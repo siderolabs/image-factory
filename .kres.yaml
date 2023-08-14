@@ -1,0 +1,111 @@
+kind: golang.Generate
+spec:
+  versionPackagePath: internal/version
+---
+kind: golang.Build
+spec:
+  outputs:
+    linux-amd64:
+      GOOS: linux
+      GOARCH: amd64
+    linux-arm64:
+      GOOS: linux
+      GOARCH: arm64
+---
+kind: common.Image
+name: image-image-service
+spec:
+  baseImage: alpine:3.18
+  additionalImages: []
+  customCommands:
+    - apk add --no-cache --update
+        bash
+        binutils-aarch64
+        binutils-x86_64
+        cpio
+        dosfstools
+        efibootmgr
+        kmod
+        mtools
+        pigz
+        qemu-img
+        squashfs-tools
+        tar
+        util-linux
+        xfsprogs
+        xorriso
+        xz
+  copyFrom:
+    - stage: ghcr.io/siderolabs/grub:v1.5.0
+      source: /
+      destination: /
+    - stage: ghcr.io/siderolabs/grub@sha256:b3200d08c4c9295e02dfb11e5760c5dbe2ffe1b1191272851ab03e527220094c # amd64
+      source: /usr/lib/grub
+      destination: /usr/lib/grub
+    - stage: ghcr.io/siderolabs/grub@sha256:a8936963fc5f1fb83b057eb2369371ec7a4e7a9cfda71a804c5d6f8de222abea # arm64
+      source: /usr/lib/grub
+      destination: /usr/lib/grub
+    - stage: ghcr.io/siderolabs/installer:v1.5.0
+      source: /usr/share/grub/unicode.pf2
+      destination: /usr/share/grub/unicode.pf2
+---
+kind: auto.CustomSteps
+spec:
+  steps:
+    - name: integration.test
+      toplevel: true
+    - name: integration
+      toplevel: true
+      inputs:
+        - base
+---
+kind: custom.Step
+name: integration.test
+spec:
+  docker:
+    enabled: true
+    stages:
+      - name: integration-build
+        description: builds the integration test binary
+        from: base
+        steps:
+          - script:
+              command: go test -c  -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
+              cache:
+                - /root/.cache/go-build
+                - /go/pkg
+      - name: integration.test
+        description: copies out the integration test binary
+        steps:
+          - copy:
+              from: integration-build
+              src: /src/integration.test
+              dst: /integration.test
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - "@$(MAKE) local-$@ DEST=$(ARTIFACTS)"
+---
+kind: custom.Step
+name: integration
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - integration.test
+    variables:
+      - name: RUN_TESTS
+        defaultValue: TestIntegration
+      - name: TEST_FLAGS
+        defaultValue: ""
+    script:
+      - "@$(MAKE) image-image-service PUSH=true"
+      - docker pull $(REGISTRY)/$(USERNAME)/image-service:$(TAG)
+      - docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-service:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
+  drone:
+    enabled: true
+    privileged: true
+    environment:
+      REGISTRY: registry.dev.talos-systems.io
