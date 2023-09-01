@@ -26,6 +26,8 @@ func initFlags() cmd.Options {
 
 	flag.IntVar(&opts.AssetBuildMaxConcurrency, "asset-builder-max-concurrency", cmd.DefaultOptions.AssetBuildMaxConcurrency, "maximum concurrency for asset builder")
 
+	flag.StringVar(&opts.ExternalURL, "external-url", cmd.DefaultOptions.ExternalURL, "service external endpoint URL")
+
 	flag.Parse()
 
 	return opts

@@ -1,12 +1,13 @@
 module github.com/siderolabs/image-service
 
-go 1.21
+go 1.21.0
 
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/google/go-containerregistry v0.16.1
 	github.com/h2non/filetype v1.1.3
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/siderolabs/gen v0.4.6
 	github.com/siderolabs/go-pointer v1.0.0
 	github.com/siderolabs/talos v1.6.0-alpha.0.0.20230831182141-b8fb55d5c2e0
 	github.com/siderolabs/talos/pkg/machinery v1.6.0-alpha.0.0.20230831182141-b8fb55d5c2e0
@@ -224,7 +225,6 @@ require (
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/siderolabs/crypto v0.4.1 // indirect
-	github.com/siderolabs/gen v0.4.5 // indirect
 	github.com/siderolabs/go-api-signature v0.2.6 // indirect
 	github.com/siderolabs/go-blockdevice v0.4.6 // indirect
 	github.com/siderolabs/go-circular v0.1.0 // indirect

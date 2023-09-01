@@ -6,9 +6,9 @@
 package profile
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
@@ -17,6 +17,15 @@ import (
 	"github.com/siderolabs/image-service/pkg/configuration"
 )
 
+// InvalidErrorTag tags errors related to invalid profiles.
+type InvalidErrorTag struct{}
+
+// parsePlatformArch parses platform-arch string into the profile.
+//
+// Supported formats:
+// - metal-amd64
+// - aws-arm64-secureboot
+// - metal-rpi_generic-arm64.
 func parsePlatformArch(s string, prof *profile.Profile) error {
 	s, ok := strings.CutSuffix(s, "-secureboot")
 	if ok {
@@ -25,7 +34,7 @@ func parsePlatformArch(s string, prof *profile.Profile) error {
 
 	platform, rest, ok := strings.Cut(s, "-")
 	if !ok {
-		return fmt.Errorf("invalid platform-arch: %q", s)
+		return xerrors.NewTaggedf[InvalidErrorTag]("invalid platform-arch: %q", s)
 	}
 
 	prof.Platform = platform
@@ -45,7 +54,7 @@ func parseArch(s string, prof *profile.Profile) error {
 
 		return nil
 	default:
-		return fmt.Errorf("invalid architecture: %q", s)
+		return xerrors.NewTaggedf[InvalidErrorTag]("invalid architecture: %q", s)
 	}
 }
 
@@ -179,7 +188,7 @@ func ParseFromPath(path string) (profile.Profile, error) {
 	}
 
 	if prof.Output.ImageOptions.DiskFormat == profile.DiskFormatUnknown {
-		return prof, fmt.Errorf("invalid profile path: %q", path)
+		return prof, xerrors.NewTaggedf[InvalidErrorTag]("invalid profile path: %q", path)
 	}
 
 	// third, figure out the platform and arch
@@ -205,7 +214,7 @@ func ParseFromPath(path string) (profile.Profile, error) {
 func EnhanceFromConfiguration(prof profile.Profile, config *configuration.Configuration, versionTag string) (profile.Profile, error) {
 	if len(config.Customization.SystemExtensions.OfficialExtensions) > 0 {
 		// TODO: implement me
-		return prof, fmt.Errorf("system extensions are not supported yet")
+		return prof, xerrors.NewTaggedf[InvalidErrorTag]("system extensions are not supported yet")
 	}
 
 	if prof.Output.Kind != profile.OutKindInitramfs && prof.Output.Kind != profile.OutKindKernel && prof.Output.Kind != profile.OutKindInstaller {

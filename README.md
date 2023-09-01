@@ -71,7 +71,38 @@ Supported image paths:
 
 ## PXE Frontend API
 
-TBD
+PXE frontend provides an [iPXE script](https://ipxe.org/scripting) which automatically downloads and boots Talos.
+The bare metal machine should be configured to boot from the URL provided by this API, e.g.:
+
+```text
+#!ipxe
+chain --replace --autofree https://image.service/pxe/<configuration-ID>/v1.5.0/metal-${buildarch}
+```
+
+### `GET /pxe/:configuration/:version/:path`
+
+Returns an iPXE script which downloads and boots Talos with the specified configuration and Talos version, architecture and platform.
+
+* `:configuration` is a configuration ID returned by `POST /configuration`
+* `:version` is a Talos version, e.g. `v1.5.0`
+* `:path` is a `<platform>-<arch>[-secureboot]` path, e.g. `metal-amd64`
+
+In non-SecureBoot configuration, the following iPXE script is returned:
+
+```text
+#!ipxe
+kernel https://image.service/image/:configuration/:version/kernel-<arch> <kernel-cmdline>
+initrd https://image.service/image/:configuration/:version/initramfs-<arch>.xz
+boot
+```
+
+For SecureBoot configuration, the following iPXE script is returned:
+
+```text
+#!ipxe
+kernel https://image.service/image/:configuration/:version/<platform>-<arch>-secureboot.uki.efi
+boot
+```
 
 ## OCI Registry Frontend API
 

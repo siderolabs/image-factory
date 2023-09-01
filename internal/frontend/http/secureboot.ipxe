@@ -1,0 +1,4 @@
+#!ipxe
+
+kernel {{ .UKIURL }}
+boot

@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 
+	"github.com/siderolabs/gen/xerrors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,6 +37,9 @@ type SystemExtensions struct {
 	OfficialExtensions []string `yaml:"officialExtensions,omitempty"`
 }
 
+// InvalidErrorTag is a tag for invalid configuration errors.
+type InvalidErrorTag struct{}
+
 // Unmarshal the configuration from text representation.
 func Unmarshal(data []byte) (*Configuration, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))
@@ -44,7 +48,7 @@ func Unmarshal(data []byte) (*Configuration, error) {
 	var cfg Configuration
 
 	if err := dec.Decode(&cfg); err != nil {
-		return nil, err
+		return nil, xerrors.NewTagged[InvalidErrorTag](err)
 	}
 
 	return &cfg, nil

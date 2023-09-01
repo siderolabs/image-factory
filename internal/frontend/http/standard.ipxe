@@ -1,0 +1,5 @@
+#!ipxe
+
+kernel {{ .KernelURL }} {{ .Cmdline }}
+initrd {{ .InitramfsURL }}
+boot

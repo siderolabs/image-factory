@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func downloadAsset(ctx context.Context, t *testing.T, baseURL string, configurationID, talosVersion, path string) io.ReadCloser {
+func downloadAsset(ctx context.Context, t *testing.T, baseURL string, configurationID, talosVersion, path string) *http.Response {
 	t.Helper()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/image/"+configurationID+"/"+talosVersion+"/"+path, nil)
@@ -30,15 +30,28 @@ func downloadAsset(ctx context.Context, t *testing.T, baseURL string, configurat
 		resp.Body.Close()
 	})
 
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	return resp
+}
 
-	return resp.Body
+func downloadAssetInvalid(ctx context.Context, t *testing.T, baseURL string, configurationID, talosVersion, path string, expectedCode int) string {
+	t.Helper()
+
+	resp := downloadAsset(ctx, t, baseURL, configurationID, talosVersion, path)
+	assert.Equal(t, expectedCode, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	return string(body)
 }
 
 func downloadAssetAndMatch(ctx context.Context, t *testing.T, baseURL string, configurationID, talosVersion, path string, fileType string, expectedSize int64) {
 	t.Helper()
 
-	body := downloadAsset(ctx, t, baseURL, configurationID, talosVersion, path)
+	resp := downloadAsset(ctx, t, baseURL, configurationID, talosVersion, path)
+	body := resp.Body
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	magic := make([]byte, 65536)
 
@@ -63,7 +76,10 @@ func downloadAssetAndMatch(ctx context.Context, t *testing.T, baseURL string, co
 func downloadCmdlineAndMatch(ctx context.Context, t *testing.T, baseURL string, configurationID, talosVersion, path string, expectedSubstrings ...string) {
 	t.Helper()
 
-	body := downloadAsset(ctx, t, baseURL, configurationID, talosVersion, path)
+	resp := downloadAsset(ctx, t, baseURL, configurationID, talosVersion, path)
+	body := resp.Body
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	cmdlineBytes, err := io.ReadAll(body)
 	require.NoError(t, err)
@@ -159,6 +175,26 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 			t.Parallel()
 
 			downloadCmdlineAndMatch(ctx, t, baseURL, extraArgsConfigurationID, talosVersion, "cmdline-metal-amd64", "talos.platform=metal", "nolapic", "nomodeset")
+		})
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("configuration", func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, "configuration ID \"aaaaaaaaaaaa\" not found\n",
+				downloadAssetInvalid(ctx, t, baseURL, "aaaaaaaaaaaa", "v1.5.0", "metal-amd64.iso", http.StatusNotFound),
+			)
+		})
+
+		t.Run("profile", func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, "error parsing profile from path: invalid profile path: \"metal-amd64.ssd\"\n",
+				downloadAssetInvalid(ctx, t, baseURL, emptyConfigurationID, "v1.5.0", "metal-amd64.ssd", http.StatusBadRequest),
+			)
 		})
 	})
 }

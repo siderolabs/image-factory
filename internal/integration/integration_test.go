@@ -33,6 +33,7 @@ func setupService(t *testing.T) (context.Context, string) {
 	options.ConfigKeyBase64 = base64.StdEncoding.EncodeToString([]byte("secret")) // use a fixed key for reproducibility
 	options.HTTPListenAddr = findListenAddr(t)
 	options.ImagePrefix = imagePrefixFlag
+	options.ExternalURL = "http://" + options.HTTPListenAddr + "/"
 
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -84,6 +85,12 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		testDownloadFrontend(ctx, t, baseURL)
+	})
+
+	t.Run("TestPXEFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testPXEFrontend(ctx, t, baseURL)
 	})
 }
 

@@ -5,7 +5,7 @@
 package cmd
 
 // Options configures image service.
-type Options struct {
+type Options struct { //nolint:govet
 	HTTPListenAddr string
 
 	MinTalosVersion string
@@ -17,6 +17,8 @@ type Options struct {
 	ContainerSignatureIssuer        string
 
 	AssetBuildMaxConcurrency int
+
+	ExternalURL string
 }
 
 // DefaultOptions are the default options.
@@ -30,4 +32,6 @@ var DefaultOptions = Options{
 	ContainerSignatureIssuer:        "https://accounts.google.com",
 
 	AssetBuildMaxConcurrency: 6,
+
+	ExternalURL: "https://localhost/",
 }

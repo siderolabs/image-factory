@@ -9,6 +9,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/siderolabs/gen/xerrors"
+
 	"github.com/siderolabs/image-service/internal/configuration/storage"
 )
 
@@ -30,7 +32,7 @@ func (s *Storage) Head(_ context.Context, id string) error {
 		return nil
 	}
 
-	return storage.ErrNotFound
+	return xerrors.NewTaggedf[storage.ErrNotFoundTag]("configuration ID %q not found", id)
 }
 
 // Get returns the configuration.
@@ -42,7 +44,7 @@ func (s *Storage) Get(_ context.Context, id string) ([]byte, error) {
 		return data, nil
 	}
 
-	return nil, storage.ErrNotFound
+	return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("configuration ID %q not found", id)
 }
 
 // Put stores the configuration.

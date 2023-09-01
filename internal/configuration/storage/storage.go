@@ -7,7 +7,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 )
 
 // Storage is the configuration storage.
@@ -17,5 +16,5 @@ type Storage interface {
 	Put(ctx context.Context, id string, data []byte) error
 }
 
-// ErrNotFound is returned when the configuration is not found.
-var ErrNotFound = errors.New("configuration not found")
+// ErrNotFoundTag tags the errors when the configuration is not found.
+type ErrNotFoundTag = struct{}

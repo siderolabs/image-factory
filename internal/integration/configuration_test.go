@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"testing"
 
@@ -25,11 +26,8 @@ const (
 	extraArgsConfigurationID = "69cbf7e068a698c5d3c72fbea15817bd1c8f2a6d9fc1bee5cf1e3a00bbe1f326"
 )
 
-func createConfiguration(ctx context.Context, t *testing.T, baseURL string, config configuration.Configuration) string {
+func createConfiguration(ctx context.Context, t *testing.T, baseURL string, marshalled []byte) *http.Response {
 	t.Helper()
-
-	marshalled, err := config.Marshal()
-	require.NoError(t, err)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/configuration", bytes.NewReader(marshalled))
 	require.NoError(t, err)
@@ -37,7 +35,20 @@ func createConfiguration(ctx context.Context, t *testing.T, baseURL string, conf
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
-	defer resp.Body.Close()
+	t.Cleanup(func() {
+		resp.Body.Close()
+	})
+
+	return resp
+}
+
+func createConfigurationGetID(ctx context.Context, t *testing.T, baseURL string, config configuration.Configuration) string {
+	t.Helper()
+
+	marshalled, err := config.Marshal()
+	require.NoError(t, err)
+
+	resp := createConfiguration(ctx, t, baseURL, marshalled)
 
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
@@ -50,13 +61,26 @@ func createConfiguration(ctx context.Context, t *testing.T, baseURL string, conf
 	return respBody.ID
 }
 
+func createConfigurationInvalid(ctx context.Context, t *testing.T, baseURL string, marshalled []byte) string {
+	t.Helper()
+
+	resp := createConfiguration(ctx, t, baseURL, marshalled)
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	return string(body)
+}
+
 func testConfiguration(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("empty", func(t *testing.T) {
-		assert.Equal(t, emptyConfigurationID, createConfiguration(ctx, t, baseURL, configuration.Configuration{}))
+		assert.Equal(t, emptyConfigurationID, createConfigurationGetID(ctx, t, baseURL, configuration.Configuration{}))
 	})
 
 	t.Run("kernel args", func(t *testing.T) {
-		assert.Equal(t, extraArgsConfigurationID, createConfiguration(ctx, t, baseURL,
+		assert.Equal(t, extraArgsConfigurationID, createConfigurationGetID(ctx, t, baseURL,
 			configuration.Configuration{
 				Customization: configuration.Customization{
 					ExtraKernelArgs: []string{"nolapic", "nomodeset"},
@@ -66,6 +90,10 @@ func testConfiguration(ctx context.Context, t *testing.T, baseURL string) {
 	})
 
 	t.Run("empty repeat", func(t *testing.T) {
-		assert.Equal(t, emptyConfigurationID, createConfiguration(ctx, t, baseURL, configuration.Configuration{}))
+		assert.Equal(t, emptyConfigurationID, createConfigurationGetID(ctx, t, baseURL, configuration.Configuration{}))
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		assert.Equal(t, "yaml: unmarshal errors:\n  line 1: field something not found in type configuration.Configuration\n", createConfigurationInvalid(ctx, t, baseURL, []byte(`something:`)))
 	})
 }

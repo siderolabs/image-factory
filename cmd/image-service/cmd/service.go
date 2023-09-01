@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -32,6 +33,11 @@ func RunService(ctx context.Context, logger *zap.Logger, opts Options) error {
 	logger.Info("starting", zap.String("name", version.Name), zap.String("version", version.Tag), zap.String("sha", version.SHA))
 	defer logger.Info("shutting down", zap.String("name", version.Name))
 
+	externalURL, err := url.Parse(opts.ExternalURL)
+	if err != nil {
+		return fmt.Errorf("failed to parse self URL: %w", err)
+	}
+
 	artifactsManager, err := buildArtifactsManager(ctx, logger, opts)
 	if err != nil {
 		return err
@@ -46,7 +52,7 @@ func RunService(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	assetBuilder := asset.NewBuilder(logger, artifactsManager, opts.AssetBuildMaxConcurrency)
 
-	frontendHTTP := frontendhttp.NewFrontend(logger, configService, assetBuilder)
+	frontendHTTP := frontendhttp.NewFrontend(logger, configService, assetBuilder, externalURL)
 
 	httpServer := &http.Server{
 		Addr:    opts.HTTPListenAddr,
