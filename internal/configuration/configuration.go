@@ -16,18 +16,13 @@ import (
 
 // Service is the configuration service.
 type Service struct {
+	options Options
 	logger  *zap.Logger
 	storage storage.Storage
-	options Options
 }
 
 // Options for the configuration service.
-type Options struct {
-	// A key used to derive the configuration ID.
-	//
-	// This key should not change.
-	Key []byte
-}
+type Options struct{}
 
 // NewService creates a new configuration service.
 func NewService(logger *zap.Logger, storage storage.Storage, options Options) *Service {
@@ -42,7 +37,7 @@ func NewService(logger *zap.Logger, storage storage.Storage, options Options) *S
 //
 // If the configuration already exists, Put does nothing.
 func (s *Service) Put(ctx context.Context, cfg *configuration.Configuration) (string, error) {
-	id, err := cfg.ID(s.options.Key)
+	id, err := cfg.ID()
 	if err != nil {
 		return "", err
 	}

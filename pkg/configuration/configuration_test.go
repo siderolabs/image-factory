@@ -12,10 +12,8 @@ import (
 	"github.com/siderolabs/image-service/pkg/configuration"
 )
 
-func TestIDStability(t *testing.T) {
+func TestID(t *testing.T) {
 	t.Parallel()
-
-	key := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}
 
 	for _, test := range []struct { //nolint:govet
 		name       string
@@ -25,7 +23,7 @@ func TestIDStability(t *testing.T) {
 		{
 			name:       "empty",
 			cfg:        configuration.Configuration{},
-			expectedID: "d852d9cfc0a183318b14b6bcc081b13afd9d050c8621cad5962b3892b9dbfacf",
+			expectedID: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",
 		},
 		{
 			name: "config1",
@@ -34,13 +32,61 @@ func TestIDStability(t *testing.T) {
 					ExtraKernelArgs: []string{"noapic", "nolapic"},
 				},
 			},
-			expectedID: "b661ad73e000500956acdc558342e5eaa30ae88458540bd9e634dca8294e9fa0",
+			expectedID: "9cba8e32753f91a16c1837ab8abf356af021706ef284aef07380780177d9a06c",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			id, err := test.cfg.ID(key)
+			id, err := test.cfg.ID()
+			require.NoError(t, err)
+
+			require.Equal(t, test.expectedID, id)
+		})
+	}
+}
+
+func TestUnmarshalID(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct { //nolint:govet
+		name       string
+		cfg        []byte
+		expectedID string
+	}{
+		{
+			name:       "no customization 1",
+			cfg:        []byte(`{}`),
+			expectedID: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",
+		},
+		{
+			name:       "no customization 2",
+			cfg:        []byte(`customization: {}`),
+			expectedID: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",
+		},
+		{
+			name:       "no customization 2",
+			cfg:        []byte(`customization: {"extraKernelArgs": []}`),
+			expectedID: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",
+		},
+		{
+			name:       "extra args 1",
+			cfg:        []byte(`{"customization": {"extraKernelArgs": ["noapic", "nolapic"]}}`),
+			expectedID: "9cba8e32753f91a16c1837ab8abf356af021706ef284aef07380780177d9a06c",
+		},
+		{
+			name:       "extra args 2",
+			cfg:        []byte(`{"customization": {"extraKernelArgs": ["noapic", "nolapic"], "systemExtensions": {}}}`),
+			expectedID: "9cba8e32753f91a16c1837ab8abf356af021706ef284aef07380780177d9a06c",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg, err := configuration.Unmarshal(test.cfg)
+			require.NoError(t, err)
+
+			id, err := cfg.ID()
 			require.NoError(t, err)
 
 			require.Equal(t, test.expectedID, id)

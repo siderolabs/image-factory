@@ -7,6 +7,7 @@ require (
 	github.com/google/go-containerregistry v0.16.1
 	github.com/h2non/filetype v1.1.3
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/opencontainers/go-digest v1.0.0
 	github.com/siderolabs/gen v0.4.6
 	github.com/siderolabs/go-pointer v1.0.0
 	github.com/siderolabs/talos v1.6.0-alpha.0.0.20230831182141-b8fb55d5c2e0
@@ -197,7 +198,6 @@ require (
 	github.com/nberlee/go-netstat v0.1.2 // indirect
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
 	github.com/opencontainers/runc v1.1.5 // indirect
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417 // indirect

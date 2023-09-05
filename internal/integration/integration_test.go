@@ -8,7 +8,6 @@ package integration_test
 
 import (
 	"context"
-	"encoding/base64"
 	"flag"
 	"net"
 	"net/http"
@@ -30,10 +29,10 @@ func setupService(t *testing.T) (context.Context, string) {
 	logger := zaptest.NewLogger(t)
 
 	options := cmd.DefaultOptions
-	options.ConfigKeyBase64 = base64.StdEncoding.EncodeToString([]byte("secret")) // use a fixed key for reproducibility
 	options.HTTPListenAddr = findListenAddr(t)
 	options.ImagePrefix = imagePrefixFlag
 	options.ExternalURL = "http://" + options.HTTPListenAddr + "/"
+	options.ConfigurationServiceRepository = configurationServiceRepositoryFlag
 
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -94,8 +93,12 @@ func TestIntegration(t *testing.T) {
 	})
 }
 
-var imagePrefixFlag string
+var (
+	imagePrefixFlag                    string
+	configurationServiceRepositoryFlag string
+)
 
 func init() {
 	flag.StringVar(&imagePrefixFlag, "test.image-prefix", cmd.DefaultOptions.ImagePrefix, "image prefix")
+	flag.StringVar(&configurationServiceRepositoryFlag, "test.configuration-service-repository", cmd.DefaultOptions.ConfigurationServiceRepository, "configuration service repository")
 }

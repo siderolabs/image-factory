@@ -19,14 +19,14 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.MinTalosVersion, "min-talos-version", cmd.DefaultOptions.MinTalosVersion, "minimum Talos version")
 	flag.StringVar(&opts.ImagePrefix, "image-prefix", cmd.DefaultOptions.ImagePrefix, "image prefix")
 
-	flag.StringVar(&opts.ConfigKeyBase64, "configuration-key-base64", cmd.DefaultOptions.ConfigKeyBase64, "configuration key (base64-encoded)")
-
 	flag.StringVar(&opts.ContainerSignatureSubjectRegExp, "container-signature-subject-regexp", cmd.DefaultOptions.ContainerSignatureSubjectRegExp, "container signature subject regexp")
 	flag.StringVar(&opts.ContainerSignatureIssuer, "container-signature-issuer", cmd.DefaultOptions.ContainerSignatureIssuer, "container signature issuer")
 
 	flag.IntVar(&opts.AssetBuildMaxConcurrency, "asset-builder-max-concurrency", cmd.DefaultOptions.AssetBuildMaxConcurrency, "maximum concurrency for asset builder")
 
 	flag.StringVar(&opts.ExternalURL, "external-url", cmd.DefaultOptions.ExternalURL, "service external endpoint URL")
+
+	flag.StringVar(&opts.ConfigurationServiceRepository, "configuration-service-repository", cmd.DefaultOptions.ConfigurationServiceRepository, "image repository for the configuration service")
 
 	flag.Parse()
 

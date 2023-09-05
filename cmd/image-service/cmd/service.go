@@ -7,7 +7,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,6 +14,10 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/github"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
@@ -23,7 +26,8 @@ import (
 	"github.com/siderolabs/image-service/internal/artifacts"
 	"github.com/siderolabs/image-service/internal/asset"
 	"github.com/siderolabs/image-service/internal/configuration"
-	"github.com/siderolabs/image-service/internal/configuration/storage/inmem"
+	"github.com/siderolabs/image-service/internal/configuration/storage/cache"
+	"github.com/siderolabs/image-service/internal/configuration/storage/registry"
 	frontendhttp "github.com/siderolabs/image-service/internal/frontend/http"
 	"github.com/siderolabs/image-service/internal/version"
 )
@@ -134,19 +138,29 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 }
 
 func buildConfigService(logger *zap.Logger, opts Options) (*configuration.Service, error) {
-	// as an interim solution, use in-memory storage
-	var storage inmem.Storage
-
-	if opts.ConfigKeyBase64 == "" {
-		return nil, fmt.Errorf("config key is required")
-	}
-
-	key, err := base64.StdEncoding.DecodeString(opts.ConfigKeyBase64)
+	repo, err := name.NewRepository(opts.ConfigurationServiceRepository, name.Insecure)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode config key: %w", err)
+		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
 
-	return configuration.NewService(logger, &storage, configuration.Options{
-		Key: key,
-	}), nil
+	storage, err := registry.NewStorage(repo, remoteOptions())
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize storage: %w", err)
+	}
+
+	return configuration.NewService(logger, cache.NewCache(storage), configuration.Options{}), nil
+}
+
+// remoteOptions returns options for remote registry access.
+//
+// Enable registry auth from the standard Docker config, and from GitHub via the token.
+func remoteOptions() []remote.Option {
+	return []remote.Option{
+		remote.WithAuthFromKeychain(
+			authn.NewMultiKeychain(
+				authn.DefaultKeychain,
+				github.Keychain,
+			),
+		),
+	}
 }

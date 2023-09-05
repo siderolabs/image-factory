@@ -9,6 +9,8 @@ package integration_test
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -22,8 +24,8 @@ import (
 
 // well known configuration IDs, they will be created with the test run
 const (
-	emptyConfigurationID     = "f655a707a7522c4bb0bd753833b288aa426c487ad44dab7cbb08d911a1ab33e5"
-	extraArgsConfigurationID = "69cbf7e068a698c5d3c72fbea15817bd1c8f2a6d9fc1bee5cf1e3a00bbe1f326"
+	emptyConfigurationID     = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
+	extraArgsConfigurationID = "e0fb1129bbbdfb5d002e94af4cdce712a8370e850950a33a242d4c3f178c532d"
 )
 
 func createConfiguration(ctx context.Context, t *testing.T, baseURL string, marshalled []byte) *http.Response {
@@ -89,11 +91,34 @@ func testConfiguration(ctx context.Context, t *testing.T, baseURL string) {
 		))
 	})
 
-	t.Run("empty repeat", func(t *testing.T) {
+	t.Run("empty once again", func(t *testing.T) {
 		assert.Equal(t, emptyConfigurationID, createConfigurationGetID(ctx, t, baseURL, configuration.Configuration{}))
 	})
 
 	t.Run("invalid", func(t *testing.T) {
 		assert.Equal(t, "yaml: unmarshal errors:\n  line 1: field something not found in type configuration.Configuration\n", createConfigurationInvalid(ctx, t, baseURL, []byte(`something:`)))
 	})
+
+	t.Run("new config", func(t *testing.T) {
+		// create a new random configuration, as the configuration is persisted, and we want to test uploading new config
+		randomKernelArg := hex.EncodeToString(randomBytes(t, 32))
+
+		assert.Len(t, createConfigurationGetID(ctx, t, baseURL,
+			configuration.Configuration{
+				Customization: configuration.Customization{
+					ExtraKernelArgs: []string{randomKernelArg},
+				},
+			},
+		), 64)
+	})
+}
+
+func randomBytes(t *testing.T, n int) []byte {
+	t.Helper()
+
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	require.NoError(t, err)
+
+	return b
 }

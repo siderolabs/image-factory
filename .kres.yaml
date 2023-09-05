@@ -109,3 +109,4 @@ spec:
     privileged: true
     environment:
       REGISTRY: registry.dev.talos-systems.io
+      TEST_FLAGS: "-test.configuration-service-repository=registry.dev.talos-systems.io/image-service/configuration"

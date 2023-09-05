@@ -7,7 +7,6 @@ package configuration
 
 import (
 	"bytes"
-	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 
@@ -63,23 +62,15 @@ func (cfg *Configuration) Marshal() ([]byte, error) {
 
 // ID returns the identifier of the configuration.
 //
-// ID is stable (does not change if the configuration is same), but it should not be possible
-// to derive the configuration from the ID.
-//
-// Key is a secret used to generate the ID.
-func (cfg *Configuration) ID(key []byte) (string, error) {
+// ID is stable (does not change if the configuration is same).
+// ID matches sha256 hash of the canonical representation of the configuration.
+func (cfg *Configuration) ID() (string, error) {
 	data, err := cfg.Marshal()
 	if err != nil {
 		return "", err
 	}
 
-	hasher := hmac.New(sha256.New, key)
+	binaryID := sha256.Sum256(data)
 
-	if _, err := hasher.Write(data); err != nil {
-		return "", err
-	}
-
-	binaryID := hasher.Sum(nil)
-
-	return hex.EncodeToString(binaryID), nil
+	return hex.EncodeToString(binaryID[:]), nil
 }

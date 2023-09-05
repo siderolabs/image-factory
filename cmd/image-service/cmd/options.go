@@ -6,19 +6,27 @@ package cmd
 
 // Options configures image service.
 type Options struct { //nolint:govet
+	// Listen address for the HTTP frontend.
 	HTTPListenAddr string
 
+	// Asset builder options: minimum supported Talos version.
 	MinTalosVersion string
-	ImagePrefix     string
+	// Image prefix for the `imager`.
+	ImagePrefix string
 
-	ConfigKeyBase64 string
-
+	// Options to verify container signatures for imager, extensions, etc.
 	ContainerSignatureSubjectRegExp string
 	ContainerSignatureIssuer        string
 
+	// Maximum number of concurrent asset builds.
 	AssetBuildMaxConcurrency int
 
+	// External URL of the image service HTTP frontend.
 	ExternalURL string
+
+	// Configuration service OCI registry prefix.
+	// It stores configurations for the image service as blobs under that path.
+	ConfigurationServiceRepository string
 }
 
 // DefaultOptions are the default options.
@@ -34,4 +42,6 @@ var DefaultOptions = Options{
 	AssetBuildMaxConcurrency: 6,
 
 	ExternalURL: "https://localhost/",
+
+	ConfigurationServiceRepository: "ghcr.io/siderolabs/image-service/configuration",
 }

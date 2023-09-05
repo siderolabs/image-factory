@@ -32,13 +32,17 @@ customization:
         - vga=791
 ```
 
-Output is JSON-encoded configuration ID:
+Output is a JSON-encoded configuration ID:
 
 ```json
 {"id":"2a63b6e7dab90ec9d44f213339b9545bd39c6499b22a14cf575c1ca4b6e39ff8"}
 ```
 
 This ID can be used to download images with this configuration.
+
+Well-known configuration IDs:
+
+* `376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba` - default configuration (without any customizations)
 
 ### `GET /image/:configuration/:version/:path`
 
@@ -113,5 +117,5 @@ TBD
 Run integration tests in local mode, with registry mirrors:
 
 ```bash
-make integration TEST_FLAGS=-test.image-prefix=127.0.0.1:5004/siderolabs/ REGISTRY=127.0.0.1:5005
+make integration TEST_FLAGS="-test.image-prefix=127.0.0.1:5004/siderolabs/ -test.configuration-service-repository=127.0.0.1:5005/image-service/configuration"  REGISTRY=127.0.0.1:5005
 ```

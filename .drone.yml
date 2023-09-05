@@ -1,7 +1,7 @@
 ---
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-08-31T15:40:00Z by kres d3c3205-dirty.
+# Generated on 2023-09-05T15:30:31Z by kres latest.
 
 kind: pipeline
 type: kubernetes
@@ -223,6 +223,7 @@ steps:
   - make integration
   environment:
     REGISTRY: registry.dev.talos-systems.io
+    TEST_FLAGS: -test.configuration-service-repository=registry.dev.talos-systems.io/image-service/configuration
   privileged: true
   volumes:
   - name: outer-docker-socket
