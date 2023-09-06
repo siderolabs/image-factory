@@ -10,8 +10,8 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/siderolabs/gen v0.4.6
 	github.com/siderolabs/go-pointer v1.0.0
-	github.com/siderolabs/talos v1.6.0-alpha.0.0.20230831182141-b8fb55d5c2e0
-	github.com/siderolabs/talos/pkg/machinery v1.6.0-alpha.0.0.20230831182141-b8fb55d5c2e0
+	github.com/siderolabs/talos v1.6.0-alpha.0.0.20230906185539-5e11f08a639b
+	github.com/siderolabs/talos/pkg/machinery v1.6.0-alpha.0.0.20230906185539-5e11f08a639b
 	github.com/sigstore/cosign/v2 v2.2.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.25.0
@@ -231,7 +231,7 @@ require (
 	github.com/siderolabs/go-cmd v0.1.1 // indirect
 	github.com/siderolabs/go-debug v0.2.3 // indirect
 	github.com/siderolabs/go-kmsg v0.1.3 // indirect
-	github.com/siderolabs/go-kubernetes v0.2.2 // indirect
+	github.com/siderolabs/go-kubernetes v0.2.3 // indirect
 	github.com/siderolabs/go-pcidb v0.2.0 // indirect
 	github.com/siderolabs/go-procfs v0.1.1 // indirect
 	github.com/siderolabs/go-retry v0.3.2 // indirect
@@ -307,12 +307,12 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/api v0.28.0 // indirect
-	k8s.io/apimachinery v0.28.0 // indirect
-	k8s.io/apiserver v0.28.0 // indirect
-	k8s.io/client-go v0.28.0 // indirect
-	k8s.io/component-base v0.28.0 // indirect
-	k8s.io/cri-api v0.28.0 // indirect
+	k8s.io/api v0.28.1 // indirect
+	k8s.io/apimachinery v0.28.1 // indirect
+	k8s.io/apiserver v0.28.1 // indirect
+	k8s.io/client-go v0.28.1 // indirect
+	k8s.io/component-base v0.28.1 // indirect
+	k8s.io/cri-api v0.28.1 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230717233707-2695361300d9 // indirect
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect

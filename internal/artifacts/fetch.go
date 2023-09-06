@@ -91,7 +91,7 @@ func (f *fetcher) fetch(ctx context.Context, logger *zap.Logger, tag string, opt
 		return err
 	}
 
-	namedRef, err := name.ParseReference(imageRef, name.Insecure)
+	namedRef, err := name.ParseReference(imageRef)
 	if err != nil {
 		return err
 	}

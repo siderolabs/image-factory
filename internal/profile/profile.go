@@ -210,6 +210,22 @@ func ParseFromPath(path string) (profile.Profile, error) {
 	return prof, nil
 }
 
+// InstallerProfile returns a profile to be used for installer image.
+func InstallerProfile(secureboot bool, arch artifacts.Arch) profile.Profile {
+	var prof profile.Profile
+
+	prof.Output.Kind = profile.OutKindInstaller
+	prof.Output.OutFormat = profile.OutFormatRaw
+	prof.Arch = string(arch)
+	prof.Platform = constants.PlatformMetal // doesn't matter for installer output
+
+	if secureboot {
+		prof.SecureBoot = pointer.To(true)
+	}
+
+	return prof
+}
+
 // EnhanceFromConfiguration enhances the profile with the configuration.
 func EnhanceFromConfiguration(prof profile.Profile, config *configuration.Configuration, versionTag string) (profile.Profile, error) {
 	if len(config.Customization.SystemExtensions.OfficialExtensions) > 0 {

@@ -33,6 +33,8 @@ func setupService(t *testing.T) (context.Context, string) {
 	options.ImagePrefix = imagePrefixFlag
 	options.ExternalURL = "http://" + options.HTTPListenAddr + "/"
 	options.ConfigurationServiceRepository = configurationServiceRepositoryFlag
+	options.InstallerExternalRepository = installerExternalRepository
+	options.InstallerInternalRepository = installerInternalRepository
 
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -56,7 +58,7 @@ func setupService(t *testing.T) (context.Context, string) {
 		return err == nil
 	}, 10*time.Second, 10*time.Millisecond)
 
-	return ctx, "http://" + options.HTTPListenAddr
+	return ctx, options.HTTPListenAddr
 }
 
 func findListenAddr(t *testing.T) string {
@@ -73,7 +75,8 @@ func findListenAddr(t *testing.T) string {
 }
 
 func TestIntegration(t *testing.T) {
-	ctx, baseURL := setupService(t)
+	ctx, listenAddr := setupService(t)
+	baseURL := "http://" + listenAddr
 
 	t.Run("TestConfiguration", func(t *testing.T) {
 		// configuration should be created first, thus no t.Parallel
@@ -91,14 +94,24 @@ func TestIntegration(t *testing.T) {
 
 		testPXEFrontend(ctx, t, baseURL)
 	})
+
+	t.Run("TestRegistryFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testRegistryFrontend(ctx, t, listenAddr)
+	})
 }
 
 var (
 	imagePrefixFlag                    string
 	configurationServiceRepositoryFlag string
+	installerExternalRepository        string
+	installerInternalRepository        string
 )
 
 func init() {
 	flag.StringVar(&imagePrefixFlag, "test.image-prefix", cmd.DefaultOptions.ImagePrefix, "image prefix")
 	flag.StringVar(&configurationServiceRepositoryFlag, "test.configuration-service-repository", cmd.DefaultOptions.ConfigurationServiceRepository, "configuration service repository")
+	flag.StringVar(&installerExternalRepository, "test.installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
+	flag.StringVar(&installerInternalRepository, "test.installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
 }

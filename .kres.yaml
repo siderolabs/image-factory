@@ -109,4 +109,4 @@ spec:
     privileged: true
     environment:
       REGISTRY: registry.dev.talos-systems.io
-      TEST_FLAGS: "-test.configuration-service-repository=registry.dev.talos-systems.io/image-service/configuration"
+      TEST_FLAGS: "-test.configuration-service-repository=registry.dev.talos-systems.io/image-service/configuration -test.installer-external-repository=registry.dev.talos-systems.io/siderolabs -test.installer-internal-repository=registry.dev.talos-systems.io/siderolabs"

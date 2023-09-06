@@ -8,12 +8,16 @@ package http
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-service/internal/asset"
 	cfg "github.com/siderolabs/image-service/internal/configuration"
@@ -28,17 +32,42 @@ type Frontend struct {
 	configService *cfg.Service
 	assetBuilder  *asset.Builder
 	logger        *zap.Logger
-	externalURL   *url.URL
+	puller        *remote.Puller
+	pusher        *remote.Pusher
+	sf            singleflight.Group
+	options       Options
+}
+
+// Options configures the HTTP frontend.
+type Options struct {
+	ExternalURL *url.URL
+
+	InstallerInternalRepository name.Repository
+	InstallerExternalRepository name.Repository
+
+	RemoteOptions []remote.Option
 }
 
 // NewFrontend creates a new HTTP frontend.
-func NewFrontend(logger *zap.Logger, configService *cfg.Service, assetBuilder *asset.Builder, externalURL *url.URL) *Frontend {
+func NewFrontend(logger *zap.Logger, configService *cfg.Service, assetBuilder *asset.Builder, opts Options) (*Frontend, error) {
 	frontend := &Frontend{
 		router:        httprouter.New(),
 		configService: configService,
 		assetBuilder:  assetBuilder,
 		logger:        logger.With(zap.String("frontend", "http")),
-		externalURL:   externalURL,
+		options:       opts,
+	}
+
+	var err error
+
+	frontend.puller, err = remote.NewPuller(opts.RemoteOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create puller: %w", err)
+	}
+
+	frontend.pusher, err = remote.NewPusher(opts.RemoteOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pusher: %w", err)
 	}
 
 	// images
@@ -48,10 +77,20 @@ func NewFrontend(logger *zap.Logger, configService *cfg.Service, assetBuilder *a
 	// PXE
 	frontend.router.GET("/pxe/:configuration/:version/:path", frontend.wrapper(frontend.handlePXE))
 
+	// registry
+	frontend.router.GET("/v2", frontend.wrapper(frontend.handleHealth))
+	frontend.router.HEAD("/v2", frontend.wrapper(frontend.handleHealth))
+	frontend.router.GET("/healthz", frontend.wrapper(frontend.handleHealth))
+	frontend.router.HEAD("/healthz", frontend.wrapper(frontend.handleHealth))
+	frontend.router.GET("/v2/:image/:configuration/blobs/:digest", frontend.wrapper(frontend.handleBlob))
+	frontend.router.HEAD("/v2/:image/:configuration/blobs/:digest", frontend.wrapper(frontend.handleBlob))
+	frontend.router.GET("/v2/:image/:configuration/manifests/:tag", frontend.wrapper(frontend.handleManifest))
+	frontend.router.HEAD("/v2/:image/:configuration/manifests/:tag", frontend.wrapper(frontend.handleManifest))
+
 	// configuration
 	frontend.router.POST("/configuration", frontend.wrapper(frontend.handleConfigurationCreate))
 
-	return frontend
+	return frontend, nil
 }
 
 // Handler returns the HTTP handler.

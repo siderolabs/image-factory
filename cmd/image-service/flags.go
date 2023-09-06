@@ -28,6 +28,9 @@ func initFlags() cmd.Options {
 
 	flag.StringVar(&opts.ConfigurationServiceRepository, "configuration-service-repository", cmd.DefaultOptions.ConfigurationServiceRepository, "image repository for the configuration service")
 
+	flag.StringVar(&opts.InstallerExternalRepository, "installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
+	flag.StringVar(&opts.InstallerInternalRepository, "installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
+
 	flag.Parse()
 
 	return opts

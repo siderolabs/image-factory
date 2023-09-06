@@ -37,11 +37,6 @@ func RunService(ctx context.Context, logger *zap.Logger, opts Options) error {
 	logger.Info("starting", zap.String("name", version.Name), zap.String("version", version.Tag), zap.String("sha", version.SHA))
 	defer logger.Info("shutting down", zap.String("name", version.Name))
 
-	externalURL, err := url.Parse(opts.ExternalURL)
-	if err != nil {
-		return fmt.Errorf("failed to parse self URL: %w", err)
-	}
-
 	artifactsManager, err := buildArtifactsManager(ctx, logger, opts)
 	if err != nil {
 		return err
@@ -56,7 +51,27 @@ func RunService(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	assetBuilder := asset.NewBuilder(logger, artifactsManager, opts.AssetBuildMaxConcurrency)
 
-	frontendHTTP := frontendhttp.NewFrontend(logger, configService, assetBuilder, externalURL)
+	var frontendOptions frontendhttp.Options
+
+	frontendOptions.ExternalURL, err = url.Parse(opts.ExternalURL)
+	if err != nil {
+		return fmt.Errorf("failed to parse self URL: %w", err)
+	}
+
+	frontendOptions.InstallerInternalRepository, err = name.NewRepository(opts.InstallerInternalRepository)
+	if err != nil {
+		return fmt.Errorf("failed to parse internal installer repository: %w", err)
+	}
+
+	frontendOptions.InstallerExternalRepository, err = name.NewRepository(opts.InstallerExternalRepository)
+	if err != nil {
+		return fmt.Errorf("failed to parse external installer repository: %w", err)
+	}
+
+	frontendHTTP, err := frontendhttp.NewFrontend(logger, configService, assetBuilder, frontendOptions)
+	if err != nil {
+		return fmt.Errorf("failed to initialize HTTP frontend: %w", err)
+	}
 
 	httpServer := &http.Server{
 		Addr:    opts.HTTPListenAddr,
@@ -138,7 +153,7 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 }
 
 func buildConfigService(logger *zap.Logger, opts Options) (*configuration.Service, error) {
-	repo, err := name.NewRepository(opts.ConfigurationServiceRepository, name.Insecure)
+	repo, err := name.NewRepository(opts.ConfigurationServiceRepository)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}

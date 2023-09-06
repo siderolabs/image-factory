@@ -80,7 +80,7 @@ The bare metal machine should be configured to boot from the URL provided by thi
 
 ```text
 #!ipxe
-chain --replace --autofree https://image.service/pxe/<configuration-ID>/v1.5.0/metal-${buildarch}
+chain --replace --autofree https://image.service/pxe/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.5.0/metal-${buildarch}
 ```
 
 ### `GET /pxe/:configuration/:version/:path`
@@ -110,12 +110,20 @@ boot
 
 ## OCI Registry Frontend API
 
-TBD
+The Talos `installer` image used both for the initial install and upgrade can be pulled from the Image Service OCI registry.
+If the image hasn't been created yet, it will be built on demand automatically.
+
+### `docker pull <registry>/installer[-secureboot]/<configuration>:<version>`
+
+Example: `docker pull imager.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.5.0`
+
+Pulls the Talos `installer` image with the specified configuration and Talos version.
+The image platform (architecture) will be determined by the architecture of the Talos Linux machine.
 
 ## Development
 
 Run integration tests in local mode, with registry mirrors:
 
 ```bash
-make integration TEST_FLAGS="-test.image-prefix=127.0.0.1:5004/siderolabs/ -test.configuration-service-repository=127.0.0.1:5005/image-service/configuration"  REGISTRY=127.0.0.1:5005
+make integration TEST_FLAGS="-test.image-prefix=127.0.0.1:5004/siderolabs/ -test.configuration-service-repository=127.0.0.1:5005/image-service/configuration -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test" REGISTRY=127.0.0.1:5005
 ```

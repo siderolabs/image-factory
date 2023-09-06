@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/siderolabs/talos/pkg/imager"
 	"github.com/siderolabs/talos/pkg/imager/profile"
@@ -58,6 +59,8 @@ func (b *Builder) getBuildAsset(ctx context.Context, versionString, arch string,
 
 // Build the asset.
 func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString string) (BootAsset, error) {
+	start := time.Now()
+
 	// enforce concurrency limit
 	select {
 	case b.semaphore <- struct{}{}:
@@ -68,6 +71,8 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 	defer func() {
 		<-b.semaphore
 	}()
+
+	b.logger.Info("building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("concurrency_latency", time.Since(start)))
 
 	if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindKernel, &prof.Input.Kernel); err != nil {
 		return nil, fmt.Errorf("failed to get kernel: %w", err)
@@ -116,6 +121,8 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 	}
 
 	tmpDir.size = st.Size()
+
+	b.logger.Info("finished building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("full_latency", time.Since(start)))
 
 	return tmpDir, nil
 }

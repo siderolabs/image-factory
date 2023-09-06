@@ -1,7 +1,7 @@
 ---
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-09-05T15:30:31Z by kres latest.
+# Generated on 2023-09-06T15:15:10Z by kres latest.
 
 kind: pipeline
 type: kubernetes
@@ -223,7 +223,7 @@ steps:
   - make integration
   environment:
     REGISTRY: registry.dev.talos-systems.io
-    TEST_FLAGS: -test.configuration-service-repository=registry.dev.talos-systems.io/image-service/configuration
+    TEST_FLAGS: -test.configuration-service-repository=registry.dev.talos-systems.io/image-service/configuration -test.installer-external-repository=registry.dev.talos-systems.io/siderolabs -test.installer-internal-repository=registry.dev.talos-systems.io/siderolabs
   privileged: true
   volumes:
   - name: outer-docker-socket

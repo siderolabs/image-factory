@@ -5,6 +5,7 @@
 package profile_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/siderolabs/go-pointer"
@@ -12,6 +13,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/stretchr/testify/require"
 
+	"github.com/siderolabs/image-service/internal/artifacts"
 	imageprofile "github.com/siderolabs/image-service/internal/profile"
 	"github.com/siderolabs/image-service/pkg/configuration"
 )
@@ -271,6 +273,52 @@ func TestEnhanceFromConfiguration(t *testing.T) {
 
 			actualProfile, err := imageprofile.EnhanceFromConfiguration(test.baseProfile, &test.configuration, test.versionString)
 			require.NoError(t, err)
+			require.Equal(t, test.expectedProfile, actualProfile)
+		})
+	}
+}
+
+func TestInstallerProfile(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct { //nolint:govet
+		arch       artifacts.Arch
+		secureboot bool
+
+		expectedProfile profile.Profile
+	}{
+		{
+			arch:       artifacts.ArchAmd64,
+			secureboot: false,
+
+			expectedProfile: profile.Profile{
+				Platform: "metal",
+				Arch:     "amd64",
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
+		{
+			arch:       artifacts.ArchArm64,
+			secureboot: true,
+
+			expectedProfile: profile.Profile{
+				Platform:   "metal",
+				Arch:       "arm64",
+				SecureBoot: pointer.To(true),
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
+	} {
+		t.Run(fmt.Sprintf("%s-%v", string(test.arch), test.secureboot), func(t *testing.T) {
+			t.Parallel()
+
+			actualProfile := imageprofile.InstallerProfile(test.secureboot, test.arch)
 			require.Equal(t, test.expectedProfile, actualProfile)
 		})
 	}
