@@ -13,13 +13,17 @@ import (
 
 	"github.com/blang/semver/v4"
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 )
 
 // Manager supports loading, caching and serving Talos release artifacts.
 type Manager struct { //nolint:govet
 	options     Options
 	storagePath string
+	flavorsPath string
 	logger      *zap.Logger
+
+	flavorsSingleFlight singleflight.Group
 
 	fetcherMu sync.Mutex
 	fetchers  map[string]*fetcher
@@ -32,9 +36,16 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 		return nil, fmt.Errorf("failed to create temporary directory: %w", err)
 	}
 
+	flavorsPath := filepath.Join(tmpDir, "flavors")
+
+	if err = os.Mkdir(flavorsPath, 0o700); err != nil {
+		return nil, fmt.Errorf("failed to create flavors directory: %w", err)
+	}
+
 	return &Manager{
 		options:     options,
 		storagePath: tmpDir,
+		flavorsPath: flavorsPath,
 		logger:      logger,
 		fetchers:    map[string]*fetcher{},
 	}, nil

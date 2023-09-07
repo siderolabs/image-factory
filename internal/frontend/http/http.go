@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/siderolabs/image-service/internal/artifacts"
 	"github.com/siderolabs/image-service/internal/asset"
 	flvr "github.com/siderolabs/image-service/internal/flavor"
 	"github.com/siderolabs/image-service/internal/flavor/storage"
@@ -28,14 +29,15 @@ import (
 
 // Frontend is the HTTP frontend.
 type Frontend struct {
-	router        *httprouter.Router
-	flavorService *flvr.Service
-	assetBuilder  *asset.Builder
-	logger        *zap.Logger
-	puller        *remote.Puller
-	pusher        *remote.Pusher
-	sf            singleflight.Group
-	options       Options
+	router           *httprouter.Router
+	flavorService    *flvr.Service
+	assetBuilder     *asset.Builder
+	artifactsManager *artifacts.Manager
+	logger           *zap.Logger
+	puller           *remote.Puller
+	pusher           *remote.Pusher
+	sf               singleflight.Group
+	options          Options
 }
 
 // Options configures the HTTP frontend.
@@ -49,13 +51,14 @@ type Options struct {
 }
 
 // NewFrontend creates a new HTTP frontend.
-func NewFrontend(logger *zap.Logger, flavorService *flvr.Service, assetBuilder *asset.Builder, opts Options) (*Frontend, error) {
+func NewFrontend(logger *zap.Logger, flavorService *flvr.Service, assetBuilder *asset.Builder, artifactsManager *artifacts.Manager, opts Options) (*Frontend, error) {
 	frontend := &Frontend{
-		router:        httprouter.New(),
-		flavorService: flavorService,
-		assetBuilder:  assetBuilder,
-		logger:        logger.With(zap.String("frontend", "http")),
-		options:       opts,
+		router:           httprouter.New(),
+		flavorService:    flavorService,
+		assetBuilder:     assetBuilder,
+		artifactsManager: artifactsManager,
+		logger:           logger.With(zap.String("frontend", "http")),
+		options:          opts,
 	}
 
 	var err error

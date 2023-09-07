@@ -6,6 +6,7 @@
 package profile
 
 import (
+	"context"
 	"strings"
 
 	"github.com/siderolabs/gen/xerrors"
@@ -226,8 +227,13 @@ func InstallerProfile(secureboot bool, arch artifacts.Arch) profile.Profile {
 	return prof
 }
 
+// FlavorExtensionProducer is a function which produces a flavor extension tarballs.
+type FlavorExtensionProducer interface {
+	GetFlavorExtension(context.Context, *flavor.Flavor) (string, error)
+}
+
 // EnhanceFromFlavor enhances the profile with the flavor.
-func EnhanceFromFlavor(prof profile.Profile, flavor *flavor.Flavor, versionTag string) (profile.Profile, error) {
+func EnhanceFromFlavor(ctx context.Context, prof profile.Profile, flavor *flavor.Flavor, flavorExtensionProducer FlavorExtensionProducer, versionTag string) (profile.Profile, error) {
 	if len(flavor.Customization.SystemExtensions.OfficialExtensions) > 0 {
 		// TODO: implement me
 		return prof, xerrors.NewTaggedf[InvalidErrorTag]("system extensions are not supported yet")
@@ -237,6 +243,14 @@ func EnhanceFromFlavor(prof profile.Profile, flavor *flavor.Flavor, versionTag s
 		// skip customizations for profile kinds which don't support it
 		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, flavor.Customization.ExtraKernelArgs...)
 	}
+
+	// append flavor extension
+	flavorExtensionPath, err := flavorExtensionProducer.GetFlavorExtension(ctx, flavor)
+	if err != nil {
+		return prof, err
+	}
+
+	prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: flavorExtensionPath})
 
 	prof.Version = versionTag
 

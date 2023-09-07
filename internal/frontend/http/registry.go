@@ -198,7 +198,7 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, fl
 	for _, arch := range []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64} {
 		prof := profile.InstallerProfile(img.SecureBoot(), arch)
 
-		prof, err := profile.EnhanceFromFlavor(prof, flavor, versionTag)
+		prof, err := profile.EnhanceFromFlavor(ctx, prof, flavor, f.artifactsManager, versionTag)
 		if err != nil {
 			return fmt.Errorf("error enhancing profile from flavor: %w", err)
 		}

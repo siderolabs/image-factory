@@ -46,7 +46,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error parsing profile from path: %w", err)
 	}
 
-	prof, err = profile.EnhanceFromFlavor(prof, flavor, versionTag)
+	prof, err = profile.EnhanceFromFlavor(ctx, prof, flavor, f.artifactsManager, versionTag)
 	if err != nil {
 		return fmt.Errorf("error enhancing profile from flavor: %w", err)
 	}

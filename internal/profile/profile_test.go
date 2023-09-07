@@ -12,6 +12,7 @@ import (
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/context"
 
 	"github.com/siderolabs/image-service/internal/artifacts"
 	imageprofile "github.com/siderolabs/image-service/internal/profile"
@@ -209,8 +210,22 @@ func TestParseFromPath(t *testing.T) {
 	}
 }
 
+type mockFlavorExtensionProducer struct{}
+
+func (mockFlavorExtensionProducer) GetFlavorExtension(_ context.Context, flavor *flavor.Flavor) (string, error) {
+	id, err := flavor.ID()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s.tar", id), nil
+}
+
 func TestEnhanceFromFlavor(t *testing.T) {
 	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
 
 	for _, test := range []struct { //nolint:govet
 		name          string
@@ -230,6 +245,13 @@ func TestEnhanceFromFlavor(t *testing.T) {
 				Platform:   constants.PlatformMetal,
 				SecureBoot: pointer.To(false),
 				Version:    "v1.5.0",
+				Input: profile.Input{
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							TarballPath: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba.tar",
+						},
+					},
+				},
 				Output: profile.Output{
 					Kind:      profile.OutKindImage,
 					OutFormat: profile.OutFormatXZ,
@@ -257,6 +279,13 @@ func TestEnhanceFromFlavor(t *testing.T) {
 				Customization: profile.CustomizationProfile{
 					ExtraKernelArgs: []string{"noapic", "nolapic"},
 				},
+				Input: profile.Input{
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							TarballPath: "9cba8e32753f91a16c1837ab8abf356af021706ef284aef07380780177d9a06c.tar",
+						},
+					},
+				},
 				Output: profile.Output{
 					Kind:      profile.OutKindImage,
 					OutFormat: profile.OutFormatXZ,
@@ -271,7 +300,7 @@ func TestEnhanceFromFlavor(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actualProfile, err := imageprofile.EnhanceFromFlavor(test.baseProfile, &test.flavor, test.versionString)
+			actualProfile, err := imageprofile.EnhanceFromFlavor(ctx, test.baseProfile, &test.flavor, mockFlavorExtensionProducer{}, test.versionString)
 			require.NoError(t, err)
 			require.Equal(t, test.expectedProfile, actualProfile)
 		})
