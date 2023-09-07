@@ -24,9 +24,9 @@ type Options struct { //nolint:govet
 	// External URL of the image service HTTP frontend.
 	ExternalURL string
 
-	// Configuration service OCI registry prefix.
-	// It stores configurations for the image service as blobs under that path.
-	ConfigurationServiceRepository string
+	// Flavor service OCI registry prefix.
+	// It stores flavors for the image service as blobs under that path.
+	FlavorServiceRepository string
 
 	// OCI registry to store installer images has two endpoints:
 	// - one for the image service to push images to
@@ -49,7 +49,7 @@ var DefaultOptions = Options{
 
 	ExternalURL: "https://localhost/",
 
-	ConfigurationServiceRepository: "ghcr.io/siderolabs/image-service/configuration",
+	FlavorServiceRepository: "ghcr.io/siderolabs/image-service/flavors",
 
 	InstallerInternalRepository: "ghcr.io/siderolabs",
 	InstallerExternalRepository: "ghcr.io/siderolabs",

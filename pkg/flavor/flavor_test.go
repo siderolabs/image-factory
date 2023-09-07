@@ -2,14 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package configuration_test
+package flavor_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/siderolabs/image-service/pkg/configuration"
+	"github.com/siderolabs/image-service/pkg/flavor"
 )
 
 func TestID(t *testing.T) {
@@ -17,18 +17,18 @@ func TestID(t *testing.T) {
 
 	for _, test := range []struct { //nolint:govet
 		name       string
-		cfg        configuration.Configuration
+		cfg        flavor.Flavor
 		expectedID string
 	}{
 		{
 			name:       "empty",
-			cfg:        configuration.Configuration{},
+			cfg:        flavor.Flavor{},
 			expectedID: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",
 		},
 		{
 			name: "config1",
-			cfg: configuration.Configuration{
-				Customization: configuration.Customization{
+			cfg: flavor.Flavor{
+				Customization: flavor.Customization{
 					ExtraKernelArgs: []string{"noapic", "nolapic"},
 				},
 			},
@@ -83,7 +83,7 @@ func TestUnmarshalID(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := configuration.Unmarshal(test.cfg)
+			cfg, err := flavor.Unmarshal(test.cfg)
 			require.NoError(t, err)
 
 			id, err := cfg.ID()

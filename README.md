@@ -20,11 +20,11 @@ Official Image Service is available at [https://imager.talos.dev](https://imager
 
 ## HTTP Frontend API
 
-### `POST /configuration`
+### `POST /flavor`
 
-Create a new image configuration.
+Create a new image flavor.
 
-The request body is a YAML (JSON) encoded configuration description:
+The request body is a YAML (JSON) encoded flavor description:
 
 ```yaml
 customization:
@@ -32,23 +32,23 @@ customization:
         - vga=791
 ```
 
-Output is a JSON-encoded configuration ID:
+Output is a JSON-encoded flavor ID:
 
 ```json
 {"id":"2a63b6e7dab90ec9d44f213339b9545bd39c6499b22a14cf575c1ca4b6e39ff8"}
 ```
 
-This ID can be used to download images with this configuration.
+This ID can be used to download images with this flavor.
 
-Well-known configuration IDs:
+Well-known flavor IDs:
 
-* `376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba` - default configuration (without any customizations)
+* `376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba` - default flavor (without any customizations)
 
-### `GET /image/:configuration/:version/:path`
+### `GET /image/:flavor/:version/:path`
 
-Download a Talos boot image with the specified configuration and Talos version.
+Download a Talos boot image with the specified flavor and Talos version.
 
-* `:configuration` is a configuration ID returned by `POST /configuration`
+* `:flavor` is a flavor ID returned by `POST /flavor`
 * `:version` is a Talos version, e.g. `v1.5.0`
 * `:path` is a specific image path, details below
 
@@ -83,28 +83,28 @@ The bare metal machine should be configured to boot from the URL provided by thi
 chain --replace --autofree https://image.service/pxe/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.5.0/metal-${buildarch}
 ```
 
-### `GET /pxe/:configuration/:version/:path`
+### `GET /pxe/:flavor/:version/:path`
 
-Returns an iPXE script which downloads and boots Talos with the specified configuration and Talos version, architecture and platform.
+Returns an iPXE script which downloads and boots Talos with the specified flavor and Talos version, architecture and platform.
 
-* `:configuration` is a configuration ID returned by `POST /configuration`
+* `:flavor` is a flavor ID returned by `POST /flavor`
 * `:version` is a Talos version, e.g. `v1.5.0`
 * `:path` is a `<platform>-<arch>[-secureboot]` path, e.g. `metal-amd64`
 
-In non-SecureBoot configuration, the following iPXE script is returned:
+In non-SecureBoot flavor, the following iPXE script is returned:
 
 ```text
 #!ipxe
-kernel https://image.service/image/:configuration/:version/kernel-<arch> <kernel-cmdline>
-initrd https://image.service/image/:configuration/:version/initramfs-<arch>.xz
+kernel https://image.service/image/:flavor/:version/kernel-<arch> <kernel-cmdline>
+initrd https://image.service/image/:flavor/:version/initramfs-<arch>.xz
 boot
 ```
 
-For SecureBoot configuration, the following iPXE script is returned:
+For SecureBoot flavor, the following iPXE script is returned:
 
 ```text
 #!ipxe
-kernel https://image.service/image/:configuration/:version/<platform>-<arch>-secureboot.uki.efi
+kernel https://image.service/image/:flavor/:version/<platform>-<arch>-secureboot.uki.efi
 boot
 ```
 
@@ -113,11 +113,11 @@ boot
 The Talos `installer` image used both for the initial install and upgrade can be pulled from the Image Service OCI registry.
 If the image hasn't been created yet, it will be built on demand automatically.
 
-### `docker pull <registry>/installer[-secureboot]/<configuration>:<version>`
+### `docker pull <registry>/installer[-secureboot]/<flavor>:<version>`
 
 Example: `docker pull imager.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.5.0`
 
-Pulls the Talos `installer` image with the specified configuration and Talos version.
+Pulls the Talos `installer` image with the specified flavor and Talos version.
 The image platform (architecture) will be determined by the architecture of the Talos Linux machine.
 
 ## Development
@@ -125,5 +125,5 @@ The image platform (architecture) will be determined by the architecture of the 
 Run integration tests in local mode, with registry mirrors:
 
 ```bash
-make integration TEST_FLAGS="-test.image-prefix=127.0.0.1:5004/siderolabs/ -test.configuration-service-repository=127.0.0.1:5005/image-service/configuration -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test" REGISTRY=127.0.0.1:5005
+make integration TEST_FLAGS="-test.image-prefix=127.0.0.1:5004/siderolabs/ -test.flavor-service-repository=127.0.0.1:5005/image-service/flavor -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test" REGISTRY=127.0.0.1:5005
 ```

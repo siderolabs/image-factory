@@ -22,9 +22,9 @@ import (
 
 // handleImage handles downloading of boot assets.
 func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-	configurationID := p.ByName("configuration")
+	flavorID := p.ByName("flavor")
 
-	configuration, err := f.configService.Get(ctx, configurationID)
+	flavor, err := f.flavorService.Get(ctx, flavorID)
 	if err != nil {
 		return err
 	}
@@ -46,9 +46,9 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error parsing profile from path: %w", err)
 	}
 
-	prof, err = profile.EnhanceFromConfiguration(prof, configuration, versionTag)
+	prof, err = profile.EnhanceFromFlavor(prof, flavor, versionTag)
 	if err != nil {
-		return fmt.Errorf("error enhancing profile from configuration: %w", err)
+		return fmt.Errorf("error enhancing profile from flavor: %w", err)
 	}
 
 	if err = prof.Validate(); err != nil {

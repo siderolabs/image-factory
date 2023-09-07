@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package configuration provides a data model for requested image configuration.
-package configuration
+// Package flavor provides a data model for requested image flavor.
+package flavor
 
 import (
 	"bytes"
@@ -14,8 +14,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Configuration represents the requested image configuration.
-type Configuration struct {
+// Flavor represents the requested image customization.
+type Flavor struct {
 	// Customization represents the Talos image customization.
 	Customization Customization `yaml:"customization"`
 }
@@ -36,15 +36,15 @@ type SystemExtensions struct {
 	OfficialExtensions []string `yaml:"officialExtensions,omitempty"`
 }
 
-// InvalidErrorTag is a tag for invalid configuration errors.
+// InvalidErrorTag is a tag for invalid flavor errors.
 type InvalidErrorTag struct{}
 
-// Unmarshal the configuration from text representation.
-func Unmarshal(data []byte) (*Configuration, error) {
+// Unmarshal the flavor from text representation.
+func Unmarshal(data []byte) (*Flavor, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
 
-	var cfg Configuration
+	var cfg Flavor
 
 	if err := dec.Decode(&cfg); err != nil {
 		return nil, xerrors.NewTagged[InvalidErrorTag](err)
@@ -53,18 +53,18 @@ func Unmarshal(data []byte) (*Configuration, error) {
 	return &cfg, nil
 }
 
-// Marshal the configuration to text representation.
+// Marshal the flavor to text representation.
 //
-// Marshal result should be stable if new configuration fields are added.
-func (cfg *Configuration) Marshal() ([]byte, error) {
+// Marshal result should be stable if new flavor fields are added.
+func (cfg *Flavor) Marshal() ([]byte, error) {
 	return yaml.Marshal(cfg)
 }
 
-// ID returns the identifier of the configuration.
+// ID returns the identifier of the flavor.
 //
-// ID is stable (does not change if the configuration is same).
-// ID matches sha256 hash of the canonical representation of the configuration.
-func (cfg *Configuration) ID() (string, error) {
+// ID is stable (does not change if the flavor is same).
+// ID matches sha256 hash of the canonical representation of the flavor.
+func (cfg *Flavor) ID() (string, error) {
 	data, err := cfg.Marshal()
 	if err != nil {
 		return "", err

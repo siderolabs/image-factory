@@ -25,9 +25,9 @@ import (
 
 	"github.com/siderolabs/image-service/internal/artifacts"
 	"github.com/siderolabs/image-service/internal/asset"
-	"github.com/siderolabs/image-service/internal/configuration"
-	"github.com/siderolabs/image-service/internal/configuration/storage/cache"
-	"github.com/siderolabs/image-service/internal/configuration/storage/registry"
+	"github.com/siderolabs/image-service/internal/flavor"
+	"github.com/siderolabs/image-service/internal/flavor/storage/cache"
+	"github.com/siderolabs/image-service/internal/flavor/storage/registry"
 	frontendhttp "github.com/siderolabs/image-service/internal/frontend/http"
 	"github.com/siderolabs/image-service/internal/version"
 )
@@ -44,7 +44,7 @@ func RunService(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	defer artifactsManager.Close() //nolint:errcheck
 
-	configService, err := buildConfigService(logger, opts)
+	configService, err := buildFlavorService(logger, opts)
 	if err != nil {
 		return err
 	}
@@ -152,8 +152,8 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 	return artifactsManager, nil
 }
 
-func buildConfigService(logger *zap.Logger, opts Options) (*configuration.Service, error) {
-	repo, err := name.NewRepository(opts.ConfigurationServiceRepository)
+func buildFlavorService(logger *zap.Logger, opts Options) (*flavor.Service, error) {
+	repo, err := name.NewRepository(opts.FlavorServiceRepository)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
@@ -163,7 +163,7 @@ func buildConfigService(logger *zap.Logger, opts Options) (*configuration.Servic
 		return nil, fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
-	return configuration.NewService(logger, cache.NewCache(storage), configuration.Options{}), nil
+	return flavor.NewService(logger, cache.NewCache(storage), flavor.Options{}), nil
 }
 
 // remoteOptions returns options for remote registry access.

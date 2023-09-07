@@ -12,11 +12,11 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/siderolabs/image-service/pkg/configuration"
+	"github.com/siderolabs/image-service/pkg/flavor"
 )
 
-// handleConfigurationCreate handles downloading of boot assets.
-func (f *Frontend) handleConfigurationCreate(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+// handleFlavorCreate handles creation of the flavor.
+func (f *Frontend) handleFlavorCreate(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err
@@ -26,12 +26,12 @@ func (f *Frontend) handleConfigurationCreate(ctx context.Context, w http.Respons
 		return err
 	}
 
-	cfg, err := configuration.Unmarshal(data)
+	cfg, err := flavor.Unmarshal(data)
 	if err != nil {
 		return err
 	}
 
-	id, err := f.configService.Put(ctx, cfg)
+	id, err := f.flavorService.Put(ctx, cfg)
 	if err != nil {
 		return err
 	}

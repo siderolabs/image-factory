@@ -20,16 +20,16 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-service/internal/asset"
-	cfg "github.com/siderolabs/image-service/internal/configuration"
-	"github.com/siderolabs/image-service/internal/configuration/storage"
+	flvr "github.com/siderolabs/image-service/internal/flavor"
+	"github.com/siderolabs/image-service/internal/flavor/storage"
 	"github.com/siderolabs/image-service/internal/profile"
-	"github.com/siderolabs/image-service/pkg/configuration"
+	"github.com/siderolabs/image-service/pkg/flavor"
 )
 
 // Frontend is the HTTP frontend.
 type Frontend struct {
 	router        *httprouter.Router
-	configService *cfg.Service
+	flavorService *flvr.Service
 	assetBuilder  *asset.Builder
 	logger        *zap.Logger
 	puller        *remote.Puller
@@ -49,10 +49,10 @@ type Options struct {
 }
 
 // NewFrontend creates a new HTTP frontend.
-func NewFrontend(logger *zap.Logger, configService *cfg.Service, assetBuilder *asset.Builder, opts Options) (*Frontend, error) {
+func NewFrontend(logger *zap.Logger, flavorService *flvr.Service, assetBuilder *asset.Builder, opts Options) (*Frontend, error) {
 	frontend := &Frontend{
 		router:        httprouter.New(),
-		configService: configService,
+		flavorService: flavorService,
 		assetBuilder:  assetBuilder,
 		logger:        logger.With(zap.String("frontend", "http")),
 		options:       opts,
@@ -71,24 +71,24 @@ func NewFrontend(logger *zap.Logger, configService *cfg.Service, assetBuilder *a
 	}
 
 	// images
-	frontend.router.GET("/image/:configuration/:version/:path", frontend.wrapper(frontend.handleImage))
-	frontend.router.HEAD("/image/:configuration/:version/:path", frontend.wrapper(frontend.handleImage))
+	frontend.router.GET("/image/:flavor/:version/:path", frontend.wrapper(frontend.handleImage))
+	frontend.router.HEAD("/image/:flavor/:version/:path", frontend.wrapper(frontend.handleImage))
 
 	// PXE
-	frontend.router.GET("/pxe/:configuration/:version/:path", frontend.wrapper(frontend.handlePXE))
+	frontend.router.GET("/pxe/:flavor/:version/:path", frontend.wrapper(frontend.handlePXE))
 
 	// registry
 	frontend.router.GET("/v2", frontend.wrapper(frontend.handleHealth))
 	frontend.router.HEAD("/v2", frontend.wrapper(frontend.handleHealth))
 	frontend.router.GET("/healthz", frontend.wrapper(frontend.handleHealth))
 	frontend.router.HEAD("/healthz", frontend.wrapper(frontend.handleHealth))
-	frontend.router.GET("/v2/:image/:configuration/blobs/:digest", frontend.wrapper(frontend.handleBlob))
-	frontend.router.HEAD("/v2/:image/:configuration/blobs/:digest", frontend.wrapper(frontend.handleBlob))
-	frontend.router.GET("/v2/:image/:configuration/manifests/:tag", frontend.wrapper(frontend.handleManifest))
-	frontend.router.HEAD("/v2/:image/:configuration/manifests/:tag", frontend.wrapper(frontend.handleManifest))
+	frontend.router.GET("/v2/:image/:flavor/blobs/:digest", frontend.wrapper(frontend.handleBlob))
+	frontend.router.HEAD("/v2/:image/:flavor/blobs/:digest", frontend.wrapper(frontend.handleBlob))
+	frontend.router.GET("/v2/:image/:flavor/manifests/:tag", frontend.wrapper(frontend.handleManifest))
+	frontend.router.HEAD("/v2/:image/:flavor/manifests/:tag", frontend.wrapper(frontend.handleManifest))
 
-	// configuration
-	frontend.router.POST("/configuration", frontend.wrapper(frontend.handleConfigurationCreate))
+	// flavor
+	frontend.router.POST("/flavor", frontend.wrapper(frontend.handleFlavorCreate))
 
 	return frontend, nil
 }
@@ -112,7 +112,7 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 		case xerrors.TagIs[storage.ErrNotFoundTag](err):
 			http.Error(w, err.Error(), http.StatusNotFound)
 		case xerrors.TagIs[profile.InvalidErrorTag](err),
-			xerrors.TagIs[configuration.InvalidErrorTag](err):
+			xerrors.TagIs[flavor.InvalidErrorTag](err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case errors.Is(err, context.Canceled):
 			// client closed connection

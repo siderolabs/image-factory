@@ -15,7 +15,7 @@ import (
 
 	"github.com/siderolabs/image-service/internal/artifacts"
 	imageprofile "github.com/siderolabs/image-service/internal/profile"
-	"github.com/siderolabs/image-service/pkg/configuration"
+	"github.com/siderolabs/image-service/pkg/flavor"
 )
 
 func TestParseFromPath(t *testing.T) {
@@ -209,13 +209,13 @@ func TestParseFromPath(t *testing.T) {
 	}
 }
 
-func TestEnhanceFromConfiguration(t *testing.T) {
+func TestEnhanceFromFlavor(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct { //nolint:govet
 		name          string
 		baseProfile   profile.Profile
-		configuration configuration.Configuration
+		flavor        flavor.Flavor
 		versionString string
 
 		expectedProfile profile.Profile
@@ -223,7 +223,7 @@ func TestEnhanceFromConfiguration(t *testing.T) {
 		{
 			name:          "no customization",
 			baseProfile:   profile.Default[constants.PlatformMetal],
-			configuration: configuration.Configuration{},
+			flavor:        flavor.Flavor{},
 			versionString: "v1.5.0",
 
 			expectedProfile: profile.Profile{
@@ -243,8 +243,8 @@ func TestEnhanceFromConfiguration(t *testing.T) {
 		{
 			name:        "extra kernel args",
 			baseProfile: profile.Default[constants.PlatformMetal],
-			configuration: configuration.Configuration{
-				Customization: configuration.Customization{
+			flavor: flavor.Flavor{
+				Customization: flavor.Customization{
 					ExtraKernelArgs: []string{"noapic", "nolapic"},
 				},
 			},
@@ -271,7 +271,7 @@ func TestEnhanceFromConfiguration(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actualProfile, err := imageprofile.EnhanceFromConfiguration(test.baseProfile, &test.configuration, test.versionString)
+			actualProfile, err := imageprofile.EnhanceFromFlavor(test.baseProfile, &test.flavor, test.versionString)
 			require.NoError(t, err)
 			require.Equal(t, test.expectedProfile, actualProfile)
 		})

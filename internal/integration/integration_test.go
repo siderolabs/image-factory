@@ -32,7 +32,7 @@ func setupService(t *testing.T) (context.Context, string) {
 	options.HTTPListenAddr = findListenAddr(t)
 	options.ImagePrefix = imagePrefixFlag
 	options.ExternalURL = "http://" + options.HTTPListenAddr + "/"
-	options.ConfigurationServiceRepository = configurationServiceRepositoryFlag
+	options.FlavorServiceRepository = flavorServiceRepositoryFlag
 	options.InstallerExternalRepository = installerExternalRepository
 	options.InstallerInternalRepository = installerInternalRepository
 
@@ -78,9 +78,9 @@ func TestIntegration(t *testing.T) {
 	ctx, listenAddr := setupService(t)
 	baseURL := "http://" + listenAddr
 
-	t.Run("TestConfiguration", func(t *testing.T) {
-		// configuration should be created first, thus no t.Parallel
-		testConfiguration(ctx, t, baseURL)
+	t.Run("TestFlavor", func(t *testing.T) {
+		// flavor should be created first, thus no t.Parallel
+		testFlavor(ctx, t, baseURL)
 	})
 
 	t.Run("TestDownloadFrontend", func(t *testing.T) {
@@ -103,15 +103,15 @@ func TestIntegration(t *testing.T) {
 }
 
 var (
-	imagePrefixFlag                    string
-	configurationServiceRepositoryFlag string
-	installerExternalRepository        string
-	installerInternalRepository        string
+	imagePrefixFlag             string
+	flavorServiceRepositoryFlag string
+	installerExternalRepository string
+	installerInternalRepository string
 )
 
 func init() {
 	flag.StringVar(&imagePrefixFlag, "test.image-prefix", cmd.DefaultOptions.ImagePrefix, "image prefix")
-	flag.StringVar(&configurationServiceRepositoryFlag, "test.configuration-service-repository", cmd.DefaultOptions.ConfigurationServiceRepository, "configuration service repository")
+	flag.StringVar(&flavorServiceRepositoryFlag, "test.flavor-service-repository", cmd.DefaultOptions.FlavorServiceRepository, "flavor service repository")
 	flag.StringVar(&installerExternalRepository, "test.installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
 	flag.StringVar(&installerInternalRepository, "test.installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
 }

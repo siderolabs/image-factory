@@ -14,7 +14,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 
 	"github.com/siderolabs/image-service/internal/artifacts"
-	"github.com/siderolabs/image-service/pkg/configuration"
+	"github.com/siderolabs/image-service/pkg/flavor"
 )
 
 // InvalidErrorTag tags errors related to invalid profiles.
@@ -226,16 +226,16 @@ func InstallerProfile(secureboot bool, arch artifacts.Arch) profile.Profile {
 	return prof
 }
 
-// EnhanceFromConfiguration enhances the profile with the configuration.
-func EnhanceFromConfiguration(prof profile.Profile, config *configuration.Configuration, versionTag string) (profile.Profile, error) {
-	if len(config.Customization.SystemExtensions.OfficialExtensions) > 0 {
+// EnhanceFromFlavor enhances the profile with the flavor.
+func EnhanceFromFlavor(prof profile.Profile, flavor *flavor.Flavor, versionTag string) (profile.Profile, error) {
+	if len(flavor.Customization.SystemExtensions.OfficialExtensions) > 0 {
 		// TODO: implement me
 		return prof, xerrors.NewTaggedf[InvalidErrorTag]("system extensions are not supported yet")
 	}
 
 	if prof.Output.Kind != profile.OutKindInitramfs && prof.Output.Kind != profile.OutKindKernel && prof.Output.Kind != profile.OutKindInstaller {
 		// skip customizations for profile kinds which don't support it
-		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, config.Customization.ExtraKernelArgs...)
+		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, flavor.Customization.ExtraKernelArgs...)
 	}
 
 	prof.Version = versionTag
