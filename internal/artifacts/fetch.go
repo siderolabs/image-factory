@@ -16,97 +16,45 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
-// fetcher is responsible for fetching artifacts.
-type fetcher struct {
-	result error
-
-	subscribers chan []chan error
-}
-
-// newFetcher creates a new fetcher.
-func newFetcher() *fetcher {
-	subscribers := make(chan []chan error, 1)
-	subscribers <- nil
-
-	return &fetcher{
-		subscribers: subscribers,
-	}
-}
-
-// Subscribe to the result of the fetch operation.
-//
-// If fetch process is still ongoing, the channel will be notified when the fetch is finished.
-// If fetch process is already finished, the channel will be notified immediately.
-func (f *fetcher) Subscribe() <-chan error {
-	ch := make(chan error, 1)
-
-	l, ok := <-f.subscribers
-	if !ok {
-		// finished
-		ch <- f.result
-	} else {
-		// still running
-		l = append(l, ch)
-		f.subscribers <- l
-	}
-
-	return ch
-}
-
-// Fetch the artifacts, store the fetch result, and notify subscribers last.
-func (f *fetcher) Fetch(logger *zap.Logger, tag string, options Options, storagePath string) {
-	go func() {
-		// set a timeout for fetching, but don't bind it to any context, as we want fetch operation to finish
-		ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
-		defer cancel()
-
-		err := f.fetch(ctx, logger, tag, options, storagePath)
-
-		subscribers := <-f.subscribers
-
-		f.result = err
-		close(f.subscribers)
-
-		for _, ch := range subscribers {
-			ch <- err
-		}
-	}()
-}
-
-func (f *fetcher) fetch(ctx context.Context, logger *zap.Logger, tag string, options Options, storagePath string) error {
-	imageRef := options.ImagePrefix + "imager:" + tag
+// fetchImageByTag contains combined logic of image handling: heading, downloading, verifying signatures, and exporting.
+func (m *Manager) fetchImageByTag(imageName, tag string, architecture Arch, exportHandler func(logger *zap.Logger, r io.Reader) error) error {
+	// set a timeout for fetching, but don't bind it to any context, as we want fetch operation to finish
+	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
+	defer cancel()
 
 	// light check first - if the image exists, and resolve the digest
 	// it's important to do further checks by digest exactly
-	logger.Debug("heading the image", zap.String("image", imageRef))
+	repoRef := m.imageRegistry.Repo(imageName).Tag(tag)
 
-	descriptor, err := crane.Head(imageRef, crane.WithContext(ctx))
+	m.logger.Debug("heading the image", zap.Stringer("image", repoRef))
+
+	descriptor, err := m.pullers[architecture].Head(ctx, repoRef)
 	if err != nil {
 		return err
 	}
 
-	namedRef, err := name.ParseReference(imageRef)
-	if err != nil {
-		return err
-	}
+	digestRef := repoRef.Digest(descriptor.Digest.String())
 
-	digestRef, err := name.ParseReference(namedRef.Name() + "@" + descriptor.Digest.String())
-	if err != nil {
-		return err
-	}
+	return m.fetchImageByDigest(digestRef, architecture, exportHandler)
+}
 
-	logger = logger.With(zap.Stringer("image", digestRef))
+// fetchImageByDigest fetches an image by digest, verifies signatures, and exports it to the storage.
+func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, exportHandler func(logger *zap.Logger, r io.Reader) error) error {
+	// set a timeout for fetching, but don't bind it to any context, as we want fetch operation to finish
+	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
+	defer cancel()
+
+	logger := m.logger.With(zap.Stringer("image", digestRef))
 
 	// verify the image signature, we only accept properly signed images
 	logger.Debug("verifying image signature")
 
-	_, bundleVerified, err := cosign.VerifyImageSignatures(ctx, digestRef, &options.ImageVerifyOptions)
+	_, bundleVerified, err := cosign.VerifyImageSignatures(ctx, digestRef, &m.options.ImageVerifyOptions)
 	if err != nil {
 		return fmt.Errorf("failed to verify image signature: %w", err)
 	}
@@ -116,12 +64,14 @@ func (f *fetcher) fetch(ctx context.Context, logger *zap.Logger, tag string, opt
 	// pull down the image and extract the necessary parts
 	logger.Info("pulling the image")
 
-	img, err := crane.Pull(digestRef.String(), crane.WithPlatform(&v1.Platform{
-		Architecture: "amd64", // always pull linux/amd64, even though it's not important, as only artifacts will be used
-		OS:           "linux",
-	}), crane.WithContext(ctx))
+	desc, err := m.pullers[architecture].Get(ctx, digestRef)
 	if err != nil {
 		return fmt.Errorf("error pulling image %s: %w", digestRef, err)
+	}
+
+	img, err := desc.Image()
+	if err != nil {
+		return fmt.Errorf("error creating image from descriptor: %w", err)
 	}
 
 	logger.Info("extracting the image")
@@ -137,7 +87,7 @@ func (f *fetcher) fetch(ctx context.Context, logger *zap.Logger, tag string, opt
 	})
 
 	eg.Go(func() error {
-		err = untar(logger, r, filepath.Join(storagePath, tag))
+		err = exportHandler(logger, r)
 		if err != nil {
 			r.CloseWithError(err) // signal the exporter to stop
 		}
@@ -145,7 +95,49 @@ func (f *fetcher) fetch(ctx context.Context, logger *zap.Logger, tag string, opt
 		return err
 	})
 
-	return eg.Wait()
+	if err = eg.Wait(); err != nil {
+		return fmt.Errorf("error extracting the image: %w", err)
+	}
+
+	return nil
+}
+
+// fetchImager fetches 'imager' container, and saves to the storage path.
+func (m *Manager) fetchImager(tag string) error {
+	destinationPath := filepath.Join(m.storagePath, tag)
+
+	if err := m.fetchImageByTag(ImagerImage, tag, ArchAmd64, func(logger *zap.Logger, r io.Reader) error {
+		return untar(logger, r, destinationPath+"-tmp")
+	}); err != nil {
+		return err
+	}
+
+	return os.Rename(destinationPath+"-tmp", destinationPath)
+}
+
+// fetchExtensionImage fetches a specified extension image and exports it to the storage.
+func (m *Manager) fetchExtensionImage(arch Arch, ref ExtensionRef, destPath string) error {
+	imageRef := m.imageRegistry.Repo(ref.TaggedReference.RepositoryStr()).Digest(ref.Digest)
+
+	if err := m.fetchImageByDigest(imageRef, arch, func(logger *zap.Logger, r io.Reader) error {
+		f, err := os.Create(destPath + "-tmp")
+		if err != nil {
+			return err
+		}
+
+		defer f.Close() //nolint:errcheck
+
+		_, err = io.Copy(f, r)
+		if err != nil {
+			return err
+		}
+
+		return f.Close()
+	}); err != nil {
+		return err
+	}
+
+	return os.Rename(destPath+"-tmp", destPath)
 }
 
 func untar(logger *zap.Logger, r io.Reader, destination string) error {

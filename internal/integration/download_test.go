@@ -103,53 +103,75 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		t.Run(talosVersion, func(t *testing.T) {
 			t.Parallel()
 
-			t.Run("iso", func(t *testing.T) {
+			t.Run("empty flavor", func(t *testing.T) {
 				t.Parallel()
 
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", 82724864)
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", 122007552)
+				t.Run("iso", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", 82724864)
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", 122007552)
+				})
+
+				t.Run("kernel", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "kernel-amd64", "application/vnd.microsoft.portable-executable", 16708992)
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "kernel-arm64", "application/vnd.microsoft.portable-executable", 69356032)
+				})
+
+				t.Run("initramfs", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "initramfs-amd64.xz", "application/x-xz", 57.5*MiB)
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "initramfs-arm64.xz", "application/x-xz", 42.5*MiB)
+				})
+
+				t.Run("installer image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "installer-amd64.tar", "application/x-tar", 167482880)
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "installer-arm64.tar", "application/x-tar", 163630080)
+				})
+
+				t.Run("metal image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", 78472708)
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 66625420)
+				})
+
+				t.Run("aws image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "aws-amd64.raw.xz", "application/x-xz", 78472708)
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "aws-arm64.raw.xz", "application/x-xz", 66625420)
+				})
+
+				t.Run("gcp image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "gcp-amd64.raw.tar.gz", "application/gzip", 78472708)
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "gcp-arm64.raw.tar.gz", "application/gzip", 70625420)
+				})
 			})
 
-			t.Run("kernel", func(t *testing.T) {
+			t.Run("extensions flavor", func(t *testing.T) {
 				t.Parallel()
 
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "kernel-amd64", "application/vnd.microsoft.portable-executable", 16708992)
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "kernel-arm64", "application/vnd.microsoft.portable-executable", 69356032)
-			})
+				t.Run("iso", func(t *testing.T) {
+					t.Parallel()
 
-			t.Run("initramfs", func(t *testing.T) {
-				t.Parallel()
+					downloadAssetAndMatch(ctx, t, baseURL, systemExtensionsFlavorID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", 112222208)
+					downloadAssetAndMatch(ctx, t, baseURL, systemExtensionsFlavorID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", 150120448)
+				})
 
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "initramfs-amd64.xz", "application/x-xz", 57.5*MiB)
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "initramfs-arm64.xz", "application/x-xz", 42.5*MiB)
-			})
+				t.Run("metal image", func(t *testing.T) {
+					t.Parallel()
 
-			t.Run("installer image", func(t *testing.T) {
-				t.Parallel()
-
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "installer-amd64.tar", "application/x-tar", 167482880)
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "installer-arm64.tar", "application/x-tar", 163630080)
-			})
-
-			t.Run("metal image", func(t *testing.T) {
-				t.Parallel()
-
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", 78472708)
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 66625420)
-			})
-
-			t.Run("aws image", func(t *testing.T) {
-				t.Parallel()
-
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "aws-amd64.raw.xz", "application/x-xz", 78472708)
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "aws-arm64.raw.xz", "application/x-xz", 66625420)
-			})
-
-			t.Run("gcp image", func(t *testing.T) {
-				t.Parallel()
-
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "gcp-amd64.raw.tar.gz", "application/gzip", 78472708)
-				downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "gcp-arm64.raw.tar.gz", "application/gzip", 70625420)
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", 78472708)
+					downloadAssetAndMatch(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 66625420)
+				})
 			})
 		})
 	}

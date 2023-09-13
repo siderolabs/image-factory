@@ -28,7 +28,7 @@ func (m *Manager) GetFlavorExtension(ctx context.Context, flavor *flavor.Flavor)
 
 	extensionPath := filepath.Join(m.flavorsPath, flavorID+".tar")
 
-	resultCh := m.flavorsSingleFlight.DoChan(flavorID, func() (any, error) {
+	resultCh := m.sf.DoChan(flavorID, func() (any, error) {
 		return nil, m.buildFlavorExtension(flavorID, extensionPath)
 	})
 

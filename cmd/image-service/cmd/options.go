@@ -4,6 +4,8 @@
 
 package cmd
 
+import "time"
+
 // Options configures image service.
 type Options struct { //nolint:govet
 	// Listen address for the HTTP frontend.
@@ -11,8 +13,8 @@ type Options struct { //nolint:govet
 
 	// Asset builder options: minimum supported Talos version.
 	MinTalosVersion string
-	// Image prefix for the `imager`.
-	ImagePrefix string
+	// Image registry for source images: imager, extensions, etc..
+	ImageRegistry string
 
 	// Options to verify container signatures for imager, extensions, etc.
 	ContainerSignatureSubjectRegExp string
@@ -33,14 +35,17 @@ type Options struct { //nolint:govet
 	// - external one for the redirects
 	InstallerInternalRepository string
 	InstallerExternalRepository string
+
+	// TalosVersionRecheckInterval is the interval for rechecking Talos versions.
+	TalosVersionRecheckInterval time.Duration
 }
 
 // DefaultOptions are the default options.
 var DefaultOptions = Options{
 	HTTPListenAddr: ":8080",
 
-	MinTalosVersion: "1.4.0",
-	ImagePrefix:     "ghcr.io/siderolabs/",
+	MinTalosVersion: "1.4.0-alpha.0",
+	ImageRegistry:   "ghcr.io",
 
 	ContainerSignatureSubjectRegExp: `@siderolabs\.com$`,
 	ContainerSignatureIssuer:        "https://accounts.google.com",
@@ -53,4 +58,6 @@ var DefaultOptions = Options{
 
 	InstallerInternalRepository: "ghcr.io/siderolabs",
 	InstallerExternalRepository: "ghcr.io/siderolabs",
+
+	TalosVersionRecheckInterval: 15 * time.Minute,
 }

@@ -101,7 +101,7 @@ spec:
       - name: TEST_FLAGS
         defaultValue: ""
     script:
-      - "@$(MAKE) image-image-service PUSH=true"
+      - "@$(MAKE) image-image-service PUSH=true GO_BUILDFLAGS=-race CGO_ENABLED=1"
       - docker pull $(REGISTRY)/$(USERNAME)/image-service:$(TAG)
       - docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-service:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
   drone:
@@ -110,3 +110,7 @@ spec:
     environment:
       REGISTRY: registry.dev.talos-systems.io
       TEST_FLAGS: "-test.flavor-service-repository=registry.dev.talos-systems.io/image-service/flavor -test.installer-external-repository=registry.dev.talos-systems.io/siderolabs -test.installer-internal-repository=registry.dev.talos-systems.io/siderolabs"
+---
+kind: auto.CI
+spec:
+    provider: drone

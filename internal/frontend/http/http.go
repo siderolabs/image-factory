@@ -91,7 +91,11 @@ func NewFrontend(logger *zap.Logger, flavorService *flvr.Service, assetBuilder *
 	frontend.router.HEAD("/v2/:image/:flavor/manifests/:tag", frontend.wrapper(frontend.handleManifest))
 
 	// flavor
-	frontend.router.POST("/flavor", frontend.wrapper(frontend.handleFlavorCreate))
+	frontend.router.POST("/flavors", frontend.wrapper(frontend.handleFlavorCreate))
+
+	// meta
+	frontend.router.GET("/versions", frontend.wrapper(frontend.handleVersions))
+	frontend.router.GET("/version/:version/extensions/official", frontend.wrapper(frontend.handleOfficialExtensions))
 
 	return frontend, nil
 }

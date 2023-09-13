@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
@@ -210,9 +212,9 @@ func TestParseFromPath(t *testing.T) {
 	}
 }
 
-type mockFlavorExtensionProducer struct{}
+type mockExtensionProducer struct{}
 
-func (mockFlavorExtensionProducer) GetFlavorExtension(_ context.Context, flavor *flavor.Flavor) (string, error) {
+func (mockExtensionProducer) GetFlavorExtension(_ context.Context, flavor *flavor.Flavor) (string, error) {
 	id, err := flavor.ID()
 	if err != nil {
 		return "", err
@@ -221,11 +223,31 @@ func (mockFlavorExtensionProducer) GetFlavorExtension(_ context.Context, flavor 
 	return fmt.Sprintf("%s.tar", id), nil
 }
 
+func (mockExtensionProducer) GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error) {
+	return []artifacts.ExtensionRef{
+		{
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/amd-ucode:2023048")),
+			Digest:          "sha256:1234567890",
+		},
+		{
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/intel-ucode:20210608")),
+			Digest:          "sha256:0987654321",
+		},
+	}, nil
+}
+
+func (mockExtensionProducer) GetExtensionImage(_ context.Context, arch artifacts.Arch, ref artifacts.ExtensionRef) (string, error) {
+	return fmt.Sprintf("%s-%s.tar", arch, ref.Digest), nil
+}
+
 func TestEnhanceFromFlavor(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
+
+	baseProfile := profile.Default[constants.PlatformMetal].DeepCopy()
+	baseProfile.Arch = "amd64"
 
 	for _, test := range []struct { //nolint:govet
 		name          string
@@ -237,13 +259,14 @@ func TestEnhanceFromFlavor(t *testing.T) {
 	}{
 		{
 			name:          "no customization",
-			baseProfile:   profile.Default[constants.PlatformMetal],
+			baseProfile:   baseProfile,
 			flavor:        flavor.Flavor{},
 			versionString: "v1.5.0",
 
 			expectedProfile: profile.Profile{
 				Platform:   constants.PlatformMetal,
 				SecureBoot: pointer.To(false),
+				Arch:       "amd64",
 				Version:    "v1.5.0",
 				Input: profile.Input{
 					SystemExtensions: []profile.ContainerAsset{
@@ -264,7 +287,7 @@ func TestEnhanceFromFlavor(t *testing.T) {
 		},
 		{
 			name:        "extra kernel args",
-			baseProfile: profile.Default[constants.PlatformMetal],
+			baseProfile: baseProfile,
 			flavor: flavor.Flavor{
 				Customization: flavor.Customization{
 					ExtraKernelArgs: []string{"noapic", "nolapic"},
@@ -275,6 +298,7 @@ func TestEnhanceFromFlavor(t *testing.T) {
 			expectedProfile: profile.Profile{
 				Platform:   constants.PlatformMetal,
 				SecureBoot: pointer.To(false),
+				Arch:       "amd64",
 				Version:    "v1.5.1",
 				Customization: profile.CustomizationProfile{
 					ExtraKernelArgs: []string{"noapic", "nolapic"},
@@ -296,11 +320,55 @@ func TestEnhanceFromFlavor(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "extensions",
+			baseProfile: baseProfile,
+			flavor: flavor.Flavor{
+				Customization: flavor.Customization{
+					SystemExtensions: flavor.SystemExtensions{
+						OfficialExtensions: []string{
+							"siderolabs/amd-ucode",
+							"siderolabs/intel-ucode",
+						},
+					},
+				},
+			},
+			versionString: "v1.5.1",
+
+			expectedProfile: profile.Profile{
+				Platform:      constants.PlatformMetal,
+				SecureBoot:    pointer.To(false),
+				Arch:          "amd64",
+				Version:       "v1.5.1",
+				Customization: profile.CustomizationProfile{},
+				Input: profile.Input{
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							TarballPath: "amd64-sha256:1234567890.tar",
+						},
+						{
+							TarballPath: "amd64-sha256:0987654321.tar",
+						},
+						{
+							TarballPath: "9f14d3d939d420f57d8ee3e64c4c2cd29ecb6fa10da4e1c8ac99da4b04d5e463.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatXZ,
+					ImageOptions: &profile.ImageOptions{
+						DiskSize:   profile.MinRAWDiskSize,
+						DiskFormat: profile.DiskFormatRaw,
+					},
+				},
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actualProfile, err := imageprofile.EnhanceFromFlavor(ctx, test.baseProfile, &test.flavor, mockFlavorExtensionProducer{}, test.versionString)
+			actualProfile, err := imageprofile.EnhanceFromFlavor(ctx, test.baseProfile, &test.flavor, mockExtensionProducer{}, test.versionString)
 			require.NoError(t, err)
 			require.Equal(t, test.expectedProfile, actualProfile)
 		})

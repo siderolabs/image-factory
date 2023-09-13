@@ -130,8 +130,8 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 	}
 
 	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
-		MinVersion:  minVersion,
-		ImagePrefix: opts.ImagePrefix,
+		MinVersion:    minVersion,
+		ImageRegistry: opts.ImageRegistry,
 		ImageVerifyOptions: cosign.CheckOpts{
 			Identities: []cosign.Identity{
 				{
@@ -144,6 +144,8 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 			RekorPubKeys:      rekorPubKeys,
 			CTLogPubKeys:      ctLogPubKeys,
 		},
+		TalosVersionRecheckInterval: opts.TalosVersionRecheckInterval,
+		RemoteOptions:               remoteOptions(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize artifacts manager: %w", err)

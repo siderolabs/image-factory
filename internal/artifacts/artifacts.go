@@ -9,19 +9,24 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 )
 
 // Options are the options for the artifacts manager.
-type Options struct {
-	// ImagePrefix is the prefix for the image name.
+type Options struct { //nolint:govet
+	// ImageRegistry is the registry which stores imager, extensions, etc..
 	//
-	// For official images, this is "ghcr.io/siderolabs/"
-	ImagePrefix string
+	// For official images, this is "ghcr.io".
+	ImageRegistry string
 	// MinVersion is the minimum version of Talos to use.
 	MinVersion semver.Version
 	// ImageVerifyOptions are the options for verifying the image signature.
 	ImageVerifyOptions cosign.CheckOpts
+	// TalosVersionRecheckInterval is the interval for rechecking Talos versions.
+	TalosVersionRecheckInterval time.Duration
+	// RemoteOptions is the list of remote options for the puller.
+	RemoteOptions []remote.Option
 }
 
 // Kind is the artifact kind.
@@ -37,3 +42,10 @@ const (
 
 // FetchTimeout controls overall timeout for fetching artifacts for a release.
 const FetchTimeout = 20 * time.Minute
+
+// Various images.
+const (
+	InstallerImage         = "siderolabs/installer"
+	ImagerImage            = "siderolabs/imager"
+	ExtensionManifestImage = "siderolabs/extensions"
+)

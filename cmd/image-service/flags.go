@@ -17,7 +17,7 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.HTTPListenAddr, "http-port", cmd.DefaultOptions.HTTPListenAddr, "HTTP listen address")
 
 	flag.StringVar(&opts.MinTalosVersion, "min-talos-version", cmd.DefaultOptions.MinTalosVersion, "minimum Talos version")
-	flag.StringVar(&opts.ImagePrefix, "image-prefix", cmd.DefaultOptions.ImagePrefix, "image prefix")
+	flag.StringVar(&opts.ImageRegistry, "image-registry", cmd.DefaultOptions.ImageRegistry, "image registry for imager, extensions, etc.")
 
 	flag.StringVar(&opts.ContainerSignatureSubjectRegExp, "container-signature-subject-regexp", cmd.DefaultOptions.ContainerSignatureSubjectRegExp, "container signature subject regexp")
 	flag.StringVar(&opts.ContainerSignatureIssuer, "container-signature-issuer", cmd.DefaultOptions.ContainerSignatureIssuer, "container signature issuer")
@@ -30,6 +30,8 @@ func initFlags() cmd.Options {
 
 	flag.StringVar(&opts.InstallerExternalRepository, "installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
 	flag.StringVar(&opts.InstallerInternalRepository, "installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
+
+	flag.DurationVar(&opts.TalosVersionRecheckInterval, "talos-versions-recheck-interval", cmd.DefaultOptions.TalosVersionRecheckInterval, "interval to recheck Talos versions")
 
 	flag.Parse()
 

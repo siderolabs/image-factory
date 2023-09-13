@@ -68,6 +68,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 	}
 
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, path))
 	w.WriteHeader(http.StatusOK)
 
 	if r.Method == http.MethodHead {

@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-08-31T14:21:15Z by kres latest.
+# Generated on 2023-09-12T19:22:18Z by kres latest.
 
 ARG TOOLCHAIN
 
@@ -127,7 +127,10 @@ COPY --from=embed-generate / /
 WORKDIR /src/cmd/image-service
 ARG GO_BUILDFLAGS
 ARG GO_LDFLAGS
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOARCH=amd64 GOOS=linux go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS}" -o /image-service-linux-amd64
+ARG VERSION_PKG="internal/version"
+ARG SHA
+ARG TAG
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOARCH=amd64 GOOS=linux go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS} -X ${VERSION_PKG}.Name=image-service -X ${VERSION_PKG}.SHA=${SHA} -X ${VERSION_PKG}.Tag=${TAG}" -o /image-service-linux-amd64
 
 # builds image-service-linux-arm64
 FROM base AS image-service-linux-arm64-build
@@ -136,7 +139,10 @@ COPY --from=embed-generate / /
 WORKDIR /src/cmd/image-service
 ARG GO_BUILDFLAGS
 ARG GO_LDFLAGS
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOARCH=arm64 GOOS=linux go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS}" -o /image-service-linux-arm64
+ARG VERSION_PKG="internal/version"
+ARG SHA
+ARG TAG
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOARCH=arm64 GOOS=linux go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS} -X ${VERSION_PKG}.Name=image-service -X ${VERSION_PKG}.SHA=${SHA} -X ${VERSION_PKG}.Tag=${TAG}" -o /image-service-linux-arm64
 
 FROM scratch AS image-service-linux-amd64
 COPY --from=image-service-linux-amd64-build /image-service-linux-amd64 /image-service-linux-amd64

@@ -20,7 +20,7 @@ Official Image Service is available at [https://imager.talos.dev](https://imager
 
 ## HTTP Frontend API
 
-### `POST /flavor`
+### `POST /flavors`
 
 Create a new image flavor.
 
@@ -30,6 +30,10 @@ The request body is a YAML (JSON) encoded flavor description:
 customization:
     extraKernelArgs: # optional
         - vga=791
+    systemExtensions: # optional
+      officialExtensions: # optional
+        - siderolabs/gvisor
+        - siderolabs/amd-ucode
 ```
 
 Output is a JSON-encoded flavor ID:
@@ -72,6 +76,29 @@ Supported image paths:
   * `aws-<arch>.raw.xz` (e.g. `aws-amd64.raw.xz`) - raw disk image for AWS platform, that can be imported as an AMI
   * `gcp-<arch>.raw.tar.gz` (e.g. `gcp-amd64.raw.tar.gz`) - raw disk image for GCP platform, that can be imported as a GCE image
   * ... other support image types
+
+### `GET /versions`
+
+Returns a list of Talos versions available for image generation.
+
+```json
+["v1.5.0","v1.5.1", "v1.5.2"]
+```
+
+### `GET /version/:version/extensions/official`
+
+Returns a list of official system extensions available for the specified Talos version.
+
+```json
+[
+  {
+    "name": "siderolabs/amd-ucode",
+    "ref": "ghcr.io/siderolabs/amd-ucode:20230804",
+    "digest": "sha256:761a5290a4bae9ceca11468d2ba8ca7b0f94e6e3a107ede2349ae26520682832",
+  },
+
+]
+```
 
 ## PXE Frontend API
 
@@ -125,5 +152,5 @@ The image platform (architecture) will be determined by the architecture of the 
 Run integration tests in local mode, with registry mirrors:
 
 ```bash
-make integration TEST_FLAGS="-test.image-prefix=127.0.0.1:5004/siderolabs/ -test.flavor-service-repository=127.0.0.1:5005/image-service/flavor -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test" REGISTRY=127.0.0.1:5005
+make integration TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.flavor-service-repository=127.0.0.1:5005/image-service/flavor -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test" REGISTRY=127.0.0.1:5005
 ```

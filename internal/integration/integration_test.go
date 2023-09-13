@@ -30,7 +30,7 @@ func setupService(t *testing.T) (context.Context, string) {
 
 	options := cmd.DefaultOptions
 	options.HTTPListenAddr = findListenAddr(t)
-	options.ImagePrefix = imagePrefixFlag
+	options.ImageRegistry = imageRegistryFlag
 	options.ExternalURL = "http://" + options.HTTPListenAddr + "/"
 	options.FlavorServiceRepository = flavorServiceRepositoryFlag
 	options.InstallerExternalRepository = installerExternalRepository
@@ -100,17 +100,23 @@ func TestIntegration(t *testing.T) {
 
 		testRegistryFrontend(ctx, t, listenAddr)
 	})
+
+	t.Run("TestMetaFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testMetaFrontend(ctx, t, baseURL)
+	})
 }
 
 var (
-	imagePrefixFlag             string
+	imageRegistryFlag           string
 	flavorServiceRepositoryFlag string
 	installerExternalRepository string
 	installerInternalRepository string
 )
 
 func init() {
-	flag.StringVar(&imagePrefixFlag, "test.image-prefix", cmd.DefaultOptions.ImagePrefix, "image prefix")
+	flag.StringVar(&imageRegistryFlag, "test.image-registry", cmd.DefaultOptions.ImageRegistry, "image registry")
 	flag.StringVar(&flavorServiceRepositoryFlag, "test.flavor-service-repository", cmd.DefaultOptions.FlavorServiceRepository, "flavor service repository")
 	flag.StringVar(&installerExternalRepository, "test.installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
 	flag.StringVar(&installerInternalRepository, "test.installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")

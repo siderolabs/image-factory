@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-09-05T15:30:31Z by kres latest.
+# Generated on 2023-09-12T19:22:18Z by kres latest.
 
 # common variables
 
@@ -202,7 +202,7 @@ integration.test:
 
 .PHONY: integration
 integration: integration.test
-	@$(MAKE) image-image-service PUSH=true
+	@$(MAKE) image-image-service PUSH=true GO_BUILDFLAGS=-race CGO_ENABLED=1
 	docker pull $(REGISTRY)/$(USERNAME)/image-service:$(TAG)
 	docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-service:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
 

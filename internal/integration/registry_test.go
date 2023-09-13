@@ -139,6 +139,7 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 
 					for _, flavorID := range []string{
 						emptyFlavorID,
+						systemExtensionsFlavorID,
 						randomFlavorID,
 					} {
 						t.Run(flavorID, func(t *testing.T) {

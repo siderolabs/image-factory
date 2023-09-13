@@ -7,8 +7,10 @@ package profile
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
+	"github.com/siderolabs/gen/value"
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
@@ -227,16 +229,43 @@ func InstallerProfile(secureboot bool, arch artifacts.Arch) profile.Profile {
 	return prof
 }
 
-// FlavorExtensionProducer is a function which produces a flavor extension tarballs.
-type FlavorExtensionProducer interface {
+// ExtensionProducer is a function which produces a set of extensions/meta information.
+type ExtensionProducer interface {
 	GetFlavorExtension(context.Context, *flavor.Flavor) (string, error)
+	GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error)
+	GetExtensionImage(context.Context, artifacts.Arch, artifacts.ExtensionRef) (string, error)
 }
 
 // EnhanceFromFlavor enhances the profile with the flavor.
-func EnhanceFromFlavor(ctx context.Context, prof profile.Profile, flavor *flavor.Flavor, flavorExtensionProducer FlavorExtensionProducer, versionTag string) (profile.Profile, error) {
+func EnhanceFromFlavor(ctx context.Context, prof profile.Profile, flavor *flavor.Flavor, extensionProducer ExtensionProducer, versionTag string) (profile.Profile, error) {
 	if len(flavor.Customization.SystemExtensions.OfficialExtensions) > 0 {
-		// TODO: implement me
-		return prof, xerrors.NewTaggedf[InvalidErrorTag]("system extensions are not supported yet")
+		availableExtensions, err := extensionProducer.GetOfficialExtensions(ctx, versionTag)
+		if err != nil {
+			return prof, fmt.Errorf("error getting official extensions: %w", err)
+		}
+
+		for _, extensionName := range flavor.Customization.SystemExtensions.OfficialExtensions {
+			var extensionRef artifacts.ExtensionRef
+
+			for _, availableExtension := range availableExtensions {
+				if availableExtension.TaggedReference.RepositoryStr() == extensionName {
+					extensionRef = availableExtension
+
+					break
+				}
+			}
+
+			if value.IsZero(extensionRef) {
+				return prof, xerrors.NewTaggedf[InvalidErrorTag]("official extension %q is not available for Talos version %s", extensionName, versionTag)
+			}
+
+			imagePath, err := extensionProducer.GetExtensionImage(ctx, artifacts.Arch(prof.Arch), extensionRef)
+			if err != nil {
+				return prof, fmt.Errorf("error getting extension image %s: %w", extensionRef.TaggedReference, err)
+			}
+
+			prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: imagePath})
+		}
 	}
 
 	if prof.Output.Kind != profile.OutKindInitramfs && prof.Output.Kind != profile.OutKindKernel && prof.Output.Kind != profile.OutKindInstaller {
@@ -245,7 +274,7 @@ func EnhanceFromFlavor(ctx context.Context, prof profile.Profile, flavor *flavor
 	}
 
 	// append flavor extension
-	flavorExtensionPath, err := flavorExtensionProducer.GetFlavorExtension(ctx, flavor)
+	flavorExtensionPath, err := extensionProducer.GetFlavorExtension(ctx, flavor)
 	if err != nil {
 		return prof, err
 	}
