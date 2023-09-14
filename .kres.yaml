@@ -113,4 +113,9 @@ spec:
 ---
 kind: auto.CI
 spec:
-    provider: drone
+  provider: drone
+---
+kind: common.Build
+spec:
+  ignoredPaths:
+    - node_modules/

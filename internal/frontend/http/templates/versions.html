@@ -1,0 +1,18 @@
+<h1 class="mb-4 mt-2 text-2xl font-bold">Create an image flavor</h1>
+<div class="mb-6">
+    <label for="talos-version" class="block mb-2 text-sm font-medium">Choose Talos Version:</label>
+    <select
+        id="talos-version"
+        name="version"
+        class="w-64 bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        hx-target="#flavor-config"
+        hx-get="/ui/flavor-config"
+        hx-params="version"
+    >
+        <option value="">Select a version</option>
+        {{ range .Versions }}
+            <option value="{{ . }}">{{ . }}</option>
+        {{ end }}
+    </select>
+    <fieldset class="mt-6" id="flavor-config"></fieldset>
+</div>

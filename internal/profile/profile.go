@@ -237,49 +237,53 @@ type ExtensionProducer interface {
 }
 
 // EnhanceFromFlavor enhances the profile with the flavor.
+//
+//nolint:gocognit
 func EnhanceFromFlavor(ctx context.Context, prof profile.Profile, flavor *flavor.Flavor, extensionProducer ExtensionProducer, versionTag string) (profile.Profile, error) {
-	if len(flavor.Customization.SystemExtensions.OfficialExtensions) > 0 {
-		availableExtensions, err := extensionProducer.GetOfficialExtensions(ctx, versionTag)
-		if err != nil {
-			return prof, fmt.Errorf("error getting official extensions: %w", err)
-		}
-
-		for _, extensionName := range flavor.Customization.SystemExtensions.OfficialExtensions {
-			var extensionRef artifacts.ExtensionRef
-
-			for _, availableExtension := range availableExtensions {
-				if availableExtension.TaggedReference.RepositoryStr() == extensionName {
-					extensionRef = availableExtension
-
-					break
-				}
-			}
-
-			if value.IsZero(extensionRef) {
-				return prof, xerrors.NewTaggedf[InvalidErrorTag]("official extension %q is not available for Talos version %s", extensionName, versionTag)
-			}
-
-			imagePath, err := extensionProducer.GetExtensionImage(ctx, artifacts.Arch(prof.Arch), extensionRef)
+	if prof.Output.Kind != profile.OutKindCmdline && prof.Output.Kind != profile.OutKindKernel {
+		if len(flavor.Customization.SystemExtensions.OfficialExtensions) > 0 {
+			availableExtensions, err := extensionProducer.GetOfficialExtensions(ctx, versionTag)
 			if err != nil {
-				return prof, fmt.Errorf("error getting extension image %s: %w", extensionRef.TaggedReference, err)
+				return prof, fmt.Errorf("error getting official extensions: %w", err)
 			}
 
-			prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: imagePath})
+			for _, extensionName := range flavor.Customization.SystemExtensions.OfficialExtensions {
+				var extensionRef artifacts.ExtensionRef
+
+				for _, availableExtension := range availableExtensions {
+					if availableExtension.TaggedReference.RepositoryStr() == extensionName {
+						extensionRef = availableExtension
+
+						break
+					}
+				}
+
+				if value.IsZero(extensionRef) {
+					return prof, xerrors.NewTaggedf[InvalidErrorTag]("official extension %q is not available for Talos version %s", extensionName, versionTag)
+				}
+
+				imagePath, err := extensionProducer.GetExtensionImage(ctx, artifacts.Arch(prof.Arch), extensionRef)
+				if err != nil {
+					return prof, fmt.Errorf("error getting extension image %s: %w", extensionRef.TaggedReference, err)
+				}
+
+				prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: imagePath})
+			}
 		}
+
+		// append flavor extension
+		flavorExtensionPath, err := extensionProducer.GetFlavorExtension(ctx, flavor)
+		if err != nil {
+			return prof, err
+		}
+
+		prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: flavorExtensionPath})
 	}
 
+	// skip customizations for profile kinds which don't support it
 	if prof.Output.Kind != profile.OutKindInitramfs && prof.Output.Kind != profile.OutKindKernel && prof.Output.Kind != profile.OutKindInstaller {
-		// skip customizations for profile kinds which don't support it
 		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, flavor.Customization.ExtraKernelArgs...)
 	}
-
-	// append flavor extension
-	flavorExtensionPath, err := extensionProducer.GetFlavorExtension(ctx, flavor)
-	if err != nil {
-		return prof, err
-	}
-
-	prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: flavorExtensionPath})
 
 	prof.Version = versionTag
 

@@ -9,12 +9,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/url"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/julienschmidt/httprouter"
+	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
@@ -96,6 +98,16 @@ func NewFrontend(logger *zap.Logger, flavorService *flvr.Service, assetBuilder *
 	// meta
 	frontend.router.GET("/versions", frontend.wrapper(frontend.handleVersions))
 	frontend.router.GET("/version/:version/extensions/official", frontend.wrapper(frontend.handleOfficialExtensions))
+
+	// UI
+	frontend.router.GET("/", frontend.wrapper(frontend.handleUI))
+	frontend.router.HEAD("/", frontend.wrapper(frontend.handleUI))
+	frontend.router.GET("/ui/flavor-config", frontend.wrapper(frontend.handleUIFlavorConfig))
+	frontend.router.GET("/ui/versions", frontend.wrapper(frontend.handleUIVersions))
+	frontend.router.POST("/ui/flavors", frontend.wrapper(frontend.handleUIFlavors))
+	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
+	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
+	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 
 	return frontend, nil
 }
