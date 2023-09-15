@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-08-10T17:01:31Z by kres c620938.
+# Generated on 2023-09-15T13:38:02Z by kres latest.
 
 codecov:
   require_ci_to_pass: false
@@ -9,7 +9,7 @@ coverage:
   status:
     project:
       default:
-        target: 50%
+        target: 25%
         threshold: 0.5%
         base: auto
         if_ci_failed: success

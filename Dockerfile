@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-09-18T18:00:42Z by kres latest.
+# Generated on 2023-09-18T18:37:49Z by kres latest.
 
 ARG TOOLCHAIN
 
@@ -69,7 +69,7 @@ RUN mkdir -p internal/version/data && \
 
 # builds the integration test binary
 FROM base AS integration-build
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg go test -c  -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
 
 # runs gofumpt
 FROM base AS lint-gofumpt

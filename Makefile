@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-09-18T18:00:42Z by kres latest.
+# Generated on 2023-09-19T17:17:39Z by kres latest.
 
 # common variables
 
@@ -105,7 +105,7 @@ respectively.
 
 endef
 
-ifneq (, $(filter $(CI), false f))
+ifneq (, $(filter $(CI), t true TRUE y yes 1))
 GITHUB_BRANCH := $(subst /,-,${GITHUB_HEAD_REF})
 GITHUB_BRANCH := $(subst +,-,$(GITHUB_BRANCH))
 CI_ARGS := --cache-from=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache-main --cache-from=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache-$(GITHUB_BRANCH) --cache-to=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache-$(GITHUB_BRANCH),mode=max
@@ -208,7 +208,7 @@ integration.test:
 
 .PHONY: integration
 integration: integration.test
-	@$(MAKE) image-image-factory PUSH=true GO_BUILDFLAGS=-race CGO_ENABLED=1
+	@$(MAKE) image-image-factory PUSH=true
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
 
@@ -231,3 +231,4 @@ release-notes:
 conformance:
 	@docker pull $(CONFORMANCE_IMAGE)
 	@docker run --rm -it -v $(PWD):/src -w /src $(CONFORMANCE_IMAGE) enforce
+

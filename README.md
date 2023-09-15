@@ -145,7 +145,7 @@ If the image hasn't been created yet, it will be built on demand automatically.
 
 ### `docker pull <registry>/installer[-secureboot]/<schematic>:<version>`
 
-Example: `docker pull imager.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.5.0`
+Example: `docker pull factory.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.5.0`
 
 Pulls the Talos Linux `installer` image with the specified schematic and Talos Linux version.
 The image platform (architecture) will be determined by the architecture of the Talos Linux Linux machine.

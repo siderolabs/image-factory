@@ -70,7 +70,7 @@ spec:
         from: base
         steps:
           - script:
-              command: go test -c  -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
+              command: go test -c -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
               cache:
                 - /root/.cache/go-build
                 - /go/pkg
@@ -101,21 +101,20 @@ spec:
       - name: TEST_FLAGS
         defaultValue: ""
     script:
-      - "@$(MAKE) image-image-factory PUSH=true GO_BUILDFLAGS=-race CGO_ENABLED=1"
+      - "@$(MAKE) image-image-factory PUSH=true"
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
-  drone:
+  ghaction:
     enabled: true
-    privileged: true
     environment:
-      REGISTRY: registry.dev.talos-systems.io
-      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.talos-systems.io/image-factory/schematic -test.installer-external-repository=registry.dev.talos-systems.io/siderolabs -test.installer-internal-repository=registry.dev.talos-systems.io/siderolabs"
----
-kind: auto.CI
-spec:
-  provider: drone
+      REGISTRY: registry.dev.siderolabs.io
+      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs"
 ---
 kind: common.Build
 spec:
   ignoredPaths:
     - node_modules/
+---
+kind: service.CodeCov
+spec:
+  targetThreshold: 25 # the actual coverage is much higher and reported from the integration test

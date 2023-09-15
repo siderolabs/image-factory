@@ -1,19 +1,110 @@
+# THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
+#
+# Generated on 2023-09-18T18:54:53Z by kres latest.
+
 name: default
 "on":
   push:
     branches:
       - main
+      - release-*
     tags:
       - v*
-  pull_request: {}
-env:
-  CI_ARGS: --cache-from=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache --cache-to=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache,mode=max
+  pull_request:
+    branches:
+      - main
+      - release-*
 jobs:
   default:
     permissions:
       contents: write
       packages: write
-    runs-on: self-hosted
+    runs-on:
+      - self-hosted
+      - X64
+    if: ${{ !startsWith(github.head_ref, 'renovate/') || !startsWith(github.head_ref, 'renovate/') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
+      - name: Unshallow
+        run: |
+          git fetch --prune --unshallow
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          config-inline: |
+            [worker.oci]
+              gc = true
+              gckeepstorage = 100000 # 100 GiB
+
+              [[worker.oci.gcpolicy]]
+                keepBytes = 32212254720 # 30 GiB
+                keepDuration = 604800
+                filters = [ "type==source.local", "type==exec.cachemount", "type==source.git.checkout"]
+              [[worker.oci.gcpolicy]]
+                all = true
+                keepBytes = 107374182400 # 100 GiB
+      - name: base
+        run: |
+          make base
+      - name: unit-tests
+        run: |
+          make unit-tests
+      - name: unit-tests-race
+        run: |
+          make unit-tests-race
+      - name: coverage
+        run: |
+          make coverage
+      - name: image-factory
+        run: |
+          make image-factory
+      - name: lint
+        run: |
+          make lint
+      - name: Login to registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v2
+        with:
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+      - name: image-image-factory
+        run: |
+          make image-image-factory
+      - name: push-image-factory
+        if: github.event_name != 'pull_request'
+        env:
+          PUSH: "true"
+        run: |
+          make image-image-factory
+      - name: push-image-factory-latest
+        if: github.event_name != 'pull_request'
+        env:
+          PUSH: "true"
+        run: |
+          make image-image-factory TAG=latest
+      - name: integration
+        env:
+          REGISTRY: registry.dev.siderolabs.io
+          TEST_FLAGS: -test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs
+        run: |
+          make integration
+      - name: Generate Checksums
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          sha256sum _out/* > _out/sha256sum.txt
+          sha512sum _out/* > _out/sha512sum.txt
+      - name: release-notes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          make release-notes
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: crazy-max/ghaction-github-release@v1
+        with:
+          body_path: _out/RELEASE_NOTES.md
+          draft: "true"
+          files: |-
+            _out/*
+            _out/sha*.txt
