@@ -25,16 +25,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/siderolabs/image-service/pkg/flavor"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
-func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, talosVersion, flavor string, secureboot bool, platform v1.Platform) {
+func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, talosVersion, schematic string, secureboot bool, platform v1.Platform) {
 	imageName := "installer"
 	if secureboot {
 		imageName += "-secureboot"
 	}
 
-	ref := registry.Repo(imageName, flavor).Tag(talosVersion)
+	ref := registry.Repo(imageName, schematic).Tag(talosVersion)
 
 	_, err := remote.Head(ref)
 	require.NoError(t, err)
@@ -114,12 +114,12 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 	registry, err := name.NewRegistry(registryAddr)
 	require.NoError(t, err)
 
-	// create a new random flavor, so that we can make sure new installer is generated
+	// create a new random schematic, so that we can make sure new installer is generated
 	randomKernelArg := hex.EncodeToString(randomBytes(t, 32))
 
-	randomFlavorID := createFlavorGetID(ctx, t, "http://"+registryAddr,
-		flavor.Flavor{
-			Customization: flavor.Customization{
+	randomSchematicID := createSchematicGetID(ctx, t, "http://"+registryAddr,
+		schematic.Schematic{
+			Customization: schematic.Customization{
 				ExtraKernelArgs: []string{randomKernelArg},
 			},
 		},
@@ -137,12 +137,12 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 						t.Skip("skipping secureboot")
 					}
 
-					for _, flavorID := range []string{
-						emptyFlavorID,
-						systemExtensionsFlavorID,
-						randomFlavorID,
+					for _, schematicID := range []string{
+						emptySchematicID,
+						systemExtensionsSchematicID,
+						randomSchematicID,
 					} {
-						t.Run(flavorID, func(t *testing.T) {
+						t.Run(schematicID, func(t *testing.T) {
 							t.Parallel()
 
 							for _, platform := range []v1.Platform{
@@ -158,7 +158,7 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 								t.Run(platform.String(), func(t *testing.T) {
 									t.Parallel()
 
-									testInstallerImage(ctx, t, registry, talosVersion, flavorID, secureboot, platform)
+									testInstallerImage(ctx, t, registry, talosVersion, schematicID, secureboot, platform)
 								})
 							}
 						})

@@ -18,8 +18,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xslices"
 
-	"github.com/siderolabs/image-service/internal/artifacts"
-	"github.com/siderolabs/image-service/pkg/flavor"
+	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 //go:embed css/output.css
@@ -69,8 +69,8 @@ func (f *Frontend) handleUIVersions(ctx context.Context, w http.ResponseWriter, 
 	})
 }
 
-// handleUIVersions handles '/ui/flavor-config'.
-func (f *Frontend) handleUIFlavorConfig(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+// handleUIVersions handles '/ui/schematic-config'.
+func (f *Frontend) handleUISchematicConfig(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	if r.Method == http.MethodHead {
 		return nil
 	}
@@ -90,15 +90,15 @@ func (f *Frontend) handleUIFlavorConfig(ctx context.Context, w http.ResponseWrit
 		return err
 	}
 
-	return templates.ExecuteTemplate(w, "flavor-config.html", struct {
+	return templates.ExecuteTemplate(w, "schematic-config.html", struct {
 		Extensions []artifacts.ExtensionRef
 	}{
 		Extensions: extensions,
 	})
 }
 
-// handleUIFlavors handles '/ui/flavors'.
-func (f *Frontend) handleUIFlavors(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+// handleUISchematics handles '/ui/schematics'.
+func (f *Frontend) handleUISchematics(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	if err := r.ParseForm(); err != nil {
 		return err
 	}
@@ -123,30 +123,30 @@ func (f *Frontend) handleUIFlavors(ctx context.Context, w http.ResponseWriter, r
 		extensions = append(extensions, name[4:])
 	}
 
-	requestedFlavor := flavor.Flavor{
-		Customization: flavor.Customization{
+	requestedSchematic := schematic.Schematic{
+		Customization: schematic.Customization{
 			ExtraKernelArgs: extraArgs,
-			SystemExtensions: flavor.SystemExtensions{
+			SystemExtensions: schematic.SystemExtensions{
 				OfficialExtensions: extensions,
 			},
 		},
 	}
 
-	flavorID, err := f.flavorService.Put(ctx, &requestedFlavor)
+	schematicID, err := f.schematicFactory.Put(ctx, &requestedSchematic)
 	if err != nil {
 		return err
 	}
 
-	marshaled, err := requestedFlavor.Marshal()
+	marshaled, err := requestedSchematic.Marshal()
 	if err != nil {
 		return err
 	}
 
 	version := "v" + versionParam
 
-	return templates.ExecuteTemplate(w, "flavor.html", struct {
+	return templates.ExecuteTemplate(w, "schematic.html", struct {
 		Version   string
-		Flavor    string
+		Schematic string
 		Marshaled string
 
 		ImageBaseURL   *url.URL
@@ -156,11 +156,11 @@ func (f *Frontend) handleUIFlavors(ctx context.Context, w http.ResponseWriter, r
 		Architectures []string
 	}{
 		Version:        version,
-		Flavor:         flavorID,
+		Schematic:      schematicID,
 		Marshaled:      string(marshaled),
-		ImageBaseURL:   f.options.ExternalURL.JoinPath("image", flavorID, version),
-		PXEBaseURL:     f.options.ExternalURL.JoinPath("pxe", flavorID, version),
-		InstallerImage: fmt.Sprintf("%s/installer/%s:%s", f.options.ExternalURL.Host, flavorID, version),
+		ImageBaseURL:   f.options.ExternalURL.JoinPath("image", schematicID, version),
+		PXEBaseURL:     f.options.ExternalURL.JoinPath("pxe", schematicID, version),
+		InstallerImage: fmt.Sprintf("%s/installer/%s:%s", f.options.ExternalURL.Host, schematicID, version),
 		Architectures: []string{
 			string(artifacts.ArchAmd64),
 			string(artifacts.ArchArm64),

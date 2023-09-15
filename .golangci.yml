@@ -36,7 +36,7 @@ linters-settings:
     lines: 60
     statements: 40
   gci:
-    local-prefixes: github.com/siderolabs/image-service/
+    local-prefixes: github.com/siderolabs/image-factory/
   gocognit:
     min-complexity: 30
   ireturn:
@@ -65,7 +65,7 @@ linters-settings:
   gofmt:
     simplify: true
   goimports:
-    local-prefixes: github.com/siderolabs/image-service/
+    local-prefixes: github.com/siderolabs/image-factory/
   golint:
     min-confidence: 0.8
   gomnd:

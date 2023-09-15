@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package cache implements an in-memory cache over flavor storage.
+// Package cache implements an in-memory cache over schematic storage.
 package cache
 
 import (
@@ -13,10 +13,10 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 	"golang.org/x/sync/singleflight"
 
-	"github.com/siderolabs/image-service/internal/flavor/storage"
+	"github.com/siderolabs/image-factory/internal/schematic/storage"
 )
 
-// Storage is a flavor storage in-memory cache.
+// Storage is a schematic storage in-memory cache.
 type Storage struct {
 	underlying storage.Storage
 
@@ -36,7 +36,7 @@ func NewCache(underlying storage.Storage) *Storage {
 // Check interface.
 var _ storage.Storage = (*Storage)(nil)
 
-// Head checks if the flavor exists.
+// Head checks if the schematic exists.
 func (s *Storage) Head(ctx context.Context, id string) error {
 	// check cache
 	s.mu.Lock()
@@ -49,7 +49,7 @@ func (s *Storage) Head(ctx context.Context, id string) error {
 			return nil
 		}
 
-		return xerrors.NewTaggedf[storage.ErrNotFoundTag]("flavor ID %q not found", id)
+		return xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
 	}
 
 	// cache entry is not there, use .Get to populate it
@@ -58,7 +58,7 @@ func (s *Storage) Head(ctx context.Context, id string) error {
 	return err
 }
 
-// Get returns the flavor.
+// Get returns the schematic.
 func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 	// check cache
 	s.mu.Lock()
@@ -71,7 +71,7 @@ func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 			return v.ValueOrZero(), nil
 		}
 
-		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("flavor ID %q not found", id)
+		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
 	}
 
 	ch := s.g.DoChan(id, func() (any, error) {
@@ -115,7 +115,7 @@ func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 	}
 }
 
-// Put stores the flavor.
+// Put stores the schematic.
 func (s *Storage) Put(ctx context.Context, id string, data []byte) error {
 	err := s.underlying.Put(ctx, id, data)
 	if err != nil {

@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package registry implements a flavor storage in OCI registry.
+// Package registry implements a schematic storage in OCI registry.
 package registry
 
 import (
@@ -21,15 +21,15 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/siderolabs/gen/xerrors"
 
-	"github.com/siderolabs/image-service/internal/flavor/storage"
+	"github.com/siderolabs/image-factory/internal/schematic/storage"
 )
 
-// FlavorMediaType is a media type for the flavor stored in the OCI registry.
-const FlavorMediaType types.MediaType = "application/vnd.sidero.dev-image.flavor"
+// SchematicMediaType is a media type for the schematic stored in the OCI registry.
+const SchematicMediaType types.MediaType = "application/vnd.sidero.dev-image.schematic"
 
-// Storage is a flavor storage in a OCI Registry.
+// Storage is a schematic storage in a OCI Registry.
 //
-// Flavor ID is a sha256 of the contents, so it matches registry content-addressable storage.
+// Schematic ID is a sha256 of the contents, so it matches registry content-addressable storage.
 type Storage struct {
 	pusher     *remote.Pusher
 	puller     *remote.Puller
@@ -63,12 +63,12 @@ func NewStorage(repository name.Repository, remoteOpts []remote.Option) (*Storag
 	return s, nil
 }
 
-// Head checks if the flavor exists.
+// Head checks if the schematic exists.
 func (s *Storage) Head(ctx context.Context, id string) error {
 	// pre-validate the ID, so that invalid IDs return not found
 	_, err := v1.NewHash(digestPrefix + id)
 	if err != nil {
-		return xerrors.NewTaggedf[storage.ErrNotFoundTag]("flavor ID %q not found", id)
+		return xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
 	}
 
 	layer, err := s.puller.Layer(ctx, s.repository.Digest(digestPrefix+id))
@@ -86,18 +86,18 @@ func (s *Storage) Head(ctx context.Context, id string) error {
 	var transportError *transport.Error
 
 	if errors.As(err, &transportError) && transportError.StatusCode == http.StatusNotFound {
-		return xerrors.NewTaggedf[storage.ErrNotFoundTag]("flavor ID %q not found", id)
+		return xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
 	}
 
 	return err
 }
 
-// Get returns the flavor.
+// Get returns the schematic.
 func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 	// pre-validate the ID
 	_, err := v1.NewHash(digestPrefix + id)
 	if err != nil {
-		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("flavor ID %q not found", id)
+		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
 	}
 
 	layer, err := s.puller.Layer(ctx, s.repository.Digest(digestPrefix+id))
@@ -105,7 +105,7 @@ func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 		var transportError *transport.Error
 
 		if errors.As(err, &transportError) && transportError.StatusCode == http.StatusNotFound {
-			return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("flavor ID %q not found", id)
+			return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
 		}
 
 		return nil, err
@@ -150,10 +150,10 @@ func (w *layerWrapper) Size() (int64, error) {
 
 // Returns the mediaType for the compressed Layer.
 func (w *layerWrapper) MediaType() (types.MediaType, error) {
-	return FlavorMediaType, nil
+	return SchematicMediaType, nil
 }
 
-// Put stores the flavor.
+// Put stores the schematic.
 func (s *Storage) Put(ctx context.Context, id string, data []byte) error {
 	layer, err := partial.CompressedToLayer(&layerWrapper{
 		data: data,

@@ -15,7 +15,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xslices"
 
-	"github.com/siderolabs/image-service/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/artifacts"
 )
 
 // handleVersions handles list of Talos versions available.

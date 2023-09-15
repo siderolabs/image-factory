@@ -22,12 +22,12 @@ import (
 
 // Manager supports loading, caching and serving Talos release artifacts.
 type Manager struct { //nolint:govet
-	options       Options
-	storagePath   string
-	flavorsPath   string
-	logger        *zap.Logger
-	imageRegistry name.Registry
-	pullers       map[Arch]*remote.Puller
+	options        Options
+	storagePath    string
+	schematicsPath string
+	logger         *zap.Logger
+	imageRegistry  name.Registry
+	pullers        map[Arch]*remote.Puller
 
 	sf singleflight.Group
 
@@ -41,15 +41,15 @@ type Manager struct { //nolint:govet
 
 // NewManager creates a new artifacts manager.
 func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
-	tmpDir, err := os.MkdirTemp("", "image-service")
+	tmpDir, err := os.MkdirTemp("", "image-factory")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temporary directory: %w", err)
 	}
 
-	flavorsPath := filepath.Join(tmpDir, "flavors")
+	schematicsPath := filepath.Join(tmpDir, "schematics")
 
-	if err = os.Mkdir(flavorsPath, 0o700); err != nil {
-		return nil, fmt.Errorf("failed to create flavors directory: %w", err)
+	if err = os.Mkdir(schematicsPath, 0o700); err != nil {
+		return nil, fmt.Errorf("failed to create schematics directory: %w", err)
 	}
 
 	imageRegistry, err := name.NewRegistry(options.ImageRegistry)
@@ -77,12 +77,12 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 	}
 
 	return &Manager{
-		options:       options,
-		storagePath:   tmpDir,
-		flavorsPath:   flavorsPath,
-		logger:        logger,
-		imageRegistry: imageRegistry,
-		pullers:       pullers,
+		options:        options,
+		storagePath:    tmpDir,
+		schematicsPath: schematicsPath,
+		logger:         logger,
+		imageRegistry:  imageRegistry,
+		pullers:        pullers,
 	}, nil
 }
 

@@ -1,5 +1,5 @@
 <div class="mb-6">
-    Your image flavor ID is: <span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">{{ .Flavor }}</span>
+    Your image schematic ID is: <span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">{{ .Schematic }}</span>
 </div>
 
 <div class="mb-6 font-mono bg-slate-200 dark:bg-slate-700 p-1 whitespace-pre">{{ .Marshaled }}</div>
@@ -8,8 +8,9 @@
     <h2>Metal ISO</h2>
     <dl>
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} ISO</dt>
-            <dd><a href="{{ $arch | printf "metal-%s.iso" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "metal-%s.iso" | $.ImageBaseURL.JoinPath }}</a></dd>
+        <dt>{{ $arch }} ISO</dt>
+        <dd><a href="{{ $arch | printf " metal-%s.iso" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "metal-%s.iso" |
+                $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
     <h2>Installer Image</h2>
@@ -20,66 +21,75 @@
     <h2>PXE Boot (Metal)</h2>
     <dl>
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} iPXE script</dt>
-            <dd>{{ $arch | printf "metal-%s" | $.PXEBaseURL.JoinPath }}</dd>
+        <dt>{{ $arch }} iPXE script</dt>
+        <dd>{{ $arch | printf "metal-%s" | $.PXEBaseURL.JoinPath }}</dd>
         {{ end }}
     </dl>
     <h2>Disk Images</h2>
     <h3>Metal</h3>
     <dl>
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} metal disk image</dt>
-            <dd><a href="{{ $arch | printf "metal-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "metal-%s.raw.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
+        <dt>{{ $arch }} metal disk image</dt>
+        <dd><a href="{{ $arch | printf " metal-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+                "metal-%s.raw.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
     <h3>AWS</h3>
     <dl>
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} AWS disk image</dt>
-            <dd><a href="{{ $arch | printf "aws-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "aws-%s.raw.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
+        <dt>{{ $arch }} AWS disk image</dt>
+        <dd><a href="{{ $arch | printf " aws-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "aws-%s.raw.xz"
+                | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
     <h3>GCP</h3>
     <dl>
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} GCP disk image</dt>
-            <dd><a href="{{ $arch | printf "gcp-%s.raw.tar.gz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "gcp-%s.raw.tar.gz" | $.ImageBaseURL.JoinPath }}</a></dd>
+        <dt>{{ $arch }} GCP disk image</dt>
+        <dd><a href="{{ $arch | printf " gcp-%s.raw.tar.gz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+                "gcp-%s.raw.tar.gz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
     <h3>Azure</h3>
     <dl>
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} Azure disk image</dt>
-            <dd><a href="{{ $arch | printf "azure-%s.vhd.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "azure-%s.vhd.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
+        <dt>{{ $arch }} Azure disk image</dt>
+        <dd><a href="{{ $arch | printf " azure-%s.vhd.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+                "azure-%s.vhd.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
     <h3>Digital Ocean</h3>
     <dl>
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} Digital Ocean disk image</dt>
-            <dd><a href="{{ $arch | printf "digital-ocean-%s.raw.gz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "digital-ocean-%s.raw.gz" | $.ImageBaseURL.JoinPath }}</a></dd>
+        <dt>{{ $arch }} Digital Ocean disk image</dt>
+        <dd><a href="{{ $arch | printf " digital-ocean-%s.raw.gz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+                "digital-ocean-%s.raw.gz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
     <h3>Hetzner Cloud</h3>
     <dl>
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} Hetzner Cloud disk image</dt>
-            <dd><a href="{{ $arch | printf "hcloud-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "hcloud-%s.raw.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
+        <dt>{{ $arch }} Hetzner Cloud disk image</dt>
+        <dd><a href="{{ $arch | printf " hcloud-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+                "hcloud-%s.raw.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
     <h3>Other</h3>
-    <p>Use the above URLs as a template replacing the last component with a matching path for your platform. See <a href="https://github.com/siderolabs/talos/releases/latest">Talos Linux release assets</a> for examples.</p>
+    <p>Use the above URLs as a template replacing the last component with a matching path for your platform. See <a
+            href="https://github.com/siderolabs/talos/releases/latest">Talos Linux release assets</a> for examples.</p>
     <h2>SecureBoot</h2>
     <p>Not fully supported yet, hang tight...</p>
     <h2>Various Assets</h2>
     <dl>
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} kernel</dt>
-            <dd><a href="{{ $arch | printf "kernel-%s" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "kernel-%s" | $.ImageBaseURL.JoinPath }}</a></dd>
+        <dt>{{ $arch }} kernel</dt>
+        <dd><a href="{{ $arch | printf " kernel-%s" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "kernel-%s" |
+                $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
         {{ range $arch := .Architectures }}
-            <dt>{{ $arch }} initramfs</dt>
-            <dd><a href="{{ $arch | printf "initramfs-%s.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "initramfs-%s.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
+        <dt>{{ $arch }} initramfs</dt>
+        <dd><a href="{{ $arch | printf " initramfs-%s.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+                "initramfs-%s.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
 </div>

@@ -2,14 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package flavor_test
+package schematic_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/siderolabs/image-service/pkg/flavor"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 func TestID(t *testing.T) {
@@ -17,18 +17,18 @@ func TestID(t *testing.T) {
 
 	for _, test := range []struct { //nolint:govet
 		name       string
-		cfg        flavor.Flavor
+		cfg        schematic.Schematic
 		expectedID string
 	}{
 		{
 			name:       "empty",
-			cfg:        flavor.Flavor{},
+			cfg:        schematic.Schematic{},
 			expectedID: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",
 		},
 		{
 			name: "config1",
-			cfg: flavor.Flavor{
-				Customization: flavor.Customization{
+			cfg: schematic.Schematic{
+				Customization: schematic.Customization{
 					ExtraKernelArgs: []string{"noapic", "nolapic"},
 				},
 			},
@@ -83,7 +83,7 @@ func TestUnmarshalID(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := flavor.Unmarshal(test.cfg)
+			cfg, err := schematic.Unmarshal(test.cfg)
 			require.NoError(t, err)
 
 			id, err := cfg.ID()

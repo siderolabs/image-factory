@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/siderolabs/image-service/internal/flavor/storage"
-	"github.com/siderolabs/image-service/internal/flavor/storage/cache"
+	"github.com/siderolabs/image-factory/internal/schematic/storage"
+	"github.com/siderolabs/image-factory/internal/schematic/storage/cache"
 )
 
 type mockStorage struct {
@@ -31,7 +31,7 @@ func (s *mockStorage) Get(_ context.Context, id string) ([]byte, error) {
 
 	switch id {
 	case "not-found":
-		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("flavor ID %q not found", id)
+		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
 	case "failing":
 		return nil, fmt.Errorf("failing")
 	default:

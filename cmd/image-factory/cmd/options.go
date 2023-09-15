@@ -6,7 +6,7 @@ package cmd
 
 import "time"
 
-// Options configures image service.
+// Options configures image factory.
 type Options struct { //nolint:govet
 	// Listen address for the HTTP frontend.
 	HTTPListenAddr string
@@ -23,15 +23,15 @@ type Options struct { //nolint:govet
 	// Maximum number of concurrent asset builds.
 	AssetBuildMaxConcurrency int
 
-	// External URL of the image service HTTP frontend.
+	// External URL of the image factory HTTP frontend.
 	ExternalURL string
 
-	// Flavor service OCI registry prefix.
-	// It stores flavors for the image service as blobs under that path.
-	FlavorServiceRepository string
+	// Schematic service OCI registry prefix.
+	// It stores schematics for the image factory as blobs under that path.
+	SchematicServiceRepository string
 
 	// OCI registry to store installer images has two endpoints:
-	// - one for the image service to push images to
+	// - one for the image factory to push images to
 	// - external one for the redirects
 	InstallerInternalRepository string
 	InstallerExternalRepository string
@@ -54,7 +54,7 @@ var DefaultOptions = Options{
 
 	ExternalURL: "https://localhost/",
 
-	FlavorServiceRepository: "ghcr.io/siderolabs/image-service/flavors",
+	SchematicServiceRepository: "ghcr.io/siderolabs/image-factory/schematics",
 
 	InstallerInternalRepository: "ghcr.io/siderolabs",
 	InstallerExternalRepository: "ghcr.io/siderolabs",

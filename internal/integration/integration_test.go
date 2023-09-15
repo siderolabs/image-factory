@@ -18,10 +18,10 @@ import (
 	"go.uber.org/zap/zaptest"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/siderolabs/image-service/cmd/image-service/cmd"
+	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 )
 
-func setupService(t *testing.T) (context.Context, string) {
+func setupFactory(t *testing.T) (context.Context, string) {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -32,14 +32,14 @@ func setupService(t *testing.T) (context.Context, string) {
 	options.HTTPListenAddr = findListenAddr(t)
 	options.ImageRegistry = imageRegistryFlag
 	options.ExternalURL = "http://" + options.HTTPListenAddr + "/"
-	options.FlavorServiceRepository = flavorServiceRepositoryFlag
+	options.SchematicServiceRepository = schematicFactoryRepositoryFlag
 	options.InstallerExternalRepository = installerExternalRepository
 	options.InstallerInternalRepository = installerInternalRepository
 
 	eg, ctx := errgroup.WithContext(ctx)
 
 	eg.Go(func() error {
-		return cmd.RunService(ctx, logger, options)
+		return cmd.RunFactory(ctx, logger, options)
 	})
 
 	t.Cleanup(func() {
@@ -75,12 +75,12 @@ func findListenAddr(t *testing.T) string {
 }
 
 func TestIntegration(t *testing.T) {
-	ctx, listenAddr := setupService(t)
+	ctx, listenAddr := setupFactory(t)
 	baseURL := "http://" + listenAddr
 
-	t.Run("TestFlavor", func(t *testing.T) {
-		// flavor should be created first, thus no t.Parallel
-		testFlavor(ctx, t, baseURL)
+	t.Run("TestSchematic", func(t *testing.T) {
+		// schematic should be created first, thus no t.Parallel
+		testSchematic(ctx, t, baseURL)
 	})
 
 	t.Run("TestDownloadFrontend", func(t *testing.T) {
@@ -109,15 +109,15 @@ func TestIntegration(t *testing.T) {
 }
 
 var (
-	imageRegistryFlag           string
-	flavorServiceRepositoryFlag string
-	installerExternalRepository string
-	installerInternalRepository string
+	imageRegistryFlag              string
+	schematicFactoryRepositoryFlag string
+	installerExternalRepository    string
+	installerInternalRepository    string
 )
 
 func init() {
 	flag.StringVar(&imageRegistryFlag, "test.image-registry", cmd.DefaultOptions.ImageRegistry, "image registry")
-	flag.StringVar(&flavorServiceRepositoryFlag, "test.flavor-service-repository", cmd.DefaultOptions.FlavorServiceRepository, "flavor service repository")
+	flag.StringVar(&schematicFactoryRepositoryFlag, "test.schematic-service-repository", cmd.DefaultOptions.SchematicServiceRepository, "schematic factory repository")
 	flag.StringVar(&installerExternalRepository, "test.installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
 	flag.StringVar(&installerInternalRepository, "test.installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
 }

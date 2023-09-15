@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-09-12T19:22:18Z by kres latest.
+# Generated on 2023-09-18T18:00:42Z by kres latest.
 
 # common variables
 
@@ -16,13 +16,13 @@ USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
 PROTOBUF_GO_VERSION ?= 1.31.0
 GRPC_GO_VERSION ?= 1.3.0
-GRPC_GATEWAY_VERSION ?= 2.17.1
-VTPROTOBUF_VERSION ?= 0.4.0
+GRPC_GATEWAY_VERSION ?= 2.18.0
+VTPROTOBUF_VERSION ?= 0.5.0
 DEEPCOPY_VERSION ?= v0.5.5
 GOLANGCILINT_VERSION ?= v1.54.2
 GOFUMPT_VERSION ?= v0.5.0
-GO_VERSION ?= 1.21
-GOIMPORTS_VERSION ?= v0.12.0
+GO_VERSION ?= 1.21.1
+GOIMPORTS_VERSION ?= v0.13.0
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -105,6 +105,12 @@ respectively.
 
 endef
 
+ifneq (, $(filter $(CI), false f))
+GITHUB_BRANCH := $(subst /,-,${GITHUB_HEAD_REF})
+GITHUB_BRANCH := $(subst +,-,$(GITHUB_BRANCH))
+CI_ARGS := --cache-from=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache-main --cache-from=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache-$(GITHUB_BRANCH) --cache-to=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache-$(GITHUB_BRANCH),mode=max
+endif
+
 ifneq (, $(filter $(WITH_RACE), t true TRUE y yes 1))
 GO_BUILDFLAGS += -race
 CGO_ENABLED := 1
@@ -117,7 +123,7 @@ else
 GO_LDFLAGS += -s -w
 endif
 
-all: unit-tests image-service image-image-service integration.test integration lint
+all: unit-tests image-factory image-image-factory integration.test integration lint
 
 .PHONY: clean
 clean:  ## Cleans up all artifacts.
@@ -168,22 +174,22 @@ unit-tests-race:  ## Performs unit tests with race detection enabled.
 coverage:  ## Upload coverage data to codecov.io.
 	bash -c "bash <(curl -s https://codecov.io/bash) -f $(ARTIFACTS)/coverage-unit-tests.txt -X fix"
 
-.PHONY: $(ARTIFACTS)/image-service-linux-amd64
-$(ARTIFACTS)/image-service-linux-amd64:
-	@$(MAKE) local-image-service-linux-amd64 DEST=$(ARTIFACTS)
+.PHONY: $(ARTIFACTS)/image-factory-linux-amd64
+$(ARTIFACTS)/image-factory-linux-amd64:
+	@$(MAKE) local-image-factory-linux-amd64 DEST=$(ARTIFACTS)
 
-.PHONY: image-service-linux-amd64
-image-service-linux-amd64: $(ARTIFACTS)/image-service-linux-amd64  ## Builds executable for image-service-linux-amd64.
+.PHONY: image-factory-linux-amd64
+image-factory-linux-amd64: $(ARTIFACTS)/image-factory-linux-amd64  ## Builds executable for image-factory-linux-amd64.
 
-.PHONY: $(ARTIFACTS)/image-service-linux-arm64
-$(ARTIFACTS)/image-service-linux-arm64:
-	@$(MAKE) local-image-service-linux-arm64 DEST=$(ARTIFACTS)
+.PHONY: $(ARTIFACTS)/image-factory-linux-arm64
+$(ARTIFACTS)/image-factory-linux-arm64:
+	@$(MAKE) local-image-factory-linux-arm64 DEST=$(ARTIFACTS)
 
-.PHONY: image-service-linux-arm64
-image-service-linux-arm64: $(ARTIFACTS)/image-service-linux-arm64  ## Builds executable for image-service-linux-arm64.
+.PHONY: image-factory-linux-arm64
+image-factory-linux-arm64: $(ARTIFACTS)/image-factory-linux-arm64  ## Builds executable for image-factory-linux-arm64.
 
-.PHONY: image-service
-image-service: image-service-linux-amd64 image-service-linux-arm64  ## Builds executables for image-service.
+.PHONY: image-factory
+image-factory: image-factory-linux-amd64 image-factory-linux-arm64  ## Builds executables for image-factory.
 
 .PHONY: lint-markdown
 lint-markdown:  ## Runs markdownlint.
@@ -192,9 +198,9 @@ lint-markdown:  ## Runs markdownlint.
 .PHONY: lint
 lint: lint-golangci-lint lint-gofumpt lint-govulncheck lint-goimports lint-markdown  ## Run all linters for the project.
 
-.PHONY: image-image-service
-image-image-service:  ## Builds image for image-service.
-	@$(MAKE) target-$@ TARGET_ARGS="--tag=$(REGISTRY)/$(USERNAME)/image-service:$(TAG)"
+.PHONY: image-image-factory
+image-image-factory:  ## Builds image for image-factory.
+	@$(MAKE) target-$@ TARGET_ARGS="--tag=$(REGISTRY)/$(USERNAME)/image-factory:$(TAG)"
 
 .PHONY: integration.test
 integration.test:
@@ -202,9 +208,9 @@ integration.test:
 
 .PHONY: integration
 integration: integration.test
-	@$(MAKE) image-image-service PUSH=true GO_BUILDFLAGS=-race CGO_ENABLED=1
-	docker pull $(REGISTRY)/$(USERNAME)/image-service:$(TAG)
-	docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-service:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
+	@$(MAKE) image-image-factory PUSH=true GO_BUILDFLAGS=-race CGO_ENABLED=1
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
 
 .PHONY: rekres
 rekres:
@@ -225,4 +231,3 @@ release-notes:
 conformance:
 	@docker pull $(CONFORMANCE_IMAGE)
 	@docker run --rm -it -v $(PWD):/src -w /src $(CONFORMANCE_IMAGE) enforce
-

@@ -2,13 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package main is the entrypoint of the image service.
+// Package main is the entrypoint of the image factory.
 package main
 
 import (
 	"flag"
 
-	"github.com/siderolabs/image-service/cmd/image-service/cmd"
+	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 )
 
 func initFlags() cmd.Options {
@@ -24,9 +24,9 @@ func initFlags() cmd.Options {
 
 	flag.IntVar(&opts.AssetBuildMaxConcurrency, "asset-builder-max-concurrency", cmd.DefaultOptions.AssetBuildMaxConcurrency, "maximum concurrency for asset builder")
 
-	flag.StringVar(&opts.ExternalURL, "external-url", cmd.DefaultOptions.ExternalURL, "service external endpoint URL")
+	flag.StringVar(&opts.ExternalURL, "external-url", cmd.DefaultOptions.ExternalURL, "factory external endpoint URL")
 
-	flag.StringVar(&opts.FlavorServiceRepository, "flavor-service-repository", cmd.DefaultOptions.FlavorServiceRepository, "image repository for the flavor service")
+	flag.StringVar(&opts.SchematicServiceRepository, "schematic-service-repository", cmd.DefaultOptions.SchematicServiceRepository, "image repository for the schematic service")
 
 	flag.StringVar(&opts.InstallerExternalRepository, "installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
 	flag.StringVar(&opts.InstallerInternalRepository, "installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")

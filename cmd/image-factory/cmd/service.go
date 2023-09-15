@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package cmd implements the entrypoint of the image service.
+// Package cmd implements the entrypoint of the image factory.
 package cmd
 
 import (
@@ -23,17 +23,17 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/siderolabs/image-service/internal/artifacts"
-	"github.com/siderolabs/image-service/internal/asset"
-	"github.com/siderolabs/image-service/internal/flavor"
-	"github.com/siderolabs/image-service/internal/flavor/storage/cache"
-	"github.com/siderolabs/image-service/internal/flavor/storage/registry"
-	frontendhttp "github.com/siderolabs/image-service/internal/frontend/http"
-	"github.com/siderolabs/image-service/internal/version"
+	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/asset"
+	frontendhttp "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/schematic"
+	"github.com/siderolabs/image-factory/internal/schematic/storage/cache"
+	"github.com/siderolabs/image-factory/internal/schematic/storage/registry"
+	"github.com/siderolabs/image-factory/internal/version"
 )
 
-// RunService runs the image service with specified options.
-func RunService(ctx context.Context, logger *zap.Logger, opts Options) error {
+// RunFactory runs the image factory with specified options.
+func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	logger.Info("starting", zap.String("name", version.Name), zap.String("version", version.Tag), zap.String("sha", version.SHA))
 	defer logger.Info("shutting down", zap.String("name", version.Name))
 
@@ -44,7 +44,7 @@ func RunService(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	defer artifactsManager.Close() //nolint:errcheck
 
-	configService, err := buildFlavorService(logger, opts)
+	configFactory, err := buildSchematicFactory(logger, opts)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func RunService(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("failed to parse external installer repository: %w", err)
 	}
 
-	frontendHTTP, err := frontendhttp.NewFrontend(logger, configService, assetBuilder, artifactsManager, frontendOptions)
+	frontendHTTP, err := frontendhttp.NewFrontend(logger, configFactory, assetBuilder, artifactsManager, frontendOptions)
 	if err != nil {
 		return fmt.Errorf("failed to initialize HTTP frontend: %w", err)
 	}
@@ -154,8 +154,8 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 	return artifactsManager, nil
 }
 
-func buildFlavorService(logger *zap.Logger, opts Options) (*flavor.Service, error) {
-	repo, err := name.NewRepository(opts.FlavorServiceRepository)
+func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory, error) {
+	repo, err := name.NewRepository(opts.SchematicServiceRepository)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
@@ -165,7 +165,7 @@ func buildFlavorService(logger *zap.Logger, opts Options) (*flavor.Service, erro
 		return nil, fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
-	return flavor.NewService(logger, cache.NewCache(storage), flavor.Options{}), nil
+	return schematic.NewFactory(logger, cache.NewCache(storage), schematic.Options{}), nil
 }
 
 // remoteOptions returns options for remote registry access.

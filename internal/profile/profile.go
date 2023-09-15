@@ -16,8 +16,8 @@ import (
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 
-	"github.com/siderolabs/image-service/internal/artifacts"
-	"github.com/siderolabs/image-service/pkg/flavor"
+	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 // InvalidErrorTag tags errors related to invalid profiles.
@@ -231,23 +231,23 @@ func InstallerProfile(secureboot bool, arch artifacts.Arch) profile.Profile {
 
 // ExtensionProducer is a function which produces a set of extensions/meta information.
 type ExtensionProducer interface {
-	GetFlavorExtension(context.Context, *flavor.Flavor) (string, error)
+	GetSchematicExtension(context.Context, *schematic.Schematic) (string, error)
 	GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error)
 	GetExtensionImage(context.Context, artifacts.Arch, artifacts.ExtensionRef) (string, error)
 }
 
-// EnhanceFromFlavor enhances the profile with the flavor.
+// EnhanceFromSchematic enhances the profile with the schematic.
 //
 //nolint:gocognit
-func EnhanceFromFlavor(ctx context.Context, prof profile.Profile, flavor *flavor.Flavor, extensionProducer ExtensionProducer, versionTag string) (profile.Profile, error) {
+func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *schematic.Schematic, extensionProducer ExtensionProducer, versionTag string) (profile.Profile, error) {
 	if prof.Output.Kind != profile.OutKindCmdline && prof.Output.Kind != profile.OutKindKernel {
-		if len(flavor.Customization.SystemExtensions.OfficialExtensions) > 0 {
+		if len(schematic.Customization.SystemExtensions.OfficialExtensions) > 0 {
 			availableExtensions, err := extensionProducer.GetOfficialExtensions(ctx, versionTag)
 			if err != nil {
 				return prof, fmt.Errorf("error getting official extensions: %w", err)
 			}
 
-			for _, extensionName := range flavor.Customization.SystemExtensions.OfficialExtensions {
+			for _, extensionName := range schematic.Customization.SystemExtensions.OfficialExtensions {
 				var extensionRef artifacts.ExtensionRef
 
 				for _, availableExtension := range availableExtensions {
@@ -271,18 +271,18 @@ func EnhanceFromFlavor(ctx context.Context, prof profile.Profile, flavor *flavor
 			}
 		}
 
-		// append flavor extension
-		flavorExtensionPath, err := extensionProducer.GetFlavorExtension(ctx, flavor)
+		// append schematic extension
+		schematicExtensionPath, err := extensionProducer.GetSchematicExtension(ctx, schematic)
 		if err != nil {
 			return prof, err
 		}
 
-		prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: flavorExtensionPath})
+		prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: schematicExtensionPath})
 	}
 
 	// skip customizations for profile kinds which don't support it
 	if prof.Output.Kind != profile.OutKindInitramfs && prof.Output.Kind != profile.OutKindKernel && prof.Output.Kind != profile.OutKindInstaller {
-		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, flavor.Customization.ExtraKernelArgs...)
+		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
 	}
 
 	prof.Version = versionTag

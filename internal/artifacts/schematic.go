@@ -16,20 +16,20 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/extensions"
 	"gopkg.in/yaml.v3"
 
-	"github.com/siderolabs/image-service/pkg/flavor"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
-// GetFlavorExtension returns a path to the tarball with "virtual" extension matching a specified flavor.
-func (m *Manager) GetFlavorExtension(ctx context.Context, flavor *flavor.Flavor) (string, error) {
-	flavorID, err := flavor.ID()
+// GetSchematicExtension returns a path to the tarball with "virtual" extension matching a specified schematic.
+func (m *Manager) GetSchematicExtension(ctx context.Context, schematic *schematic.Schematic) (string, error) {
+	schematicID, err := schematic.ID()
 	if err != nil {
 		return "", err
 	}
 
-	extensionPath := filepath.Join(m.flavorsPath, flavorID+".tar")
+	extensionPath := filepath.Join(m.schematicsPath, schematicID+".tar")
 
-	resultCh := m.sf.DoChan(flavorID, func() (any, error) {
-		return nil, m.buildFlavorExtension(flavorID, extensionPath)
+	resultCh := m.sf.DoChan(schematicID, func() (any, error) {
+		return nil, m.buildSchematicExtension(schematicID, extensionPath)
 	})
 
 	select {
@@ -44,15 +44,15 @@ func (m *Manager) GetFlavorExtension(ctx context.Context, flavor *flavor.Flavor)
 	}
 }
 
-// flavorExtension builds a "virtual" extension matching a specified flavor.
-func flavorExtension(flavorID string) (io.Reader, error) {
+// schematicExtension builds a "virtual" extension matching a specified schematic.
+func schematicExtension(schematicID string) (io.Reader, error) {
 	manifest := extensions.Manifest{
 		Version: "v1alpha1",
 		Metadata: extensions.Metadata{
-			Name:        "flavor",
-			Version:     flavorID,
-			Author:      "Image Service",
-			Description: "Virtual extension which specifies the flavor of the image built with Image Service.",
+			Name:        "schematic",
+			Version:     schematicID,
+			Author:      "Image Factory",
+			Description: "Virtual extension which specifies the schematic of the image built with Image Factory.",
 			Compatibility: extensions.Compatibility{
 				Talos: extensions.Constraint{
 					Version: ">= 1.0.0",
@@ -88,7 +88,7 @@ func flavorExtension(flavorID string) (io.Reader, error) {
 		"rootfs/usr/",
 		"rootfs/usr/local/",
 		"rootfs/usr/local/share/",
-		"rootfs/usr/local/share/flavor/",
+		"rootfs/usr/local/share/schematic/",
 	} {
 		if err = tw.WriteHeader(&tar.Header{
 			Name:     path,
@@ -100,7 +100,7 @@ func flavorExtension(flavorID string) (io.Reader, error) {
 	}
 
 	if err = tw.WriteHeader(&tar.Header{
-		Name:     filepath.Join("rootfs/usr/local/share/flavor", flavorID), // empty file
+		Name:     filepath.Join("rootfs/usr/local/share/schematic", schematicID), // empty file
 		Typeflag: tar.TypeReg,
 		Mode:     0o755,
 	}); err != nil {
@@ -114,11 +114,11 @@ func flavorExtension(flavorID string) (io.Reader, error) {
 	return &buf, nil
 }
 
-// buildFlavorExtension builds a flavor extension tarball.
-func (m *Manager) buildFlavorExtension(flavorID, extensionPath string) error {
-	tarball, err := flavorExtension(flavorID)
+// buildSchematicExtension builds a schematic extension tarball.
+func (m *Manager) buildSchematicExtension(schematicID, extensionPath string) error {
+	tarball, err := schematicExtension(schematicID)
 	if err != nil {
-		return fmt.Errorf("failed to build flavor layer: %w", err)
+		return fmt.Errorf("failed to build schematic layer: %w", err)
 	}
 
 	f, err := os.Create(extensionPath + ".tmp")

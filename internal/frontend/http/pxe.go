@@ -17,7 +17,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/ensure"
 
-	"github.com/siderolabs/image-service/internal/profile"
+	"github.com/siderolabs/image-factory/internal/profile"
 )
 
 //go:embed standard.ipxe
@@ -28,9 +28,9 @@ var securebootIPXE string
 
 // handlePXE delivers a PXE script to boot Talos.
 func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http.Request, p httprouter.Params) error {
-	flavorID := p.ByName("flavor")
+	schematicID := p.ByName("schematic")
 
-	flavor, err := f.flavorService.Get(ctx, flavorID)
+	schematic, err := f.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
 		return err
 	}
@@ -53,9 +53,9 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 		return fmt.Errorf("error parsing profile from path: %w", err)
 	}
 
-	prof, err = profile.EnhanceFromFlavor(ctx, prof, flavor, f.artifactsManager, versionTag)
+	prof, err = profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, versionTag)
 	if err != nil {
-		return fmt.Errorf("error enhancing profile from flavor: %w", err)
+		return fmt.Errorf("error enhancing profile from schematic: %w", err)
 	}
 
 	if err = prof.Validate(); err != nil {
@@ -69,7 +69,7 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 				struct {
 					UKIURL string
 				}{
-					UKIURL: f.options.ExternalURL.JoinPath("image", flavorID, versionTag, fmt.Sprintf("%s-%s-secureboot.uki.efi", prof.Platform, prof.Arch)).String(),
+					UKIURL: f.options.ExternalURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("%s-%s-secureboot.uki.efi", prof.Platform, prof.Arch)).String(),
 				},
 			)
 	}
@@ -102,9 +102,9 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 				Cmdline      string
 				InitramfsURL string
 			}{
-				KernelURL:    f.options.ExternalURL.JoinPath("image", flavorID, versionTag, fmt.Sprintf("kernel-%s", prof.Arch)).String(),
+				KernelURL:    f.options.ExternalURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("kernel-%s", prof.Arch)).String(),
 				Cmdline:      string(cmdline),
-				InitramfsURL: f.options.ExternalURL.JoinPath("image", flavorID, versionTag, fmt.Sprintf("initramfs-%s.xz", prof.Arch)).String(),
+				InitramfsURL: f.options.ExternalURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("initramfs-%s.xz", prof.Arch)).String(),
 			},
 		)
 }

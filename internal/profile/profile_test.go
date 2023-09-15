@@ -16,9 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 
-	"github.com/siderolabs/image-service/internal/artifacts"
-	imageprofile "github.com/siderolabs/image-service/internal/profile"
-	"github.com/siderolabs/image-service/pkg/flavor"
+	"github.com/siderolabs/image-factory/internal/artifacts"
+	imageprofile "github.com/siderolabs/image-factory/internal/profile"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 func TestParseFromPath(t *testing.T) {
@@ -214,8 +214,8 @@ func TestParseFromPath(t *testing.T) {
 
 type mockExtensionProducer struct{}
 
-func (mockExtensionProducer) GetFlavorExtension(_ context.Context, flavor *flavor.Flavor) (string, error) {
-	id, err := flavor.ID()
+func (mockExtensionProducer) GetSchematicExtension(_ context.Context, schematic *schematic.Schematic) (string, error) {
+	id, err := schematic.ID()
 	if err != nil {
 		return "", err
 	}
@@ -240,7 +240,7 @@ func (mockExtensionProducer) GetExtensionImage(_ context.Context, arch artifacts
 	return fmt.Sprintf("%s-%s.tar", arch, ref.Digest), nil
 }
 
-func TestEnhanceFromFlavor(t *testing.T) {
+func TestEnhanceFromSchematic(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -252,7 +252,7 @@ func TestEnhanceFromFlavor(t *testing.T) {
 	for _, test := range []struct { //nolint:govet
 		name          string
 		baseProfile   profile.Profile
-		flavor        flavor.Flavor
+		schematic     schematic.Schematic
 		versionString string
 
 		expectedProfile profile.Profile
@@ -260,7 +260,7 @@ func TestEnhanceFromFlavor(t *testing.T) {
 		{
 			name:          "no customization",
 			baseProfile:   baseProfile,
-			flavor:        flavor.Flavor{},
+			schematic:     schematic.Schematic{},
 			versionString: "v1.5.0",
 
 			expectedProfile: profile.Profile{
@@ -288,8 +288,8 @@ func TestEnhanceFromFlavor(t *testing.T) {
 		{
 			name:        "extra kernel args",
 			baseProfile: baseProfile,
-			flavor: flavor.Flavor{
-				Customization: flavor.Customization{
+			schematic: schematic.Schematic{
+				Customization: schematic.Customization{
 					ExtraKernelArgs: []string{"noapic", "nolapic"},
 				},
 			},
@@ -323,9 +323,9 @@ func TestEnhanceFromFlavor(t *testing.T) {
 		{
 			name:        "extensions",
 			baseProfile: baseProfile,
-			flavor: flavor.Flavor{
-				Customization: flavor.Customization{
-					SystemExtensions: flavor.SystemExtensions{
+			schematic: schematic.Schematic{
+				Customization: schematic.Customization{
+					SystemExtensions: schematic.SystemExtensions{
 						OfficialExtensions: []string{
 							"siderolabs/amd-ucode",
 							"siderolabs/intel-ucode",
@@ -368,7 +368,7 @@ func TestEnhanceFromFlavor(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actualProfile, err := imageprofile.EnhanceFromFlavor(ctx, test.baseProfile, &test.flavor, mockExtensionProducer{}, test.versionString)
+			actualProfile, err := imageprofile.EnhanceFromSchematic(ctx, test.baseProfile, &test.schematic, mockExtensionProducer{}, test.versionString)
 			require.NoError(t, err)
 			require.Equal(t, test.expectedProfile, actualProfile)
 		})

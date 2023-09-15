@@ -22,10 +22,10 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 
-	"github.com/siderolabs/image-service/internal/artifacts"
-	"github.com/siderolabs/image-service/internal/asset"
-	"github.com/siderolabs/image-service/internal/profile"
-	"github.com/siderolabs/image-service/pkg/flavor"
+	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/asset"
+	"github.com/siderolabs/image-factory/internal/profile"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 // handleHealth handles registry health.
@@ -67,10 +67,10 @@ func (img requestedImage) SecureBoot() bool {
 //
 // We always redirect to the external registry, as we assume the image has already been pushed.
 func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, _ *http.Request, p httprouter.Params) error {
-	// verify that flavor exists
-	flavorID := p.ByName("flavor")
+	// verify that schematic exists
+	schematicID := p.ByName("schematic")
 
-	_, err := f.flavorService.Get(ctx, flavorID)
+	_, err := f.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, _ *htt
 	redirectURL.Scheme = f.options.InstallerExternalRepository.Scheme()
 	redirectURL.Host = f.options.InstallerExternalRepository.Registry.Name()
 
-	location := redirectURL.JoinPath("v2", f.options.InstallerExternalRepository.RepositoryStr(), img.Name(), flavorID, "blobs", digest).String()
+	location := redirectURL.JoinPath("v2", f.options.InstallerExternalRepository.RepositoryStr(), img.Name(), schematicID, "blobs", digest).String()
 
 	f.logger.Info("redirecting blob", zap.String("location", location))
 
@@ -101,9 +101,9 @@ func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, _ *htt
 //
 // If the manifest is for the tag, we check if the image already exists, and either redirect, or build, push and redirect.
 func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ *http.Request, p httprouter.Params) error {
-	flavorID := p.ByName("flavor")
+	schematicID := p.ByName("schematic")
 
-	flavor, err := f.flavorService.Get(ctx, flavorID)
+	schematic, err := f.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 		redirectURL.Scheme = f.options.InstallerExternalRepository.Scheme()
 		redirectURL.Host = f.options.InstallerExternalRepository.Registry.Name()
 
-		location := redirectURL.JoinPath("v2", f.options.InstallerExternalRepository.RepositoryStr(), img.Name(), flavorID, "manifests", versionTag).String()
+		location := redirectURL.JoinPath("v2", f.options.InstallerExternalRepository.RepositoryStr(), img.Name(), schematicID, "manifests", versionTag).String()
 
 		f.logger.Info("redirecting manifest", zap.String("location", location))
 
@@ -141,14 +141,14 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 	}
 
 	// check if the asset has already been built
-	f.logger.Info("heading installer image", zap.String("image", img.Name()), zap.String("flavor", flavorID), zap.String("version", versionTag))
+	f.logger.Info("heading installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
 
 	_, err = f.puller.Head(
 		ctx,
 		f.options.InstallerInternalRepository.Repo(
 			f.options.InstallerInternalRepository.RepositoryStr(),
 			img.Name(),
-			flavorID,
+			schematicID,
 		).Tag(versionTag),
 	)
 	if err == nil {
@@ -170,11 +170,11 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 	}
 
 	// build installer images for each architecture, combine them into a single index and push it
-	key := fmt.Sprintf("%s-%s-%s", img.Name(), flavorID, versionTag)
+	key := fmt.Sprintf("%s-%s-%s", img.Name(), schematicID, versionTag)
 
 	resultCh := f.sf.DoChan(key, func() (any, error) {
 		// we use here detached context to make sure image is built no matter if the request is canceled
-		return nil, f.buildInstallImage(context.Background(), img, flavor, version, flavorID, versionTag)
+		return nil, f.buildInstallImage(context.Background(), img, schematic, version, schematicID, versionTag)
 	})
 
 	select {
@@ -190,17 +190,17 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 	return redirect()
 }
 
-func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, flavor *flavor.Flavor, version semver.Version, flavorID, versionTag string) error {
-	f.logger.Info("building installer image", zap.String("image", img.Name()), zap.String("flavor", flavorID), zap.String("version", versionTag))
+func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, schematic *schematic.Schematic, version semver.Version, schematicID, versionTag string) error {
+	f.logger.Info("building installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
 
 	var imageIndex v1.ImageIndex = empty.Index
 
 	for _, arch := range []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64} {
 		prof := profile.InstallerProfile(img.SecureBoot(), arch)
 
-		prof, err := profile.EnhanceFromFlavor(ctx, prof, flavor, f.artifactsManager, versionTag)
+		prof, err := profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, versionTag)
 		if err != nil {
-			return fmt.Errorf("error enhancing profile from flavor: %w", err)
+			return fmt.Errorf("error enhancing profile from schematic: %w", err)
 		}
 
 		if err = prof.Validate(); err != nil {
@@ -239,14 +239,14 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, fl
 		return fmt.Errorf("error validating index: %w", err)
 	}
 
-	f.logger.Info("pushing installer image", zap.String("image", img.Name()), zap.String("flavor", flavorID), zap.String("version", versionTag))
+	f.logger.Info("pushing installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
 
 	if err := f.pusher.Push(
 		ctx,
 		f.options.InstallerInternalRepository.Repo(
 			f.options.InstallerInternalRepository.RepositoryStr(),
 			img.Name(),
-			flavorID,
+			schematicID,
 		).Tag(versionTag),
 		imageIndex,
 	); err != nil {

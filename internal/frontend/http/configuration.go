@@ -12,11 +12,11 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/siderolabs/image-service/pkg/flavor"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
-// handleFlavorCreate handles creation of the flavor.
-func (f *Frontend) handleFlavorCreate(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+// handleSchematicCreate handles creation of the schematic.
+func (f *Frontend) handleSchematicCreate(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err
@@ -26,12 +26,12 @@ func (f *Frontend) handleFlavorCreate(ctx context.Context, w http.ResponseWriter
 		return err
 	}
 
-	cfg, err := flavor.Unmarshal(data)
+	cfg, err := schematic.Unmarshal(data)
 	if err != nil {
 		return err
 	}
 
-	id, err := f.flavorService.Put(ctx, cfg)
+	id, err := f.schematicFactory.Put(ctx, cfg)
 	if err != nil {
 		return err
 	}

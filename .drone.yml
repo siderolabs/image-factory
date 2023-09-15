@@ -105,11 +105,11 @@ steps:
   depends_on:
   - unit-tests
 
-- name: image-service
+- name: image-factory
   pull: always
   image: autonomy/build-container:latest
   commands:
-  - make image-service
+  - make image-factory
   volumes:
   - name: outer-docker-socket
     path: /var/outer-run
@@ -139,11 +139,11 @@ steps:
   depends_on:
   - base
 
-- name: image-image-service
+- name: image-image-factory
   pull: always
   image: autonomy/build-container:latest
   commands:
-  - make image-image-service
+  - make image-image-factory
   volumes:
   - name: outer-docker-socket
     path: /var/outer-run
@@ -154,16 +154,16 @@ steps:
   - name: ssh
     path: /root/.ssh
   depends_on:
-  - image-service
+  - image-factory
   - lint
   - unit-tests
 
-- name: push-image-service
+- name: push-image-factory
   pull: always
   image: autonomy/build-container:latest
   commands:
   - docker login ghcr.io --username "$${GHCR_USERNAME}" --password "$${GHCR_PASSWORD}"
-  - make image-image-service
+  - make image-image-factory
   environment:
     GHCR_PASSWORD:
       from_secret: ghcr_token
@@ -184,14 +184,14 @@ steps:
       exclude:
       - pull_request
   depends_on:
-  - image-image-service
+  - image-image-factory
 
-- name: push-image-service-latest
+- name: push-image-factory-latest
   pull: always
   image: autonomy/build-container:latest
   commands:
   - docker login ghcr.io --username "$${GHCR_USERNAME}" --password "$${GHCR_PASSWORD}"
-  - make image-image-service TAG=latest
+  - make image-image-factory TAG=latest
   environment:
     GHCR_PASSWORD:
       from_secret: ghcr_token
@@ -214,7 +214,7 @@ steps:
       exclude:
       - pull_request
   depends_on:
-  - push-image-service
+  - push-image-factory
 
 - name: integration
   pull: always
@@ -223,7 +223,7 @@ steps:
   - make integration
   environment:
     REGISTRY: registry.dev.talos-systems.io
-    TEST_FLAGS: -test.flavor-service-repository=registry.dev.talos-systems.io/image-service/flavor -test.installer-external-repository=registry.dev.talos-systems.io/siderolabs -test.installer-internal-repository=registry.dev.talos-systems.io/siderolabs
+    TEST_FLAGS: -test.schematic-service-repository=registry.dev.talos-systems.io/image-factory/schematic -test.installer-external-repository=registry.dev.talos-systems.io/siderolabs -test.installer-internal-repository=registry.dev.talos-systems.io/siderolabs
   privileged: true
   volumes:
   - name: outer-docker-socket
@@ -257,8 +257,8 @@ steps:
   depends_on:
   - unit-tests
   - coverage
-  - image-service
-  - image-image-service
+  - image-factory
+  - image-image-factory
   - integration
   - lint
 

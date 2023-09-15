@@ -17,7 +17,7 @@ import (
 	"github.com/siderolabs/talos/pkg/reporter"
 	"go.uber.org/zap"
 
-	"github.com/siderolabs/image-service/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/artifacts"
 )
 
 // BootAsset is an interface to access a boot asset.

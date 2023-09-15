@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package flavor provides a data model for requested image flavor.
-package flavor
+// Package schematic provides a data model for requested image schematic.
+package schematic
 
 import (
 	"bytes"
@@ -14,8 +14,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Flavor represents the requested image customization.
-type Flavor struct {
+// Schematic represents the requested image customization.
+type Schematic struct {
 	// Customization represents the Talos image customization.
 	Customization Customization `yaml:"customization"`
 }
@@ -32,19 +32,19 @@ type Customization struct {
 type SystemExtensions struct {
 	// OfficialExtensions represents the Talos official system extensions to be installed.
 	//
-	// The image service will pick up automatically the version compatible with Talos version.
+	// The image factory will pick up automatically the version compatible with Talos version.
 	OfficialExtensions []string `yaml:"officialExtensions,omitempty"`
 }
 
-// InvalidErrorTag is a tag for invalid flavor errors.
+// InvalidErrorTag is a tag for invalid schematic errors.
 type InvalidErrorTag struct{}
 
-// Unmarshal the flavor from text representation.
-func Unmarshal(data []byte) (*Flavor, error) {
+// Unmarshal the schematic from text representation.
+func Unmarshal(data []byte) (*Schematic, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
 
-	var cfg Flavor
+	var cfg Schematic
 
 	if err := dec.Decode(&cfg); err != nil {
 		return nil, xerrors.NewTagged[InvalidErrorTag](err)
@@ -53,18 +53,18 @@ func Unmarshal(data []byte) (*Flavor, error) {
 	return &cfg, nil
 }
 
-// Marshal the flavor to text representation.
+// Marshal the schematic to text representation.
 //
-// Marshal result should be stable if new flavor fields are added.
-func (cfg *Flavor) Marshal() ([]byte, error) {
+// Marshal result should be stable if new schematic fields are added.
+func (cfg *Schematic) Marshal() ([]byte, error) {
 	return yaml.Marshal(cfg)
 }
 
-// ID returns the identifier of the flavor.
+// ID returns the identifier of the schematic.
 //
-// ID is stable (does not change if the flavor is same).
-// ID matches sha256 hash of the canonical representation of the flavor.
-func (cfg *Flavor) ID() (string, error) {
+// ID is stable (does not change if the schematic is same).
+// ID matches sha256 hash of the canonical representation of the schematic.
+func (cfg *Schematic) ID() (string, error) {
 	data, err := cfg.Marshal()
 	if err != nil {
 		return "", err

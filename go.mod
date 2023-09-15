@@ -1,4 +1,4 @@
-module github.com/siderolabs/image-service
+module github.com/siderolabs/image-factory
 
 go 1.21.0
 

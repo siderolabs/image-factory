@@ -17,10 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func downloadPXE(ctx context.Context, t *testing.T, baseURL string, flavorID, talosVersion, path string) string {
+func downloadPXE(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string) string {
 	t.Helper()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/pxe/"+flavorID+"/"+talosVersion+"/"+path, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/pxe/"+schematicID+"/"+talosVersion+"/"+path, nil)
 	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
@@ -59,11 +59,11 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					strings.ReplaceAll(
 						strings.ReplaceAll(
 							strings.ReplaceAll(metalInsecureExpected, "ENDPOINT", baseURL),
-							"CONFIG", emptyFlavorID,
+							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
 					),
-					downloadPXE(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-amd64"),
+					downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64"),
 				)
 			})
 
@@ -74,11 +74,11 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					strings.ReplaceAll(
 						strings.ReplaceAll(
 							strings.ReplaceAll(equinixInsecureExpected, "ENDPOINT", baseURL),
-							"CONFIG", emptyFlavorID,
+							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
 					),
-					downloadPXE(ctx, t, baseURL, emptyFlavorID, talosVersion, "equinixMetal-amd64"),
+					downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "equinixMetal-amd64"),
 				)
 			})
 
@@ -89,11 +89,11 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					strings.ReplaceAll(
 						strings.ReplaceAll(
 							strings.ReplaceAll(securebootExpected, "ENDPOINT", baseURL),
-							"CONFIG", emptyFlavorID,
+							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
 					),
-					downloadPXE(ctx, t, baseURL, emptyFlavorID, talosVersion, "metal-amd64-secureboot"),
+					downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot"),
 				)
 			})
 		})

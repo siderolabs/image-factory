@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package main is the entrypoint of the image service.
+// Package main is the entrypoint of the image factory.
 package main
 
 import (
@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sys/unix"
 
-	"github.com/siderolabs/image-service/cmd/image-service/cmd"
+	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 )
 
 func main() {
@@ -38,5 +38,5 @@ func runWithContext(ctx context.Context) error {
 
 	opts := initFlags()
 
-	return cmd.RunService(ctx, logger, opts)
+	return cmd.RunFactory(ctx, logger, opts)
 }

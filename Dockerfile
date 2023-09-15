@@ -2,16 +2,16 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-09-12T19:22:18Z by kres latest.
+# Generated on 2023-09-18T18:00:42Z by kres latest.
 
 ARG TOOLCHAIN
 
-FROM alpine:3.18 AS base-image-image-service
+FROM alpine:3.18 AS base-image-image-factory
 
 # runs markdownlint
-FROM docker.io/node:20.5.1-alpine3.18 AS lint-markdown
+FROM docker.io/node:20.6.1-alpine3.18 AS lint-markdown
 WORKDIR /src
-RUN npm i -g markdownlint-cli@0.35.0
+RUN npm i -g markdownlint-cli@0.36.0
 RUN npm i sentences-per-line@0.2.1
 COPY .markdownlint.json .
 COPY ./README.md ./README.md
@@ -77,7 +77,7 @@ RUN FILES="$(gofumpt -l .)" && test -z "${FILES}" || (echo -e "Source code is no
 
 # runs goimports
 FROM base AS lint-goimports
-RUN FILES="$(goimports -l -local github.com/siderolabs/image-service/ .)" && test -z "${FILES}" || (echo -e "Source code is not formatted with 'goimports -w -local github.com/siderolabs/image-service/ .':\n${FILES}"; exit 1)
+RUN FILES="$(goimports -l -local github.com/siderolabs/image-factory/ .)" && test -z "${FILES}" || (echo -e "Source code is not formatted with 'goimports -w -local github.com/siderolabs/image-factory/ .':\n${FILES}"; exit 1)
 
 # runs golangci-lint
 FROM base AS lint-golangci-lint
@@ -120,50 +120,50 @@ COPY --from=unit-tests-run /src/coverage.txt /coverage-unit-tests.txt
 FROM scratch AS generate
 COPY --from=embed-abbrev-generate /src/internal/version internal/version
 
-# builds image-service-linux-amd64
-FROM base AS image-service-linux-amd64-build
+# builds image-factory-linux-amd64
+FROM base AS image-factory-linux-amd64-build
 COPY --from=generate / /
 COPY --from=embed-generate / /
-WORKDIR /src/cmd/image-service
+WORKDIR /src/cmd/image-factory
 ARG GO_BUILDFLAGS
 ARG GO_LDFLAGS
 ARG VERSION_PKG="internal/version"
 ARG SHA
 ARG TAG
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOARCH=amd64 GOOS=linux go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS} -X ${VERSION_PKG}.Name=image-service -X ${VERSION_PKG}.SHA=${SHA} -X ${VERSION_PKG}.Tag=${TAG}" -o /image-service-linux-amd64
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOARCH=amd64 GOOS=linux go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS} -X ${VERSION_PKG}.Name=image-factory -X ${VERSION_PKG}.SHA=${SHA} -X ${VERSION_PKG}.Tag=${TAG}" -o /image-factory-linux-amd64
 
-# builds image-service-linux-arm64
-FROM base AS image-service-linux-arm64-build
+# builds image-factory-linux-arm64
+FROM base AS image-factory-linux-arm64-build
 COPY --from=generate / /
 COPY --from=embed-generate / /
-WORKDIR /src/cmd/image-service
+WORKDIR /src/cmd/image-factory
 ARG GO_BUILDFLAGS
 ARG GO_LDFLAGS
 ARG VERSION_PKG="internal/version"
 ARG SHA
 ARG TAG
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOARCH=arm64 GOOS=linux go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS} -X ${VERSION_PKG}.Name=image-service -X ${VERSION_PKG}.SHA=${SHA} -X ${VERSION_PKG}.Tag=${TAG}" -o /image-service-linux-arm64
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg GOARCH=arm64 GOOS=linux go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS} -X ${VERSION_PKG}.Name=image-factory -X ${VERSION_PKG}.SHA=${SHA} -X ${VERSION_PKG}.Tag=${TAG}" -o /image-factory-linux-arm64
 
-FROM scratch AS image-service-linux-amd64
-COPY --from=image-service-linux-amd64-build /image-service-linux-amd64 /image-service-linux-amd64
+FROM scratch AS image-factory-linux-amd64
+COPY --from=image-factory-linux-amd64-build /image-factory-linux-amd64 /image-factory-linux-amd64
 
-FROM scratch AS image-service-linux-arm64
-COPY --from=image-service-linux-arm64-build /image-service-linux-arm64 /image-service-linux-arm64
+FROM scratch AS image-factory-linux-arm64
+COPY --from=image-factory-linux-arm64-build /image-factory-linux-arm64 /image-factory-linux-arm64
 
-FROM image-service-linux-${TARGETARCH} AS image-service
+FROM image-factory-linux-${TARGETARCH} AS image-factory
 
-FROM scratch AS image-service-all
-COPY --from=image-service-linux-amd64 / /
-COPY --from=image-service-linux-arm64 / /
+FROM scratch AS image-factory-all
+COPY --from=image-factory-linux-amd64 / /
+COPY --from=image-factory-linux-arm64 / /
 
-FROM base-image-image-service AS image-image-service
+FROM base-image-image-factory AS image-image-factory
 RUN apk add --no-cache --update bash binutils-aarch64 binutils-x86_64 cpio dosfstools efibootmgr kmod mtools pigz qemu-img squashfs-tools tar util-linux xfsprogs xorriso xz
 ARG TARGETARCH
-COPY --from=image-service image-service-linux-${TARGETARCH} /image-service
+COPY --from=image-factory image-factory-linux-${TARGETARCH} /image-factory
 COPY --from=ghcr.io/siderolabs/grub:v1.5.0 / /
 COPY --from=ghcr.io/siderolabs/grub@sha256:b3200d08c4c9295e02dfb11e5760c5dbe2ffe1b1191272851ab03e527220094c /usr/lib/grub /usr/lib/grub
 COPY --from=ghcr.io/siderolabs/grub@sha256:a8936963fc5f1fb83b057eb2369371ec7a4e7a9cfda71a804c5d6f8de222abea /usr/lib/grub /usr/lib/grub
 COPY --from=ghcr.io/siderolabs/installer:v1.5.0 /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
-LABEL org.opencontainers.image.source https://github.com/siderolabs/image-service
-ENTRYPOINT ["/image-service"]
+LABEL org.opencontainers.image.source https://github.com/siderolabs/image-factory
+ENTRYPOINT ["/image-factory"]
 

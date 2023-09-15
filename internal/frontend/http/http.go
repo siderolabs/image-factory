@@ -21,18 +21,18 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
-	"github.com/siderolabs/image-service/internal/artifacts"
-	"github.com/siderolabs/image-service/internal/asset"
-	flvr "github.com/siderolabs/image-service/internal/flavor"
-	"github.com/siderolabs/image-service/internal/flavor/storage"
-	"github.com/siderolabs/image-service/internal/profile"
-	"github.com/siderolabs/image-service/pkg/flavor"
+	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/asset"
+	"github.com/siderolabs/image-factory/internal/profile"
+	"github.com/siderolabs/image-factory/internal/schematic"
+	"github.com/siderolabs/image-factory/internal/schematic/storage"
+	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 // Frontend is the HTTP frontend.
 type Frontend struct {
 	router           *httprouter.Router
-	flavorService    *flvr.Service
+	schematicFactory *schematic.Factory
 	assetBuilder     *asset.Builder
 	artifactsManager *artifacts.Manager
 	logger           *zap.Logger
@@ -53,10 +53,10 @@ type Options struct {
 }
 
 // NewFrontend creates a new HTTP frontend.
-func NewFrontend(logger *zap.Logger, flavorService *flvr.Service, assetBuilder *asset.Builder, artifactsManager *artifacts.Manager, opts Options) (*Frontend, error) {
+func NewFrontend(logger *zap.Logger, schematicFactory *schematic.Factory, assetBuilder *asset.Builder, artifactsManager *artifacts.Manager, opts Options) (*Frontend, error) {
 	frontend := &Frontend{
 		router:           httprouter.New(),
-		flavorService:    flavorService,
+		schematicFactory: schematicFactory,
 		assetBuilder:     assetBuilder,
 		artifactsManager: artifactsManager,
 		logger:           logger.With(zap.String("frontend", "http")),
@@ -76,24 +76,24 @@ func NewFrontend(logger *zap.Logger, flavorService *flvr.Service, assetBuilder *
 	}
 
 	// images
-	frontend.router.GET("/image/:flavor/:version/:path", frontend.wrapper(frontend.handleImage))
-	frontend.router.HEAD("/image/:flavor/:version/:path", frontend.wrapper(frontend.handleImage))
+	frontend.router.GET("/image/:schematic/:version/:path", frontend.wrapper(frontend.handleImage))
+	frontend.router.HEAD("/image/:schematic/:version/:path", frontend.wrapper(frontend.handleImage))
 
 	// PXE
-	frontend.router.GET("/pxe/:flavor/:version/:path", frontend.wrapper(frontend.handlePXE))
+	frontend.router.GET("/pxe/:schematic/:version/:path", frontend.wrapper(frontend.handlePXE))
 
 	// registry
 	frontend.router.GET("/v2", frontend.wrapper(frontend.handleHealth))
 	frontend.router.HEAD("/v2", frontend.wrapper(frontend.handleHealth))
 	frontend.router.GET("/healthz", frontend.wrapper(frontend.handleHealth))
 	frontend.router.HEAD("/healthz", frontend.wrapper(frontend.handleHealth))
-	frontend.router.GET("/v2/:image/:flavor/blobs/:digest", frontend.wrapper(frontend.handleBlob))
-	frontend.router.HEAD("/v2/:image/:flavor/blobs/:digest", frontend.wrapper(frontend.handleBlob))
-	frontend.router.GET("/v2/:image/:flavor/manifests/:tag", frontend.wrapper(frontend.handleManifest))
-	frontend.router.HEAD("/v2/:image/:flavor/manifests/:tag", frontend.wrapper(frontend.handleManifest))
+	frontend.router.GET("/v2/:image/:schematic/blobs/:digest", frontend.wrapper(frontend.handleBlob))
+	frontend.router.HEAD("/v2/:image/:schematic/blobs/:digest", frontend.wrapper(frontend.handleBlob))
+	frontend.router.GET("/v2/:image/:schematic/manifests/:tag", frontend.wrapper(frontend.handleManifest))
+	frontend.router.HEAD("/v2/:image/:schematic/manifests/:tag", frontend.wrapper(frontend.handleManifest))
 
-	// flavor
-	frontend.router.POST("/flavors", frontend.wrapper(frontend.handleFlavorCreate))
+	// schematic
+	frontend.router.POST("/schematics", frontend.wrapper(frontend.handleSchematicCreate))
 
 	// meta
 	frontend.router.GET("/versions", frontend.wrapper(frontend.handleVersions))
@@ -102,9 +102,9 @@ func NewFrontend(logger *zap.Logger, flavorService *flvr.Service, assetBuilder *
 	// UI
 	frontend.router.GET("/", frontend.wrapper(frontend.handleUI))
 	frontend.router.HEAD("/", frontend.wrapper(frontend.handleUI))
-	frontend.router.GET("/ui/flavor-config", frontend.wrapper(frontend.handleUIFlavorConfig))
+	frontend.router.GET("/ui/schematic-config", frontend.wrapper(frontend.handleUISchematicConfig))
 	frontend.router.GET("/ui/versions", frontend.wrapper(frontend.handleUIVersions))
-	frontend.router.POST("/ui/flavors", frontend.wrapper(frontend.handleUIFlavors))
+	frontend.router.POST("/ui/schematics", frontend.wrapper(frontend.handleUISchematics))
 	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
 	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
@@ -131,7 +131,7 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 		case xerrors.TagIs[storage.ErrNotFoundTag](err):
 			http.Error(w, err.Error(), http.StatusNotFound)
 		case xerrors.TagIs[profile.InvalidErrorTag](err),
-			xerrors.TagIs[flavor.InvalidErrorTag](err):
+			xerrors.TagIs[schematicpkg.InvalidErrorTag](err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case errors.Is(err, context.Canceled):
 			// client closed connection

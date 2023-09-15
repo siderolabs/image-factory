@@ -1,8 +1,8 @@
 # commit to be tagged for the new release
 commit = "HEAD"
 
-project_name = "image-service"
-github_repo = "siderolabs/image-service"
+project_name = "image-factory"
+github_repo = "siderolabs/image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
 # previous = -
