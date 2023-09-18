@@ -10,10 +10,12 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/siderolabs/gen v0.4.6
 	github.com/siderolabs/go-pointer v1.0.0
-	github.com/siderolabs/talos v1.6.0-alpha.0.0.20230906185539-5e11f08a639b
-	github.com/siderolabs/talos/pkg/machinery v1.6.0-alpha.0.0.20230906185539-5e11f08a639b
+	github.com/siderolabs/talos v1.6.0-alpha.0.0.20230918100341-e3b494058841
+	github.com/siderolabs/talos/pkg/machinery v1.6.0-alpha.0.0.20230918100341-e3b494058841
 	github.com/sigstore/cosign/v2 v2.2.0
 	github.com/stretchr/testify v1.8.4
+	github.com/u-root/u-root v0.11.0
+	github.com/ulikunitz/xz v0.5.11
 	go.uber.org/zap v1.25.0
 	golang.org/x/net v0.15.0
 	golang.org/x/sync v0.3.0
@@ -147,7 +149,7 @@ require (
 	github.com/google/go-tpm v0.9.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.3.1 // indirect
-	github.com/gopacket/gopacket v1.1.1 // indirect
+	github.com/gopacket/gopacket v1.1.2-0.20230910070655-0d0aa7b3b2d7 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -261,9 +263,7 @@ require (
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	github.com/transparency-dev/merkle v0.0.2 // indirect
-	github.com/u-root/u-root v0.11.0 // indirect
 	github.com/u-root/uio v0.0.0-20230220225925-ffce2a382923 // indirect
-	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
 	github.com/vmware/vmw-guestinfo v0.0.0-20220317130741-510905f0efa3 // indirect
 	github.com/vultr/metadata v1.1.0 // indirect
@@ -301,7 +301,7 @@ require (
 	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
-	google.golang.org/grpc v1.57.0 // indirect
+	google.golang.org/grpc v1.58.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
