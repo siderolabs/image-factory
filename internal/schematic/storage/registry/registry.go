@@ -14,6 +14,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
@@ -163,5 +165,14 @@ func (s *Storage) Put(ctx context.Context, id string, data []byte) error {
 		return err
 	}
 
-	return s.pusher.Upload(ctx, s.repository, layer)
+	// we don't need to push an image manifest, but we create it to make sure that a schematic blob (layer)
+	// doesn't get GC'ed by the registry
+	img := empty.Image
+
+	img, err = mutate.AppendLayers(img, layer)
+	if err != nil {
+		return err
+	}
+
+	return s.pusher.Push(ctx, s.repository.Tag(id), img)
 }

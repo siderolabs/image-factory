@@ -68,6 +68,8 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("failed to parse external installer repository: %w", err)
 	}
 
+	frontendOptions.RemoteOptions = append(frontendOptions.RemoteOptions, remoteOptions()...)
+
 	frontendHTTP, err := frontendhttp.NewFrontend(logger, configFactory, assetBuilder, artifactsManager, frontendOptions)
 	if err != nil {
 		return fmt.Errorf("failed to initialize HTTP frontend: %w", err)

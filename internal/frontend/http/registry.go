@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/validate"
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
@@ -28,7 +29,7 @@ import (
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
-// handleHealth handles registry health.
+// handleHealth handles registry health and auth.
 func (f *Frontend) handleHealth(_ context.Context, _ http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
 	// always healthy, yay!
 	return nil
@@ -97,6 +98,22 @@ func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, _ *htt
 	return nil
 }
 
+func (f *Frontend) redirectToExternalRegistry(w http.ResponseWriter, imageName, schematicID, tagOrDigest string) error {
+	var redirectURL url.URL
+
+	redirectURL.Scheme = f.options.InstallerExternalRepository.Scheme()
+	redirectURL.Host = f.options.InstallerExternalRepository.Registry.Name()
+
+	location := redirectURL.JoinPath("v2", f.options.InstallerExternalRepository.RepositoryStr(), imageName, schematicID, "manifests", tagOrDigest).String()
+
+	f.logger.Info("redirecting manifest", zap.String("location", location))
+
+	w.Header().Add("Location", location)
+	w.WriteHeader(http.StatusTemporaryRedirect)
+
+	return nil
+}
+
 // handleManifest handles image manifest download.
 //
 // If the manifest is for the tag, we check if the image already exists, and either redirect, or build, push and redirect.
@@ -115,25 +132,9 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 		return err
 	}
 
-	redirect := func() error {
-		var redirectURL url.URL
-
-		redirectURL.Scheme = f.options.InstallerExternalRepository.Scheme()
-		redirectURL.Host = f.options.InstallerExternalRepository.Registry.Name()
-
-		location := redirectURL.JoinPath("v2", f.options.InstallerExternalRepository.RepositoryStr(), img.Name(), schematicID, "manifests", versionTag).String()
-
-		f.logger.Info("redirecting manifest", zap.String("location", location))
-
-		w.Header().Add("Location", location)
-		w.WriteHeader(http.StatusTemporaryRedirect)
-
-		return nil
-	}
-
 	// if the tag is the digest, we just redirect to the external registry
 	if strings.HasPrefix(versionTag, "sha256:") {
-		return redirect()
+		return f.redirectToExternalRegistry(w, img.Name(), schematicID, versionTag)
 	}
 
 	if !strings.HasPrefix(versionTag, "v") {
@@ -143,22 +144,26 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 	// check if the asset has already been built
 	f.logger.Info("heading installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
 
-	_, err = f.puller.Head(
+	extDesc, err := f.puller.Head(
 		ctx,
 		f.options.InstallerInternalRepository.Repo(
 			f.options.InstallerInternalRepository.RepositoryStr(),
 			img.Name(),
-			schematicID,
 		).Tag(versionTag),
 	)
 	if err == nil {
-		// the asset has already been built, redirect to the external registry
-		return redirect()
+		// the asset has already been built, redirect to the external registry, but use the digest directly to avoid tag changes
+		return f.redirectToExternalRegistry(w, img.Name(), schematicID, extDesc.Digest.String())
 	}
 
 	var transportError *transport.Error
 
-	if !errors.As(err, &transportError) || transportError.StatusCode != http.StatusNotFound {
+	if errors.As(err, &transportError) && (transportError.StatusCode == http.StatusNotFound || transportError.StatusCode == http.StatusForbidden) {
+		// ignore 404/403, it means the image hasn't been built yet
+		err = nil
+	}
+
+	if err != nil {
 		// something is wrong
 		return err
 	}
@@ -174,11 +179,13 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 
 	resultCh := f.sf.DoChan(key, func() (any, error) {
 		// we use here detached context to make sure image is built no matter if the request is canceled
-		return nil, f.buildInstallImage(context.Background(), img, schematic, version, schematicID, versionTag)
+		return f.buildInstallImage(context.Background(), img, schematic, version, schematicID, versionTag)
 	})
 
+	var res singleflight.Result
+
 	select {
-	case res := <-resultCh:
+	case res = <-resultCh:
 		if res.Err != nil {
 			return res.Err
 		}
@@ -186,11 +193,17 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 		return ctx.Err()
 	}
 
+	manifestHash, ok := res.Val.(v1.Hash)
+	if !ok {
+		// unexpected
+		return fmt.Errorf("unexpected result type: %T", res.Val)
+	}
+
 	// now we can redirect to the external registry
-	return redirect()
+	return f.redirectToExternalRegistry(w, img.Name(), schematicID, manifestHash.String())
 }
 
-func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, schematic *schematic.Schematic, version semver.Version, schematicID, versionTag string) error {
+func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, schematic *schematic.Schematic, version semver.Version, schematicID, versionTag string) (v1.Hash, error) {
 	f.logger.Info("building installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
 
 	var imageIndex v1.ImageIndex = empty.Index
@@ -200,18 +213,18 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 
 		prof, err := profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, versionTag)
 		if err != nil {
-			return fmt.Errorf("error enhancing profile from schematic: %w", err)
+			return v1.Hash{}, fmt.Errorf("error enhancing profile from schematic: %w", err)
 		}
 
 		if err = prof.Validate(); err != nil {
-			return fmt.Errorf("error validating profile: %w", err)
+			return v1.Hash{}, fmt.Errorf("error validating profile: %w", err)
 		}
 
 		var asset asset.BootAsset
 
 		asset, err = f.assetBuilder.Build(ctx, prof, version.String())
 		if err != nil {
-			return err
+			return v1.Hash{}, err
 		}
 
 		defer asset.Release() //nolint:errcheck
@@ -220,7 +233,7 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 
 		archImage, err = tarball.Image(asset.Reader, nil)
 		if err != nil {
-			return fmt.Errorf("error creating image from asset: %w", err)
+			return v1.Hash{}, fmt.Errorf("error creating image from asset: %w", err)
 		}
 
 		imageIndex = mutate.AppendManifests(imageIndex,
@@ -236,7 +249,7 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 	}
 
 	if err := validate.Index(imageIndex); err != nil {
-		return fmt.Errorf("error validating index: %w", err)
+		return v1.Hash{}, fmt.Errorf("error validating index: %w", err)
 	}
 
 	f.logger.Info("pushing installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
@@ -250,8 +263,8 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 		).Tag(versionTag),
 		imageIndex,
 	); err != nil {
-		return fmt.Errorf("error pushing index: %w", err)
+		return v1.Hash{}, fmt.Errorf("error pushing index: %w", err)
 	}
 
-	return nil
+	return imageIndex.Digest()
 }
