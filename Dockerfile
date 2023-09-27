@@ -2,16 +2,16 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-09-18T18:37:49Z by kres latest.
+# Generated on 2023-10-03T19:35:51Z by kres latest.
 
 ARG TOOLCHAIN
 
 FROM alpine:3.18 AS base-image-image-factory
 
 # runs markdownlint
-FROM docker.io/node:20.6.1-alpine3.18 AS lint-markdown
+FROM docker.io/node:20.8.0-alpine3.18 AS lint-markdown
 WORKDIR /src
-RUN npm i -g markdownlint-cli@0.36.0
+RUN npm i -g markdownlint-cli@0.37.0
 RUN npm i sentences-per-line@0.2.1
 COPY .markdownlint.json .
 COPY ./README.md ./README.md

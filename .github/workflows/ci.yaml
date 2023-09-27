@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-09-18T18:54:53Z by kres latest.
+# Generated on 2023-10-03T19:35:51Z by kres latest.
 
 name: default
 "on":
@@ -21,29 +21,28 @@ jobs:
       packages: write
     runs-on:
       - self-hosted
-      - X64
-    if: ${{ !startsWith(github.head_ref, 'renovate/') || !startsWith(github.head_ref, 'renovate/') }}
+      - generic
+    if: (!startsWith(github.head_ref, 'renovate/') && !startsWith(github.head_ref, 'dependabot/'))
+    services:
+      buildkitd:
+        image: moby/buildkit:v0.12.2
+        options: --privileged
+        ports:
+          - 1234:1234
+        volumes:
+          - /var/lib/buildkit/${{ github.repository }}:/var/lib/buildkit
+          - /usr/etc/buildkit/buildkitd.toml:/etc/buildkit/buildkitd.toml
     steps:
       - name: checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
         with:
-          config-inline: |
-            [worker.oci]
-              gc = true
-              gckeepstorage = 100000 # 100 GiB
-
-              [[worker.oci.gcpolicy]]
-                keepBytes = 32212254720 # 30 GiB
-                keepDuration = 604800
-                filters = [ "type==source.local", "type==exec.cachemount", "type==source.git.checkout"]
-              [[worker.oci.gcpolicy]]
-                all = true
-                keepBytes = 107374182400 # 100 GiB
+          driver: remote
+          endpoint: tcp://localhost:1234
       - name: base
         run: |
           make base
@@ -64,7 +63,7 @@ jobs:
           make lint
       - name: Login to registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
@@ -101,7 +100,7 @@ jobs:
           make release-notes
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: crazy-max/ghaction-github-release@v1
+        uses: crazy-max/ghaction-github-release@v2
         with:
           body_path: _out/RELEASE_NOTES.md
           draft: "true"

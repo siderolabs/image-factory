@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-09-19T17:17:39Z by kres latest.
+# Generated on 2023-10-03T19:35:51Z by kres latest.
 
 # common variables
 
@@ -104,12 +104,6 @@ The registry and username can be overridden by exporting REGISTRY, and USERNAME
 respectively.
 
 endef
-
-ifneq (, $(filter $(CI), t true TRUE y yes 1))
-GITHUB_BRANCH := $(subst /,-,${GITHUB_HEAD_REF})
-GITHUB_BRANCH := $(subst +,-,$(GITHUB_BRANCH))
-CI_ARGS := --cache-from=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache-main --cache-from=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache-$(GITHUB_BRANCH) --cache-to=type=registry,ref=registry.dev.siderolabs.io/${GITHUB_REPOSITORY}:buildcache-$(GITHUB_BRANCH),mode=max
-endif
 
 ifneq (, $(filter $(WITH_RACE), t true TRUE y yes 1))
 GO_BUILDFLAGS += -race
@@ -215,7 +209,7 @@ integration: integration.test
 .PHONY: rekres
 rekres:
 	@docker pull $(KRES_IMAGE)
-	@docker run --rm -v $(PWD):/src -w /src -e GITHUB_TOKEN $(KRES_IMAGE)
+	@docker run --rm --net=host -v $(PWD):/src -w /src -e GITHUB_TOKEN $(KRES_IMAGE)
 
 .PHONY: help
 help:  ## This help menu.
