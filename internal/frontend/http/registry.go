@@ -149,6 +149,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 		f.options.InstallerInternalRepository.Repo(
 			f.options.InstallerInternalRepository.RepositoryStr(),
 			img.Name(),
+			schematicID,
 		).Tag(versionTag),
 	)
 	if err == nil {
