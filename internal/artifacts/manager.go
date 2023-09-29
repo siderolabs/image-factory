@@ -142,6 +142,11 @@ func (m *Manager) GetInstallerImageRef(versionString string) string {
 	return m.imageRegistry.Repo(InstallerImage).Tag("v" + versionString).String()
 }
 
+// GetInstallerImageForceInsecure returns the installer image force insecure option.
+func (m *Manager) GetInstallerImageForceInsecure() bool {
+	return m.options.InsecureImageRegistry
+}
+
 // GetTalosVersions returns a list of Talos versions available.
 func (m *Manager) GetTalosVersions(ctx context.Context) ([]semver.Version, error) {
 	m.talosVersionsMu.Lock()

@@ -83,6 +83,7 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 	}
 
 	prof.Input.BaseInstaller.ImageRef = b.artifactsManager.GetInstallerImageRef(versionString)
+	prof.Input.BaseInstaller.ForceInsecure = b.artifactsManager.GetInstallerImageForceInsecure()
 
 	if prof.SecureBootEnabled() {
 		if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindSystemdBoot, &prof.Input.SDBoot); err != nil {
