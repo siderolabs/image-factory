@@ -37,6 +37,8 @@ type Options struct { //nolint:govet
 	// - external one for the redirects
 	InstallerInternalRepository string
 	InstallerExternalRepository string
+	// Allow insecure connection to the internal installer repository
+	InsecureInstallerInternalRepository bool
 
 	// TalosVersionRecheckInterval is the interval for rechecking Talos versions.
 	TalosVersionRecheckInterval time.Duration

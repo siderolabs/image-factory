@@ -58,7 +58,12 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("failed to parse self URL: %w", err)
 	}
 
-	frontendOptions.InstallerInternalRepository, err = name.NewRepository(opts.InstallerInternalRepository)
+	repoOpts := []name.Option{}
+	if opts.InsecureInstallerInternalRepository {
+		repoOpts = append(repoOpts, name.Insecure)
+	}
+
+	frontendOptions.InstallerInternalRepository, err = name.NewRepository(opts.InstallerInternalRepository, repoOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to parse internal installer repository: %w", err)
 	}

@@ -31,6 +31,12 @@ func initFlags() cmd.Options {
 
 	flag.StringVar(&opts.InstallerExternalRepository, "installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
 	flag.StringVar(&opts.InstallerInternalRepository, "installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
+	flag.BoolVar(
+		&opts.InsecureInstallerInternalRepository,
+		"insecure-installer-internal-repository",
+		cmd.DefaultOptions.InsecureInstallerInternalRepository,
+		"allow an insecure connection to the image repository for the installer (internal)",
+	)
 
 	flag.DurationVar(&opts.TalosVersionRecheckInterval, "talos-versions-recheck-interval", cmd.DefaultOptions.TalosVersionRecheckInterval, "interval to recheck Talos versions")
 
