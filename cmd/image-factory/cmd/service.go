@@ -132,8 +132,9 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 	}
 
 	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
-		MinVersion:    minVersion,
-		ImageRegistry: opts.ImageRegistry,
+		MinVersion:            minVersion,
+		ImageRegistry:         opts.ImageRegistry,
+		InsecureImageRegistry: opts.InsecureImageRegistry,
 		ImageVerifyOptions: cosign.CheckOpts{
 			Identities: []cosign.Identity{
 				{

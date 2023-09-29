@@ -19,6 +19,8 @@ type Options struct { //nolint:govet
 	//
 	// For official images, this is "ghcr.io".
 	ImageRegistry string
+	// Option to allow using an image registry without TLS.
+	InsecureImageRegistry bool
 	// MinVersion is the minimum version of Talos to use.
 	MinVersion semver.Version
 	// ImageVerifyOptions are the options for verifying the image signature.

@@ -52,7 +52,12 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 		return nil, fmt.Errorf("failed to create schematics directory: %w", err)
 	}
 
-	imageRegistry, err := name.NewRegistry(options.ImageRegistry)
+	opts := []name.Option{}
+	if options.InsecureImageRegistry {
+		opts = append(opts, name.Insecure)
+	}
+
+	imageRegistry, err := name.NewRegistry(options.ImageRegistry, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse image registry: %w", err)
 	}

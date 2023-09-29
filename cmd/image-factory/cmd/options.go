@@ -15,6 +15,8 @@ type Options struct { //nolint:govet
 	MinTalosVersion string
 	// Image registry for source images: imager, extensions, etc..
 	ImageRegistry string
+	// Allow insecure connection to the image registry
+	InsecureImageRegistry bool
 
 	// Options to verify container signatures for imager, extensions, etc.
 	ContainerSignatureSubjectRegExp string
