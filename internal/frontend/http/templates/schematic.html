@@ -9,7 +9,7 @@
     <dl>
         {{ range $arch := .Architectures }}
         <dt>{{ $arch }} ISO</dt>
-        <dd><a href="{{ $arch | printf " metal-%s.iso" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "metal-%s.iso" |
+        <dd><a href="{{ $arch | printf "metal-%s.iso" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "metal-%s.iso" |
                 $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
@@ -30,7 +30,7 @@
     <dl>
         {{ range $arch := .Architectures }}
         <dt>{{ $arch }} metal disk image</dt>
-        <dd><a href="{{ $arch | printf " metal-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+        <dd><a href="{{ $arch | printf "metal-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
                 "metal-%s.raw.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
@@ -38,7 +38,7 @@
     <dl>
         {{ range $arch := .Architectures }}
         <dt>{{ $arch }} AWS disk image</dt>
-        <dd><a href="{{ $arch | printf " aws-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "aws-%s.raw.xz"
+        <dd><a href="{{ $arch | printf "aws-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "aws-%s.raw.xz"
                 | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
@@ -46,7 +46,7 @@
     <dl>
         {{ range $arch := .Architectures }}
         <dt>{{ $arch }} GCP disk image</dt>
-        <dd><a href="{{ $arch | printf " gcp-%s.raw.tar.gz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+        <dd><a href="{{ $arch | printf "gcp-%s.raw.tar.gz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
                 "gcp-%s.raw.tar.gz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
@@ -54,7 +54,7 @@
     <dl>
         {{ range $arch := .Architectures }}
         <dt>{{ $arch }} Azure disk image</dt>
-        <dd><a href="{{ $arch | printf " azure-%s.vhd.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+        <dd><a href="{{ $arch | printf "azure-%s.vhd.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
                 "azure-%s.vhd.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
@@ -62,7 +62,7 @@
     <dl>
         {{ range $arch := .Architectures }}
         <dt>{{ $arch }} Digital Ocean disk image</dt>
-        <dd><a href="{{ $arch | printf " digital-ocean-%s.raw.gz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+        <dd><a href="{{ $arch | printf "digital-ocean-%s.raw.gz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
                 "digital-ocean-%s.raw.gz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
@@ -70,7 +70,7 @@
     <dl>
         {{ range $arch := .Architectures }}
         <dt>{{ $arch }} Hetzner Cloud disk image</dt>
-        <dd><a href="{{ $arch | printf " hcloud-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+        <dd><a href="{{ $arch | printf "hcloud-%s.raw.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
                 "hcloud-%s.raw.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
@@ -83,12 +83,12 @@
     <dl>
         {{ range $arch := .Architectures }}
         <dt>{{ $arch }} kernel</dt>
-        <dd><a href="{{ $arch | printf " kernel-%s" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "kernel-%s" |
+        <dd><a href="{{ $arch | printf "kernel-%s" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf "kernel-%s" |
                 $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
         {{ range $arch := .Architectures }}
         <dt>{{ $arch }} initramfs</dt>
-        <dd><a href="{{ $arch | printf " initramfs-%s.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
+        <dd><a href="{{ $arch | printf "initramfs-%s.xz" | $.ImageBaseURL.JoinPath }}">{{ $arch | printf
                 "initramfs-%s.xz" | $.ImageBaseURL.JoinPath }}</a></dd>
         {{ end }}
     </dl>
