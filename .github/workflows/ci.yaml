@@ -1,8 +1,11 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-10-03T19:35:51Z by kres latest.
+# Generated on 2023-10-11T10:56:42Z by kres latest.
 
 name: default
+concurrency:
+  group: ${{ github.event.label == null && github.head_ref || github.run_id }}
+  cancel-in-progress: true
 "on":
   push:
     branches:
