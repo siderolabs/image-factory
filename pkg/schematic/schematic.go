@@ -24,8 +24,18 @@ type Schematic struct {
 type Customization struct {
 	// Extra kernel arguments to be passed to the kernel.
 	ExtraKernelArgs []string `yaml:"extraKernelArgs,omitempty"`
+	// Meta provides initial META contents for the image.
+	Meta []MetaValue `yaml:"meta,omitempty"`
 	// SystemExtensions represents the Talos system extensions to be installed.
 	SystemExtensions SystemExtensions `yaml:"systemExtensions,omitempty"`
+}
+
+// MetaValue provides initial META contents for the image.
+type MetaValue struct { //nolint:govet
+	// Key is the META key.
+	Key uint8 `yaml:"key"`
+	// Value is the META value.
+	Value string `yaml:"value"`
 }
 
 // SystemExtensions represents the Talos system extensions to be installed.

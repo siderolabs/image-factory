@@ -264,6 +264,12 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 			downloadCmdlineAndMatch(ctx, t, baseURL, extraArgsSchematicID, talosVersion, "cmdline-metal-amd64", "talos.platform=metal", "nolapic", "nomodeset")
 		})
+
+		t.Run("meta contents", func(t *testing.T) {
+			t.Parallel()
+
+			downloadCmdlineAndMatch(ctx, t, baseURL, metaSchematicID, talosVersion, "cmdline-metal-amd64", "talos.environment=INSTALLER_META_BASE64=MHhhPXsiZXh0ZXJuYWxJUHMiOlsiMS4yLjMuNCJdfQ==")
+		})
 	})
 
 	t.Run("invalid", func(t *testing.T) {

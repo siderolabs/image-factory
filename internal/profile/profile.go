@@ -12,12 +12,14 @@ import (
 
 	"github.com/siderolabs/gen/value"
 	"github.com/siderolabs/gen/xerrors"
+	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
+	"github.com/siderolabs/talos/pkg/machinery/meta"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 // InvalidErrorTag tags errors related to invalid profiles.
@@ -231,7 +233,7 @@ func InstallerProfile(secureboot bool, arch artifacts.Arch) profile.Profile {
 
 // ExtensionProducer is a function which produces a set of extensions/meta information.
 type ExtensionProducer interface {
-	GetSchematicExtension(context.Context, *schematic.Schematic) (string, error)
+	GetSchematicExtension(context.Context, *schematicpkg.Schematic) (string, error)
 	GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error)
 	GetExtensionImage(context.Context, artifacts.Arch, artifacts.ExtensionRef) (string, error)
 }
@@ -239,7 +241,7 @@ type ExtensionProducer interface {
 // EnhanceFromSchematic enhances the profile with the schematic.
 //
 //nolint:gocognit
-func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *schematic.Schematic, extensionProducer ExtensionProducer, versionTag string) (profile.Profile, error) {
+func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *schematicpkg.Schematic, extensionProducer ExtensionProducer, versionTag string) (profile.Profile, error) {
 	if prof.Output.Kind != profile.OutKindCmdline && prof.Output.Kind != profile.OutKindKernel {
 		if len(schematic.Customization.SystemExtensions.OfficialExtensions) > 0 {
 			availableExtensions, err := extensionProducer.GetOfficialExtensions(ctx, versionTag)
@@ -283,6 +285,16 @@ func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *
 	// skip customizations for profile kinds which don't support it
 	if prof.Output.Kind != profile.OutKindInitramfs && prof.Output.Kind != profile.OutKindKernel && prof.Output.Kind != profile.OutKindInstaller {
 		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
+		prof.Customization.MetaContents = append(prof.Customization.MetaContents,
+			xslices.Map(schematic.Customization.Meta,
+				func(mv schematicpkg.MetaValue) meta.Value {
+					return meta.Value{
+						Key:   mv.Key,
+						Value: mv.Value,
+					}
+				},
+			)...,
+		)
 	}
 
 	prof.Version = versionTag

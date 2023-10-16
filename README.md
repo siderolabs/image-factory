@@ -32,6 +32,9 @@ The request body is a YAML (JSON) encoded schematic description:
 customization:
     extraKernelArgs: # optional
         - vga=791
+    meta: # optional, allows to set initial Talos META
+      - key: 0xa
+        value: "{}"
     systemExtensions: # optional
       officialExtensions: # optional
         - siderolabs/gvisor

@@ -27,6 +27,7 @@ const (
 	emptySchematicID            = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
 	extraArgsSchematicID        = "e0fb1129bbbdfb5d002e94af4cdce712a8370e850950a33a242d4c3f178c532d"
 	systemExtensionsSchematicID = "51ff3e49313773332729a5c04e57af0dbe2e6d3f65ff638e6d4c3a05065fefff"
+	metaSchematicID             = "fe866116408a5a13dab7d5003eb57a00954ea81ebeec3fbbcd1a6d4462a00036"
 )
 
 func createSchematic(ctx context.Context, t *testing.T, baseURL string, marshalled []byte) *http.Response {
@@ -101,6 +102,21 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 							"siderolabs/amd-ucode",
 							"siderolabs/gvisor",
 							"siderolabs/gasket-driver",
+						},
+					},
+				},
+			},
+		))
+	})
+
+	t.Run("meta", func(t *testing.T) {
+		assert.Equal(t, metaSchematicID, createSchematicGetID(ctx, t, baseURL,
+			schematic.Schematic{
+				Customization: schematic.Customization{
+					Meta: []schematic.MetaValue{
+						{
+							Key:   0xa,
+							Value: `{"externalIPs":["1.2.3.4"]}`,
 						},
 					},
 				},

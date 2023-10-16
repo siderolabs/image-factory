@@ -34,6 +34,20 @@ func TestID(t *testing.T) {
 			},
 			expectedID: "9cba8e32753f91a16c1837ab8abf356af021706ef284aef07380780177d9a06c",
 		},
+		{
+			name: "meta",
+			cfg: schematic.Schematic{
+				Customization: schematic.Customization{
+					Meta: []schematic.MetaValue{
+						{
+							Key:   0x0a,
+							Value: "foo",
+						},
+					},
+				},
+			},
+			expectedID: "d308a2a5ee2277bed5fbaa104fcbc8d59122abfa737df987a95b4ca763459a7f",
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -78,6 +92,11 @@ func TestUnmarshalID(t *testing.T) {
 			name:       "extra args 2",
 			cfg:        []byte(`{"customization": {"extraKernelArgs": ["noapic", "nolapic"], "systemExtensions": {}}}`),
 			expectedID: "9cba8e32753f91a16c1837ab8abf356af021706ef284aef07380780177d9a06c",
+		},
+		{
+			name:       "meta",
+			cfg:        []byte(`{"customization": {"meta": [{"key": 10, "value": "foo"}], "extraKernelArgs": [], "systemExtensions": {}}}`),
+			expectedID: "d308a2a5ee2277bed5fbaa104fcbc8d59122abfa737df987a95b4ca763459a7f",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
