@@ -137,16 +137,6 @@ func (m *Manager) Get(ctx context.Context, versionString string, arch Arch, kind
 	return path, nil
 }
 
-// GetInstallerImageRef returns the installer image reference for the given version.
-func (m *Manager) GetInstallerImageRef(versionString string) string {
-	return m.imageRegistry.Repo(InstallerImage).Tag("v" + versionString).String()
-}
-
-// GetInstallerImageForceInsecure returns the installer image force insecure option.
-func (m *Manager) GetInstallerImageForceInsecure() bool {
-	return m.options.InsecureImageRegistry
-}
-
 // GetTalosVersions returns a list of Talos versions available.
 func (m *Manager) GetTalosVersions(ctx context.Context) ([]semver.Version, error) {
 	m.talosVersionsMu.Lock()
@@ -216,14 +206,25 @@ func (m *Manager) GetOfficialExtensions(ctx context.Context, versionString strin
 	return extensions, nil
 }
 
-// GetExtensionImage pulls and exports an extension image.
-func (m *Manager) GetExtensionImage(ctx context.Context, arch Arch, ref ExtensionRef) (string, error) {
-	tarballPath := filepath.Join(m.storagePath, string(arch)+"-"+ref.Digest+".tar")
+// GetInstallerImage pulls and stoers in OCI layout installer image.
+func (m *Manager) GetInstallerImage(ctx context.Context, arch Arch, versionString string) (string, error) {
+	version, err := semver.ParseTolerant(versionString)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse version: %w", err)
+	}
+
+	if version.LT(m.options.MinVersion) {
+		return "", fmt.Errorf("version %s is not supported, minimum is %s", version, m.options.MinVersion)
+	}
+
+	tag := "v" + version.String()
+
+	ociPath := filepath.Join(m.storagePath, string(arch)+"-installer-"+tag)
 
 	// check if already fetched
-	if _, err := os.Stat(tarballPath); err != nil {
-		resultCh := m.sf.DoChan(tarballPath, func() (any, error) {
-			return nil, m.fetchExtensionImage(arch, ref, tarballPath)
+	if _, err := os.Stat(ociPath); err != nil {
+		resultCh := m.sf.DoChan(ociPath, func() (any, error) {
+			return nil, m.fetchInstallerImage(arch, tag, ociPath)
 		})
 
 		select {
@@ -236,5 +237,28 @@ func (m *Manager) GetExtensionImage(ctx context.Context, arch Arch, ref Extensio
 		}
 	}
 
-	return tarballPath, nil
+	return ociPath, nil
+}
+
+// GetExtensionImage pulls and stores in OCI layout an extension image.
+func (m *Manager) GetExtensionImage(ctx context.Context, arch Arch, ref ExtensionRef) (string, error) {
+	ociPath := filepath.Join(m.storagePath, string(arch)+"-"+ref.Digest)
+
+	// check if already fetched
+	if _, err := os.Stat(ociPath); err != nil {
+		resultCh := m.sf.DoChan(ociPath, func() (any, error) {
+			return nil, m.fetchExtensionImage(arch, ref, ociPath)
+		})
+
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case result := <-resultCh:
+			if result.Err != nil {
+				return "", result.Err
+			}
+		}
+	}
+
+	return ociPath, nil
 }

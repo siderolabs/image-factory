@@ -231,20 +231,30 @@ func InstallerProfile(secureboot bool, arch artifacts.Arch) profile.Profile {
 	return prof
 }
 
-// ExtensionProducer is a function which produces a set of extensions/meta information.
-type ExtensionProducer interface {
+// ArtifactProducer is a type which produces a set of extensions/meta information, installer images, etc..
+type ArtifactProducer interface {
 	GetSchematicExtension(context.Context, *schematicpkg.Schematic) (string, error)
 	GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error)
 	GetExtensionImage(context.Context, artifacts.Arch, artifacts.ExtensionRef) (string, error)
+	GetInstallerImage(context.Context, artifacts.Arch, string) (string, error)
 }
 
 // EnhanceFromSchematic enhances the profile with the schematic.
 //
 //nolint:gocognit
-func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *schematicpkg.Schematic, extensionProducer ExtensionProducer, versionTag string) (profile.Profile, error) {
+func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *schematicpkg.Schematic, artifactProducer ArtifactProducer, versionTag string) (profile.Profile, error) {
+	if prof.Output.Kind == profile.OutKindInstaller {
+		if installerImagePath, err := artifactProducer.GetInstallerImage(ctx, artifacts.Arch(prof.Arch), versionTag); err == nil {
+			prof.Input.BaseInstaller.ImageRef = artifacts.InstallerImage + ":" + versionTag // fake reference
+			prof.Input.BaseInstaller.OCIPath = installerImagePath
+		} else {
+			return prof, fmt.Errorf("failed to get base installer: %w", err)
+		}
+	}
+
 	if prof.Output.Kind != profile.OutKindCmdline && prof.Output.Kind != profile.OutKindKernel {
 		if len(schematic.Customization.SystemExtensions.OfficialExtensions) > 0 {
-			availableExtensions, err := extensionProducer.GetOfficialExtensions(ctx, versionTag)
+			availableExtensions, err := artifactProducer.GetOfficialExtensions(ctx, versionTag)
 			if err != nil {
 				return prof, fmt.Errorf("error getting official extensions: %w", err)
 			}
@@ -264,17 +274,17 @@ func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *
 					return prof, xerrors.NewTaggedf[InvalidErrorTag]("official extension %q is not available for Talos version %s", extensionName, versionTag)
 				}
 
-				imagePath, err := extensionProducer.GetExtensionImage(ctx, artifacts.Arch(prof.Arch), extensionRef)
+				imagePath, err := artifactProducer.GetExtensionImage(ctx, artifacts.Arch(prof.Arch), extensionRef)
 				if err != nil {
 					return prof, fmt.Errorf("error getting extension image %s: %w", extensionRef.TaggedReference, err)
 				}
 
-				prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: imagePath})
+				prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{OCIPath: imagePath})
 			}
 		}
 
 		// append schematic extension
-		schematicExtensionPath, err := extensionProducer.GetSchematicExtension(ctx, schematic)
+		schematicExtensionPath, err := artifactProducer.GetSchematicExtension(ctx, schematic)
 		if err != nil {
 			return prof, err
 		}

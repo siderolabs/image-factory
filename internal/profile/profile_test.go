@@ -212,9 +212,9 @@ func TestParseFromPath(t *testing.T) {
 	}
 }
 
-type mockExtensionProducer struct{}
+type mockArtifactProducer struct{}
 
-func (mockExtensionProducer) GetSchematicExtension(_ context.Context, schematic *schematic.Schematic) (string, error) {
+func (mockArtifactProducer) GetSchematicExtension(_ context.Context, schematic *schematic.Schematic) (string, error) {
 	id, err := schematic.ID()
 	if err != nil {
 		return "", err
@@ -223,7 +223,7 @@ func (mockExtensionProducer) GetSchematicExtension(_ context.Context, schematic 
 	return fmt.Sprintf("%s.tar", id), nil
 }
 
-func (mockExtensionProducer) GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error) {
+func (mockArtifactProducer) GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error) {
 	return []artifacts.ExtensionRef{
 		{
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/amd-ucode:2023048")),
@@ -236,8 +236,12 @@ func (mockExtensionProducer) GetOfficialExtensions(context.Context, string) ([]a
 	}, nil
 }
 
-func (mockExtensionProducer) GetExtensionImage(_ context.Context, arch artifacts.Arch, ref artifacts.ExtensionRef) (string, error) {
-	return fmt.Sprintf("%s-%s.tar", arch, ref.Digest), nil
+func (mockArtifactProducer) GetExtensionImage(_ context.Context, arch artifacts.Arch, ref artifacts.ExtensionRef) (string, error) {
+	return fmt.Sprintf("%s-%s.oci", arch, ref.Digest), nil
+}
+
+func (mockArtifactProducer) GetInstallerImage(_ context.Context, arch artifacts.Arch, tag string) (string, error) {
+	return fmt.Sprintf("installer-%s-%s.oci", arch, tag), nil
 }
 
 func TestEnhanceFromSchematic(t *testing.T) {
@@ -248,6 +252,9 @@ func TestEnhanceFromSchematic(t *testing.T) {
 
 	baseProfile := profile.Default[constants.PlatformMetal].DeepCopy()
 	baseProfile.Arch = "amd64"
+
+	installerProfile := profile.Default["installer"].DeepCopy()
+	installerProfile.Arch = "amd64"
 
 	for _, test := range []struct { //nolint:govet
 		name          string
@@ -344,10 +351,10 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				Input: profile.Input{
 					SystemExtensions: []profile.ContainerAsset{
 						{
-							TarballPath: "amd64-sha256:1234567890.tar",
+							OCIPath: "amd64-sha256:1234567890.oci",
 						},
 						{
-							TarballPath: "amd64-sha256:0987654321.tar",
+							OCIPath: "amd64-sha256:0987654321.oci",
 						},
 						{
 							TarballPath: "9f14d3d939d420f57d8ee3e64c4c2cd29ecb6fa10da4e1c8ac99da4b04d5e463.tar",
@@ -364,11 +371,58 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "installer with extensions",
+			baseProfile: installerProfile,
+			schematic: schematic.Schematic{
+				Customization: schematic.Customization{
+					SystemExtensions: schematic.SystemExtensions{
+						OfficialExtensions: []string{
+							"siderolabs/amd-ucode",
+						},
+					},
+					ExtraKernelArgs: []string{"noapic", "nolapic"}, // will be ignored (installer)
+					Meta: []schematic.MetaValue{ // will be ignored (installer)
+						{
+							Key:   0xa,
+							Value: "foo",
+						},
+					},
+				},
+			},
+			versionString: "v1.5.3",
+
+			expectedProfile: profile.Profile{
+				Platform:      constants.PlatformMetal,
+				SecureBoot:    pointer.To(false),
+				Arch:          "amd64",
+				Version:       "v1.5.3",
+				Customization: profile.CustomizationProfile{},
+				Input: profile.Input{
+					BaseInstaller: profile.ContainerAsset{
+						ImageRef: "siderolabs/installer:v1.5.3",
+						OCIPath:  "installer-amd64-v1.5.3.oci",
+					},
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							OCIPath: "amd64-sha256:1234567890.oci",
+						},
+						{
+							TarballPath: "c36dec8c835049f60b10b8e02c689c47f775a07e9a9d909786e3aacb30af9675.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actualProfile, err := imageprofile.EnhanceFromSchematic(ctx, test.baseProfile, &test.schematic, mockExtensionProducer{}, test.versionString)
+			actualProfile, err := imageprofile.EnhanceFromSchematic(ctx, test.baseProfile, &test.schematic, mockArtifactProducer{}, test.versionString)
 			require.NoError(t, err)
 			require.Equal(t, test.expectedProfile, actualProfile)
 		})
