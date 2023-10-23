@@ -40,6 +40,8 @@ func initFlags() cmd.Options {
 
 	flag.DurationVar(&opts.TalosVersionRecheckInterval, "talos-versions-recheck-interval", cmd.DefaultOptions.TalosVersionRecheckInterval, "interval to recheck Talos versions")
 
+	flag.StringVar(&opts.CacheSigningKeyPath, "cache-signing-key-path", cmd.DefaultOptions.CacheSigningKeyPath, "path to the default cache signing key (PEM-encoded, ECDSA private key)")
+
 	flag.Parse()
 
 	return opts

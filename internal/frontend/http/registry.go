@@ -20,6 +20,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/validate"
 	"github.com/julienschmidt/httprouter"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
@@ -132,29 +133,50 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 		return err
 	}
 
-	// if the tag is the digest, we just redirect to the external registry
-	if strings.HasPrefix(versionTag, "sha256:") {
+	// if the tag is the digest, or it doesn't look like the version, we just redirect to the external registry
+	if strings.HasPrefix(versionTag, "sha256:") || !strings.HasPrefix(versionTag, "v") {
 		return f.redirectToExternalRegistry(w, img.Name(), schematicID, versionTag)
 	}
 
-	if !strings.HasPrefix(versionTag, "v") {
-		versionTag = "v" + versionTag
-	}
+	imageRepository := f.options.InstallerInternalRepository.Repo(
+		f.options.InstallerInternalRepository.RepositoryStr(),
+		img.Name(),
+		schematicID,
+	)
 
 	// check if the asset has already been built
-	f.logger.Info("heading installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
+	f.logger.Info("heading installer image",
+		zap.String("image", img.Name()),
+		zap.String("schematic", schematicID),
+		zap.String("version", versionTag),
+		zap.Stringer("ref", imageRepository.Tag(versionTag)),
+	)
 
 	extDesc, err := f.puller.Head(
 		ctx,
-		f.options.InstallerInternalRepository.Repo(
-			f.options.InstallerInternalRepository.RepositoryStr(),
-			img.Name(),
-			schematicID,
-		).Tag(versionTag),
+		imageRepository.Tag(versionTag),
 	)
 	if err == nil {
-		// the asset has already been built, redirect to the external registry, but use the digest directly to avoid tag changes
-		return f.redirectToExternalRegistry(w, img.Name(), schematicID, extDesc.Digest.String())
+		// the asset has already been built, so check the signature
+		f.logger.Info("verifying cached installer image signature",
+			zap.String("image", img.Name()),
+			zap.String("schematic", schematicID),
+			zap.String("version", versionTag),
+			zap.Stringer("ref", imageRepository.Digest(extDesc.Digest.String())),
+		)
+
+		_, _, signatureErr := cosign.VerifyImageSignatures(
+			ctx,
+			imageRepository.Digest(extDesc.Digest.String()),
+			f.imageSigner.GetCheckOpts(),
+		)
+		if signatureErr == nil {
+			// redirect to the external registry, but use the digest directly to avoid tag changes
+			return f.redirectToExternalRegistry(w, img.Name(), schematicID, extDesc.Digest.String())
+		}
+
+		// log the signature verification error, but continue to build the image
+		f.logger.Error("error verifying cached image signature", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag), zap.Error(signatureErr))
 	}
 
 	var transportError *transport.Error
@@ -255,17 +277,44 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 
 	f.logger.Info("pushing installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
 
+	installerRepo := f.options.InstallerInternalRepository.Repo(
+		f.options.InstallerInternalRepository.RepositoryStr(),
+		img.Name(),
+		schematicID,
+	)
+
 	if err := f.pusher.Push(
 		ctx,
-		f.options.InstallerInternalRepository.Repo(
-			f.options.InstallerInternalRepository.RepositoryStr(),
-			img.Name(),
-			schematicID,
-		).Tag(versionTag),
+		installerRepo.Tag(versionTag),
 		imageIndex,
 	); err != nil {
 		return v1.Hash{}, fmt.Errorf("error pushing index: %w", err)
 	}
 
-	return imageIndex.Digest()
+	digest, err := imageIndex.Digest()
+	if err != nil {
+		return v1.Hash{}, fmt.Errorf("error getting index digest: %w", err)
+	}
+
+	f.logger.Info("signing installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag), zap.Stringer("digest", digest))
+
+	if err := f.imageSigner.SignImage(
+		ctx,
+		installerRepo.Digest(digest.String()),
+		f.pusher,
+	); err != nil {
+		return v1.Hash{}, fmt.Errorf("error signing image: %w", err)
+	}
+
+	return digest, nil
+}
+
+// handleCosignSigningKeyPub returns cosign public key in PEM format.
+func (f *Frontend) handleCosignSigningKeyPub(_ context.Context, w http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
+	w.Header().Set("Content-Type", "application/x-pem-file")
+	w.WriteHeader(http.StatusOK)
+
+	_, err := w.Write(f.imageSigner.GetPublicKeyPEM())
+
+	return err
 }

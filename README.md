@@ -153,10 +153,37 @@ Example: `docker pull factory.talos.dev/installer/376567988ad370138ad8b269821236
 Pulls the Talos Linux `installer` image with the specified schematic and Talos Linux version.
 The image platform (architecture) will be determined by the architecture of the Talos Linux Linux machine.
 
+### `GET /oci/cosign/signing-key.pub`
+
+Returns PEM-encoded public key used to sign the Talos Linux `installer` images.
+
+The key can be used to verify the installer images with `cosign`:
+
+```shell
+cosign verify --offline --insecure-ignore-tlog --insecure-ignore-sct --key signing-key.pub factory.talos.dev/...
+```
+
 ## Development
 
 Run integration tests in local mode, with registry mirrors:
 
 ```bash
 make integration TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5005/image-factory/schematic -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test" REGISTRY=127.0.0.1:5005
+```
+
+In order to run the Image Factory, generate a ECDSA key pair:
+
+```bash
+openssl ecparam -name prime256v1 -genkey -noout -out cache-signing-key.key
+```
+
+Run the Image Factory passing the flags:
+
+```text
+-image-registry 127.0.0.1:5004 # registry mirror for ghcr.io
+-external-url https://example.com/ # external URL the Image Factory is available at
+-schematic-service-repository 127.0.0.1:5005/image-factory/schematic # private registry for schematics
+-installer-internal-repository 127.0.0.1:5005/siderolabs # internal registry to push installer images to
+-installer-external-repository 127.0.0.1:5005/siderolabs # external registry to redirect users to pull installer
+-cache-signing-key-path ./cache-signing-key.key # path to the ECDSA private key (to sign cached assets)
 ```

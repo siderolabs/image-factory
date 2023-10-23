@@ -42,6 +42,11 @@ type Options struct { //nolint:govet
 
 	// TalosVersionRecheckInterval is the interval for rechecking Talos versions.
 	TalosVersionRecheckInterval time.Duration
+
+	// CacheSigningKeyPath is the path to the signing key for the cache.
+	//
+	// Best choice is to use ECDSA key.
+	CacheSigningKeyPath string
 }
 
 // DefaultOptions are the default options.

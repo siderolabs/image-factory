@@ -9,18 +9,24 @@ package integration_test
 import (
 	"archive/tar"
 	"context"
+	"crypto"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/siderolabs/gen/xslices"
+	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -28,7 +34,7 @@ import (
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
-func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, talosVersion, schematic string, secureboot bool, platform v1.Platform) {
+func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, talosVersion, schematic string, secureboot bool, platform v1.Platform, baseURL string) {
 	imageName := "installer"
 	if secureboot {
 		imageName += "-secureboot"
@@ -69,6 +75,17 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 		fmt.Sprintf("usr/install/%s/vmlinuz", platform.Architecture):      {},
 		fmt.Sprintf("usr/install/%s/initramfs.xz", platform.Architecture): {},
 	})
+
+	// verify the image signature
+	assertImageSignature(ctx, t, ref, baseURL)
+
+	// try to get the image once again, it should be fast now, as the image got cached & signed
+	start := time.Now()
+
+	_, err = remote.Get(ref, remote.WithPlatform(platform))
+	require.NoError(t, err)
+
+	assert.Less(t, time.Since(start), 1*time.Second)
 }
 
 func assertImageContainsFiles(t *testing.T, img v1.Image, files map[string]struct{}) {
@@ -105,7 +122,43 @@ func assertImageContainsFiles(t *testing.T, img v1.Image, files map[string]struc
 	assert.Empty(t, files)
 }
 
-func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string) {
+func assertImageSignature(ctx context.Context, t *testing.T, ref name.Reference, baseURL string) {
+	t.Helper()
+
+	// download public key
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/oci/cosign/signing-key.pub", nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		resp.Body.Close()
+	})
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	pub, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	pubKey, err := cryptoutils.UnmarshalPEMToPublicKey(pub)
+	require.NoError(t, err)
+
+	verifier, err := signature.LoadVerifier(pubKey, crypto.SHA256)
+	require.NoError(t, err)
+
+	checkOpts := &cosign.CheckOpts{
+		SigVerifier: verifier,
+		IgnoreSCT:   true,
+		IgnoreTlog:  true,
+		Offline:     true,
+	}
+
+	_, _, err = cosign.VerifyImageSignatures(ctx, ref, checkOpts)
+	assert.NoError(t, err)
+}
+
+func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string, baseURL string) {
 	talosVersions := []string{
 		"v1.5.0",
 		"v1.5.1",
@@ -158,7 +211,7 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 								t.Run(platform.String(), func(t *testing.T) {
 									t.Parallel()
 
-									testInstallerImage(ctx, t, registry, talosVersion, schematicID, secureboot, platform)
+									testInstallerImage(ctx, t, registry, talosVersion, schematicID, secureboot, platform, baseURL)
 								})
 							}
 						})

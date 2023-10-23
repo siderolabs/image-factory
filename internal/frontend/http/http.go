@@ -7,6 +7,7 @@ package http
 
 import (
 	"context"
+	"crypto"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
+	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/schematic"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
@@ -38,6 +40,7 @@ type Frontend struct {
 	logger           *zap.Logger
 	puller           *remote.Puller
 	pusher           *remote.Pusher
+	imageSigner      *signer.Signer
 	sf               singleflight.Group
 	options          Options
 }
@@ -48,6 +51,8 @@ type Options struct {
 
 	InstallerInternalRepository name.Repository
 	InstallerExternalRepository name.Repository
+
+	CacheSigningKey crypto.PrivateKey
 
 	RemoteOptions []remote.Option
 }
@@ -75,6 +80,11 @@ func NewFrontend(logger *zap.Logger, schematicFactory *schematic.Factory, assetB
 		return nil, fmt.Errorf("failed to create pusher: %w", err)
 	}
 
+	frontend.imageSigner, err = signer.NewSigner(opts.CacheSigningKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create image signer: %w", err)
+	}
+
 	// images
 	frontend.router.GET("/image/:schematic/:version/:path", frontend.wrapper(frontend.handleImage))
 	frontend.router.HEAD("/image/:schematic/:version/:path", frontend.wrapper(frontend.handleImage))
@@ -91,6 +101,7 @@ func NewFrontend(logger *zap.Logger, schematicFactory *schematic.Factory, assetB
 	frontend.router.HEAD("/v2/:image/:schematic/blobs/:digest", frontend.wrapper(frontend.handleBlob))
 	frontend.router.GET("/v2/:image/:schematic/manifests/:tag", frontend.wrapper(frontend.handleManifest))
 	frontend.router.HEAD("/v2/:image/:schematic/manifests/:tag", frontend.wrapper(frontend.handleManifest))
+	frontend.router.GET("/oci/cosign/signing-key.pub", frontend.wrapper(frontend.handleCosignSigningKeyPub))
 
 	// schematic
 	frontend.router.POST("/schematics", frontend.wrapper(frontend.handleSchematicCreate))

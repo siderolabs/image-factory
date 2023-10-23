@@ -8,12 +8,15 @@ package integration_test
 
 import (
 	"context"
+	"crypto/elliptic"
 	"flag"
 	"net"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"golang.org/x/sync/errgroup"
@@ -35,6 +38,8 @@ func setupFactory(t *testing.T) (context.Context, string) {
 	options.SchematicServiceRepository = schematicFactoryRepositoryFlag
 	options.InstallerExternalRepository = installerExternalRepository
 	options.InstallerInternalRepository = installerInternalRepository
+
+	setupCacheSigningKey(t, &options)
 
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -59,6 +64,20 @@ func setupFactory(t *testing.T) (context.Context, string) {
 	}, 10*time.Second, 10*time.Millisecond)
 
 	return ctx, options.HTTPListenAddr
+}
+
+func setupCacheSigningKey(t *testing.T, options *cmd.Options) {
+	t.Helper()
+
+	optionsDir := t.TempDir()
+
+	// we use a new key each time in the tests, so cached assets will never be used, as the signature won't match
+	priv, _, err := cryptoutils.GeneratePEMEncodedECDSAKeyPair(elliptic.P256(), cryptoutils.SkipPassword)
+	require.NoError(t, err)
+
+	require.NoError(t, os.WriteFile(optionsDir+"/cache-signing-key.pem", priv, 0o600))
+
+	options.CacheSigningKeyPath = optionsDir + "/cache-signing-key.pem"
 }
 
 func findListenAddr(t *testing.T) string {
@@ -98,7 +117,7 @@ func TestIntegration(t *testing.T) {
 	t.Run("TestRegistryFrontend", func(t *testing.T) {
 		t.Parallel()
 
-		testRegistryFrontend(ctx, t, listenAddr)
+		testRegistryFrontend(ctx, t, listenAddr, baseURL)
 	})
 
 	t.Run("TestMetaFrontend", func(t *testing.T) {

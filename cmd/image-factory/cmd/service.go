@@ -7,10 +7,12 @@ package cmd
 
 import (
 	"context"
+	"crypto"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -20,6 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -52,6 +55,13 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	assetBuilder := asset.NewBuilder(logger, artifactsManager, opts.AssetBuildMaxConcurrency)
 
 	var frontendOptions frontendhttp.Options
+
+	cacheSigningKey, err := loadPrivateKey(opts.CacheSigningKeyPath)
+	if err != nil {
+		return fmt.Errorf("failed to load cache signing key: %w", err)
+	}
+
+	frontendOptions.CacheSigningKey = cacheSigningKey
 
 	frontendOptions.ExternalURL, err = url.Parse(opts.ExternalURL)
 	if err != nil {
@@ -188,4 +198,13 @@ func remoteOptions() []remote.Option {
 			),
 		),
 	}
+}
+
+func loadPrivateKey(keyPath string) (crypto.PrivateKey, error) {
+	fileBytes, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return cryptoutils.UnmarshalPEMToPrivateKey(fileBytes, cryptoutils.SkipPassword)
 }
