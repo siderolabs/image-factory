@@ -80,8 +80,6 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 		return err
 	}
 
-	defer asset.Release() //nolint:errcheck
-
 	reader, err := asset.Reader()
 	if err != nil {
 		return err

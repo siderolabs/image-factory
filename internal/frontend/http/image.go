@@ -60,8 +60,6 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return err
 	}
 
-	defer asset.Release() //nolint:errcheck
-
 	w.Header().Set("Content-Length", strconv.FormatInt(asset.Size(), 10))
 
 	if ext := filepath.Ext(path); ext != "" {

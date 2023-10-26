@@ -38,6 +38,7 @@ func setupFactory(t *testing.T) (context.Context, string) {
 	options.SchematicServiceRepository = schematicFactoryRepositoryFlag
 	options.InstallerExternalRepository = installerExternalRepository
 	options.InstallerInternalRepository = installerInternalRepository
+	options.CacheRepository = cacheRepository
 
 	setupCacheSigningKey(t, &options)
 
@@ -132,6 +133,7 @@ var (
 	schematicFactoryRepositoryFlag string
 	installerExternalRepository    string
 	installerInternalRepository    string
+	cacheRepository                string
 )
 
 func init() {
@@ -139,4 +141,5 @@ func init() {
 	flag.StringVar(&schematicFactoryRepositoryFlag, "test.schematic-service-repository", cmd.DefaultOptions.SchematicServiceRepository, "schematic factory repository")
 	flag.StringVar(&installerExternalRepository, "test.installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
 	flag.StringVar(&installerInternalRepository, "test.installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
+	flag.StringVar(&cacheRepository, "test.cache-repository", cmd.DefaultOptions.CacheRepository, "image repository for cached boot assets")
 }

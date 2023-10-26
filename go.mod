@@ -21,6 +21,7 @@ require (
 	github.com/siderolabs/talos v1.6.0-alpha.1.0.20231018180437-c23bc2f4a77c
 	github.com/siderolabs/talos/pkg/machinery v1.6.0-alpha.1.0.20231018180437-c23bc2f4a77c
 	github.com/sigstore/cosign/v2 v2.2.0
+	github.com/sigstore/sigstore v1.7.2
 	github.com/stretchr/testify v1.8.4
 	github.com/u-root/u-root v0.11.0
 	github.com/ulikunitz/xz v0.5.11
@@ -258,7 +259,6 @@ require (
 	github.com/siderolabs/siderolink v0.3.1 // indirect
 	github.com/sigstore/fulcio v1.4.0 // indirect
 	github.com/sigstore/rekor v1.2.2 // indirect
-	github.com/sigstore/sigstore v1.7.2 // indirect
 	github.com/sigstore/timestamp-authority v1.1.2 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect

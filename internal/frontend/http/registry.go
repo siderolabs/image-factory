@@ -250,8 +250,6 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 			return v1.Hash{}, err
 		}
 
-		defer asset.Release() //nolint:errcheck
-
 		var archImage v1.Image
 
 		archImage, err = tarball.Image(asset.Reader, nil)

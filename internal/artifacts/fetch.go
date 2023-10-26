@@ -141,32 +141,32 @@ func (m *Manager) fetchImager(tag string) error {
 	destinationPath := filepath.Join(m.storagePath, tag)
 
 	if err := m.fetchImageByTag(ImagerImage, tag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
-		return untar(logger, r, destinationPath+"-tmp")
+		return untar(logger, r, destinationPath+tmpSuffix)
 	})); err != nil {
 		return err
 	}
 
-	return os.Rename(destinationPath+"-tmp", destinationPath)
+	return os.Rename(destinationPath+tmpSuffix, destinationPath)
 }
 
 // fetchExtensionImage fetches a specified extension image and exports it to the storage as OCI.
 func (m *Manager) fetchExtensionImage(arch Arch, ref ExtensionRef, destPath string) error {
 	imageRef := m.imageRegistry.Repo(ref.TaggedReference.RepositoryStr()).Digest(ref.Digest)
 
-	if err := m.fetchImageByDigest(imageRef, arch, imageOCIHandler(destPath+"-tmp")); err != nil {
+	if err := m.fetchImageByDigest(imageRef, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
 		return err
 	}
 
-	return os.Rename(destPath+"-tmp", destPath)
+	return os.Rename(destPath+tmpSuffix, destPath)
 }
 
 // fetchInstallerImage fetches a Talos installer image and exports it to the storage.
 func (m *Manager) fetchInstallerImage(arch Arch, versionTag string, destPath string) error {
-	if err := m.fetchImageByTag(InstallerImage, versionTag, arch, imageOCIHandler(destPath+"-tmp")); err != nil {
+	if err := m.fetchImageByTag(InstallerImage, versionTag, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
 		return err
 	}
 
-	return os.Rename(destPath+"-tmp", destPath)
+	return os.Rename(destPath+tmpSuffix, destPath)
 }
 
 func untar(logger *zap.Logger, r io.Reader, destination string) error {

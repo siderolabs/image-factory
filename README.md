@@ -168,7 +168,7 @@ cosign verify --offline --insecure-ignore-tlog --insecure-ignore-sct --key signi
 Run integration tests in local mode, with registry mirrors:
 
 ```bash
-make integration TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5005/image-factory/schematic -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test" REGISTRY=127.0.0.1:5005
+make integration TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5005/image-factory/schematic -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test -test.cache-repository=127.0.0.1:5005/cache" REGISTRY=127.0.0.1:5005
 ```
 
 In order to run the Image Factory, generate a ECDSA key pair:
@@ -185,5 +185,6 @@ Run the Image Factory passing the flags:
 -schematic-service-repository 127.0.0.1:5005/image-factory/schematic # private registry for schematics
 -installer-internal-repository 127.0.0.1:5005/siderolabs # internal registry to push installer images to
 -installer-external-repository 127.0.0.1:5005/siderolabs # external registry to redirect users to pull installer
+-cache-repository 127.0.0.1:5005/cache # private registry for cached assets
 -cache-signing-key-path ./cache-signing-key.key # path to the ECDSA private key (to sign cached assets)
 ```

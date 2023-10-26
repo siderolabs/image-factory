@@ -51,3 +51,5 @@ const (
 	ImagerImage            = "siderolabs/imager"
 	ExtensionManifestImage = "siderolabs/extensions"
 )
+
+const tmpSuffix = "-tmp"

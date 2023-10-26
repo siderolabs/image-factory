@@ -52,14 +52,17 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	assetBuilder := asset.NewBuilder(logger, artifactsManager, opts.AssetBuildMaxConcurrency)
-
-	var frontendOptions frontendhttp.Options
-
 	cacheSigningKey, err := loadPrivateKey(opts.CacheSigningKeyPath)
 	if err != nil {
 		return fmt.Errorf("failed to load cache signing key: %w", err)
 	}
+
+	assetBuilder, err := buildAssetBuilder(logger, artifactsManager, cacheSigningKey, opts)
+	if err != nil {
+		return err
+	}
+
+	var frontendOptions frontendhttp.Options
 
 	frontendOptions.CacheSigningKey = cacheSigningKey
 
@@ -170,6 +173,24 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 	}
 
 	return artifactsManager, nil
+}
+
+func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, cacheSigningKey crypto.PrivateKey, opts Options) (*asset.Builder, error) {
+	builderOptions := asset.Options{
+		AllowedConcurrency: opts.AssetBuildMaxConcurrency,
+		CacheSigningKey:    cacheSigningKey,
+	}
+
+	builderOptions.RemoteOptions = append(builderOptions.RemoteOptions, remoteOptions()...)
+
+	var err error
+
+	builderOptions.CacheRepository, err = name.NewRepository(opts.CacheRepository)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse cache repository: %w", err)
+	}
+
+	return asset.NewBuilder(logger, artifactsManager, builderOptions)
 }
 
 func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory, error) {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 )
 
 // tmpDir holds a generates boot asset in a temporary directory.
@@ -27,9 +28,15 @@ func newTmpDir() (*tmpDir, error) {
 		return nil, fmt.Errorf("failed to create temporary directory: %w", err)
 	}
 
-	return &tmpDir{
+	t := &tmpDir{
 		directoryPath: dir,
-	}, nil
+	}
+
+	runtime.SetFinalizer(t, func(t *tmpDir) {
+		t.cleanup() //nolint:errcheck
+	})
+
+	return t, nil
 }
 
 // Size returns the size of the boot asset.
@@ -42,7 +49,7 @@ func (t *tmpDir) Reader() (io.ReadCloser, error) {
 	return os.Open(t.assetPath)
 }
 
-// Release releases the boot asset.
-func (t *tmpDir) Release() error {
+// cleanup releases the boot asset.
+func (t *tmpDir) cleanup() error {
 	return os.RemoveAll(t.directoryPath)
 }

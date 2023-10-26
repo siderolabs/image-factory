@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/h2non/filetype"
 	"github.com/siderolabs/gen/optional"
@@ -34,6 +35,20 @@ func downloadAsset(ctx context.Context, t *testing.T, baseURL string, schematicI
 	})
 
 	return resp
+}
+
+func downloadAssetAssertCached(ctx context.Context, t *testing.T, baseURL, schematicID, talosVersion, path string, expectedSize int64) {
+	t.Helper()
+
+	start := time.Now()
+
+	resp := downloadAsset(ctx, t, baseURL, schematicID, talosVersion, path)
+	size, err := io.Copy(io.Discard, resp.Body)
+
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedSize, size)
+	assert.Less(t, time.Since(start), 10*time.Second) // images take some time to download, even from the cache, so give it some time
 }
 
 func downloadAssetInvalid(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, expectedCode int) string {
@@ -74,6 +89,8 @@ func downloadAssetAndMatchSize(ctx context.Context, t *testing.T, baseURL string
 	require.NoError(t, err)
 
 	assert.InDelta(t, expectedSize, rest+int64(n), float64(expectedSize)*0.1)
+
+	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, rest+int64(n))
 }
 
 func downloadAssetAndValidateInitramfs(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, initramfsSpec initramfsSpec) {
@@ -90,12 +107,14 @@ func downloadAssetAndValidateInitramfs(ctx context.Context, t *testing.T, baseUR
 	out, err := os.Create(initramfsPath)
 	require.NoError(t, err)
 
-	_, err = io.Copy(out, body)
+	size, err := io.Copy(out, body)
 	require.NoError(t, err)
 
 	require.NoError(t, out.Close())
 
 	assertInitramfs(t, initramfsPath, initramfsSpec)
+
+	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, size)
 }
 
 func downloadCmdlineAndMatch(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, expectedSubstrings ...string) {
@@ -114,6 +133,8 @@ func downloadCmdlineAndMatch(ctx context.Context, t *testing.T, baseURL string, 
 	for _, expectedSubstring := range expectedSubstrings {
 		assert.Contains(t, cmdline, expectedSubstring)
 	}
+
+	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, int64(len(cmdlineBytes)))
 }
 
 func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {

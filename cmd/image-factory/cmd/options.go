@@ -47,6 +47,10 @@ type Options struct { //nolint:govet
 	//
 	// Best choice is to use ECDSA key.
 	CacheSigningKeyPath string
+
+	// OCI registry to use to store cached boot assets.
+	// Only used internally by the image factory.
+	CacheRepository string
 }
 
 // DefaultOptions are the default options.
@@ -69,4 +73,6 @@ var DefaultOptions = Options{
 	InstallerExternalRepository: "ghcr.io/siderolabs",
 
 	TalosVersionRecheckInterval: 15 * time.Minute,
+
+	CacheRepository: "ghcr.io/siderolabs/image-factory/cache",
 }
