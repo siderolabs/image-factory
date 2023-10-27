@@ -70,11 +70,19 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 
 	assert.Len(t, layers, 2)
 
-	assertImageContainsFiles(t, img, map[string]struct{}{
+	expectedFiles := map[string]struct{}{
 		"bin/installer": {},
 		fmt.Sprintf("usr/install/%s/vmlinuz", platform.Architecture):      {},
 		fmt.Sprintf("usr/install/%s/initramfs.xz", platform.Architecture): {},
-	})
+	}
+
+	if platform.Architecture == "arm64" {
+		expectedFiles["usr/install/arm64/dtb/allwinner/sun50i-h616-x96-mate.dtb"] = struct{}{}
+		expectedFiles["usr/install/arm64/raspberrypi-firmware/boot/bootcode.bin"] = struct{}{}
+		expectedFiles["usr/install/arm64/u-boot/rockpi_4/rkspi_loader.img"] = struct{}{}
+	}
+
+	assertImageContainsFiles(t, img, expectedFiles)
 
 	// verify the image signature
 	assertImageSignature(ctx, t, ref, baseURL)

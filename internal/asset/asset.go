@@ -195,6 +195,20 @@ func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString
 		return nil, fmt.Errorf("secure boot is not supported yet")
 	}
 
+	if prof.Arch == string(artifacts.ArchArm64) {
+		if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindDTB, &prof.Input.DTB); err != nil {
+			return nil, fmt.Errorf("failed to get dtb: %w", err)
+		}
+
+		if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindUBoot, &prof.Input.UBoot); err != nil {
+			return nil, fmt.Errorf("failed to get u-boot: %w", err)
+		}
+
+		if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindRPiFirmware, &prof.Input.RPiFirmware); err != nil {
+			return nil, fmt.Errorf("failed to get rpi firmware: %w", err)
+		}
+	}
+
 	imgr, err := imager.New(prof)
 	if err != nil {
 		return nil, err

@@ -185,7 +185,7 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					t.Parallel()
 
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-amd64.tar", "application/x-tar", 167482880)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar", 163630080)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar", 222793728)
 				})
 
 				t.Run("metal image", func(t *testing.T) {
@@ -208,6 +208,12 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "gcp-amd64.raw.tar.gz", "application/gzip", 78472708)
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "gcp-arm64.raw.tar.gz", "application/gzip", 70625420)
 				})
+
+				t.Run("rpi image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 66574172)
+				})
 			})
 
 			t.Run("extensions schematic", func(t *testing.T) {
@@ -225,6 +231,12 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", 108049020)
 					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 91484764)
+				})
+
+				t.Run("rpi image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 94756312)
 				})
 
 				t.Run("initramfs", func(t *testing.T) {

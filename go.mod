@@ -18,8 +18,8 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/siderolabs/gen v0.4.7
 	github.com/siderolabs/go-pointer v1.0.0
-	github.com/siderolabs/talos v1.6.0-alpha.1.0.20231018180437-c23bc2f4a77c
-	github.com/siderolabs/talos/pkg/machinery v1.6.0-alpha.1.0.20231018180437-c23bc2f4a77c
+	github.com/siderolabs/talos v1.6.0-alpha.1.0.20231030094658-cbe6e7622d01
+	github.com/siderolabs/talos/pkg/machinery v1.6.0-alpha.1.0.20231030094658-cbe6e7622d01
 	github.com/sigstore/cosign/v2 v2.2.0
 	github.com/sigstore/sigstore v1.7.2
 	github.com/stretchr/testify v1.8.4
@@ -241,7 +241,7 @@ require (
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/siderolabs/crypto v0.4.1 // indirect
-	github.com/siderolabs/go-api-signature v0.3.0 // indirect
+	github.com/siderolabs/go-api-signature v0.3.1 // indirect
 	github.com/siderolabs/go-blockdevice v0.4.6 // indirect
 	github.com/siderolabs/go-circular v0.1.0 // indirect
 	github.com/siderolabs/go-cmd v0.1.1 // indirect
@@ -281,15 +281,15 @@ require (
 	github.com/vultr/metadata v1.1.0 // indirect
 	github.com/xanzy/go-gitlab v0.90.0 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
-	go.etcd.io/bbolt v1.3.7 // indirect
-	go.etcd.io/etcd/api/v3 v3.5.9 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.5.9 // indirect
-	go.etcd.io/etcd/client/v2 v2.305.9 // indirect
-	go.etcd.io/etcd/client/v3 v3.5.9 // indirect
-	go.etcd.io/etcd/etcdutl/v3 v3.5.9 // indirect
-	go.etcd.io/etcd/pkg/v3 v3.5.9 // indirect
-	go.etcd.io/etcd/raft/v3 v3.5.9 // indirect
-	go.etcd.io/etcd/server/v3 v3.5.9 // indirect
+	go.etcd.io/bbolt v1.3.8 // indirect
+	go.etcd.io/etcd/api/v3 v3.5.10 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.5.10 // indirect
+	go.etcd.io/etcd/client/v2 v2.305.10 // indirect
+	go.etcd.io/etcd/client/v3 v3.5.10 // indirect
+	go.etcd.io/etcd/etcdutl/v3 v3.5.10 // indirect
+	go.etcd.io/etcd/pkg/v3 v3.5.10 // indirect
+	go.etcd.io/etcd/raft/v3 v3.5.10 // indirect
+	go.etcd.io/etcd/server/v3 v3.5.10 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.40.0 // indirect

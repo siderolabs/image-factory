@@ -40,6 +40,9 @@ const (
 	KindInitramfs   Kind = "initramfs.xz"
 	KindSystemdBoot Kind = "systemd-boot.efi"
 	KindSystemdStub Kind = "systemd-stub.efi"
+	KindDTB         Kind = "dtb"
+	KindUBoot       Kind = "u-boot"
+	KindRPiFirmware Kind = "raspberrypi-firmware"
 )
 
 // FetchTimeout controls overall timeout for fetching artifacts for a release.
