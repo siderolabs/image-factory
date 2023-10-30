@@ -71,7 +71,8 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("failed to parse self URL: %w", err)
 	}
 
-	repoOpts := []name.Option{}
+	var repoOpts []name.Option
+
 	if opts.InsecureInstallerInternalRepository {
 		repoOpts = append(repoOpts, name.Insecure)
 	}
@@ -183,9 +184,15 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 
 	builderOptions.RemoteOptions = append(builderOptions.RemoteOptions, remoteOptions()...)
 
+	var repoOpts []name.Option
+
+	if opts.InsecureCacheRepository {
+		repoOpts = append(repoOpts, name.Insecure)
+	}
+
 	var err error
 
-	builderOptions.CacheRepository, err = name.NewRepository(opts.CacheRepository)
+	builderOptions.CacheRepository, err = name.NewRepository(opts.CacheRepository, repoOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cache repository: %w", err)
 	}

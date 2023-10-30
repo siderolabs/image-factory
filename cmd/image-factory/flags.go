@@ -43,6 +43,12 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.CacheSigningKeyPath, "cache-signing-key-path", cmd.DefaultOptions.CacheSigningKeyPath, "path to the default cache signing key (PEM-encoded, ECDSA private key)")
 
 	flag.StringVar(&opts.CacheRepository, "cache-repository", cmd.DefaultOptions.CacheRepository, "cache repository for boot assets")
+	flag.BoolVar(
+		&opts.InsecureCacheRepository,
+		"insecure-cache-repository",
+		cmd.DefaultOptions.InsecureCacheRepository,
+		"allow an insecure connection to the cache repository",
+	)
 
 	flag.Parse()
 

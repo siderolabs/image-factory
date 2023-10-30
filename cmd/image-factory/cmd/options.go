@@ -51,6 +51,8 @@ type Options struct { //nolint:govet
 	// OCI registry to use to store cached boot assets.
 	// Only used internally by the image factory.
 	CacheRepository string
+	// Allow insecure connection to the cache repository.
+	InsecureCacheRepository bool
 }
 
 // DefaultOptions are the default options.
