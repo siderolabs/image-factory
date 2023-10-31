@@ -53,6 +53,11 @@ type Options struct { //nolint:govet
 	CacheRepository string
 	// Allow insecure connection to the cache repository.
 	InsecureCacheRepository bool
+
+	// Bind address for Prometheus metrics.
+	//
+	// Leave empty to disable.
+	MetricsListenAddr string
 }
 
 // DefaultOptions are the default options.
@@ -77,4 +82,6 @@ var DefaultOptions = Options{
 	TalosVersionRecheckInterval: 15 * time.Minute,
 
 	CacheRepository: "ghcr.io/siderolabs/image-factory/cache",
+
+	MetricsListenAddr: ":2122",
 }

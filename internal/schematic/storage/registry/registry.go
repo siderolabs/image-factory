@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/opencontainers/go-digest"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/gen/xerrors"
 
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
@@ -176,3 +177,15 @@ func (s *Storage) Put(ctx context.Context, id string, data []byte) error {
 
 	return s.pusher.Push(ctx, s.repository.Tag(id), img)
 }
+
+// Describe implements prom.Collector interface.
+func (s *Storage) Describe(ch chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(s, ch)
+}
+
+// Collect implements prom.Collector interface.
+func (s *Storage) Collect(chan<- prometheus.Metric) {
+	// no metrics for now
+}
+
+var _ prometheus.Collector = &Storage{}

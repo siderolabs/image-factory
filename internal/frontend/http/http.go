@@ -19,6 +19,9 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/gen/xerrors"
+	metrics "github.com/slok/go-http-metrics/metrics/prometheus"
+	"github.com/slok/go-http-metrics/middleware"
+	httproutermiddleware "github.com/slok/go-http-metrics/middleware/httprouter"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
@@ -85,37 +88,46 @@ func NewFrontend(logger *zap.Logger, schematicFactory *schematic.Factory, assetB
 		return nil, fmt.Errorf("failed to create image signer: %w", err)
 	}
 
+	// monitoring middleware
+	mdlw := middleware.New(middleware.Config{
+		Recorder: metrics.NewRecorder(metrics.Config{}),
+	})
+
+	registerRoute := func(registrator func(string, httprouter.Handle), path string, handler func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error) {
+		registrator(path, httproutermiddleware.Handler(path, frontend.wrapper(handler), mdlw))
+	}
+
 	// images
-	frontend.router.GET("/image/:schematic/:version/:path", frontend.wrapper(frontend.handleImage))
-	frontend.router.HEAD("/image/:schematic/:version/:path", frontend.wrapper(frontend.handleImage))
+	registerRoute(frontend.router.GET, "/image/:schematic/:version/:path", frontend.handleImage)
+	registerRoute(frontend.router.HEAD, "/image/:schematic/:version/:path", frontend.handleImage)
 
 	// PXE
-	frontend.router.GET("/pxe/:schematic/:version/:path", frontend.wrapper(frontend.handlePXE))
+	registerRoute(frontend.router.GET, "/pxe/:schematic/:version/:path", frontend.handlePXE)
 
 	// registry
-	frontend.router.GET("/v2", frontend.wrapper(frontend.handleHealth))
-	frontend.router.HEAD("/v2", frontend.wrapper(frontend.handleHealth))
-	frontend.router.GET("/healthz", frontend.wrapper(frontend.handleHealth))
-	frontend.router.HEAD("/healthz", frontend.wrapper(frontend.handleHealth))
-	frontend.router.GET("/v2/:image/:schematic/blobs/:digest", frontend.wrapper(frontend.handleBlob))
-	frontend.router.HEAD("/v2/:image/:schematic/blobs/:digest", frontend.wrapper(frontend.handleBlob))
-	frontend.router.GET("/v2/:image/:schematic/manifests/:tag", frontend.wrapper(frontend.handleManifest))
-	frontend.router.HEAD("/v2/:image/:schematic/manifests/:tag", frontend.wrapper(frontend.handleManifest))
-	frontend.router.GET("/oci/cosign/signing-key.pub", frontend.wrapper(frontend.handleCosignSigningKeyPub))
+	registerRoute(frontend.router.GET, "/v2", frontend.handleHealth)
+	registerRoute(frontend.router.HEAD, "/v2", frontend.handleHealth)
+	registerRoute(frontend.router.GET, "/healthz", frontend.handleHealth)
+	registerRoute(frontend.router.HEAD, "/healthz", frontend.handleHealth)
+	registerRoute(frontend.router.GET, "/v2/:image/:schematic/blobs/:digest", frontend.handleBlob)
+	registerRoute(frontend.router.HEAD, "/v2/:image/:schematic/blobs/:digest", frontend.handleBlob)
+	registerRoute(frontend.router.GET, "/v2/:image/:schematic/manifests/:tag", frontend.handleManifest)
+	registerRoute(frontend.router.HEAD, "/v2/:image/:schematic/manifests/:tag", frontend.handleManifest)
+	registerRoute(frontend.router.GET, "/oci/cosign/signing-key.pub", frontend.handleCosignSigningKeyPub)
 
 	// schematic
-	frontend.router.POST("/schematics", frontend.wrapper(frontend.handleSchematicCreate))
+	registerRoute(frontend.router.POST, "/schematics", frontend.handleSchematicCreate)
 
 	// meta
-	frontend.router.GET("/versions", frontend.wrapper(frontend.handleVersions))
-	frontend.router.GET("/version/:version/extensions/official", frontend.wrapper(frontend.handleOfficialExtensions))
+	registerRoute(frontend.router.GET, "/versions", frontend.handleVersions)
+	registerRoute(frontend.router.GET, "/version/:version/extensions/official", frontend.handleOfficialExtensions)
 
 	// UI
-	frontend.router.GET("/", frontend.wrapper(frontend.handleUI))
-	frontend.router.HEAD("/", frontend.wrapper(frontend.handleUI))
-	frontend.router.GET("/ui/schematic-config", frontend.wrapper(frontend.handleUISchematicConfig))
-	frontend.router.GET("/ui/versions", frontend.wrapper(frontend.handleUIVersions))
-	frontend.router.POST("/ui/schematics", frontend.wrapper(frontend.handleUISchematics))
+	registerRoute(frontend.router.GET, "/", frontend.handleUI)
+	registerRoute(frontend.router.HEAD, "/", frontend.handleUI)
+	registerRoute(frontend.router.GET, "/ui/schematic-config", frontend.handleUISchematicConfig)
+	registerRoute(frontend.router.GET, "/ui/versions", frontend.handleUIVersions)
+	registerRoute(frontend.router.POST, "/ui/schematics", frontend.handleUISchematics)
 	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
 	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))

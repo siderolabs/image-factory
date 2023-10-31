@@ -16,6 +16,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/talos/pkg/imager"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/reporter"
@@ -43,6 +44,10 @@ type Builder struct {
 	artifactsManager *artifacts.Manager
 	sf               singleflight.Group
 	semaphore        chan struct{}
+
+	metricAssetsCached, metricAssetsBuilt         *prometheus.CounterVec
+	metricAssetBytesCached, metricAssetBytesBuilt *prometheus.CounterVec
+	metricConcurrencyLatency, metricBuildLatency  prometheus.Histogram
 }
 
 // Options configures the asset builder.
@@ -83,6 +88,49 @@ func NewBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, options
 		cache:            cache,
 		artifactsManager: artifactsManager,
 		semaphore:        make(chan struct{}, options.AllowedConcurrency),
+
+		metricAssetsCached: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "image_factory_assets_delivered_cached_total",
+				Help: "Number of assets retrieved from cache.",
+			},
+			[]string{"talos_version", "output_kind", "arch"},
+		),
+		metricAssetsBuilt: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "image_factory_assets_built_total",
+				Help: "Number of assets built (missing in the cache).",
+			},
+			[]string{"talos_version", "output_kind", "arch"},
+		),
+		metricAssetBytesCached: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "image_factory_assets_cached_bytes_total",
+				Help: "Number of bytes delivered with cached assets.",
+			},
+			[]string{"talos_version", "output_kind", "arch"},
+		),
+		metricAssetBytesBuilt: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "image_factory_assets_built_bytes_total",
+				Help: "Number of bytes delivered with assets built (missing in the cache).",
+			},
+			[]string{"talos_version", "output_kind", "arch"},
+		),
+		metricConcurrencyLatency: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "image_factory_assets_concurrency_latency_seconds",
+				Help:    "Latency of asset build related to the concurrency limit (waiting for available workers).",
+				Buckets: []float64{1, 10, 60, 180, 600},
+			},
+		),
+		metricBuildLatency: prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    "image_factory_assets_build_latency_seconds",
+				Help:    "Latency of asset build for the build itself (excluding waiting for available workers).",
+				Buckets: []float64{1, 10, 60, 180, 600},
+			},
+		),
 	}, nil
 }
 
@@ -106,6 +154,9 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 
 	asset, err := b.cache.Get(ctx, profileHash)
 	if err == nil {
+		b.metricAssetsCached.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
+		b.metricAssetBytesCached.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Add(float64(asset.Size()))
+
 		return asset, nil
 	}
 
@@ -149,6 +200,9 @@ func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versio
 		return nil, err
 	}
 
+	b.metricAssetsBuilt.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
+	b.metricAssetBytesBuilt.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Add(float64(asset.Size()))
+
 	if err = b.cache.Put(ctx, profileHash, asset); err != nil {
 		b.logger.Error("error putting asset to cache", zap.Error(err), zap.String("profile_hash", profileHash))
 	}
@@ -173,7 +227,9 @@ func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString
 		<-b.semaphore
 	}()
 
-	b.logger.Info("building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("concurrency_latency", time.Since(start)))
+	concurrencyLatency := time.Since(start)
+	b.logger.Info("building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("concurrency_latency", concurrencyLatency))
+	b.metricConcurrencyLatency.Observe(concurrencyLatency.Seconds())
 
 	if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindKernel, &prof.Input.Kernel); err != nil {
 		return nil, fmt.Errorf("failed to get kernel: %w", err)
@@ -231,7 +287,28 @@ func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString
 
 	tmpDir.size = st.Size()
 
-	b.logger.Info("finished building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("full_latency", time.Since(start)))
+	buildLatency := time.Since(start) - concurrencyLatency
+	b.logger.Info("finished building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("build_latency", buildLatency))
+	b.metricBuildLatency.Observe(buildLatency.Seconds())
 
 	return tmpDir, nil
 }
+
+// Describe implements prom.Collector interface.
+func (b *Builder) Describe(ch chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(b, ch)
+}
+
+// Collect implements prom.Collector interface.
+func (b *Builder) Collect(ch chan<- prometheus.Metric) {
+	b.metricAssetsBuilt.Collect(ch)
+	b.metricAssetsCached.Collect(ch)
+
+	b.metricAssetBytesBuilt.Collect(ch)
+	b.metricAssetBytesCached.Collect(ch)
+
+	b.metricBuildLatency.Collect(ch)
+	b.metricConcurrencyLatency.Collect(ch)
+}
+
+var _ prometheus.Collector = &Builder{}

@@ -9,7 +9,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/gen/value"
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/gen/xslices"
@@ -243,6 +245,8 @@ type ArtifactProducer interface {
 //
 //nolint:gocognit
 func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *schematicpkg.Schematic, artifactProducer ArtifactProducer, versionTag string) (profile.Profile, error) {
+	metricsOnce.Do(initMetrics)
+
 	if prof.Output.Kind == profile.OutKindInstaller {
 		if installerImagePath, err := artifactProducer.GetInstallerImage(ctx, artifacts.Arch(prof.Arch), versionTag); err == nil {
 			prof.Input.BaseInstaller.ImageRef = artifacts.InstallerImage + ":" + versionTag // fake reference
@@ -279,6 +283,8 @@ func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *
 					return prof, fmt.Errorf("error getting extension image %s: %w", extensionRef.TaggedReference, err)
 				}
 
+				metricSystemExtensionHit.WithLabelValues(extensionName).Inc()
+
 				prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{OCIPath: imagePath})
 			}
 		}
@@ -310,4 +316,21 @@ func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *
 	prof.Version = versionTag
 
 	return prof, nil
+}
+
+var (
+	metricSystemExtensionHit *prometheus.CounterVec
+	metricsOnce              sync.Once
+)
+
+func initMetrics() {
+	metricSystemExtensionHit = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "image_factory_profile_system_extension_hits_total",
+			Help: "Number of times system extension was used in images build.",
+		},
+		[]string{"extension"},
+	)
+
+	prometheus.MustRegister(metricSystemExtensionHit)
 }

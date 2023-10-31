@@ -20,6 +20,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -121,7 +123,42 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return httpServer.Shutdown(shutdownCtx) //nolint:contextcheck
 	})
 
+	if opts.MetricsListenAddr != "" {
+		runMetricsServer(ctx, logger, eg, opts)
+	}
+
 	return eg.Wait()
+}
+
+func runMetricsServer(ctx context.Context, logger *zap.Logger, eg *errgroup.Group, opts Options) {
+	var metricsMux http.ServeMux
+
+	metricsMux.Handle("/metrics", promhttp.Handler())
+
+	metricsServer := &http.Server{
+		Addr:    opts.MetricsListenAddr,
+		Handler: &metricsMux,
+	}
+
+	eg.Go(func() error {
+		logger.Info("serving metrics", zap.String("listen_addr", opts.MetricsListenAddr))
+
+		err := metricsServer.ListenAndServe()
+		if errors.Is(err, http.ErrServerClosed) {
+			err = nil
+		}
+
+		return err
+	})
+
+	eg.Go(func() error {
+		<-ctx.Done()
+
+		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCtxCancel()
+
+		return metricsServer.Shutdown(shutdownCtx) //nolint:contextcheck
+	})
 }
 
 func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options) (*artifacts.Manager, error) {
@@ -197,7 +234,14 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 		return nil, fmt.Errorf("failed to parse cache repository: %w", err)
 	}
 
-	return asset.NewBuilder(logger, artifactsManager, builderOptions)
+	builder, err := asset.NewBuilder(logger, artifactsManager, builderOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	prometheus.MustRegister(builder)
+
+	return builder, nil
 }
 
 func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory, error) {
@@ -211,7 +255,11 @@ func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory
 		return nil, fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
-	return schematic.NewFactory(logger, cache.NewCache(storage), schematic.Options{}), nil
+	factory := schematic.NewFactory(logger, cache.NewCache(storage), schematic.Options{})
+
+	prometheus.MustRegister(factory)
+
+	return factory, nil
 }
 
 // remoteOptions returns options for remote registry access.

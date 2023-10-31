@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,6 +42,12 @@ func (s *mockStorage) Get(_ context.Context, id string) ([]byte, error) {
 
 func (s *mockStorage) Put(_ context.Context, _ string, _ []byte) error {
 	return nil
+}
+
+func (s *mockStorage) Describe(chan<- *prometheus.Desc) {
+}
+
+func (s *mockStorage) Collect(chan<- prometheus.Metric) {
 }
 
 func TestStorage(t *testing.T) {

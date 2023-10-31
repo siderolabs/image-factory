@@ -9,6 +9,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/gen/optional"
 	"github.com/siderolabs/gen/xerrors"
 	"golang.org/x/sync/singleflight"
@@ -20,6 +21,8 @@ import (
 type Storage struct {
 	underlying storage.Storage
 
+	metricCacheSize prometheus.Gauge
+
 	g  singleflight.Group
 	m  map[string]optional.Optional[[]byte]
 	mu sync.Mutex
@@ -30,6 +33,10 @@ func NewCache(underlying storage.Storage) *Storage {
 	return &Storage{
 		underlying: underlying,
 		m:          map[string]optional.Optional[[]byte]{},
+		metricCacheSize: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "image_factory_schematic_cache_size",
+			Help: "Number of schematics in in-memory cache.",
+		}),
 	}
 }
 
@@ -128,3 +135,19 @@ func (s *Storage) Put(ctx context.Context, id string, data []byte) error {
 
 	return nil
 }
+
+// Describe implements prom.Collector interface.
+func (s *Storage) Describe(ch chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(s, ch)
+}
+
+// Collect implements prom.Collector interface.
+func (s *Storage) Collect(ch chan<- prometheus.Metric) {
+	s.mu.Lock()
+	s.metricCacheSize.Set(float64(len(s.m)))
+	s.mu.Unlock()
+
+	s.metricCacheSize.Collect(ch)
+}
+
+var _ prometheus.Collector = &Storage{}

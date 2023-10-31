@@ -50,6 +50,8 @@ func initFlags() cmd.Options {
 		"allow an insecure connection to the cache repository",
 	)
 
+	flag.StringVar(&opts.MetricsListenAddr, "metrics-listen-addr", cmd.DefaultOptions.MetricsListenAddr, "metrics listen address (set empty to disable)")
+
 	flag.Parse()
 
 	return opts

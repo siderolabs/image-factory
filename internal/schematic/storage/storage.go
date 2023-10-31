@@ -7,10 +7,14 @@ package storage
 
 import (
 	"context"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Storage is the schematic storage.
 type Storage interface {
+	prometheus.Collector
+
 	Head(ctx context.Context, id string) error
 	Get(ctx context.Context, id string) ([]byte, error)
 	Put(ctx context.Context, id string, data []byte) error
