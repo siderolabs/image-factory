@@ -19,6 +19,7 @@ import (
 	"github.com/siderolabs/gen/xslices"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/version"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -42,7 +43,11 @@ func (f *Frontend) handleUI(_ context.Context, w http.ResponseWriter, r *http.Re
 		return nil
 	}
 
-	return templates.ExecuteTemplate(w, "index.html", nil)
+	return templates.ExecuteTemplate(w, "index.html", struct {
+		Version string
+	}{
+		Version: version.Tag,
+	})
 }
 
 // handleUIVersions handles '/ui/versions'.
