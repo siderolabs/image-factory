@@ -197,6 +197,22 @@ func TestParseFromPath(t *testing.T) {
 				},
 			},
 		},
+		{
+			path: "digital-ocean-amd64.raw.gz",
+
+			expectedProfile: profile.Profile{
+				Platform: "digital-ocean",
+				Arch:     "amd64",
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatGZ,
+					ImageOptions: &profile.ImageOptions{
+						DiskFormat: profile.DiskFormatRaw,
+						DiskSize:   profile.DefaultRAWDiskSize,
+					},
+				},
+			},
+		},
 	} {
 		t.Run(test.path, func(t *testing.T) {
 			t.Parallel()

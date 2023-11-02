@@ -44,6 +44,12 @@ func parsePlatformArch(s string, prof *profile.Profile) error {
 		return xerrors.NewTaggedf[InvalidErrorTag]("invalid platform-arch: %q", s)
 	}
 
+	// special case for 'digital-ocean' platform which has a dash in it
+	if platform == "digital" && strings.HasPrefix(rest, "ocean-") {
+		platform = "digital-ocean"
+		rest = strings.TrimPrefix(rest, "ocean-")
+	}
+
 	prof.Platform = platform
 
 	if platform == constants.PlatformMetal && strings.HasSuffix(rest, "-"+string(artifacts.ArchArm64)) {
