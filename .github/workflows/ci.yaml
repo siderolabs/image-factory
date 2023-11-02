@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-10-27T14:12:36Z by kres latest.
+# Generated on 2023-11-02T09:56:23Z by kres latest.
 
 name: default
 concurrency:
@@ -104,8 +104,8 @@ jobs:
       - name: Generate Checksums
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          sha256sum _out/* > _out/sha256sum.txt
-          sha512sum _out/* > _out/sha512sum.txt
+          sha256sum _out/image-factory-* > _out/sha256sum.txt
+          sha512sum _out/image-factory-* > _out/sha512sum.txt
       - name: release-notes
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -117,5 +117,5 @@ jobs:
           body_path: _out/RELEASE_NOTES.md
           draft: "true"
           files: |-
-            _out/*
+            _out/image-factory-*
             _out/sha*.txt

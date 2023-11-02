@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-10-27T14:12:36Z by kres latest.
+# Generated on 2023-11-02T09:56:23Z by kres latest.
 
 # common variables
 
@@ -209,7 +209,7 @@ integration: integration.test
 .PHONY: rekres
 rekres:
 	@docker pull $(KRES_IMAGE)
-	@docker run --rm --net=host -v $(PWD):/src -w /src -e GITHUB_TOKEN $(KRES_IMAGE)
+	@docker run --rm --net=host --user $(shell id -u):$(shell id -g) -v $(PWD):/src -w /src -e GITHUB_TOKEN $(KRES_IMAGE)
 
 .PHONY: help
 help:  ## This help menu.

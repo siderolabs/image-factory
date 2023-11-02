@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-10-03T19:35:51Z by kres latest.
+# Generated on 2023-11-02T09:56:23Z by kres latest.
 
 ARG TOOLCHAIN
 
@@ -14,6 +14,7 @@ WORKDIR /src
 RUN npm i -g markdownlint-cli@0.37.0
 RUN npm i sentences-per-line@0.2.1
 COPY .markdownlint.json .
+COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
 RUN markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules node_modules/sentences-per-line/index.js .
 

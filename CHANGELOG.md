@@ -1,3 +1,44 @@
+## [image-factory 0.1.1](https://github.com/siderolabs/image-factory/releases/tag/v0.1.1) (2023-11-02)
+
+Welcome to the v0.1.1 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* budimanjojo
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`4211a5c`](https://github.com/siderolabs/image-factory/commit/4211a5c52d6a5c407cecb793f47c17eb6a529051) chore: update Talos
+* [`fcc8cb5`](https://github.com/siderolabs/image-factory/commit/fcc8cb503835de8b549c99281302f55acd4880c2) fix: small UI updates
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>3 commits</summary>
+<p>
+
+* [`2e78513e1`](https://github.com/siderolabs/talos/commit/2e78513e16b2eb0d83a4a7e107c470058d30837d) refactor: drop the dependency link platform -> network ctrl
+* [`6dc776b8a`](https://github.com/siderolabs/talos/commit/6dc776b8aaa2d9382737d41a90023e8e4ea1a601) fix: when writing to META in the installer/imager, use fixed name
+* [`3703041e9`](https://github.com/siderolabs/talos/commit/3703041e989c83c1ad7496851c6687f729cb207f) chore: remove uneeded code
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/siderolabs/talos**                cbe6e7622d01 -> 2e78513e16b2
+* **github.com/siderolabs/talos/pkg/machinery**  cbe6e7622d01 -> 2e78513e16b2
+
+Previous release can be found at [v0.1.0](https://github.com/siderolabs/image-factory/releases/tag/v0.1.0)
+
+
 ## [image-factory 0.1.0](https://github.com/siderolabs/image-factory/releases/tag/v0.1.0) (2023-11-01)
 
 Welcome to the v0.1.0 release of image-factory!
