@@ -1,3 +1,70 @@
+## [image-factory 0.1.2](https://github.com/siderolabs/image-factory/releases/tag/v0.1.2) (2023-11-08)
+
+Welcome to the v0.1.2 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Noel Georgi
+* Utku Ozdemir
+* budimanjojo
+
+### Changes
+<details><summary>5 commits</summary>
+<p>
+
+* [`58378e0`](https://github.com/siderolabs/image-factory/commit/58378e0da6aa7a9cb30393e60186d022757f82b2) chore: bump dependencies and Talos
+* [`db21b76`](https://github.com/siderolabs/image-factory/commit/db21b76ca8b34e9a9534342ba4516246fbb1bae4) fix: parse profiles for 'digital-ocean' platform
+* [`43a6388`](https://github.com/siderolabs/image-factory/commit/43a638843689df7b04db8d8292a2d0983507d408) release(v0.1.1): prepare release
+* [`4211a5c`](https://github.com/siderolabs/image-factory/commit/4211a5c52d6a5c407cecb793f47c17eb6a529051) chore: update Talos
+* [`fcc8cb5`](https://github.com/siderolabs/image-factory/commit/fcc8cb503835de8b549c99281302f55acd4880c2) fix: small UI updates
+</p>
+</details>
+
+### Changes since v0.1.1
+<details><summary>2 commits</summary>
+<p>
+
+* [`58378e0`](https://github.com/siderolabs/image-factory/commit/58378e0da6aa7a9cb30393e60186d022757f82b2) chore: bump dependencies and Talos
+* [`db21b76`](https://github.com/siderolabs/image-factory/commit/db21b76ca8b34e9a9534342ba4516246fbb1bae4) fix: parse profiles for 'digital-ocean' platform
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>13 commits</summary>
+<p>
+
+* [`75d3987c0`](https://github.com/siderolabs/talos/commit/75d3987c05390d3c0a7cf4de855895f1d10c8a84) chore: drop sha1 from genereated pcr json
+* [`6f32d2990`](https://github.com/siderolabs/talos/commit/6f32d2990f438a9e8134d7e94558a54b3912854e) feat: add `.der` output `talosctl gen secureboot pcr`
+* [`87c40da6c`](https://github.com/siderolabs/talos/commit/87c40da6cc5d9ae62d20984ba5d3762da734a49e) fix: proper logging in machined on startup
+* [`a54da5f64`](https://github.com/siderolabs/talos/commit/a54da5f641886d723465e0a8cfa95b15bc2e96aa) fix: image build for nanopi_4s
+* [`6f3cd0593`](https://github.com/siderolabs/talos/commit/6f3cd05935a2faaf14d16c2e643f54e6f9134c0f) refactor: update packet capture to use 'afpacket' interface
+* [`813442dd7`](https://github.com/siderolabs/talos/commit/813442dd7a08b2781829ef190b110aa38c725932) fix: don't validate machine.install if installed
+* [`dff60069c`](https://github.com/siderolabs/talos/commit/dff60069c0230ecf531c5593724211fd75f26d7c) feat: update Kubernetes to 1.29.0-alpha.3
+* [`c97db5dfe`](https://github.com/siderolabs/talos/commit/c97db5dfe174032f012bdd525a3479ebea200c93) chore: bump Go dependencies
+* [`807a9950a`](https://github.com/siderolabs/talos/commit/807a9950ac5cb542e41d65af0f9f80f1c73550a3) fix: use custom Talos/kernel version when generating UKI
+* [`eb94468a6`](https://github.com/siderolabs/talos/commit/eb94468a659b4518b317398f92346b62e6adefe4) docs: add documentation for Image Factory
+* [`2e78513e1`](https://github.com/siderolabs/talos/commit/2e78513e16b2eb0d83a4a7e107c470058d30837d) refactor: drop the dependency link platform -> network ctrl
+* [`6dc776b8a`](https://github.com/siderolabs/talos/commit/6dc776b8aaa2d9382737d41a90023e8e4ea1a601) fix: when writing to META in the installer/imager, use fixed name
+* [`3703041e9`](https://github.com/siderolabs/talos/commit/3703041e989c83c1ad7496851c6687f729cb207f) chore: remove uneeded code
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/siderolabs/talos**                cbe6e7622d01 -> 75d3987c0539
+* **github.com/siderolabs/talos/pkg/machinery**  cbe6e7622d01 -> 75d3987c0539
+* **github.com/sigstore/cosign/v2**              v2.2.0 -> v2.2.1
+* **golang.org/x/sync**                          v0.4.0 -> v0.5.0
+* **golang.org/x/sys**                           v0.13.0 -> v0.14.0
+
+Previous release can be found at [v0.1.0](https://github.com/siderolabs/image-factory/releases/tag/v0.1.0)
+
 ## [image-factory 0.1.1](https://github.com/siderolabs/image-factory/releases/tag/v0.1.1) (2023-11-02)
 
 Welcome to the v0.1.1 release of image-factory!
