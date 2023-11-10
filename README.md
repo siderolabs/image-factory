@@ -105,9 +105,16 @@ Returns a list of official system extensions available for the specified Talos L
 ]
 ```
 
+### `GET /secureboot/signing-cert.pem`
+
+Returns PEM-encoded SecureBoot signing certificate used by the Image Factory.
+
+It might be used to manually enroll the certificate into the UEFI firmware.
+Talos Linux SecureBoot ISOs come with an option for automatic enrollment of the certificate, but if that is not desired, the certificate can be manually enrolled.
+
 ## PXE Frontend API
 
-The PXE frontend provides an [iPXE script](https://ipxe.org/scripting) which automatically downloads and boots Talos Linux.
+The PXE frontend provides an [iPXE script](https://ipxe.org/scripting) that automatically downloads and boots Talos Linux.
 The bare metal machine should be configured to boot from the URL provided by this API, e.g.:
 
 ```text

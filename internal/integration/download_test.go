@@ -159,6 +159,13 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", 122007552)
 				})
 
+				t.Run("secureboot iso", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", 82724864)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", 122007552)
+				})
+
 				t.Run("kernel", func(t *testing.T) {
 					t.Parallel()
 
@@ -181,6 +188,13 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					)
 				})
 
+				t.Run("UKI", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot-uki.efi", "application/vnd.microsoft.portable-executable", 77691056)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot-uki.efi", "application/vnd.microsoft.portable-executable", 114564272)
+				})
+
 				t.Run("installer image", func(t *testing.T) {
 					t.Parallel()
 
@@ -193,6 +207,13 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", 78472708)
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 66625420)
+				})
+
+				t.Run("metal secureboot image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.raw.xz", "application/x-xz", 78472708)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.raw.xz", "application/x-xz", 66625420)
 				})
 
 				t.Run("aws image", func(t *testing.T) {
@@ -224,6 +245,13 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", 112222208)
 					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", 150120448)
+				})
+
+				t.Run("secureboot iso", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", 112222208)
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", 150120448)
 				})
 
 				t.Run("metal image", func(t *testing.T) {

@@ -18,6 +18,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	imageprofile "github.com/siderolabs/image-factory/internal/profile"
+	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -272,6 +273,17 @@ func TestEnhanceFromSchematic(t *testing.T) {
 	installerProfile := profile.Default["installer"].DeepCopy()
 	installerProfile.Arch = "amd64"
 
+	secureBootInstallerProfile := installerProfile.DeepCopy()
+	secureBootInstallerProfile.SecureBoot = pointer.To(true)
+
+	secureBootService, err := secureboot.NewService(secureboot.Options{
+		Enabled:         true,
+		SigningKeyPath:  "sign-key.pem",
+		SigningCertPath: "sign-cert.pem",
+		PCRKeyPath:      "pcr-key.pem",
+	})
+	require.NoError(t, err)
+
 	for _, test := range []struct { //nolint:govet
 		name          string
 		baseProfile   profile.Profile
@@ -434,11 +446,55 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "secureboot installer",
+			baseProfile: secureBootInstallerProfile,
+			schematic: schematic.Schematic{
+				Customization: schematic.Customization{
+					ExtraKernelArgs: []string{"noapic", "nolapic"},
+				},
+			},
+			versionString: "v1.5.3",
+
+			expectedProfile: profile.Profile{
+				Platform:   constants.PlatformMetal,
+				Arch:       "amd64",
+				Version:    "v1.5.3",
+				SecureBoot: pointer.To(true),
+				Customization: profile.CustomizationProfile{
+					ExtraKernelArgs: []string{"noapic", "nolapic"},
+				},
+				Input: profile.Input{
+					SecureBoot: &profile.SecureBootAssets{
+						SecureBootSigner: profile.SigningKeyAndCertificate{
+							KeyPath:  "sign-key.pem",
+							CertPath: "sign-cert.pem",
+						},
+						PCRSigner: profile.SigningKey{
+							KeyPath: "pcr-key.pem",
+						},
+					},
+					BaseInstaller: profile.ContainerAsset{
+						ImageRef: "siderolabs/installer:v1.5.3",
+						OCIPath:  "installer-amd64-v1.5.3.oci",
+					},
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							TarballPath: "9cba8e32753f91a16c1837ab8abf356af021706ef284aef07380780177d9a06c.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			actualProfile, err := imageprofile.EnhanceFromSchematic(ctx, test.baseProfile, &test.schematic, mockArtifactProducer{}, test.versionString)
+			actualProfile, err := imageprofile.EnhanceFromSchematic(ctx, test.baseProfile, &test.schematic, mockArtifactProducer{}, secureBootService, test.versionString)
 			require.NoError(t, err)
 			require.Equal(t, test.expectedProfile, actualProfile)
 		})

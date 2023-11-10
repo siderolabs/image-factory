@@ -34,6 +34,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/schematic"
 	"github.com/siderolabs/image-factory/internal/schematic/storage/cache"
 	"github.com/siderolabs/image-factory/internal/schematic/storage/registry"
+	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/internal/version"
 )
 
@@ -64,6 +65,11 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
+	secureBootService, err := secureboot.NewService(secureboot.Options(opts.SecureBoot))
+	if err != nil {
+		return fmt.Errorf("failed to initialize SecureBoot service: %w", err)
+	}
+
 	var frontendOptions frontendhttp.Options
 
 	frontendOptions.CacheSigningKey = cacheSigningKey
@@ -91,7 +97,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	frontendOptions.RemoteOptions = append(frontendOptions.RemoteOptions, remoteOptions()...)
 
-	frontendHTTP, err := frontendhttp.NewFrontend(logger, configFactory, assetBuilder, artifactsManager, frontendOptions)
+	frontendHTTP, err := frontendhttp.NewFrontend(logger, configFactory, assetBuilder, artifactsManager, secureBootService, frontendOptions)
 	if err != nil {
 		return fmt.Errorf("failed to initialize HTTP frontend: %w", err)
 	}

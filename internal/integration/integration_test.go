@@ -9,10 +9,12 @@ package integration_test
 import (
 	"context"
 	"crypto/elliptic"
+	_ "embed"
 	"flag"
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -40,6 +42,7 @@ func setupFactory(t *testing.T) (context.Context, string) {
 	options.InstallerInternalRepository = installerInternalRepository
 	options.CacheRepository = cacheRepository
 
+	setupSecureBoot(t, &options)
 	setupCacheSigningKey(t, &options)
 
 	eg, ctx := errgroup.WithContext(ctx)
@@ -79,6 +82,34 @@ func setupCacheSigningKey(t *testing.T, options *cmd.Options) {
 	require.NoError(t, os.WriteFile(optionsDir+"/cache-signing-key.pem", priv, 0o600))
 
 	options.CacheSigningKeyPath = optionsDir + "/cache-signing-key.pem"
+}
+
+var (
+	//go:embed "testdata/secureboot/uki-signing-key.pem"
+	secureBootSigningKey []byte
+	//go:embed "testdata/secureboot/uki-signing-cert.pem"
+	secureBootSigningCert []byte
+	//go:embed "testdata/secureboot/pcr-signing-key.pem"
+	secureBootPCRKey []byte
+)
+
+func setupSecureBoot(t *testing.T, options *cmd.Options) {
+	t.Helper()
+
+	certDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "secureboot-signing-key.pem"), secureBootSigningKey, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "secureboot-signing-cert.pem"), secureBootSigningCert, 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(certDir, "pcr-signing-key.pem"), secureBootPCRKey, 0o600))
+
+	// use fixed SecureBoot keys
+	options.SecureBoot = cmd.SecureBootOptions{
+		Enabled: true,
+
+		SigningKeyPath:  filepath.Join(certDir, "secureboot-signing-key.pem"),
+		SigningCertPath: filepath.Join(certDir, "secureboot-signing-cert.pem"),
+		PCRKeyPath:      filepath.Join(certDir, "pcr-signing-key.pem"),
+	}
 }
 
 func findListenAddr(t *testing.T) string {
@@ -125,6 +156,12 @@ func TestIntegration(t *testing.T) {
 		t.Parallel()
 
 		testMetaFrontend(ctx, t, baseURL)
+	})
+
+	t.Run("TestSecureBootFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testSecureBootFrontend(ctx, t, baseURL)
 	})
 }
 

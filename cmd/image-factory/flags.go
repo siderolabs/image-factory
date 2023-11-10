@@ -52,6 +52,16 @@ func initFlags() cmd.Options {
 
 	flag.StringVar(&opts.MetricsListenAddr, "metrics-listen-addr", cmd.DefaultOptions.MetricsListenAddr, "metrics listen address (set empty to disable)")
 
+	flag.BoolVar(&opts.SecureBoot.Enabled, "secureboot", cmd.DefaultOptions.SecureBoot.Enabled, "enable Secure Boot asset generation")
+
+	flag.StringVar(&opts.SecureBoot.SigningKeyPath, "secureboot-signing-key-path", cmd.DefaultOptions.SecureBoot.SigningKeyPath, "Secure Boot signing key path (use local PKI)")
+	flag.StringVar(&opts.SecureBoot.SigningCertPath, "secureboot-signing-cert-path", cmd.DefaultOptions.SecureBoot.SigningCertPath, "Secure Boot signing certificate path (use local PKI)")
+	flag.StringVar(&opts.SecureBoot.PCRKeyPath, "secureboot-pcr-key-path", cmd.DefaultOptions.SecureBoot.PCRKeyPath, "Secure Boot PCR key path (use local PKI)")
+
+	flag.StringVar(&opts.SecureBoot.AzureKeyVaultURL, "secureboot-azure-key-vault-url", cmd.DefaultOptions.SecureBoot.AzureKeyVaultURL, "Secure Boot Azure Key Vault URL (use Azure PKI)")
+	flag.StringVar(&opts.SecureBoot.AzureCertificateName, "secureboot-azure-certificate-name", cmd.DefaultOptions.SecureBoot.AzureCertificateName, "Secure Boot Azure Key Vault certificate name (use Azure PKI)") //nolint:lll
+	flag.StringVar(&opts.SecureBoot.AzureKeyName, "secureboot-azure-key-name", cmd.DefaultOptions.SecureBoot.AzureKeyName, "Secure Boot Azure Key Vault PCR key name (use Azure PKI)")
+
 	flag.Parse()
 
 	return opts

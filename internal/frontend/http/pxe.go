@@ -53,7 +53,7 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 		return fmt.Errorf("error parsing profile from path: %w", err)
 	}
 
-	prof, err = profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, versionTag)
+	prof, err = profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, f.secureBootService, versionTag)
 	if err != nil {
 		return fmt.Errorf("error enhancing profile from schematic: %w", err)
 	}

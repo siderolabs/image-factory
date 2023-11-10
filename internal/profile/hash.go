@@ -45,7 +45,10 @@ func Clean(p *profile.Profile) {
 	}
 
 	if p.Input.SecureBoot != nil {
-		panic("SecureBoot is not supported yet, add support for it here")
+		// don't clean Azure/file settings, as changing those should invalidate the cache
+		p.Input.SecureBoot.KeyExchangeKeyPath = ""
+		p.Input.SecureBoot.SignatureKeyPath = ""
+		p.Input.SecureBoot.PlatformKeyPath = ""
 	}
 
 	cleanFileAsset(&p.Input.Kernel)

@@ -7,6 +7,7 @@ package profile
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -21,6 +22,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/meta"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/secureboot"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -249,9 +251,29 @@ type ArtifactProducer interface {
 
 // EnhanceFromSchematic enhances the profile with the schematic.
 //
-//nolint:gocognit
-func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *schematicpkg.Schematic, artifactProducer ArtifactProducer, versionTag string) (profile.Profile, error) {
+//nolint:gocognit,gocyclo,cyclop
+func EnhanceFromSchematic(
+	ctx context.Context,
+	prof profile.Profile,
+	schematic *schematicpkg.Schematic,
+	artifactProducer ArtifactProducer,
+	secureBootService *secureboot.Service,
+	versionTag string,
+) (profile.Profile, error) {
 	metricsOnce.Do(initMetrics)
+
+	if prof.SecureBootEnabled() {
+		secureBootAssets, err := secureBootService.GetSecureBootAssets()
+		if err != nil {
+			if errors.Is(err, secureboot.ErrDisabled) {
+				return prof, xerrors.NewTagged[InvalidErrorTag](err)
+			}
+
+			return prof, err
+		}
+
+		prof.Input.SecureBoot = secureBootAssets
+	}
 
 	if prof.Output.Kind == profile.OutKindInstaller {
 		if installerImagePath, err := artifactProducer.GetInstallerImage(ctx, artifacts.Arch(prof.Arch), versionTag); err == nil {
@@ -305,18 +327,25 @@ func EnhanceFromSchematic(ctx context.Context, prof profile.Profile, schematic *
 	}
 
 	// skip customizations for profile kinds which don't support it
-	if prof.Output.Kind != profile.OutKindInitramfs && prof.Output.Kind != profile.OutKindKernel && prof.Output.Kind != profile.OutKindInstaller {
+	//
+	// initramfs/kernel can't carry extra kernel args & META
+	// !secureboot (non-UKI) installer can't carry extra kernel args & META
+	// UKI installer has kernel args embedded in the UKI image
+	if !(prof.Output.Kind == profile.OutKindInitramfs || prof.Output.Kind == profile.OutKindKernel || (prof.Output.Kind == profile.OutKindInstaller && !prof.SecureBootEnabled())) {
 		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
-		prof.Customization.MetaContents = append(prof.Customization.MetaContents,
-			xslices.Map(schematic.Customization.Meta,
-				func(mv schematicpkg.MetaValue) meta.Value {
-					return meta.Value{
-						Key:   mv.Key,
-						Value: mv.Value,
-					}
-				},
-			)...,
-		)
+
+		if prof.Output.Kind != profile.OutKindInstaller {
+			prof.Customization.MetaContents = append(prof.Customization.MetaContents,
+				xslices.Map(schematic.Customization.Meta,
+					func(mv schematicpkg.MetaValue) meta.Value {
+						return meta.Value{
+							Key:   mv.Key,
+							Value: mv.Value,
+						}
+					},
+				)...,
+			)
+		}
 	}
 
 	prof.Version = versionTag

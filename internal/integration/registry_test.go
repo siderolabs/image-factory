@@ -72,8 +72,14 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 
 	expectedFiles := map[string]struct{}{
 		"bin/installer": {},
-		fmt.Sprintf("usr/install/%s/vmlinuz", platform.Architecture):      {},
-		fmt.Sprintf("usr/install/%s/initramfs.xz", platform.Architecture): {},
+	}
+
+	if !secureboot {
+		expectedFiles[fmt.Sprintf("usr/install/%s/vmlinuz", platform.Architecture)] = struct{}{}
+		expectedFiles[fmt.Sprintf("usr/install/%s/initramfs.xz", platform.Architecture)] = struct{}{}
+	} else {
+		expectedFiles[fmt.Sprintf("usr/install/%s/vmlinuz.efi.signed", platform.Architecture)] = struct{}{}
+		expectedFiles[fmt.Sprintf("usr/install/%s/systemd-boot.efi", platform.Architecture)] = struct{}{}
 	}
 
 	if platform.Architecture == "arm64" {
@@ -193,10 +199,6 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 			for _, secureboot := range []bool{false, true} {
 				t.Run(fmt.Sprintf("secureboot=%t", secureboot), func(t *testing.T) {
 					t.Parallel()
-
-					if secureboot {
-						t.Skip("skipping secureboot")
-					}
 
 					for _, schematicID := range []string{
 						emptySchematicID,

@@ -58,6 +58,24 @@ type Options struct { //nolint:govet
 	//
 	// Leave empty to disable.
 	MetricsListenAddr string
+
+	// SecureBoot settings.
+	SecureBoot SecureBootOptions
+}
+
+// SecureBootOptions configures SecureBoot.
+type SecureBootOptions struct { //nolint:govet
+	// Enable SecureBoot asset generation.
+	Enabled bool
+
+	// File-based approach.
+	SigningKeyPath, SigningCertPath string
+	PCRKeyPath                      string
+
+	// Azure Key Vault approach.
+	AzureKeyVaultURL     string
+	AzureCertificateName string
+	AzureKeyName         string
 }
 
 // DefaultOptions are the default options.

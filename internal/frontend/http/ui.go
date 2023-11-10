@@ -154,18 +154,20 @@ func (f *Frontend) handleUISchematics(ctx context.Context, w http.ResponseWriter
 		Schematic string
 		Marshaled string
 
-		ImageBaseURL   *url.URL
-		PXEBaseURL     *url.URL
-		InstallerImage string
+		ImageBaseURL             *url.URL
+		PXEBaseURL               *url.URL
+		InstallerImage           string
+		SecureBootInstallerImage string
 
 		Architectures []string
 	}{
-		Version:        version,
-		Schematic:      schematicID,
-		Marshaled:      string(marshaled),
-		ImageBaseURL:   f.options.ExternalURL.JoinPath("image", schematicID, version),
-		PXEBaseURL:     f.options.ExternalURL.JoinPath("pxe", schematicID, version),
-		InstallerImage: fmt.Sprintf("%s/installer/%s:%s", f.options.ExternalURL.Host, schematicID, version),
+		Version:                  version,
+		Schematic:                schematicID,
+		Marshaled:                string(marshaled),
+		ImageBaseURL:             f.options.ExternalURL.JoinPath("image", schematicID, version),
+		PXEBaseURL:               f.options.ExternalURL.JoinPath("pxe", schematicID, version),
+		InstallerImage:           fmt.Sprintf("%s/installer/%s:%s", f.options.ExternalURL.Host, schematicID, version),
+		SecureBootInstallerImage: fmt.Sprintf("%s/installer-secureboot/%s:%s", f.options.ExternalURL.Host, schematicID, version),
 		Architectures: []string{
 			string(artifacts.ArchAmd64),
 			string(artifacts.ArchArm64),

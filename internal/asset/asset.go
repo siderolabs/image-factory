@@ -247,8 +247,6 @@ func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString
 		if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindSystemdStub, &prof.Input.SDStub); err != nil {
 			return nil, fmt.Errorf("failed to get systemd-stub: %w", err)
 		}
-
-		return nil, fmt.Errorf("secure boot is not supported yet")
 	}
 
 	if prof.Arch == string(artifacts.ArchArm64) {

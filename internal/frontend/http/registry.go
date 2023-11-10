@@ -230,7 +230,7 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 	for _, arch := range []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64} {
 		prof := profile.InstallerProfile(img.SecureBoot(), arch)
 
-		prof, err := profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, versionTag)
+		prof, err := profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, f.secureBootService, versionTag)
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("error enhancing profile from schematic: %w", err)
 		}

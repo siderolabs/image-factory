@@ -31,21 +31,23 @@ import (
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/schematic"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
+	"github.com/siderolabs/image-factory/internal/secureboot"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 // Frontend is the HTTP frontend.
 type Frontend struct {
-	router           *httprouter.Router
-	schematicFactory *schematic.Factory
-	assetBuilder     *asset.Builder
-	artifactsManager *artifacts.Manager
-	logger           *zap.Logger
-	puller           *remote.Puller
-	pusher           *remote.Pusher
-	imageSigner      *signer.Signer
-	sf               singleflight.Group
-	options          Options
+	router            *httprouter.Router
+	schematicFactory  *schematic.Factory
+	assetBuilder      *asset.Builder
+	artifactsManager  *artifacts.Manager
+	secureBootService *secureboot.Service
+	logger            *zap.Logger
+	puller            *remote.Puller
+	pusher            *remote.Pusher
+	imageSigner       *signer.Signer
+	sf                singleflight.Group
+	options           Options
 }
 
 // Options configures the HTTP frontend.
@@ -61,14 +63,22 @@ type Options struct {
 }
 
 // NewFrontend creates a new HTTP frontend.
-func NewFrontend(logger *zap.Logger, schematicFactory *schematic.Factory, assetBuilder *asset.Builder, artifactsManager *artifacts.Manager, opts Options) (*Frontend, error) {
+func NewFrontend(
+	logger *zap.Logger,
+	schematicFactory *schematic.Factory,
+	assetBuilder *asset.Builder,
+	artifactsManager *artifacts.Manager,
+	secureBootService *secureboot.Service,
+	opts Options,
+) (*Frontend, error) {
 	frontend := &Frontend{
-		router:           httprouter.New(),
-		schematicFactory: schematicFactory,
-		assetBuilder:     assetBuilder,
-		artifactsManager: artifactsManager,
-		logger:           logger.With(zap.String("frontend", "http")),
-		options:          opts,
+		router:            httprouter.New(),
+		schematicFactory:  schematicFactory,
+		assetBuilder:      assetBuilder,
+		artifactsManager:  artifactsManager,
+		secureBootService: secureBootService,
+		logger:            logger.With(zap.String("frontend", "http")),
+		options:           opts,
 	}
 
 	var err error
@@ -121,6 +131,9 @@ func NewFrontend(logger *zap.Logger, schematicFactory *schematic.Factory, assetB
 	// meta
 	registerRoute(frontend.router.GET, "/versions", frontend.handleVersions)
 	registerRoute(frontend.router.GET, "/version/:version/extensions/official", frontend.handleOfficialExtensions)
+
+	// secureboot
+	registerRoute(frontend.router.GET, "/secureboot/signing-cert.pem", frontend.handleSecureBootSigningCert)
 
 	// UI
 	registerRoute(frontend.router.GET, "/", frontend.handleUI)

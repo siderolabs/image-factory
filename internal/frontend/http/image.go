@@ -46,7 +46,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error parsing profile from path: %w", err)
 	}
 
-	prof, err = profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, versionTag)
+	prof, err = profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, f.secureBootService, versionTag)
 	if err != nil {
 		return fmt.Errorf("error enhancing profile from schematic: %w", err)
 	}
