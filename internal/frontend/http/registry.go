@@ -18,7 +18,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
-	"github.com/google/go-containerregistry/pkg/v1/validate"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
@@ -267,10 +266,6 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 					},
 				},
 			})
-	}
-
-	if err := validate.Index(imageIndex); err != nil {
-		return v1.Hash{}, fmt.Errorf("error validating index: %w", err)
 	}
 
 	f.logger.Info("pushing installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
