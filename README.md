@@ -145,7 +145,7 @@ boot
 
 The Talos Linux `installer` image is used for the initial install and upgrades.
 It can be pulled from the Image Factory OCI registry.
-If the image hasn't been created yet, it will be built on demand automatically.
+If the image hasn't been created yet, it will be built on demand automatically. As long as the ID has been created before.
 
 ### `docker pull <registry>/installer[-secureboot]/<schematic>:<version>`
 
