@@ -47,7 +47,8 @@ Output is a JSON-encoded schematic ID:
 {"id":"2a63b6e7dab90ec9d44f213339b9545bd39c6499b22a14cf575c1ca4b6e39ff8"}
 ```
 
-This ID can be used to download images with this schematic.
+After creation ID can be used to download images with this schematic.
+Creation through the factory is required for the images associated with the ID to be build.
 
 Well-known schematic IDs:
 
