@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-11-02T09:56:23Z by kres latest.
+# Generated on 2023-11-21T16:57:47Z by kres latest.
 
 name: slack-notify
 "on":
@@ -14,14 +14,15 @@ jobs:
     runs-on:
       - self-hosted
       - generic
-    if: ${{ github.event.workflow_run.conclusion != 'skipped' }}
+    if: github.event.workflow_run.conclusion != 'skipped'
     steps:
-      - name: Retrieve Workflow Run Info
-        id: retrieve-workflow-run-info
-        uses: potiuk/get-workflow-origin@v1_5
-        with:
-          sourceRunId: ${{ github.event.workflow_run.id }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Get PR number
+        id: get-pr-number
+        if: github.event.workflow_run.event == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo pull_request_number=$(gh pr view -R ${{ github.repository }} ${{ github.event.workflow_run.head_repository.owner.login }}:${{ github.event.workflow_run.head_branch }} --json number --jq .number) >> $GITHUB_OUTPUT
       - name: Slack Notify
         uses: slackapi/slack-github-action@v1
         with:
@@ -38,7 +39,7 @@ jobs:
                                 "fields": [
                                     {
                                         "type": "mrkdwn",
-                                        "text": "${{ github.event.workflow_run.event == 'pull_request' && format('*Pull Request:* {0} (`{1}`)\n<{2}/pull/{3}|{4}>', github.repository, github.ref_name, github.event.repository.html_url, steps.retrieve-workflow-run-info.outputs.pullRequestNumber, github.event.workflow_run.display_title) || format('*Build:* {0} (`{1}`)\n<{2}/commit/{3}|{4}>', github.repository, github.ref_name, github.event.repository.html_url, github.sha, github.event.workflow_run.display_title) }}"
+                                        "text": "${{ github.event.workflow_run.event == 'pull_request' && format('*Pull Request:* {0} (`{1}`)\n<{2}/pull/{3}|{4}>', github.repository, github.ref_name, github.event.repository.html_url, steps.get-pr-number.outputs.pull_request_number, github.event.workflow_run.display_title) || format('*Build:* {0} (`{1}`)\n<{2}/commit/{3}|{4}>', github.repository, github.ref_name, github.event.repository.html_url, github.sha, github.event.workflow_run.display_title) }}"
                                     },
                                     {
                                         "type": "mrkdwn",

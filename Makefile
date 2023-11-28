@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-11-02T09:56:23Z by kres latest.
+# Generated on 2023-11-30T10:20:41Z by kres 902f3bd-dirty.
 
 # common variables
 
@@ -16,13 +16,13 @@ USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
 PROTOBUF_GO_VERSION ?= 1.31.0
 GRPC_GO_VERSION ?= 1.3.0
-GRPC_GATEWAY_VERSION ?= 2.18.0
+GRPC_GATEWAY_VERSION ?= 2.18.1
 VTPROTOBUF_VERSION ?= 0.5.0
 DEEPCOPY_VERSION ?= v0.5.5
-GOLANGCILINT_VERSION ?= v1.55.1
+GOLANGCILINT_VERSION ?= v1.55.2
 GOFUMPT_VERSION ?= v0.5.0
-GO_VERSION ?= 1.21.3
-GOIMPORTS_VERSION ?= v0.14.0
+GO_VERSION ?= 1.21.4
+GOIMPORTS_VERSION ?= v0.15.0
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -146,8 +146,7 @@ fmt:  ## Formats the source code
 		go install mvdan.cc/gofumpt@$(GOFUMPT_VERSION) && \
 		gofumpt -w ."
 
-lint-govulncheck:  ## Runs govulncheck linter.
-	@$(MAKE) target-$@
+lint-govulncheck:  ## Disabled govulncheck linter.
 
 lint-goimports:  ## Runs goimports linter.
 	@$(MAKE) target-$@

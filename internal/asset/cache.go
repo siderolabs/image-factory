@@ -15,11 +15,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/internal/image/signer"
+	"github.com/siderolabs/image-factory/internal/regtransport"
 )
 
 // registryCache is using OCI registry to cache assets.
@@ -41,9 +41,7 @@ func (r *registryCache) Get(ctx context.Context, profileID string) (BootAsset, e
 
 	desc, err := r.puller.Head(ctx, taggedRef)
 
-	var transportError *transport.Error
-
-	if errors.As(err, &transportError) && (transportError.StatusCode == http.StatusNotFound || transportError.StatusCode == http.StatusForbidden) {
+	if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
 		// ignore 404/403, it means the image hasn't been pushed yet
 		return nil, errCacheNotFound
 	}

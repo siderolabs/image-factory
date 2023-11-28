@@ -8,7 +8,6 @@ package registry
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io"
 	"net/http"
 
@@ -18,12 +17,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/opencontainers/go-digest"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/gen/xerrors"
 
+	"github.com/siderolabs/image-factory/internal/regtransport"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 )
 
@@ -86,9 +85,7 @@ func (s *Storage) Head(ctx context.Context, id string) error {
 		return nil
 	}
 
-	var transportError *transport.Error
-
-	if errors.As(err, &transportError) && transportError.StatusCode == http.StatusNotFound {
+	if regtransport.IsStatusCodeError(err, http.StatusNotFound) {
 		return xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
 	}
 
@@ -105,9 +102,7 @@ func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 
 	layer, err := s.puller.Layer(ctx, s.repository.Digest(digestPrefix+id))
 	if err != nil {
-		var transportError *transport.Error
-
-		if errors.As(err, &transportError) && transportError.StatusCode == http.StatusNotFound {
+		if regtransport.IsStatusCodeError(err, http.StatusNotFound) {
 			return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
 		}
 
@@ -117,6 +112,10 @@ func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 	// pull the layer
 	r, err := layer.Compressed()
 	if err != nil {
+		if regtransport.IsStatusCodeError(err, http.StatusNotFound) {
+			return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
+		}
+
 		return nil, err
 	}
 

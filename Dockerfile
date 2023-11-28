@@ -2,14 +2,14 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-11-02T09:56:23Z by kres latest.
+# Generated on 2023-11-30T10:18:19Z by kres 902f3bd-dirty.
 
 ARG TOOLCHAIN
 
 FROM alpine:3.18 AS base-image-image-factory
 
 # runs markdownlint
-FROM docker.io/node:20.8.0-alpine3.18 AS lint-markdown
+FROM docker.io/node:21.1.0-alpine3.18 AS lint-markdown
 WORKDIR /src
 RUN npm i -g markdownlint-cli@0.37.0
 RUN npm i sentences-per-line@0.2.1
@@ -86,11 +86,6 @@ WORKDIR /src
 COPY .golangci.yml .
 ENV GOGC 50
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/root/.cache/golangci-lint --mount=type=cache,target=/go/pkg golangci-lint run --config .golangci.yml
-
-# runs govulncheck
-FROM base AS lint-govulncheck
-WORKDIR /src
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg govulncheck ./...
 
 # runs unit-tests with race detector
 FROM base AS unit-tests-race

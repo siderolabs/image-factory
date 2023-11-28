@@ -6,7 +6,6 @@ package http
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -16,7 +15,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/julienschmidt/httprouter"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
@@ -26,6 +24,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/profile"
+	"github.com/siderolabs/image-factory/internal/regtransport"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -178,9 +177,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 		f.logger.Error("error verifying cached image signature", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag), zap.Error(signatureErr))
 	}
 
-	var transportError *transport.Error
-
-	if errors.As(err, &transportError) && (transportError.StatusCode == http.StatusNotFound || transportError.StatusCode == http.StatusForbidden) {
+	if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
 		// ignore 404/403, it means the image hasn't been built yet
 		err = nil
 	}

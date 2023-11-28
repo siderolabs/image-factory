@@ -118,3 +118,8 @@ spec:
 kind: service.CodeCov
 spec:
   targetThreshold: 25 # the actual coverage is much higher and reported from the integration test
+---
+# see https://github.com/golang/go/issues/64112
+kind: golang.GoVulnCheck
+spec:
+  disabled: true
