@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-11-30T10:18:19Z by kres 902f3bd-dirty.
+# Generated on 2023-11-30T12:42:01Z by kres latest.
 
 ARG TOOLCHAIN
 

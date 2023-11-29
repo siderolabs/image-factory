@@ -31,6 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -181,10 +182,13 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 	registry, err := name.NewRegistry(registryAddr)
 	require.NoError(t, err)
 
+	c, err := client.New("http://" + registryAddr)
+	require.NoError(t, err)
+
 	// create a new random schematic, so that we can make sure new installer is generated
 	randomKernelArg := hex.EncodeToString(randomBytes(t, 32))
 
-	randomSchematicID := createSchematicGetID(ctx, t, "http://"+registryAddr,
+	randomSchematicID := createSchematicGetID(ctx, t, c,
 		schematic.Schematic{
 			Customization: schematic.Customization{
 				ExtraKernelArgs: []string{randomKernelArg},

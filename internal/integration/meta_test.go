@@ -8,70 +8,41 @@ package integration_test
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
 	"testing"
 
 	"github.com/siderolabs/gen/xslices"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/siderolabs/image-factory/pkg/client"
 )
 
-func getVersions(ctx context.Context, t *testing.T, baseURL string) []string {
+func getVersions(ctx context.Context, t *testing.T, c *client.Client) []string {
 	t.Helper()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/versions", nil)
+	versions, err := c.Versions(ctx)
 	require.NoError(t, err)
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		resp.Body.Close()
-	})
-
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var versions []string
-
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&versions))
 
 	return versions
 }
 
-type extensionInfo struct {
-	Name   string `json:"name"`
-	Ref    string `json:"ref"`
-	Digest string `json:"digest"`
-}
-
-func getExtensions(ctx context.Context, t *testing.T, baseURL, talosVersion string) []extensionInfo {
+func getExtensions(ctx context.Context, t *testing.T, c *client.Client, talosVersion string) []client.ExtensionInfo {
 	t.Helper()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/version/"+talosVersion+"/extensions/official", nil)
+	versions, err := c.ExtensionsVersions(ctx, talosVersion)
 	require.NoError(t, err)
 
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		resp.Body.Close()
-	})
-
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var extensions []extensionInfo
-
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&extensions))
-
-	return extensions
+	return versions
 }
 
 func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
+	c, err := client.New(baseURL)
+	require.NoError(t, err)
+
 	t.Run("versions", func(t *testing.T) {
 		t.Parallel()
 
-		versions := getVersions(ctx, t, baseURL)
+		versions := getVersions(ctx, t, c)
 
 		assert.Greater(t, len(versions), 10)
 	})
@@ -88,9 +59,9 @@ func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
 			t.Run(talosVersion, func(t *testing.T) {
 				t.Parallel()
 
-				extensions := getExtensions(ctx, t, baseURL, talosVersion)
+				extensions := getExtensions(ctx, t, c, talosVersion)
 
-				names := xslices.Map(extensions, func(ext extensionInfo) string {
+				names := xslices.Map(extensions, func(ext client.ExtensionInfo) string {
 					return ext.Name
 				})
 

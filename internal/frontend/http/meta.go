@@ -16,6 +16,7 @@ import (
 	"github.com/siderolabs/gen/xslices"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/pkg/client"
 )
 
 // handleVersions handles list of Talos versions available.
@@ -49,15 +50,9 @@ func (f *Frontend) handleOfficialExtensions(ctx context.Context, w http.Response
 		return err
 	}
 
-	type extensionInfo struct {
-		Name   string `json:"name"`
-		Ref    string `json:"ref"`
-		Digest string `json:"digest"`
-	}
-
 	return json.NewEncoder(w).Encode(
-		xslices.Map(extensions, func(e artifacts.ExtensionRef) extensionInfo {
-			return extensionInfo{
+		xslices.Map(extensions, func(e artifacts.ExtensionRef) client.ExtensionInfo {
+			return client.ExtensionInfo{
 				Name:   e.TaggedReference.RepositoryStr(),
 				Ref:    e.TaggedReference.String(),
 				Digest: e.Digest,

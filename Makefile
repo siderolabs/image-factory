@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-11-30T10:20:41Z by kres 902f3bd-dirty.
+# Generated on 2023-11-30T12:36:19Z by kres latest.
 
 # common variables
 

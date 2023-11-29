@@ -11,7 +11,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"io"
 	"net/http"
 	"testing"
@@ -19,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -30,7 +30,17 @@ const (
 	metaSchematicID             = "fe866116408a5a13dab7d5003eb57a00954ea81ebeec3fbbcd1a6d4462a00036"
 )
 
-func createSchematic(ctx context.Context, t *testing.T, baseURL string, marshalled []byte) *http.Response {
+func createSchematicGetID(ctx context.Context, t *testing.T, c *client.Client, schematic schematic.Schematic) string {
+	t.Helper()
+
+	id, err := c.SchematicCreate(ctx, schematic)
+	require.NoError(t, err)
+
+	return id
+}
+
+// not using the client here as we need to submit invalid yaml.
+func createSchematicInvalid(ctx context.Context, t *testing.T, baseURL string, marshalled []byte) string {
 	t.Helper()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/schematics", bytes.NewReader(marshalled))
@@ -43,35 +53,6 @@ func createSchematic(ctx context.Context, t *testing.T, baseURL string, marshall
 		resp.Body.Close()
 	})
 
-	return resp
-}
-
-func createSchematicGetID(ctx context.Context, t *testing.T, baseURL string, schematic schematic.Schematic) string {
-	t.Helper()
-
-	marshalled, err := schematic.Marshal()
-	require.NoError(t, err)
-
-	resp := createSchematic(ctx, t, baseURL, marshalled)
-
-	require.Equal(t, http.StatusCreated, resp.StatusCode)
-
-	var respBody struct {
-		ID string `json:"id"`
-	}
-
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&respBody))
-
-	return respBody.ID
-}
-
-func createSchematicInvalid(ctx context.Context, t *testing.T, baseURL string, marshalled []byte) string {
-	t.Helper()
-
-	resp := createSchematic(ctx, t, baseURL, marshalled)
-
-	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
-
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
@@ -79,12 +60,15 @@ func createSchematicInvalid(ctx context.Context, t *testing.T, baseURL string, m
 }
 
 func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
+	c, err := client.New(baseURL)
+	require.NoError(t, err)
+
 	t.Run("empty", func(t *testing.T) {
-		assert.Equal(t, emptySchematicID, createSchematicGetID(ctx, t, baseURL, schematic.Schematic{}))
+		assert.Equal(t, emptySchematicID, createSchematicGetID(ctx, t, c, schematic.Schematic{}))
 	})
 
 	t.Run("kernel args", func(t *testing.T) {
-		assert.Equal(t, extraArgsSchematicID, createSchematicGetID(ctx, t, baseURL,
+		assert.Equal(t, extraArgsSchematicID, createSchematicGetID(ctx, t, c,
 			schematic.Schematic{
 				Customization: schematic.Customization{
 					ExtraKernelArgs: []string{"nolapic", "nomodeset"},
@@ -94,7 +78,7 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 	})
 
 	t.Run("system extensions", func(t *testing.T) {
-		assert.Equal(t, systemExtensionsSchematicID, createSchematicGetID(ctx, t, baseURL,
+		assert.Equal(t, systemExtensionsSchematicID, createSchematicGetID(ctx, t, c,
 			schematic.Schematic{
 				Customization: schematic.Customization{
 					SystemExtensions: schematic.SystemExtensions{
@@ -110,7 +94,7 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 	})
 
 	t.Run("meta", func(t *testing.T) {
-		assert.Equal(t, metaSchematicID, createSchematicGetID(ctx, t, baseURL,
+		assert.Equal(t, metaSchematicID, createSchematicGetID(ctx, t, c,
 			schematic.Schematic{
 				Customization: schematic.Customization{
 					Meta: []schematic.MetaValue{
@@ -125,7 +109,7 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 	})
 
 	t.Run("empty once again", func(t *testing.T) {
-		assert.Equal(t, emptySchematicID, createSchematicGetID(ctx, t, baseURL, schematic.Schematic{}))
+		assert.Equal(t, emptySchematicID, createSchematicGetID(ctx, t, c, schematic.Schematic{}))
 	})
 
 	t.Run("invalid", func(t *testing.T) {
@@ -136,7 +120,7 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 		// create a new random schematic, as the schematic is persisted, and we want to test uploading new config
 		randomKernelArg := hex.EncodeToString(randomBytes(t, 32))
 
-		assert.Len(t, createSchematicGetID(ctx, t, baseURL,
+		assert.Len(t, createSchematicGetID(ctx, t, c,
 			schematic.Schematic{
 				Customization: schematic.Customization{
 					ExtraKernelArgs: []string{randomKernelArg},
