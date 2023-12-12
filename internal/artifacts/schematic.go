@@ -16,6 +16,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/extensions"
 	"gopkg.in/yaml.v3"
 
+	"github.com/siderolabs/image-factory/pkg/constants"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -49,7 +50,7 @@ func schematicExtension(schematicID string) (io.Reader, error) {
 	manifest := extensions.Manifest{
 		Version: "v1alpha1",
 		Metadata: extensions.Metadata{
-			Name:        "schematic",
+			Name:        constants.SchematicIDExtensionName,
 			Version:     schematicID,
 			Author:      "Image Factory",
 			Description: "Virtual extension which specifies the schematic of the image built with Image Factory.",
