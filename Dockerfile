@@ -2,14 +2,14 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-11-30T12:42:01Z by kres latest.
+# Generated on 2023-12-15T10:44:04Z by kres latest.
 
 ARG TOOLCHAIN
 
 FROM alpine:3.18 AS base-image-image-factory
 
 # runs markdownlint
-FROM docker.io/node:21.1.0-alpine3.18 AS lint-markdown
+FROM docker.io/node:21.4.0-alpine3.18 AS lint-markdown
 WORKDIR /src
 RUN npm i -g markdownlint-cli@0.37.0
 RUN npm i sentences-per-line@0.2.1
@@ -156,10 +156,10 @@ FROM base-image-image-factory AS image-image-factory
 RUN apk add --no-cache --update bash binutils-aarch64 binutils-x86_64 cpio dosfstools efibootmgr kmod mtools pigz qemu-img squashfs-tools tar util-linux xfsprogs xorriso xz
 ARG TARGETARCH
 COPY --from=image-factory image-factory-linux-${TARGETARCH} /image-factory
-COPY --from=ghcr.io/siderolabs/grub:v1.5.0 / /
-COPY --from=ghcr.io/siderolabs/grub@sha256:b3200d08c4c9295e02dfb11e5760c5dbe2ffe1b1191272851ab03e527220094c /usr/lib/grub /usr/lib/grub
-COPY --from=ghcr.io/siderolabs/grub@sha256:a8936963fc5f1fb83b057eb2369371ec7a4e7a9cfda71a804c5d6f8de222abea /usr/lib/grub /usr/lib/grub
-COPY --from=ghcr.io/siderolabs/installer:v1.5.0 /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
+COPY --from=ghcr.io/siderolabs/grub:v1.6.0-3-g617d342 / /
+COPY --from=ghcr.io/siderolabs/grub@sha256:9c17d29995e569a30ef7e35bfc5aedf9fee4de7f285787322c90dc807af08302 /usr/lib/grub /usr/lib/grub
+COPY --from=ghcr.io/siderolabs/grub@sha256:29014cfe94f68d815e94b990a381bdc464b78fc989e775c748894ce359bcf3a5 /usr/lib/grub /usr/lib/grub
+COPY --from=ghcr.io/siderolabs/installer:v1.6.0 /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
 LABEL org.opencontainers.image.source https://github.com/siderolabs/image-factory
 ENTRYPOINT ["/image-factory"]
 
