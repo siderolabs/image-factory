@@ -98,6 +98,80 @@ func TestCleanProfile(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "rpi image profile",
+			in: profile.Profile{
+				Platform:   constants.PlatformMetal,
+				SecureBoot: pointer.To(false),
+				Arch:       "arm64",
+				Board:      "rpi_generic",
+				Version:    "v1.5.5",
+				Customization: profile.CustomizationProfile{
+					ExtraKernelArgs: []string{"net.ifnames=0"},
+				},
+				Input: profile.Input{
+					Kernel: profile.FileAsset{
+						Path: "/tmp/foo/kernel-amd64-v1.5.5",
+					},
+					Initramfs: profile.FileAsset{
+						Path: "/tmp/foo/initramfs-amd64-v1.5.5",
+					},
+					BaseInstaller: profile.ContainerAsset{
+						ImageRef: "ghcr.io/siderolabs/installer:v1.5.5",
+						OCIPath:  "/tmp/foo/installer-amd64-v1.5.5.oci",
+					},
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							TarballPath: "/path/some/c36dec8c835049f60b10b8e02c689c47f775a07e9a9d909786e3aacb30af9675.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatRaw,
+					ImageOptions: &profile.ImageOptions{
+						DiskFormat: profile.DiskFormatRaw,
+						DiskSize:   profile.MinRAWDiskSize,
+					},
+				},
+			},
+
+			expected: profile.Profile{
+				Platform:   constants.PlatformMetal,
+				SecureBoot: pointer.To(false),
+				Arch:       "arm64",
+				Board:      "rpi_generic",
+				Version:    "v1.5.5",
+				Customization: profile.CustomizationProfile{
+					ExtraKernelArgs: []string{"net.ifnames=0"},
+				},
+				Input: profile.Input{
+					Kernel: profile.FileAsset{
+						Path: "kernel-amd64-v1.5.5",
+					},
+					Initramfs: profile.FileAsset{
+						Path: "initramfs-amd64-v1.5.5",
+					},
+					BaseInstaller: profile.ContainerAsset{
+						ImageRef: "installer:v1.5.5",
+						OCIPath:  "installer-amd64-v1.5.5.oci",
+					},
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							TarballPath: "c36dec8c835049f60b10b8e02c689c47f775a07e9a9d909786e3aacb30af9675.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatRaw,
+					ImageOptions: &profile.ImageOptions{
+						DiskFormat: profile.DiskFormatRaw,
+						DiskSize:   profile.MinRAWDiskSize,
+					},
+				},
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

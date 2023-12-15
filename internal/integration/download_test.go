@@ -233,7 +233,7 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run("rpi image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 66574172)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 107183936)
 				})
 			})
 
@@ -264,7 +264,7 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run("rpi image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 94756312)
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 132095368)
 				})
 
 				t.Run("initramfs", func(t *testing.T) {

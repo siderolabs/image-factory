@@ -1,6 +1,6 @@
 module github.com/siderolabs/image-factory
 
-go 1.21.4
+go 1.21.5
 
 require (
 	github.com/blang/semver/v4 v4.0.0
@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	github.com/siderolabs/gen v0.4.7
 	github.com/siderolabs/go-pointer v1.0.0
-	github.com/siderolabs/talos v1.6.0
+	github.com/siderolabs/talos v1.6.0-alpha.2.0.20231215154610-760f793d55f3
 	github.com/siderolabs/talos/pkg/machinery v1.6.0
 	github.com/sigstore/cosign/v2 v2.2.1
 	github.com/sigstore/sigstore v1.7.5

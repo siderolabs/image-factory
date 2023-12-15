@@ -165,6 +165,23 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
+			path: "metal-rpi_generic-arm64.raw.xz",
+
+			expectedProfile: profile.Profile{
+				Platform: "metal",
+				Arch:     "arm64",
+				Board:    "rpi_generic",
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatXZ,
+					ImageOptions: &profile.ImageOptions{
+						DiskFormat: profile.DiskFormatRaw,
+						DiskSize:   profile.MinRAWDiskSize,
+					},
+				},
+			},
+		},
+		{
 			path: "aws-amd64-secureboot.qcow2.tar.gz",
 
 			expectedProfile: profile.Profile{

@@ -31,6 +31,13 @@ func Hash(p profile.Profile) (string, error) {
 		return "", fmt.Errorf("failed to marshal profile: %w", err)
 	}
 
+	// update the hash value to force rebuild assets once the bug is fixed
+	//
+	// 1. errata https://github.com/siderolabs/image-factory/issues/65
+	if p.Board != "" {
+		hasher.Write([]byte("board fix #65"))
+	}
+
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
