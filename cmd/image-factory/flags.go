@@ -26,6 +26,7 @@ func initFlags() cmd.Options {
 	flag.IntVar(&opts.AssetBuildMaxConcurrency, "asset-builder-max-concurrency", cmd.DefaultOptions.AssetBuildMaxConcurrency, "maximum concurrency for asset builder")
 
 	flag.StringVar(&opts.ExternalURL, "external-url", cmd.DefaultOptions.ExternalURL, "factory external endpoint URL")
+	flag.StringVar(&opts.ExternalPXEURL, "external-pxe-url", cmd.DefaultOptions.ExternalPXEURL, "factory external PXE endpoint URL, if not set defaults to --external-url")
 
 	flag.StringVar(&opts.SchematicServiceRepository, "schematic-service-repository", cmd.DefaultOptions.SchematicServiceRepository, "image repository for the schematic service")
 

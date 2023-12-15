@@ -27,6 +27,8 @@ type Options struct { //nolint:govet
 
 	// External URL of the image factory HTTP frontend.
 	ExternalURL string
+	// External URL of the image factory PXE frontend.
+	ExternalPXEURL string
 
 	// Schematic service OCI registry prefix.
 	// It stores schematics for the image factory as blobs under that path.

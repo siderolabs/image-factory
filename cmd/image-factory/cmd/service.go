@@ -79,6 +79,15 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("failed to parse self URL: %w", err)
 	}
 
+	if opts.ExternalPXEURL != "" {
+		frontendOptions.ExternalPXEURL, err = url.Parse(opts.ExternalPXEURL)
+		if err != nil {
+			return fmt.Errorf("failed to parse self PXE URL: %w", err)
+		}
+	} else {
+		frontendOptions.ExternalPXEURL = frontendOptions.ExternalURL
+	}
+
 	var repoOpts []name.Option
 
 	if opts.InsecureInstallerInternalRepository {

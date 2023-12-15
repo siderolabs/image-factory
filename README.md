@@ -119,7 +119,7 @@ The bare metal machine should be configured to boot from the URL provided by thi
 
 ```text
 #!ipxe
-chain --replace --autofree https://image.factory/pxe/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.5.0/metal-${buildarch}
+chain --replace --autofree https://pxe.talos.dev/pxe/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.5.0/metal-${buildarch}
 ```
 
 ### `GET /pxe/:schematic/:version/:path`
@@ -134,8 +134,8 @@ In non-SecureBoot schematic, the following iPXE script is returned:
 
 ```text
 #!ipxe
-kernel https://image.factory/image/:schematic/:version/kernel-<arch> <kernel-cmdline>
-initrd https://image.factory/image/:schematic/:version/initramfs-<arch>.xz
+kernel https://pxe.talos.dev/image/:schematic/:version/kernel-<arch> <kernel-cmdline>
+initrd https://pxe.talos.dev/image/:schematic/:version/initramfs-<arch>.xz
 boot
 ```
 
@@ -143,7 +143,7 @@ For SecureBoot schematic, the following iPXE script is returned:
 
 ```text
 #!ipxe
-kernel https://image.factory/image/:schematic/:version/<platform>-<arch>-secureboot.uki.efi
+kernel https://pxe.talos.dev/image/:schematic/:version/<platform>-<arch>-secureboot.uki.efi
 boot
 ```
 

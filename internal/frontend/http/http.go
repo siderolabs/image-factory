@@ -52,7 +52,8 @@ type Frontend struct {
 
 // Options configures the HTTP frontend.
 type Options struct {
-	ExternalURL *url.URL
+	ExternalURL    *url.URL
+	ExternalPXEURL *url.URL
 
 	InstallerInternalRepository name.Repository
 	InstallerExternalRepository name.Repository

@@ -69,7 +69,7 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 				struct {
 					UKIURL string
 				}{
-					UKIURL: f.options.ExternalURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("%s-%s-secureboot.uki.efi", prof.Platform, prof.Arch)).String(),
+					UKIURL: f.options.ExternalPXEURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("%s-%s-secureboot.uki.efi", prof.Platform, prof.Arch)).String(),
 				},
 			)
 	}
@@ -100,9 +100,9 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 				Cmdline      string
 				InitramfsURL string
 			}{
-				KernelURL:    f.options.ExternalURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("kernel-%s", prof.Arch)).String(),
+				KernelURL:    f.options.ExternalPXEURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("kernel-%s", prof.Arch)).String(),
 				Cmdline:      string(cmdline),
-				InitramfsURL: f.options.ExternalURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("initramfs-%s.xz", prof.Arch)).String(),
+				InitramfsURL: f.options.ExternalPXEURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("initramfs-%s.xz", prof.Arch)).String(),
 			},
 		)
 }
