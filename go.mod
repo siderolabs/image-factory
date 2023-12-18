@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	github.com/siderolabs/gen v0.4.7
 	github.com/siderolabs/go-pointer v1.0.0
-	github.com/siderolabs/talos v1.6.0-alpha.2.0.20231215154610-760f793d55f3
+	github.com/siderolabs/talos v1.6.0-alpha.2.0.20231218135451-241bc9312edc
 	github.com/siderolabs/talos/pkg/machinery v1.6.0
 	github.com/sigstore/cosign/v2 v2.2.1
 	github.com/sigstore/sigstore v1.7.5
@@ -40,7 +40,6 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azcertificates v1.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys v1.0.1 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.0.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
 	github.com/Azure/go-autorest/autorest v0.11.29 // indirect
