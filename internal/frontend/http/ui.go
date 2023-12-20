@@ -16,7 +16,6 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
-	"github.com/siderolabs/gen/xslices"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/version"
@@ -60,10 +59,6 @@ func (f *Frontend) handleUIVersions(ctx context.Context, w http.ResponseWriter, 
 	if err != nil {
 		return err
 	}
-
-	versions = xslices.Filter(versions, func(v semver.Version) bool {
-		return len(v.Pre) == 0
-	})
 
 	slices.Reverse(versions)
 

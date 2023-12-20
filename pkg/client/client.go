@@ -14,25 +14,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/siderolabs/gen/xerrors"
-
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
-
-// InvalidSchematicError is parsed from 400 response from the server.
-type InvalidSchematicError struct {
-	Details string
-}
-
-// Error implements error interface.
-func (e *InvalidSchematicError) Error() string {
-	return fmt.Sprintf("invalid schematic: %s", e.Details)
-}
-
-// IsInvalidSchematicError checks if the error is invalid schematic.
-func IsInvalidSchematicError(err error) bool {
-	return xerrors.TypeIs[*InvalidSchematicError](err)
-}
 
 // ExtensionInfo defines extensions versions list response item.
 type ExtensionInfo struct {
@@ -143,20 +126,27 @@ func (c *Client) do(ctx context.Context, method, uri string, requestData []byte,
 }
 
 func (c *Client) checkError(resp *http.Response) error {
+	const maxErrorBody = 8192
+
+	if resp.StatusCode < http.StatusBadRequest {
+		return nil
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
+	if err != nil {
+		return err
+	}
+
+	err = &HTTPError{
+		Code:    resp.StatusCode,
+		Message: string(body),
+	}
+
 	if resp.StatusCode == http.StatusBadRequest {
-		details, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return err
-		}
-
 		return &InvalidSchematicError{
-			Details: string(details),
+			e: err,
 		}
 	}
 
-	if resp.StatusCode >= http.StatusBadRequest {
-		return fmt.Errorf("request failed, code %d", resp.StatusCode)
-	}
-
-	return nil
+	return err
 }

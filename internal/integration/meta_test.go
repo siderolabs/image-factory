@@ -8,6 +8,7 @@ package integration_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/siderolabs/gen/xslices"
@@ -17,24 +18,6 @@ import (
 	"github.com/siderolabs/image-factory/pkg/client"
 )
 
-func getVersions(ctx context.Context, t *testing.T, c *client.Client) []string {
-	t.Helper()
-
-	versions, err := c.Versions(ctx)
-	require.NoError(t, err)
-
-	return versions
-}
-
-func getExtensions(ctx context.Context, t *testing.T, c *client.Client, talosVersion string) []client.ExtensionInfo {
-	t.Helper()
-
-	versions, err := c.ExtensionsVersions(ctx, talosVersion)
-	require.NoError(t, err)
-
-	return versions
-}
-
 func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	c, err := client.New(baseURL)
 	require.NoError(t, err)
@@ -42,7 +25,8 @@ func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("versions", func(t *testing.T) {
 		t.Parallel()
 
-		versions := getVersions(ctx, t, c)
+		versions, err := c.Versions(ctx)
+		require.NoError(t, err)
 
 		assert.Greater(t, len(versions), 10)
 	})
@@ -53,13 +37,15 @@ func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		talosVersions := []string{
 			"v1.5.0",
 			"v1.5.1",
+			"v1.6.0",
 		}
 
 		for _, talosVersion := range talosVersions {
 			t.Run(talosVersion, func(t *testing.T) {
 				t.Parallel()
 
-				extensions := getExtensions(ctx, t, c, talosVersion)
+				extensions, err := c.ExtensionsVersions(ctx, talosVersion)
+				require.NoError(t, err)
 
 				names := xslices.Map(extensions, func(ext client.ExtensionInfo) string {
 					return ext.Name
@@ -70,5 +56,17 @@ func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				assert.Contains(t, names, "siderolabs/nvidia-open-gpu-kernel-modules")
 			})
 		}
+
+		t.Run("invalid version", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := c.ExtensionsVersions(ctx, "v1.5.0-alpha.0")
+			require.Error(t, err)
+
+			var httpError *client.HTTPError
+			require.ErrorAs(t, err, &httpError)
+
+			assert.Equal(t, http.StatusNotFound, httpError.Code)
+		})
 	})
 }

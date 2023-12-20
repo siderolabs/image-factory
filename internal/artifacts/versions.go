@@ -17,6 +17,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/siderolabs/gen/xslices"
 	"go.uber.org/zap"
 )
 
@@ -41,31 +42,40 @@ func (m *Manager) fetchTalosVersions() (any, error) {
 			continue // ignore invalid versions
 		}
 
-		if version.LT(m.options.MinVersion) {
-			continue // ignore versions below minimum
-		}
-
-		// filter out intermediate versions
-		if len(version.Pre) > 0 {
-			if len(version.Pre) != 2 {
-				continue
-			}
-
-			if !(version.Pre[0].VersionStr == "alpha" || version.Pre[0].VersionStr == "beta") {
-				continue
-			}
-
-			if !version.Pre[1].IsNumeric() {
-				continue
-			}
-		}
-
 		versions = append(versions, version)
 	}
 
-	slices.SortFunc(versions, func(a, b semver.Version) int {
-		return a.Compare(b)
+	// find "current" maximum version
+	maxVersion := slices.MaxFunc(versions, semver.Version.Compare)
+
+	// allow non-prerelease versions, and allow pre-release for the "latest" release (maxVersion)
+	versions = xslices.Filter(versions, func(version semver.Version) bool {
+		if version.LT(m.options.MinVersion) {
+			return false // ignore versions below minimum
+		}
+
+		if len(version.Pre) > 0 {
+			if !(version.Major == maxVersion.Major && version.Minor == maxVersion.Minor) {
+				return false // ignore pre-releases for older versions
+			}
+
+			if len(version.Pre) != 2 {
+				return false
+			}
+
+			if !(version.Pre[0].VersionStr == "alpha" || version.Pre[0].VersionStr == "beta") {
+				return false
+			}
+
+			if !version.Pre[1].IsNumeric() {
+				return false
+			}
+		}
+
+		return true
 	})
+
+	slices.SortFunc(versions, semver.Version.Compare)
 
 	m.talosVersionsMu.Lock()
 	m.talosVersions, m.talosVersionsTimestamp = versions, time.Now()

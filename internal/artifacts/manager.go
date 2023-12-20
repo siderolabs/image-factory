@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 )
@@ -96,6 +98,19 @@ func (m *Manager) Close() error {
 	return os.RemoveAll(m.storagePath)
 }
 
+func (m *Manager) validateTalosVersion(ctx context.Context, version semver.Version) error {
+	availableVersion, err := m.GetTalosVersions(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get available Talos versions: %w", err)
+	}
+
+	if !slices.ContainsFunc(availableVersion, version.Equals) {
+		return xerrors.NewTaggedf[ErrNotFoundTag]("version %s is not available", version)
+	}
+
+	return nil
+}
+
 // Get returns the artifact path for the given version, arch and kind.
 func (m *Manager) Get(ctx context.Context, versionString string, arch Arch, kind Kind) (string, error) {
 	version, err := semver.Parse(versionString)
@@ -103,8 +118,8 @@ func (m *Manager) Get(ctx context.Context, versionString string, arch Arch, kind
 		return "", fmt.Errorf("failed to parse version: %w", err)
 	}
 
-	if version.LT(m.options.MinVersion) {
-		return "", fmt.Errorf("version %s is not supported, minimum is %s", version, m.options.MinVersion)
+	if err = m.validateTalosVersion(ctx, version); err != nil {
+		return "", err
 	}
 
 	tag := "v" + version.String()
@@ -172,8 +187,8 @@ func (m *Manager) GetOfficialExtensions(ctx context.Context, versionString strin
 		return nil, fmt.Errorf("failed to parse version: %w", err)
 	}
 
-	if version.LT(m.options.MinVersion) {
-		return nil, fmt.Errorf("version %s is not supported, minimum is %s", version, m.options.MinVersion)
+	if err = m.validateTalosVersion(ctx, version); err != nil {
+		return nil, err
 	}
 
 	tag := "v" + version.String()
@@ -213,8 +228,8 @@ func (m *Manager) GetInstallerImage(ctx context.Context, arch Arch, versionStrin
 		return "", fmt.Errorf("failed to parse version: %w", err)
 	}
 
-	if version.LT(m.options.MinVersion) {
-		return "", fmt.Errorf("version %s is not supported, minimum is %s", version, m.options.MinVersion)
+	if err = m.validateTalosVersion(ctx, version); err != nil {
+		return "", err
 	}
 
 	tag := "v" + version.String()
