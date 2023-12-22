@@ -1,3 +1,70 @@
+## [image-factory 0.2.1](https://github.com/siderolabs/image-factory/releases/tag/v0.2.1) (2023-12-22)
+
+Welcome to the v0.2.1 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Alexey Palazhchenko
+* Andrey Smirnov
+* Artem Chernyshev
+* Dmitriy Matrenichev
+* Tim Jones
+
+### Changes
+<details><summary>3 commits</summary>
+<p>
+
+* [`0ca3869`](https://github.com/siderolabs/image-factory/commit/0ca3869d23db1372c4dd082aff9b6249083ca018) fix: memory usage when building an installer
+* [`a1421e0`](https://github.com/siderolabs/image-factory/commit/a1421e070168c09cc2159311be50b9a01dbcf4e6) feat: implement compatibility with Talos 1.2-1.3
+* [`cde9b39`](https://github.com/siderolabs/image-factory/commit/cde9b3954cd2982341422cfd8c44034a1238a2df) fix: update Talos version listing
+</p>
+</details>
+
+### Changes from siderolabs/go-debug
+<details><summary>7 commits</summary>
+<p>
+
+* [`43d9100`](https://github.com/siderolabs/go-debug/commit/43d9100eba3a30ff0d7f1bed0058e6631243cc47) chore: allow enabling pprof manually
+* [`c1bc4bf`](https://github.com/siderolabs/go-debug/commit/c1bc4bf306e54879ce9f4b002527876ac0cbf88f) chore: rekres, rename, etc
+* [`3d0a6e1`](https://github.com/siderolabs/go-debug/commit/3d0a6e1bf5e3c521e83ead2c8b7faad3638b8c5d) feat: race build tag flag detector
+* [`5b292e5`](https://github.com/siderolabs/go-debug/commit/5b292e50198b8ed91c434f00e2772db394dbf0b9) feat: disable memory profiling by default
+* [`c6d0ae2`](https://github.com/siderolabs/go-debug/commit/c6d0ae2c0ee099fa0940405401e6a02716a15bd8) fix: linters and CI
+* [`d969f95`](https://github.com/siderolabs/go-debug/commit/d969f952af9e02feea59963671298fc236ca4399) feat: initial implementation
+* [`b2044b7`](https://github.com/siderolabs/go-debug/commit/b2044b70379c84f9706de74044bd2fd6a8e891cf) Initial commit
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>10 commits</summary>
+<p>
+
+* [`265f21be0`](https://github.com/siderolabs/talos/commit/265f21be09d68cc23764d690e9f9479b9d92d749) fix: replace the filemap implementation to not buffer in memory
+* [`8db3c5b3c`](https://github.com/siderolabs/talos/commit/8db3c5b3c63ad67043b876265ac4687cdcb0f0ff) fix: pick correctly base installer image layers
+* [`0a30ef784`](https://github.com/siderolabs/talos/commit/0a30ef78456e854419d0c593f9c97f40166102f3) fix: imager should support different Talos versions
+* [`d6342cda5`](https://github.com/siderolabs/talos/commit/d6342cda53027eb5d46dcb6f57fbb1cc31f920dd) docs: update latest version to v1.6.1
+* [`e6e422b92`](https://github.com/siderolabs/talos/commit/e6e422b92ade5f24c898e09affdb6de8ee671cb0) chore: bump dependencies
+* [`5a19d078a`](https://github.com/siderolabs/talos/commit/5a19d078ad3205d201b11e0d60d5e07b379aba91) fix: properly overwrite files on install
+* [`9eb6cea78`](https://github.com/siderolabs/talos/commit/9eb6cea7890854173917a096bcffd6202487d38c) docs: secureboot sd-boot menu clarification
+* [`01f0cbe61`](https://github.com/siderolabs/talos/commit/01f0cbe61c32b3ff6e9d05f2c14c83223ce043fa) feat: support iPXE direct booting in `talosctl cluster create`
+* [`3ba84701d`](https://github.com/siderolabs/talos/commit/3ba84701d9f87f533b3039395d350b311f4a484f) feat: pull in kernel modules for mlx Infiniband and VFIO
+* [`ba993e0ed`](https://github.com/siderolabs/talos/commit/ba993e0edd20f927ff8d59f418e47c6cbf8a95b3) docs: announce that SecureBoot is available
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/google/go-containerregistry**  v0.16.1 -> v0.17.0
+* **github.com/siderolabs/go-debug**          v0.2.3 **_new_**
+* **github.com/siderolabs/talos**             241bc9312edc -> 265f21be09d6
+
+Previous release can be found at [v0.2.0](https://github.com/siderolabs/image-factory/releases/tag/v0.2.0)
+
 ## [image-factory 0.2.0](https://github.com/siderolabs/image-factory/releases/tag/v0.2.0) (2023-12-18)
 
 Welcome to the v0.2.0 release of image-factory!
