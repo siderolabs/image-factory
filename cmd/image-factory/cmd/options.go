@@ -84,7 +84,7 @@ type SecureBootOptions struct { //nolint:govet
 var DefaultOptions = Options{
 	HTTPListenAddr: ":8080",
 
-	MinTalosVersion: "1.4.0-alpha.0",
+	MinTalosVersion: "1.2.0",
 	ImageRegistry:   "ghcr.io",
 
 	ContainerSignatureSubjectRegExp: `@siderolabs\.com$`,

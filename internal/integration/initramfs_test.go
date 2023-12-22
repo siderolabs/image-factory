@@ -31,6 +31,7 @@ type initramfsSpec struct {
 	extensions      []string
 	modulesDepMatch optional.Optional[string]
 	schematicID     string
+	skipMlxfw       bool
 }
 
 func eatPadding(t *testing.T, in *bufio.Reader) {
@@ -198,6 +199,9 @@ func assertInitramfs(t *testing.T, path string, expected initramfsSpec) {
 		require.NoError(t, err)
 
 		assert.Contains(t, string(contents), expected.modulesDepMatch.ValueOrZero())
-		assert.Contains(t, string(contents), "mlxfw.ko") // assert on a known module from base initramfs
+
+		if !expected.skipMlxfw {
+			assert.Contains(t, string(contents), "mlxfw.ko") // assert on a known module from base initramfs
+		}
 	}
 }

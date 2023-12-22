@@ -69,7 +69,9 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 	layers, err := img.Layers()
 	require.NoError(t, err)
 
-	assert.Len(t, layers, 2)
+	if talosVersion != "v1.3.7" {
+		assert.Len(t, layers, 2, "installer image should have 2 layers: base and artifacts")
+	}
 
 	expectedFiles := map[string]struct{}{
 		"bin/installer": {},
@@ -84,7 +86,10 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 	}
 
 	if platform.Architecture == "arm64" {
-		expectedFiles["usr/install/arm64/dtb/allwinner/sun50i-h616-x96-mate.dtb"] = struct{}{}
+		if talosVersion != "v1.3.7" {
+			expectedFiles["usr/install/arm64/dtb/allwinner/sun50i-h616-x96-mate.dtb"] = struct{}{}
+		}
+
 		expectedFiles["usr/install/arm64/raspberrypi-firmware/boot/bootcode.bin"] = struct{}{}
 		expectedFiles["usr/install/arm64/u-boot/rockpi_4/rkspi_loader.img"] = struct{}{}
 	}
@@ -175,6 +180,7 @@ func assertImageSignature(ctx context.Context, t *testing.T, ref name.Reference,
 
 func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string, baseURL string) {
 	talosVersions := []string{
+		"v1.3.7",
 		"v1.5.0",
 		"v1.5.1",
 	}
@@ -203,6 +209,10 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 			for _, secureboot := range []bool{false, true} {
 				t.Run(fmt.Sprintf("secureboot=%t", secureboot), func(t *testing.T) {
 					t.Parallel()
+
+					if secureboot && talosVersion == "v1.3.7" {
+						t.Skip("secureboot is not supported in Talos v1.3.7")
+					}
 
 					for _, schematicID := range []string{
 						emptySchematicID,

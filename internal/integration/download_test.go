@@ -48,7 +48,7 @@ func downloadAssetAssertCached(ctx context.Context, t *testing.T, baseURL, schem
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedSize, size)
-	assert.Less(t, time.Since(start), 20*time.Second) // images take some time to download, even from the cache, so give it some time
+	assert.Less(t, time.Since(start), 40*time.Second) // images take some time to download, even from the cache, so give it some time
 }
 
 func downloadAssetInvalid(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, expectedCode int) string {
@@ -302,6 +302,113 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 			})
 		})
 	}
+
+	// special test for v1.3.7 which supports less features
+	t.Run("v1.3.7", func(t *testing.T) {
+		t.Parallel()
+
+		talosVersion := "v1.3.7"
+
+		t.Run("empty schematic", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("iso", func(t *testing.T) {
+				t.Parallel()
+
+				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", 82724864)
+				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", 122007552)
+			})
+
+			t.Run("kernel", func(t *testing.T) {
+				t.Parallel()
+
+				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "kernel-amd64", "application/vnd.microsoft.portable-executable", 18956032)
+				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "kernel-arm64", "application/vnd.microsoft.portable-executable", 69356032)
+			})
+
+			t.Run("initramfs", func(t *testing.T) {
+				t.Parallel()
+
+				downloadAssetAndValidateInitramfs(ctx, t, baseURL, emptySchematicID, talosVersion, "initramfs-amd64.xz",
+					initramfsSpec{
+						schematicID: emptySchematicID,
+					},
+				)
+				downloadAssetAndValidateInitramfs(ctx, t, baseURL, emptySchematicID, talosVersion, "initramfs-arm64.xz",
+					initramfsSpec{
+						schematicID: emptySchematicID,
+					},
+				)
+			})
+
+			t.Run("installer image", func(t *testing.T) {
+				t.Parallel()
+
+				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-amd64.tar", "application/x-tar", 188085248)
+				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar", 275915264)
+			})
+
+			t.Run("metal image", func(t *testing.T) {
+				t.Parallel()
+
+				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", 78472708)
+				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 66625420)
+			})
+		})
+
+		t.Run("extensions schematic", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("iso", func(t *testing.T) {
+				t.Parallel()
+
+				downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", 112222208)
+				downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", 150120448)
+			})
+
+			t.Run("metal image", func(t *testing.T) {
+				t.Parallel()
+
+				downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", 108049020)
+				downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 91484764)
+			})
+
+			t.Run("initramfs", func(t *testing.T) {
+				t.Parallel()
+
+				downloadAssetAndValidateInitramfs(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "initramfs-amd64.xz",
+					initramfsSpec{
+						earlyPaths: []string{
+							"kernel/x86/microcode/AuthenticAMD.bin",
+						},
+						extensions: []string{
+							"amd-ucode",
+							"gvisor",
+							"gasket",
+						},
+						modulesDepMatch: optional.Some("gasket"),
+						schematicID:     systemExtensionsSchematicID,
+						skipMlxfw:       true,
+					},
+				)
+				downloadAssetAndValidateInitramfs(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "initramfs-arm64.xz",
+					initramfsSpec{
+						earlyPaths: []string{
+							"kernel/x86/microcode/AuthenticAMD.bin",
+						},
+						extensions: []string{
+							"amd-ucode",
+							"gvisor",
+							"gasket",
+						},
+						modulesDepMatch: optional.Some("gasket"),
+						schematicID:     systemExtensionsSchematicID,
+						skipMlxfw:       true,
+					},
+				)
+			})
+		})
+	})
 
 	t.Run("cmdline", func(t *testing.T) {
 		t.Parallel()

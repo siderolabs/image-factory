@@ -37,6 +37,10 @@ func Hash(p profile.Profile) (string, error) {
 	if p.Board != "" {
 		hasher.Write([]byte("board fix #65"))
 	}
+	// 2. installer wrong base layers https://github.com/siderolabs/talos/pull/8107
+	if p.Output.Kind == profile.OutKindInstaller {
+		hasher.Write([]byte("installer fix #8107"))
+	}
 
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
