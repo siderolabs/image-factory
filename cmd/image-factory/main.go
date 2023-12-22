@@ -11,6 +11,7 @@ import (
 	"log"
 	"os/signal"
 
+	"github.com/siderolabs/go-debug"
 	"go.uber.org/zap"
 	"golang.org/x/sys/unix"
 
@@ -23,9 +24,23 @@ func main() {
 	}
 }
 
+func runDebugServer(ctx context.Context) {
+	const debugAddr = ":9981"
+
+	debugLogFunc := func(msg string) {
+		log.Print(msg)
+	}
+
+	if err := debug.ListenAndServe(ctx, debugAddr, debugLogFunc); err != nil {
+		log.Fatalf("failed to start debug server: %s", err)
+	}
+}
+
 func run() error {
 	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGINT, unix.SIGTERM)
 	defer cancel()
+
+	go runDebugServer(ctx)
 
 	return runWithContext(ctx)
 }
