@@ -19,6 +19,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/siderolabs/gen/xslices"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 func (m *Manager) fetchTalosVersions() (any, error) {
@@ -88,6 +89,15 @@ func (m *Manager) fetchTalosVersions() (any, error) {
 type ExtensionRef struct {
 	TaggedReference name.Tag
 	Digest          string
+	Description     string
+	Author          string
+
+	imageDigest string
+}
+
+type extensionsDescriptions map[string]struct {
+	Author      string `yaml:"author"`
+	Description string `yaml:"description"`
 }
 
 func (m *Manager) fetchOfficialExtensions(tag string) error {
@@ -120,10 +130,13 @@ func (m *Manager) fetchOfficialExtensions(tag string) error {
 	return nil
 }
 
+//nolint:gocognit
 func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
 	var extensions []ExtensionRef
 
 	tr := tar.NewReader(r)
+
+	var descriptions extensionsDescriptions
 
 	for {
 		hdr, err := tr.Next()
@@ -133,6 +146,14 @@ func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
 			}
 
 			return nil, fmt.Errorf("error reading tar header: %w", err)
+		}
+
+		if hdr.Name == "descriptions.yaml" {
+			decoder := yaml.NewDecoder(tr)
+
+			if err = decoder.Decode(&descriptions); err != nil {
+				return nil, fmt.Errorf("error reading descriptions.yaml file: %w", err)
+			}
 		}
 
 		if hdr.Name == "image-digests" {
@@ -154,6 +175,8 @@ func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
 				extensions = append(extensions, ExtensionRef{
 					TaggedReference: taggedRef,
 					Digest:          digest,
+
+					imageDigest: line,
 				})
 			}
 
@@ -164,6 +187,18 @@ func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
 	}
 
 	if extensions != nil {
+		if descriptions != nil {
+			for i, extension := range extensions {
+				desc, ok := descriptions[extension.imageDigest]
+				if !ok {
+					continue
+				}
+
+				extensions[i].Author = desc.Author
+				extensions[i].Description = desc.Description
+			}
+		}
+
 		return extensions, nil
 	}
 
