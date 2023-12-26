@@ -19,9 +19,11 @@ import (
 
 // ExtensionInfo defines extensions versions list response item.
 type ExtensionInfo struct {
-	Name   string `json:"name"`
-	Ref    string `json:"ref"`
-	Digest string `json:"digest"`
+	Name        string `json:"name"`
+	Ref         string `json:"ref"`
+	Digest      string `json:"digest"`
+	Author      string `json:"author"`
+	Description string `json:"description"`
 }
 
 // Client is the Image Factory HTTP API client.

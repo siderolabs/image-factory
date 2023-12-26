@@ -53,9 +53,11 @@ func (f *Frontend) handleOfficialExtensions(ctx context.Context, w http.Response
 	return json.NewEncoder(w).Encode(
 		xslices.Map(extensions, func(e artifacts.ExtensionRef) client.ExtensionInfo {
 			return client.ExtensionInfo{
-				Name:   e.TaggedReference.RepositoryStr(),
-				Ref:    e.TaggedReference.String(),
-				Digest: e.Digest,
+				Name:        e.TaggedReference.RepositoryStr(),
+				Ref:         e.TaggedReference.String(),
+				Digest:      e.Digest,
+				Author:      e.Author,
+				Description: e.Description,
 			}
 		}),
 	)
