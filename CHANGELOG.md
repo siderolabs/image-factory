@@ -1,3 +1,81 @@
+## [image-factory 0.2.2](https://github.com/siderolabs/image-factory/releases/tag/v0.2.2) (2024-01-23)
+
+Welcome to the v0.2.2 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Utku Ozdemir
+* Anthony ARNAUD
+* Artem Chernyshev
+* Dmitriy Matrenichev
+* ExtraClock
+* Jonomir
+* Serge Logvinov
+* Steve Francis
+
+### Changes
+<details><summary>3 commits</summary>
+<p>
+
+* [`c603b11`](https://github.com/siderolabs/image-factory/commit/c603b11f7798faafc43ff8553e80d715a19d6640) feat: update Talos version
+* [`9a030ec`](https://github.com/siderolabs/image-factory/commit/9a030ec311c36826ce9573a5cf4d0b37e81aa4bb) fix: reverse version slice on a copy
+* [`8e62c9d`](https://github.com/siderolabs/image-factory/commit/8e62c9dbd3cf87e28961c809bfba42bad660fd94) feat: fetch extensions descriptions from the extensions image
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>25 commits</summary>
+<p>
+
+* [`e0dfbb8fb`](https://github.com/siderolabs/talos/commit/e0dfbb8fba3c50652d0ecbae1db0b0660d0766a6) fix: allow META encoded values to be compressed
+* [`d677901b6`](https://github.com/siderolabs/talos/commit/d677901b672eec46b8b5edf57c680813b8fcf697) feat: implement device selector for 'physical'
+* [`7d1117289`](https://github.com/siderolabs/talos/commit/7d1117289658ac04707b09f64a1dc70514a9fba9) docs: add missing talosconfig flag
+* [`8a1732bcb`](https://github.com/siderolabs/talos/commit/8a1732bcb12deb4444ae87d22cc15d8b968b867d) fix: pull in `mptspi` driver
+* [`c1e45071f`](https://github.com/siderolabs/talos/commit/c1e45071f0cb0e48ee35d2f87b483fffb05c6123) refactor: use etcd configuration from the EtcdSpec resource
+* [`4e9b688d3`](https://github.com/siderolabs/talos/commit/4e9b688d3f8bc809e0b2f012d5e58c27de85d1e0) fix: use correct TTL for talosconfig in `talosctl config new`
+* [`fb5ad0555`](https://github.com/siderolabs/talos/commit/fb5ad05551e08404cb8acde01202c4ae88ddd25a) feat: update Kubernetes default to 1.29.1
+* [`fe24139f3`](https://github.com/siderolabs/talos/commit/fe24139f3c0b3f37c8266e5d6c5091950e3a647c) docs: fork docs for v1.7
+* [`1c2d10ccc`](https://github.com/siderolabs/talos/commit/1c2d10ccccb84a6d1e008af23866fa13cc14d094) chore: bump dependencies
+* [`a599e3867`](https://github.com/siderolabs/talos/commit/a599e38674af448fe5cac210f5d80826d3b08a12) chore: allow custom registry to build installer/imager
+* [`3911ddf7b`](https://github.com/siderolabs/talos/commit/3911ddf7bd630286358f1696adf9bdac207e1b9d) docs: add how-to for cert management
+* [`b0ee0bfba`](https://github.com/siderolabs/talos/commit/b0ee0bfba3f4c9172c76422a8f8f10a4046c352b) fix: strategic patch merging for audit policy
+* [`474eccdc4`](https://github.com/siderolabs/talos/commit/474eccdc4cb1d0fab3ba0b370cc388bc8c9d363a) fix: watch bufer overrun for RouteStatus
+* [`cc06b5d7a`](https://github.com/siderolabs/talos/commit/cc06b5d7a659a7f5a35e86a82ee242344c303302) fix: fix .der output in `talosctl gen secureboot`
+* [`1dbb4abf4`](https://github.com/siderolabs/talos/commit/1dbb4abf43695d1dd18d51b0386cf644aba67d73) fix: update discovery service client to v0.1.6
+* [`9782319c3`](https://github.com/siderolabs/talos/commit/9782319c31e496d998bdf9d505f32a4d8e6e937e) fix: support KubePrism settings in Kubernetes Discovery
+* [`6c5a0c281`](https://github.com/siderolabs/talos/commit/6c5a0c2811e3c0f3e1ca2a8fb871065df5bf9b46) feat: generate a single JSON schema for multidoc config
+* [`f70b47ddd`](https://github.com/siderolabs/talos/commit/f70b47dddc2599a618c68d8b403d9b37c61f2b71) fix: force KubePrism to connect using IPv4
+* [`d5321e085`](https://github.com/siderolabs/talos/commit/d5321e085eb6c877b1b5b38d69eabb839b505297) fix: update kmsg with utf-8 fix
+* [`7fa7362dd`](https://github.com/siderolabs/talos/commit/7fa7362ddc0e8a0b85cffcaebc38abd772b355e2) fix: fix nodes on dashboard footer when node names are used in `--nodes`
+* [`ba88678f1`](https://github.com/siderolabs/talos/commit/ba88678f1a42b4e9f6c9de25bdc827330cfb254c) fix: merge ports and ingress configs correctly in NetworkRuleConfig
+* [`dea9bda2d`](https://github.com/siderolabs/talos/commit/dea9bda2d00feeb29bf4b2c91c2ca24b6cd362f2) fix: disk UUID & WWID always empty in `talosctl disks`
+* [`8dc112f36`](https://github.com/siderolabs/talos/commit/8dc112f36bd77ec72e5c501755aa4f056803efd0) chore: pull in NBD modules
+* [`f6926faab`](https://github.com/siderolabs/talos/commit/f6926faab5a8b878c600d60ef9d693026277f3ee) fix: default priority for ipv6
+* [`e8758dcba`](https://github.com/siderolabs/talos/commit/e8758dcbad6d3188dfccd235dbab04c19dd1a6ed) chore: support http downloads for assets in talosctl cluster create
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/google/go-containerregistry**     v0.17.0 -> v0.18.0
+* **github.com/prometheus/client_golang**        v1.17.0 -> v1.18.0
+* **github.com/siderolabs/talos**                265f21be09d6 -> e0dfbb8fba3c
+* **github.com/siderolabs/talos/pkg/machinery**  v1.6.0 -> e0dfbb8fba3c
+* **github.com/sigstore/cosign/v2**              v2.2.1 -> v2.2.2
+* **github.com/sigstore/sigstore**               v1.7.5 -> v1.8.1
+* **github.com/u-root/u-root**                   v0.11.0 -> v0.12.0
+* **golang.org/x/net**                           v0.19.0 -> v0.20.0
+* **golang.org/x/sync**                          v0.5.0 -> v0.6.0
+* **golang.org/x/sys**                           v0.15.0 -> v0.16.0
+
+Previous release can be found at [v0.2.1](https://github.com/siderolabs/image-factory/releases/tag/v0.2.1)
+
 ## [image-factory 0.2.1](https://github.com/siderolabs/image-factory/releases/tag/v0.2.1) (2023-12-22)
 
 Welcome to the v0.2.1 release of image-factory!
