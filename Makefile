@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-12-12T13:59:28Z by kres latest.
+# Generated on 2024-01-23T11:18:17Z by kres latest.
 
 # common variables
 
@@ -14,15 +14,15 @@ WITH_RACE ?= false
 REGISTRY ?= ghcr.io
 USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
-PROTOBUF_GO_VERSION ?= 1.31.0
+PROTOBUF_GO_VERSION ?= 1.32.0
 GRPC_GO_VERSION ?= 1.3.0
-GRPC_GATEWAY_VERSION ?= 2.18.1
+GRPC_GATEWAY_VERSION ?= 2.19.0
 VTPROTOBUF_VERSION ?= 0.5.0
 DEEPCOPY_VERSION ?= v0.5.5
 GOLANGCILINT_VERSION ?= v1.55.2
 GOFUMPT_VERSION ?= v0.5.0
-GO_VERSION ?= 1.21.5
-GOIMPORTS_VERSION ?= v0.16.0
+GO_VERSION ?= 1.21.6
+GOIMPORTS_VERSION ?= v0.17.0
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -93,6 +93,23 @@ To create a builder instance, run:
 
 	docker buildx create --name local --use
 
+If running builds that needs to be cached aggresively create a builder instance with the following:
+
+	docker buildx create --name local --use --config=config.toml
+
+config.toml contents:
+
+[worker.oci]
+  gc = true
+  gckeepstorage = 50000
+
+  [[worker.oci.gcpolicy]]
+    keepBytes = 10737418240
+    keepDuration = 604800
+    filters = [ "type==source.local", "type==exec.cachemount", "type==source.git.checkout"]
+  [[worker.oci.gcpolicy]]
+    all = true
+    keepBytes = 53687091200
 
 If you already have a compatible builder instance, you may use that instead.
 

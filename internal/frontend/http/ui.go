@@ -60,6 +60,7 @@ func (f *Frontend) handleUIVersions(ctx context.Context, w http.ResponseWriter, 
 		return err
 	}
 
+	versions = slices.Clone(versions)
 	slices.Reverse(versions)
 
 	return templates.ExecuteTemplate(w, "versions.html", struct {
