@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-01-23T11:18:17Z by kres latest.
+# Generated on 2024-01-25T16:14:09Z by kres latest.
 
 # common variables
 
@@ -163,7 +163,8 @@ fmt:  ## Formats the source code
 		go install mvdan.cc/gofumpt@$(GOFUMPT_VERSION) && \
 		gofumpt -w ."
 
-lint-govulncheck:  ## Disabled govulncheck linter.
+lint-govulncheck:  ## Runs govulncheck linter.
+	@$(MAKE) target-$@
 
 lint-goimports:  ## Runs goimports linter.
 	@$(MAKE) target-$@

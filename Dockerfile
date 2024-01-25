@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-01-23T11:18:17Z by kres latest.
+# Generated on 2024-01-25T16:14:09Z by kres latest.
 
 ARG TOOLCHAIN
 
@@ -86,6 +86,11 @@ WORKDIR /src
 COPY .golangci.yml .
 ENV GOGC 50
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/root/.cache/golangci-lint --mount=type=cache,target=/go/pkg golangci-lint run --config .golangci.yml
+
+# runs govulncheck
+FROM base AS lint-govulncheck
+WORKDIR /src
+RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg govulncheck ./...
 
 # runs unit-tests with race detector
 FROM base AS unit-tests-race
