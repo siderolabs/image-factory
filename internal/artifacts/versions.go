@@ -103,7 +103,7 @@ type extensionsDescriptions map[string]struct {
 func (m *Manager) fetchOfficialExtensions(tag string) error {
 	var extensions []ExtensionRef
 
-	if err := m.fetchImageByTag(ExtensionManifestImage, tag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
+	if err := m.fetchImageByTag(ExtensionManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		extensions, extractErr = extractExtensionList(r)

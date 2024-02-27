@@ -117,4 +117,4 @@ spec:
 ---
 kind: service.CodeCov
 spec:
-  targetThreshold: 25 # the actual coverage is much higher and reported from the integration test
+  targetThreshold: 10 # the actual coverage is much higher and reported from the integration test

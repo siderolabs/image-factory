@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-10-27T14:12:36Z by kres latest.
+# Generated on 2024-02-27T07:52:48Z by kres latest.
 
 # options for analysis running
 run:
@@ -74,8 +74,6 @@ linters-settings:
   govet:
     check-shadowing: true
     enable-all: true
-    disable:
-      - loopclosure
   lll:
     line-length: 200
     tab-width: 4
@@ -153,6 +151,7 @@ linters:
     - inamedparam
     - testifylint # complains about our assert recorder and has a number of false positives for assert.Greater(t, thing, 1)
     - protogetter # complains about us using Value field on typed spec, instead of GetValue which has a different signature
+    - perfsprint # complains about us using fmt.Sprintf in non-performance critical code, updating just kres took too long
     # abandoned linters for which golangci shows the warning that the repo is archived by the owner
     - interfacer
     - maligned

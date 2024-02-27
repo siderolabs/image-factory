@@ -28,7 +28,7 @@ type imageHandler func(ctx context.Context, logger *zap.Logger, img v1.Image) er
 
 // imageExportHandler exports the image for further processing.
 func imageExportHandler(exportHandler func(logger *zap.Logger, r io.Reader) error) imageHandler {
-	return func(ctx context.Context, logger *zap.Logger, img v1.Image) error {
+	return func(_ context.Context, logger *zap.Logger, img v1.Image) error {
 		logger.Info("extracting the image")
 
 		r, w := io.Pipe()
@@ -60,7 +60,7 @@ func imageExportHandler(exportHandler func(logger *zap.Logger, r io.Reader) erro
 
 // imageOCIHandler exports the image to the OCI format.
 func imageOCIHandler(path string) imageHandler {
-	return func(ctx context.Context, logger *zap.Logger, img v1.Image) error {
+	return func(_ context.Context, logger *zap.Logger, img v1.Image) error {
 		if err := os.RemoveAll(path); err != nil {
 			return fmt.Errorf("error removing the directory %q: %w", path, err)
 		}

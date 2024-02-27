@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-01-25T16:14:09Z by kres latest.
+# Generated on 2024-02-27T07:52:48Z by kres latest.
 
 # common variables
 
@@ -16,18 +16,17 @@ USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
 PROTOBUF_GO_VERSION ?= 1.32.0
 GRPC_GO_VERSION ?= 1.3.0
-GRPC_GATEWAY_VERSION ?= 2.19.0
-VTPROTOBUF_VERSION ?= 0.5.0
-DEEPCOPY_VERSION ?= v0.5.5
-GOLANGCILINT_VERSION ?= v1.55.2
-GOFUMPT_VERSION ?= v0.5.0
-GO_VERSION ?= 1.21.6
-GOIMPORTS_VERSION ?= v0.17.0
+GRPC_GATEWAY_VERSION ?= 2.19.1
+VTPROTOBUF_VERSION ?= 0.6.0
+DEEPCOPY_VERSION ?= v0.5.6
+GOLANGCILINT_VERSION ?= v1.56.2
+GOFUMPT_VERSION ?= v0.6.0
+GO_VERSION ?= 1.22.0
+GOIMPORTS_VERSION ?= v0.18.0
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
 GOTOOLCHAIN ?= local
-GOEXPERIMENT ?= loopvar
 TESTPKGS ?= ./...
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 CONFORMANCE_IMAGE ?= ghcr.io/siderolabs/conform:latest
@@ -65,7 +64,7 @@ COMMON_ARGS += --build-arg=GOLANGCILINT_VERSION="$(GOLANGCILINT_VERSION)"
 COMMON_ARGS += --build-arg=GOIMPORTS_VERSION="$(GOIMPORTS_VERSION)"
 COMMON_ARGS += --build-arg=GOFUMPT_VERSION="$(GOFUMPT_VERSION)"
 COMMON_ARGS += --build-arg=TESTPKGS="$(TESTPKGS)"
-TOOLCHAIN ?= docker.io/golang:1.21-alpine
+TOOLCHAIN ?= docker.io/golang:1.22-alpine
 
 # extra variables
 
@@ -131,7 +130,7 @@ endif
 ifneq (, $(filter $(WITH_DEBUG), t true TRUE y yes 1))
 GO_BUILDFLAGS += -tags sidero.debug
 else
-GO_LDFLAGS += -s -w
+GO_LDFLAGS += -s
 endif
 
 all: unit-tests image-factory image-image-factory integration.test integration lint
@@ -158,7 +157,7 @@ lint-gofumpt:  ## Runs gofumpt linter.
 .PHONY: fmt
 fmt:  ## Formats the source code
 	@docker run --rm -it -v $(PWD):/src -w /src golang:$(GO_VERSION) \
-		bash -c "export GOEXPERIMENT=loopvar; export GOTOOLCHAIN=local; \
+		bash -c "export GOTOOLCHAIN=local; \
 		export GO111MODULE=on; export GOPROXY=https://proxy.golang.org; \
 		go install mvdan.cc/gofumpt@$(GOFUMPT_VERSION) && \
 		gofumpt -w ."
