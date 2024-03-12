@@ -39,6 +39,11 @@ customization:
       officialExtensions: # optional
         - siderolabs/gvisor
         - siderolabs/amd-ucode
+overlay: # optional
+  image: ghcr.io/siderolabs/sbc-raspberry-pi # overlay image
+  name: rpi_generic # overlay name
+  options: # optional, any valid yaml, depends on the overlay implementation
+    data: "mydata"
 ```
 
 Output is a JSON-encoded schematic ID:
@@ -65,7 +70,7 @@ Common used parameters:
 
 * `<arch>` image architecture: `amd64` or `arm64`
 * `<platform>` Talos Linux platform, e.g. `metal`, `aws`, `gcp`, etc.
-* `<board>` is a board name (only for `arm64` `metal` platform), e.g. `rpi_generic`
+* `<board>` is a board name (only for `arm64` `metal` platform), e.g. `rpi_generic` # for talos versions >= v1.7.0 this is deprecated, use metal image instead
 * `-secureboot` identifies a Secure Boot asset
 
 Supported image paths:
@@ -100,6 +105,22 @@ Returns a list of official system extensions available for the specified Talos L
     "name": "siderolabs/amd-ucode",
     "ref": "ghcr.io/siderolabs/amd-ucode:20230804",
     "digest": "sha256:761a5290a4bae9ceca11468d2ba8ca7b0f94e6e3a107ede2349ae26520682832",
+  },
+
+]
+```
+
+### `GET /version/:version/overlays/official`
+
+Returns a list of official overlays available for the specified Talos Linux version.
+
+```json
+[
+  {
+    "name": "rpi_generic",
+    "image": "siderolabs/sbc-raspberrypi",
+    "ref": "ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0",
+    "digest": "sha256:849ace01b9af514d817b05a9c5963a35202e09a4807d12f8a3ea83657c76c863",
   },
 
 ]

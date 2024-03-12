@@ -36,6 +36,9 @@ type Manager struct { //nolint:govet
 	officialExtensionsMu sync.Mutex
 	officialExtensions   map[string][]ExtensionRef
 
+	officialOverlaysMu sync.Mutex
+	officialOverlays   map[string][]OverlayRef
+
 	talosVersionsMu        sync.Mutex
 	talosVersions          []semver.Version
 	talosVersionsTimestamp time.Time
@@ -146,13 +149,6 @@ func (m *Manager) Get(ctx context.Context, versionString string, arch Arch, kind
 
 	_, err = os.Stat(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			// with 1.7+, SBC artifacts are not packaged
-			if kind == KindRPiFirmware || kind == KindDTB || kind == KindUBoot {
-				return path, os.Mkdir(path, 0o700)
-			}
-		}
-
 		return "", fmt.Errorf("failed to find artifact: %w", err)
 	}
 
@@ -188,17 +184,13 @@ func (m *Manager) GetTalosVersions(ctx context.Context) ([]semver.Version, error
 }
 
 // GetOfficialExtensions returns a list of Talos extensions per Talos version available.
+//
+//nolint:dupl
 func (m *Manager) GetOfficialExtensions(ctx context.Context, versionString string) ([]ExtensionRef, error) {
-	version, err := semver.ParseTolerant(versionString)
+	tag, err := m.parseTag(ctx, versionString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse version: %w", err)
-	}
-
-	if err = m.validateTalosVersion(ctx, version); err != nil {
 		return nil, err
 	}
-
-	tag := "v" + version.String()
 
 	m.officialExtensionsMu.Lock()
 	extensions, ok := m.officialExtensions[tag]
@@ -226,6 +218,43 @@ func (m *Manager) GetOfficialExtensions(ctx context.Context, versionString strin
 	m.officialExtensionsMu.Unlock()
 
 	return extensions, nil
+}
+
+// GetOfficialOverlays returns a list of overlays per Talos version available.
+//
+//nolint:dupl
+func (m *Manager) GetOfficialOverlays(ctx context.Context, versionString string) ([]OverlayRef, error) {
+	tag, err := m.parseTag(ctx, versionString)
+	if err != nil {
+		return nil, err
+	}
+
+	m.officialOverlaysMu.Lock()
+	overlays, ok := m.officialOverlays[tag]
+	m.officialOverlaysMu.Unlock()
+
+	if ok {
+		return overlays, nil
+	}
+
+	resultCh := m.sf.DoChan("overlays-"+tag, func() (any, error) {
+		return nil, m.fetchOfficialOverlays(tag)
+	})
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-resultCh:
+		if result.Err != nil {
+			return nil, result.Err
+		}
+	}
+
+	m.officialOverlaysMu.Lock()
+	overlays = m.officialOverlays[tag]
+	m.officialOverlaysMu.Unlock()
+
+	return overlays, nil
 }
 
 // GetInstallerImage pulls and stoers in OCI layout installer image.
@@ -283,4 +312,40 @@ func (m *Manager) GetExtensionImage(ctx context.Context, arch Arch, ref Extensio
 	}
 
 	return ociPath, nil
+}
+
+// GetOverlayImage pulls and stores in OCI layout an overlay image.
+func (m *Manager) GetOverlayImage(ctx context.Context, arch Arch, ref OverlayRef) (string, error) {
+	ociPath := filepath.Join(m.storagePath, string(arch)+"-"+ref.Digest)
+
+	// check if already fetched
+	if _, err := os.Stat(ociPath); err != nil {
+		resultCh := m.sf.DoChan(ociPath, func() (any, error) {
+			return nil, m.fetchOverlayImage(arch, ref, ociPath)
+		})
+
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case result := <-resultCh:
+			if result.Err != nil {
+				return "", result.Err
+			}
+		}
+	}
+
+	return ociPath, nil
+}
+
+func (m *Manager) parseTag(ctx context.Context, versionString string) (string, error) {
+	version, err := semver.ParseTolerant(versionString)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse version: %w", err)
+	}
+
+	if err = m.validateTalosVersion(ctx, version); err != nil {
+		return "", err
+	}
+
+	return "v" + version.String(), nil
 }

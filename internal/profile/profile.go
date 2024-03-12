@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
+	"github.com/siderolabs/talos/pkg/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/meta"
 
@@ -35,7 +37,7 @@ type InvalidErrorTag struct{}
 // - metal-amd64
 // - aws-arm64-secureboot
 // - metal-rpi_generic-arm64.
-func parsePlatformArch(s string, prof *profile.Profile) error {
+func parsePlatformArch(s, version string, prof *profile.Profile) error {
 	s, ok := strings.CutSuffix(s, "-secureboot")
 	if ok {
 		prof.SecureBoot = pointer.To(true)
@@ -54,7 +56,7 @@ func parsePlatformArch(s string, prof *profile.Profile) error {
 
 	prof.Platform = platform
 
-	if platform == constants.PlatformMetal && strings.HasSuffix(rest, "-"+string(artifacts.ArchArm64)) {
+	if platform == constants.PlatformMetal && strings.HasSuffix(rest, "-"+string(artifacts.ArchArm64)) && !quirks.New(version).SupportsOverlay() {
 		// arm64 metal images might be "board" images
 		prof.Board, rest, _ = strings.Cut(rest, "-")
 	}
@@ -76,7 +78,7 @@ func parseArch(s string, prof *profile.Profile) error {
 // ParseFromPath parses imager profile from the file path.
 //
 //nolint:gocognit,gocyclo,cyclop
-func ParseFromPath(path string) (profile.Profile, error) {
+func ParseFromPath(path, version string) (profile.Profile, error) {
 	var prof profile.Profile
 
 	// kernel-<arch>
@@ -97,7 +99,7 @@ func ParseFromPath(path string) (profile.Profile, error) {
 		prof.Output.Kind = profile.OutKindCmdline
 		prof.Output.OutFormat = profile.OutFormatRaw
 
-		if err := parsePlatformArch(rest, &prof); err != nil {
+		if err := parsePlatformArch(rest, version, &prof); err != nil {
 			return prof, err
 		}
 
@@ -124,7 +126,7 @@ func ParseFromPath(path string) (profile.Profile, error) {
 		prof.Output.Kind = profile.OutKindISO
 		prof.Output.OutFormat = profile.OutFormatRaw
 
-		if err := parsePlatformArch(rest, &prof); err != nil {
+		if err := parsePlatformArch(rest, version, &prof); err != nil {
 			return prof, err
 		}
 
@@ -136,7 +138,7 @@ func ParseFromPath(path string) (profile.Profile, error) {
 		prof.Output.Kind = profile.OutKindUKI
 		prof.Output.OutFormat = profile.OutFormatRaw
 
-		if err := parsePlatformArch(rest, &prof); err != nil {
+		if err := parsePlatformArch(rest, version, &prof); err != nil {
 			return prof, err
 		}
 
@@ -207,7 +209,7 @@ func ParseFromPath(path string) (profile.Profile, error) {
 	}
 
 	// third, figure out the platform and arch
-	if err := parsePlatformArch(path, &prof); err != nil {
+	if err := parsePlatformArch(path, version, &prof); err != nil {
 		return prof, err
 	}
 
@@ -243,9 +245,11 @@ func InstallerProfile(secureboot bool, arch artifacts.Arch) profile.Profile {
 
 // ArtifactProducer is a type which produces a set of extensions/meta information, installer images, etc..
 type ArtifactProducer interface {
-	GetSchematicExtension(context.Context, *schematicpkg.Schematic) (string, error)
+	GetSchematicExtension(context.Context, string, *schematicpkg.Schematic) (string, error)
 	GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error)
+	GetOfficialOverlays(context.Context, string) ([]artifacts.OverlayRef, error)
 	GetExtensionImage(context.Context, artifacts.Arch, artifacts.ExtensionRef) (string, error)
+	GetOverlayImage(context.Context, artifacts.Arch, artifacts.OverlayRef) (string, error)
 	GetInstallerImage(context.Context, artifacts.Arch, string) (string, error)
 }
 
@@ -273,6 +277,10 @@ func EnhanceFromSchematic(
 		}
 
 		prof.Input.SecureBoot = secureBootAssets
+	}
+
+	if schematic.Overlay.Name != "" && !quirks.New(versionTag).SupportsOverlay() {
+		return prof, xerrors.NewTaggedf[InvalidErrorTag]("overlay is not supported for Talos version %s", versionTag)
 	}
 
 	if prof.Output.Kind == profile.OutKindInstaller {
@@ -318,12 +326,46 @@ func EnhanceFromSchematic(
 		}
 
 		// append schematic extension
-		schematicExtensionPath, err := artifactProducer.GetSchematicExtension(ctx, schematic)
+		schematicExtensionPath, err := artifactProducer.GetSchematicExtension(ctx, versionTag, schematic)
 		if err != nil {
 			return prof, err
 		}
 
 		prof.Input.SystemExtensions = append(prof.Input.SystemExtensions, profile.ContainerAsset{TarballPath: schematicExtensionPath})
+
+		if schematic.Overlay.Name != "" {
+			availableOverlays, err := artifactProducer.GetOfficialOverlays(ctx, versionTag)
+			if err != nil {
+				return prof, fmt.Errorf("error getting official overlays: %w", err)
+			}
+
+			var overlayRef artifacts.OverlayRef
+
+			for _, availableOverlay := range availableOverlays {
+				if availableOverlay.Name == schematic.Overlay.Name {
+					overlayRef = availableOverlay
+
+					break
+				}
+			}
+
+			if value.IsZero(overlayRef) {
+				return prof, xerrors.NewTaggedf[InvalidErrorTag]("official overlay %q is not available for Talos version %s", overlayRef, versionTag)
+			}
+
+			imagePath, err := artifactProducer.GetOverlayImage(ctx, artifacts.Arch(runtime.GOARCH), overlayRef)
+			if err != nil {
+				return prof, fmt.Errorf("error getting extension image %s: %w", overlayRef.TaggedReference, err)
+			}
+
+			metricSystemExtensionHit.WithLabelValues(schematic.Overlay.Name).Inc()
+
+			prof.Overlay = &profile.OverlayOptions{
+				Name:         schematic.Overlay.Name,
+				Image:        profile.ContainerAsset{OCIPath: imagePath},
+				ExtraOptions: schematic.Overlay.Options,
+			}
+		}
 	}
 
 	// skip customizations for profile kinds which don't support it

@@ -16,6 +16,8 @@ import (
 
 // Schematic represents the requested image customization.
 type Schematic struct {
+	// Overlay represents the overlay options for image generation.
+	Overlay Overlay `yaml:"overlay,omitempty"`
 	// Customization represents the Talos image customization.
 	Customization Customization `yaml:"customization"`
 }
@@ -44,6 +46,13 @@ type SystemExtensions struct {
 	//
 	// The image factory will pick up automatically the version compatible with Talos version.
 	OfficialExtensions []string `yaml:"officialExtensions,omitempty"`
+}
+
+// Overlay represents the overlay options for image generation.
+type Overlay struct { //nolint:govet
+	Image   string         `yaml:"image"`
+	Name    string         `yaml:"name"`
+	Options map[string]any `yaml:"options,omitempty"`
 }
 
 // InvalidErrorTag is a tag for invalid schematic errors.

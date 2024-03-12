@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -302,6 +303,41 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 			})
 		})
 	}
+
+	// test for v1.7.0 which supports overlays
+	// TODO: frezbo: update to to v1.7.0 when it's released
+	// for now only v1.7.0-alpha.1 or later supports overlays
+	t.Run("v1.7.0-alpha.1", func(t *testing.T) {
+		t.Parallel()
+
+		talosVersion := "v1.7.0-alpha.1"
+
+		t.Run("installer image", func(t *testing.T) {
+			t.Parallel()
+
+			// curl the image and `du -sh` on the tarball
+			downloadAssetAndMatchSize(ctx, t, baseURL, rpiGenericOverlaySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar", 209*1024*1024)
+		})
+
+		t.Run("metal image", func(t *testing.T) {
+			t.Parallel()
+
+			// curl the image and `du -sh` on the image
+			downloadAssetAndMatchSize(ctx, t, baseURL, rpiGenericOverlaySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 117*1024*1024)
+		})
+
+		t.Run("initramfs", func(t *testing.T) {
+			t.Parallel()
+
+			downloadAssetAndValidateInitramfs(ctx, t, baseURL, rpiGenericOverlaySchematicID, talosVersion, "initramfs-amd64.xz",
+				initramfsSpec{
+					schematicID:        rpiGenericOverlaySchematicID,
+					skipMlxfw:          true,
+					schematicExtraInfo: strings.TrimPrefix(rpiGenericOverlay, "\n"),
+				},
+			)
+		})
+	})
 
 	// special test for v1.3.7 which supports less features
 	t.Run("v1.3.7", func(t *testing.T) {

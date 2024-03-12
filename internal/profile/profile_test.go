@@ -26,13 +26,15 @@ func TestParseFromPath(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
-		path string
+		path    string
+		version string
 
 		expectedProfile profile.Profile
 		expectedError   string
 	}{
 		{
-			path: "kernel-amd64",
+			path:    "kernel-amd64",
+			version: "v1.5.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "metal",
@@ -44,7 +46,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "kernel-arm64",
+			path:    "kernel-arm64",
+			version: "v1.5.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "metal",
@@ -56,12 +59,14 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "kernel-foo",
+			path:    "kernel-foo",
+			version: "v1.5.0",
 
 			expectedError: "invalid architecture: \"foo\"",
 		},
 		{
-			path: "cmdline-metal-arm64",
+			path:    "cmdline-metal-arm64",
+			version: "v1.5.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "metal",
@@ -73,7 +78,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "cmdline-aws-amd64-secureboot",
+			path:    "cmdline-aws-amd64-secureboot",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform:   "aws",
@@ -86,7 +92,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "cmdline-metal-rpi_generic-arm64",
+			path:    "cmdline-metal-rpi_generic-arm64",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "metal",
@@ -99,7 +106,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "initramfs-amd64.xz",
+			path:    "initramfs-amd64.xz",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "metal",
@@ -111,7 +119,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "metal-arm64-secureboot.iso",
+			path:    "metal-arm64-secureboot.iso",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform:   "metal",
@@ -124,7 +133,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "metal-amd64-secureboot-uki.efi",
+			path:    "metal-amd64-secureboot-uki.efi",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform:   "metal",
@@ -137,7 +147,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "installer-amd64.tar",
+			path:    "installer-amd64.tar",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "metal",
@@ -149,7 +160,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "metal-arm64.raw.xz",
+			path:    "metal-arm64.raw.xz",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "metal",
@@ -165,7 +177,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "metal-rpi_generic-arm64.raw.xz",
+			path:    "metal-rpi_generic-arm64.raw.xz",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "metal",
@@ -182,7 +195,14 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "aws-amd64-secureboot.qcow2.tar.gz",
+			path:    "metal-rpi_generic-arm64.raw.xz",
+			version: "v1.7.0",
+
+			expectedError: "invalid architecture: \"rpi_generic-arm64\"",
+		},
+		{
+			path:    "aws-amd64-secureboot.qcow2.tar.gz",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform:   "aws",
@@ -199,7 +219,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "azure-amd64.vhd",
+			path:    "azure-amd64.vhd",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "azure",
@@ -216,7 +237,8 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path: "digital-ocean-amd64.raw.gz",
+			path:    "digital-ocean-amd64.raw.gz",
+			version: "v1.6.0",
 
 			expectedProfile: profile.Profile{
 				Platform: "digital-ocean",
@@ -235,7 +257,7 @@ func TestParseFromPath(t *testing.T) {
 		t.Run(test.path, func(t *testing.T) {
 			t.Parallel()
 
-			prof, err := imageprofile.ParseFromPath(test.path)
+			prof, err := imageprofile.ParseFromPath(test.path, test.version)
 			if test.expectedError != "" {
 				require.EqualError(t, err, test.expectedError)
 			} else {
@@ -248,7 +270,7 @@ func TestParseFromPath(t *testing.T) {
 
 type mockArtifactProducer struct{}
 
-func (mockArtifactProducer) GetSchematicExtension(_ context.Context, schematic *schematic.Schematic) (string, error) {
+func (mockArtifactProducer) GetSchematicExtension(_ context.Context, _ string, schematic *schematic.Schematic) (string, error) {
 	id, err := schematic.ID()
 	if err != nil {
 		return "", err
@@ -270,7 +292,26 @@ func (mockArtifactProducer) GetOfficialExtensions(context.Context, string) ([]ar
 	}, nil
 }
 
+func (mockArtifactProducer) GetOfficialOverlays(context.Context, string) ([]artifacts.OverlayRef, error) {
+	return []artifacts.OverlayRef{
+		{
+			Name:            "rpi_generic",
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0")),
+			Digest:          "sha256:abcdef123456",
+		},
+		{
+			Name:            "rockpi",
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/sbc-rockpi:v0.2.0")),
+			Digest:          "sha256:654321fedcba",
+		},
+	}, nil
+}
+
 func (mockArtifactProducer) GetExtensionImage(_ context.Context, arch artifacts.Arch, ref artifacts.ExtensionRef) (string, error) {
+	return fmt.Sprintf("%s-%s.oci", arch, ref.Digest), nil
+}
+
+func (mockArtifactProducer) GetOverlayImage(_ context.Context, arch artifacts.Arch, ref artifacts.OverlayRef) (string, error) {
 	return fmt.Sprintf("%s-%s.oci", arch, ref.Digest), nil
 }
 
@@ -278,6 +319,7 @@ func (mockArtifactProducer) GetInstallerImage(_ context.Context, arch artifacts.
 	return fmt.Sprintf("installer-%s-%s.oci", arch, tag), nil
 }
 
+//nolint:maintidx
 func TestEnhanceFromSchematic(t *testing.T) {
 	t.Parallel()
 
@@ -301,13 +343,13 @@ func TestEnhanceFromSchematic(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	for _, test := range []struct { //nolint:govet
+	for _, test := range []struct {
 		name          string
-		baseProfile   profile.Profile
-		schematic     schematic.Schematic
 		versionString string
+		baseProfile   profile.Profile
 
 		expectedProfile profile.Profile
+		schematic       schematic.Schematic
 	}{
 		{
 			name:          "no customization",
@@ -504,6 +546,60 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				Output: profile.Output{
 					Kind:      profile.OutKindInstaller,
 					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
+		{
+			name:        "extensions",
+			baseProfile: baseProfile,
+			schematic: schematic.Schematic{
+				Overlay: schematic.Overlay{
+					Name:  "rpi_generic",
+					Image: "ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0",
+				},
+				Customization: schematic.Customization{
+					SystemExtensions: schematic.SystemExtensions{
+						OfficialExtensions: []string{
+							"siderolabs/amd-ucode",
+							"siderolabs/intel-ucode",
+						},
+					},
+				},
+			},
+			versionString: "v1.7.0",
+
+			expectedProfile: profile.Profile{
+				Platform:      constants.PlatformMetal,
+				SecureBoot:    pointer.To(false),
+				Arch:          "amd64",
+				Version:       "v1.7.0",
+				Customization: profile.CustomizationProfile{},
+				Input: profile.Input{
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							OCIPath: "amd64-sha256:1234567890.oci",
+						},
+						{
+							OCIPath: "amd64-sha256:0987654321.oci",
+						},
+						{
+							TarballPath: "7a1dc25b1e08495a5ff4caff05c848fe166e5f5000ed3b717b5612a9ffb0fd4c.tar",
+						},
+					},
+				},
+				Overlay: &profile.OverlayOptions{
+					Name: "rpi_generic",
+					Image: profile.ContainerAsset{
+						OCIPath: "amd64-sha256:abcdef123456.oci",
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatXZ,
+					ImageOptions: &profile.ImageOptions{
+						DiskSize:   profile.MinRAWDiskSize,
+						DiskFormat: profile.DiskFormatRaw,
+					},
 				},
 			},
 		},

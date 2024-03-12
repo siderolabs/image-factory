@@ -27,11 +27,12 @@ import (
 )
 
 type initramfsSpec struct {
-	earlyPaths      []string
-	extensions      []string
-	modulesDepMatch optional.Optional[string]
-	schematicID     string
-	skipMlxfw       bool
+	earlyPaths         []string
+	extensions         []string
+	schematicExtraInfo string
+	modulesDepMatch    optional.Optional[string]
+	schematicID        string
+	skipMlxfw          bool
 }
 
 func eatPadding(t *testing.T, in *bufio.Reader) {
@@ -139,6 +140,20 @@ func assertInitramfs(t *testing.T, path string, expected initramfsSpec) {
 		switch {
 		case record.Name == "extensions.yaml":
 			require.NoError(t, yaml.NewDecoder(record.ReaderAt.(*io.SectionReader)).Decode(&extensionConfig))
+
+			var extraInfo []string
+
+			for _, layer := range extensionConfig.Layers {
+				if layer.Metadata.ExtraInfo != "" {
+					extraInfo = append(extraInfo, layer.Metadata.ExtraInfo)
+				}
+			}
+
+			if expected.schematicExtraInfo == "" {
+				require.Empty(t, extraInfo)
+			} else {
+				require.Contains(t, extraInfo, expected.schematicExtraInfo)
+			}
 		case filepath.Ext(record.Name) == ".sqsh":
 			sqshFile, err := os.Create(filepath.Join(sqshPath, record.Name))
 			require.NoError(t, err)

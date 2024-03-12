@@ -15,10 +15,11 @@ import (
 func TestID(t *testing.T) {
 	t.Parallel()
 
-	for _, test := range []struct { //nolint:govet
+	for _, test := range []struct {
 		name       string
-		cfg        schematic.Schematic
 		expectedID string
+
+		cfg schematic.Schematic
 	}{
 		{
 			name:       "empty",
@@ -97,6 +98,16 @@ func TestUnmarshalID(t *testing.T) {
 			name:       "meta",
 			cfg:        []byte(`{"customization": {"meta": [{"key": 10, "value": "foo"}], "extraKernelArgs": [], "systemExtensions": {}}}`),
 			expectedID: "d308a2a5ee2277bed5fbaa104fcbc8d59122abfa737df987a95b4ca763459a7f",
+		},
+		{
+			name:       "overlay",
+			cfg:        []byte(`{"overlay": {"name": "rpi_generic", "image": "siderolabs/sbc-raspberrypi"}}`),
+			expectedID: "ee21ef4a5ef808a9b7484cc0dda0f25075021691c8c09a276591eedb638ea1f9",
+		},
+		{
+			name:       "overlay with empty customization",
+			cfg:        []byte(`{"overlay": {"name": "rpi_generic", "image": "siderolabs/sbc-raspberrypi"},"customization":{}}`),
+			expectedID: "ee21ef4a5ef808a9b7484cc0dda0f25075021691c8c09a276591eedb638ea1f9",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

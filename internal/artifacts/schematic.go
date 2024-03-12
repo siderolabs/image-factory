@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/siderolabs/talos/pkg/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/extensions"
 	"gopkg.in/yaml.v3"
 
@@ -21,7 +22,7 @@ import (
 )
 
 // GetSchematicExtension returns a path to the tarball with "virtual" extension matching a specified schematic.
-func (m *Manager) GetSchematicExtension(ctx context.Context, schematic *schematic.Schematic) (string, error) {
+func (m *Manager) GetSchematicExtension(ctx context.Context, versiontag string, schematic *schematic.Schematic) (string, error) {
 	schematicID, err := schematic.ID()
 	if err != nil {
 		return "", err
@@ -29,8 +30,17 @@ func (m *Manager) GetSchematicExtension(ctx context.Context, schematic *schemati
 
 	extensionPath := filepath.Join(m.schematicsPath, schematicID+".tar")
 
+	var schematicInfo []byte
+
+	if quirks.New(versiontag).SupportsOverlay() {
+		schematicInfo, err = yaml.Marshal(schematic)
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal schematic overlay info: %w", err)
+		}
+	}
+
 	resultCh := m.sf.DoChan(schematicID, func() (any, error) {
-		return nil, m.buildSchematicExtension(schematicID, extensionPath)
+		return nil, m.buildSchematicExtension(schematicID, extensionPath, schematicInfo)
 	})
 
 	select {
@@ -46,7 +56,7 @@ func (m *Manager) GetSchematicExtension(ctx context.Context, schematic *schemati
 }
 
 // schematicExtension builds a "virtual" extension matching a specified schematic.
-func schematicExtension(schematicID string) (io.Reader, error) {
+func schematicExtension(schematicID string, schematicInfo []byte) (io.Reader, error) {
 	manifest := extensions.Manifest{
 		Version: "v1alpha1",
 		Metadata: extensions.Metadata{
@@ -60,6 +70,10 @@ func schematicExtension(schematicID string) (io.Reader, error) {
 				},
 			},
 		},
+	}
+
+	if len(schematicInfo) > 0 {
+		manifest.Metadata.ExtraInfo = string(schematicInfo)
 	}
 
 	manifestBytes, err := yaml.Marshal(manifest)
@@ -103,7 +117,7 @@ func schematicExtension(schematicID string) (io.Reader, error) {
 	if err = tw.WriteHeader(&tar.Header{
 		Name:     filepath.Join("rootfs/usr/local/share/schematic", schematicID), // empty file
 		Typeflag: tar.TypeReg,
-		Mode:     0o755,
+		Mode:     0o644,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to write rootfs header: %w", err)
 	}
@@ -116,8 +130,8 @@ func schematicExtension(schematicID string) (io.Reader, error) {
 }
 
 // buildSchematicExtension builds a schematic extension tarball.
-func (m *Manager) buildSchematicExtension(schematicID, extensionPath string) error {
-	tarball, err := schematicExtension(schematicID)
+func (m *Manager) buildSchematicExtension(schematicID, extensionPath string, schematicInfo []byte) error {
+	tarball, err := schematicExtension(schematicID, schematicInfo)
 	if err != nil {
 		return fmt.Errorf("failed to build schematic layer: %w", err)
 	}
