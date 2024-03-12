@@ -16,6 +16,8 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
+	"github.com/siderolabs/talos/pkg/imager/quirks"
+	"gopkg.in/yaml.v3"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/version"
@@ -91,10 +93,21 @@ func (f *Frontend) handleUISchematicConfig(ctx context.Context, w http.ResponseW
 		return err
 	}
 
+	var overlays []artifacts.OverlayRef
+
+	if quirks.New(version.String()).SupportsOverlay() {
+		overlays, err = f.artifactsManager.GetOfficialOverlays(ctx, version.String())
+		if err != nil {
+			return err
+		}
+	}
+
 	return templates.ExecuteTemplate(w, "schematic-config.html", struct {
 		Extensions []artifacts.ExtensionRef
+		Overlays   []artifacts.OverlayRef
 	}{
 		Extensions: extensions,
+		Overlays:   overlays,
 	})
 }
 
@@ -114,7 +127,11 @@ func (f *Frontend) handleUISchematics(ctx context.Context, w http.ResponseWriter
 		extraArgs = strings.Split(extraArgsParam, " ")
 	}
 
-	var extensions []string //nolint:prealloc
+	var (
+		overlayOptions string
+
+		extensions = make([]string, 0)
+	)
 
 	for name := range r.PostForm {
 		if !strings.HasPrefix(name, "ext-") {
@@ -124,7 +141,31 @@ func (f *Frontend) handleUISchematics(ctx context.Context, w http.ResponseWriter
 		extensions = append(extensions, name[4:])
 	}
 
+	overlayData := r.PostForm.Get("overlay")
+
+	overlayName, overlayImage, _ := strings.Cut(overlayData, "@")
+
+	if overlayName != "" {
+		overlayOptions = r.PostForm.Get("extra-overlay-options")
+	}
+
+	overlay := schematic.Overlay{
+		Name:  overlayName,
+		Image: overlayImage,
+	}
+
+	if overlayOptions != "" {
+		var overlayOptsParsed map[string]any
+
+		if err := yaml.Unmarshal([]byte(overlayOptions), &overlayOptsParsed); err != nil {
+			return fmt.Errorf("error parsing overlay options: %w", err)
+		}
+
+		overlay.Options = overlayOptsParsed
+	}
+
 	requestedSchematic := schematic.Schematic{
+		Overlay: overlay,
 		Customization: schematic.Customization{
 			ExtraKernelArgs: extraArgs,
 			SystemExtensions: schematic.SystemExtensions{

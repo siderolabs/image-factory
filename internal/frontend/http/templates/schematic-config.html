@@ -3,49 +3,54 @@
 </div>
 
 {{ range .Extensions }}
-    <div class="flex items-center mb-4">
-        <input
-            id="{{ .TaggedReference.RepositoryStr }}"
-            name="ext-{{ .TaggedReference.RepositoryStr }}"
-            type="checkbox"
-            value=""
-            hx-preserve
-            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-        >
-        <label
-            for="{{ .TaggedReference.RepositoryStr }}"
-            {{ if .Author }}
-            title="{{ .Description }}Author {{ .Author }}"
-            {{ end }}
-            class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-        >
-            {{ .TaggedReference.RepositoryStr }} <span class="text-xs">({{ .TaggedReference.TagStr }})</span>
-        </label>
-    </div>
+<div class="flex items-center mb-4">
+    <input id="{{ .TaggedReference.RepositoryStr }}" name="ext-{{ .TaggedReference.RepositoryStr }}" type="checkbox"
+        value="" hx-preserve
+        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+    <label for="{{ .TaggedReference.RepositoryStr }}" {{ if .Author }} title="{{ .Description }}Author {{ .Author }}" {{
+        end }} class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+        {{ .TaggedReference.RepositoryStr }} <span class="text-xs">({{ .TaggedReference.TagStr }})</span>
+    </label>
+</div>
 {{ end }}
 
 <div class="mb-6">
-    <label
-        for="extra-args"
-        class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-    >
+    <label for="extra-args" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
         Extra kernel command line arguments:
     </label>
-    <input
-        id="extra-args"
-        name="extra-args"
+    <input id="extra-args" name="extra-args"
         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-        hx-preserve
-    >
+        hx-preserve>
+</div>
+
+{{- if .Overlays }}
+<div class="mb-6">
+    <label for="overlays" class="block mb-2 text-sm font-medium">Choose an Overlay:</label>
+    <select id="overlay" name="overlay"
+        class="w-64 bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
+        <option value="">Select an overlay</option>
+        {{ range .Overlays }}
+        <option value="{{ .Name }}@{{ .TaggedReference.RepositoryStr }}">
+            {{ .Name }} ({{ .TaggedReference.RepositoryStr }}:{{ .TaggedReference.TagStr }})
+        </option>
+        {{ end }}
+    </select>
 </div>
 
 <div class="mb-6">
-    <button
-        type="button"
+    <label for="extra-overlay-options" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+        Extra overlay options:
+    </label>
+    <textarea id="extra-overlay-options" name="extra-overlay-options"
+        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        hx-preserve></textarea>
+</div>
+{{ end -}}
+
+<div class="mb-6">
+    <button type="button"
         class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 mr-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-        hx-post="/ui/schematics"
-        hx-target="#schematic"
-    >
+        hx-post="/ui/schematics" hx-target="#schematic">
         Submit
     </button>
 </div>

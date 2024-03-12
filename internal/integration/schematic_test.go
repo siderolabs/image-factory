@@ -24,10 +24,11 @@ import (
 
 // well known schematic IDs, they will be created with the test run
 const (
-	emptySchematicID            = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
-	extraArgsSchematicID        = "e0fb1129bbbdfb5d002e94af4cdce712a8370e850950a33a242d4c3f178c532d"
-	systemExtensionsSchematicID = "51ff3e49313773332729a5c04e57af0dbe2e6d3f65ff638e6d4c3a05065fefff"
-	metaSchematicID             = "fe866116408a5a13dab7d5003eb57a00954ea81ebeec3fbbcd1a6d4462a00036"
+	emptySchematicID             = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
+	extraArgsSchematicID         = "e0fb1129bbbdfb5d002e94af4cdce712a8370e850950a33a242d4c3f178c532d"
+	systemExtensionsSchematicID  = "51ff3e49313773332729a5c04e57af0dbe2e6d3f65ff638e6d4c3a05065fefff"
+	metaSchematicID              = "fe866116408a5a13dab7d5003eb57a00954ea81ebeec3fbbcd1a6d4462a00036"
+	rpiGenericOverlaySchematicID = "fc1cceeb5711cd263877b6b808fbf4942a8deda65e8804c114a0b5bae252dc50"
 )
 
 func createSchematicGetID(ctx context.Context, t *testing.T, c *client.Client, schematic schematic.Schematic) string {
@@ -103,6 +104,17 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 							Value: `{"externalIPs":["1.2.3.4"]}`,
 						},
 					},
+				},
+			},
+		))
+	})
+
+	t.Run("rpi generic overlay", func(t *testing.T) {
+		assert.Equal(t, rpiGenericOverlaySchematicID, createSchematicGetID(ctx, t, c,
+			schematic.Schematic{
+				Overlay: schematic.Overlay{
+					Name:  "rpi_generic",
+					Image: "siderolabs/sbc-raspberrypi",
 				},
 			},
 		))

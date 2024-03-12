@@ -132,6 +132,7 @@ func NewFrontend(
 	// meta
 	registerRoute(frontend.router.GET, "/versions", frontend.handleVersions)
 	registerRoute(frontend.router.GET, "/version/:version/extensions/official", frontend.handleOfficialExtensions)
+	registerRoute(frontend.router.GET, "/version/:version/overlays/official", frontend.handleOfficialOverlays)
 
 	// secureboot
 	registerRoute(frontend.router.GET, "/secureboot/signing-cert.pem", frontend.handleSecureBootSigningCert)

@@ -69,4 +69,47 @@ func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
 			assert.Equal(t, http.StatusNotFound, httpError.Code)
 		})
 	})
+
+	t.Run("overlays", func(t *testing.T) {
+		t.Parallel()
+
+		testData := []struct {
+			version  string
+			expected []string
+		}{
+			{
+				version:  "v1.5.0",
+				expected: nil,
+			},
+			{
+				version: "v1.7.0-alpha.1",
+				expected: []string{
+					"rpi_generic",
+					"rockpi4",
+					"rockpi4c",
+					"nanopi-r4s",
+					"rock64",
+					"jetson_nano",
+					"bananapi_m64",
+					"libretech_all_h3_cc_h5",
+					"pine64",
+				},
+			},
+		}
+
+		for _, tt := range testData {
+			t.Run(tt.version, func(t *testing.T) {
+				t.Parallel()
+
+				overlays, err := c.OverlaysVersions(ctx, tt.version)
+				require.NoError(t, err)
+
+				names := xslices.Map(overlays, func(overlay client.OverlayInfo) string {
+					return overlay.Name
+				})
+
+				assert.Equal(t, tt.expected, names)
+			})
+		}
+	})
 }

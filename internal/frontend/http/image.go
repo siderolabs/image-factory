@@ -41,7 +41,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 
 	path := p.ByName("path")
 
-	prof, err := profile.ParseFromPath(path)
+	prof, err := profile.ParseFromPath(path, version.String())
 	if err != nil {
 		return fmt.Errorf("error parsing profile from path: %w", err)
 	}
