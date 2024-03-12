@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2023-11-02T09:56:23Z by kres latest.
+# Generated on 2024-03-12T11:43:50Z by kres latest.
 
 *
 !cmd
@@ -12,3 +12,6 @@
 !CHANGELOG.md
 !README.md
 !.markdownlint.json
+!tailwind.config.js
+!package.json
+!package-lock.json

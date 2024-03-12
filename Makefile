@@ -1,11 +1,11 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-02-27T07:52:48Z by kres latest.
+# Generated on 2024-03-12T11:43:50Z by kres latest.
 
 # common variables
 
 SHA := $(shell git describe --match=none --always --abbrev=8 --dirty)
-TAG := $(shell git describe --tag --always --dirty)
+TAG := $(shell git describe --tag --always --dirty --match v[0-9]\*)
 ABBREV_TAG := $(shell git describe --tags >/dev/null 2>/dev/null && git describe --tag --always --match v[0-9]\* --abbrev=0 || echo 'undefined')
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 ARTIFACTS := _out
@@ -14,15 +14,15 @@ WITH_RACE ?= false
 REGISTRY ?= ghcr.io
 USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
-PROTOBUF_GO_VERSION ?= 1.32.0
+PROTOBUF_GO_VERSION ?= 1.33.0
 GRPC_GO_VERSION ?= 1.3.0
 GRPC_GATEWAY_VERSION ?= 2.19.1
 VTPROTOBUF_VERSION ?= 0.6.0
 DEEPCOPY_VERSION ?= v0.5.6
 GOLANGCILINT_VERSION ?= v1.56.2
 GOFUMPT_VERSION ?= v0.6.0
-GO_VERSION ?= 1.22.0
-GOIMPORTS_VERSION ?= v0.18.0
+GO_VERSION ?= 1.22.1
+GOIMPORTS_VERSION ?= v0.19.0
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -133,7 +133,7 @@ else
 GO_LDFLAGS += -s
 endif
 
-all: unit-tests image-factory image-image-factory integration.test integration lint
+all: unit-tests image-factory image-image-factory integration.test integration tailwind lint
 
 .PHONY: clean
 clean:  ## Cleans up all artifacts.
@@ -209,7 +209,7 @@ lint-markdown:  ## Runs markdownlint.
 lint: lint-golangci-lint lint-gofumpt lint-govulncheck lint-goimports lint-markdown  ## Run all linters for the project.
 
 .PHONY: image-image-factory
-image-image-factory:  ## Builds image for image-factory.
+image-image-factory: tailwind  ## Builds image for image-factory.
 	@$(MAKE) target-$@ TARGET_ARGS="--tag=$(REGISTRY)/$(USERNAME)/image-factory:$(TAG)"
 
 .PHONY: integration.test
@@ -221,6 +221,10 @@ integration: integration.test
 	@$(MAKE) image-image-factory PUSH=true
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
+
+.PHONY: tailwind
+tailwind:
+	@$(MAKE) local-tailwind-copy PUSH=false DEST=.
 
 .PHONY: rekres
 rekres:

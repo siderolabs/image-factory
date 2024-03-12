@@ -17,6 +17,12 @@ name: image-image-factory
 spec:
   baseImage: alpine:3.18
   additionalImages: []
+  allowedLocalPaths:
+    - tailwind.config.js
+    - package.json
+    - package-lock.json
+  dependsOn:
+    - tailwind
   customCommands:
     - apk add --no-cache --update
         bash
@@ -56,8 +62,8 @@ spec:
       toplevel: true
     - name: integration
       toplevel: true
-      inputs:
-        - base
+    - name: tailwind
+      toplevel: true
 ---
 kind: custom.Step
 name: integration.test
@@ -118,3 +124,49 @@ spec:
 kind: service.CodeCov
 spec:
   targetThreshold: 10 # the actual coverage is much higher and reported from the integration test
+---
+kind: custom.Step
+name: tailwind
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=."
+  docker:
+    description: "Runs tailwind update"
+    enabled: true
+    stages:
+      - name: tailwind-base
+        description: "Installs tailwindcss"
+        from: docker.io/node:21.7.1-alpine3.19
+        workdir: /src
+        steps:
+          - copy:
+              src: package.json package-lock.json
+              dst: .
+          - script:
+              cache:
+                - /src/node_modules
+              command: npm ci
+      - name: tailwind-update
+        description: "tailwind update"
+        from: tailwind-base
+        steps:
+          - copy:
+              src: tailwind.config.js
+              dst: .
+          - copy:
+              src: internal/frontend/http
+              dst: internal/frontend/http
+          - script:
+              cache:
+                - /src/node_modules
+              command: node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
+      - name: tailwind-copy
+        description: "Copies assets"
+        steps:
+          - copy:
+              from: tailwind-update
+              src: /src/internal/frontend/http/css/output.css
+              dst: internal/frontend/http/css/output.css

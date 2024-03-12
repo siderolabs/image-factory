@@ -1,15 +1,15 @@
-# syntax = docker/dockerfile-upstream:1.6.0-labs
+# syntax = docker/dockerfile-upstream:1.7.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-02-27T07:52:48Z by kres latest.
+# Generated on 2024-03-12T11:43:50Z by kres latest.
 
 ARG TOOLCHAIN
 
 FROM alpine:3.18 AS base-image-image-factory
 
 # runs markdownlint
-FROM docker.io/node:21.6.2-alpine3.19 AS lint-markdown
+FROM docker.io/node:21.7.1-alpine3.19 AS lint-markdown
 WORKDIR /src
 RUN npm i -g markdownlint-cli@0.39.0
 RUN npm i sentences-per-line@0.2.1
@@ -17,6 +17,12 @@ COPY .markdownlint.json .
 COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
 RUN markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules node_modules/sentences-per-line/index.js .
+
+# Installs tailwindcss
+FROM docker.io/node:21.7.1-alpine3.19 AS tailwind-base
+WORKDIR /src
+COPY package.json package-lock.json .
+RUN --mount=type=cache,target=/src/node_modules npm ci
 
 # base toolchain image
 FROM ${TOOLCHAIN} AS toolchain
@@ -47,6 +53,12 @@ ARG GOFUMPT_VERSION
 RUN go install mvdan.cc/gofumpt@${GOFUMPT_VERSION} \
 	&& mv /go/bin/gofumpt /bin/gofumpt
 
+# tailwind update
+FROM tailwind-base AS tailwind-update
+COPY tailwind.config.js .
+COPY internal/frontend/http internal/frontend/http
+RUN --mount=type=cache,target=/src/node_modules node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
+
 # tools and sources
 FROM tools AS base
 WORKDIR /src
@@ -67,6 +79,10 @@ WORKDIR /src
 RUN mkdir -p internal/version/data && \
     echo -n ${SHA} > internal/version/data/sha && \
     echo -n ${TAG} > internal/version/data/tag
+
+# Copies assets
+FROM scratch AS tailwind-copy
+COPY --from=tailwind-update /src/internal/frontend/http/css/output.css internal/frontend/http/css/output.css
 
 # builds the integration test binary
 FROM base AS integration-build
