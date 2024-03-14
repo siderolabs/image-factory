@@ -146,6 +146,13 @@ func (m *Manager) Get(ctx context.Context, versionString string, arch Arch, kind
 
 	_, err = os.Stat(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// with 1.7+, SBC artifacts are not packaged
+			if kind == KindRPiFirmware || kind == KindDTB || kind == KindUBoot {
+				return path, os.Mkdir(path, 0o700)
+			}
+		}
+
 		return "", fmt.Errorf("failed to find artifact: %w", err)
 	}
 
