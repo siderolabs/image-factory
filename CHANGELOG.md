@@ -1,3 +1,85 @@
+## [image-factory 0.2.3](https://github.com/siderolabs/image-factory/releases/tag/v0.2.3) (2024-03-14)
+
+Welcome to the v0.2.3 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Dmitriy Matrenichev
+* Spencer Smith
+* Christian Mohn
+* Noel Georgi
+* Steve Francis
+* Utku Ozdemir
+* edwinavalos
+* stereobutter
+
+### Changes
+<details><summary>4 commits</summary>
+<p>
+
+* [`4ccf0e5`](https://github.com/siderolabs/image-factory/commit/4ccf0e5d7ed44e39d97ab45040cca6665618f4fa) fix: ignore missing DTB and other SBC artifacts
+* [`c7dba02`](https://github.com/siderolabs/image-factory/commit/c7dba02d17b068e576de7c155d5a5e58fa156a76) chore: run tailwindcss before creating image
+* [`81f2cb4`](https://github.com/siderolabs/image-factory/commit/81f2cb437f71e4cb2d92db71a6f2a2b7becb8b56) chore: bump dependencies, rekres
+* [`07095cd`](https://github.com/siderolabs/image-factory/commit/07095cd4966ab8943d93490bd5a9bc5085bec2f8) chore: re-enable govulncheck
+</p>
+</details>
+
+### Changes from siderolabs/go-debug
+<details><summary>1 commit</summary>
+<p>
+
+* [`0c2be80`](https://github.com/siderolabs/go-debug/commit/0c2be80d9d60034f3352a34841b615ef7bb0a62c) chore: run rekres (update to Go 1.22)
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>21 commits</summary>
+<p>
+
+* [`029d7f7b9`](https://github.com/siderolabs/talos/commit/029d7f7b9b2ba610b9bd68dd00a9d8a060bfd280) release(v1.7.0-alpha.0): prepare release
+* [`2ff81c06b`](https://github.com/siderolabs/talos/commit/2ff81c06bc1123af2fa7286fff15d9de0b8a868a) feat: update runc 1.1.12, containerd 1.7.13
+* [`9d8cd4d05`](https://github.com/siderolabs/talos/commit/9d8cd4d058e73d30e4864e67377cf55390467725) chore: drop deprecated method EtcdRemoveMember
+* [`17567f19b`](https://github.com/siderolabs/talos/commit/17567f19be39eeaf0d9a9aa3cd773b73d537814a) fix: take into account the moment seen when cleaning up CRI images
+* [`aa03204b8`](https://github.com/siderolabs/talos/commit/aa03204b864d8d8ac5a7ee4986a06230863043fb) docs: document the process of building custom kernel packages
+* [`7af48bd55`](https://github.com/siderolabs/talos/commit/7af48bd5598e61357cdb9b31dd57de6479b1ce7c) feat: use RSA key for kube-apiserver service account key
+* [`a5e13c696`](https://github.com/siderolabs/talos/commit/a5e13c696d1e1cb8e894a4133791c74470687553) fix: retry blockdevice open in the installer
+* [`593afeea3`](https://github.com/siderolabs/talos/commit/593afeea38a75de01041e3126cb0ad3443f6e1a1) fix: run the interactive installer loop to report errors
+* [`87be76b87`](https://github.com/siderolabs/talos/commit/87be76b8788d179058be14c53e1092054b08c5dd) fix: be more tolerant to error handling in Mounts API
+* [`03add7503`](https://github.com/siderolabs/talos/commit/03add750309dcdeb7c2b87cd72da29a3e228e56e) docs: add section on using imager with extensions from tarball
+* [`ee0fb5eff`](https://github.com/siderolabs/talos/commit/ee0fb5effce82fec99860b5910e0fb6e5147b49b) docs: consolidate certificate management articles
+* [`9c14dea20`](https://github.com/siderolabs/talos/commit/9c14dea209bba69b471fd43eb2e8ba05de3ff549) chore: bump coredns
+* [`ebeef2852`](https://github.com/siderolabs/talos/commit/ebeef28525f71189727200115d62fe8d713d1d07) feat: implement local caching dns server
+* [`4a3691a27`](https://github.com/siderolabs/talos/commit/4a3691a2739871be5eff4b313c30d454a143fbc4) docs: fix broken links in metal-network-configuration.md
+* [`c4ed189a6`](https://github.com/siderolabs/talos/commit/c4ed189a6912238350efd5f0181a6ef45728fc63) docs: provide sane defaults for each release series in vmware script
+* [`8138d54c6`](https://github.com/siderolabs/talos/commit/8138d54c6c9bae4255216007595fa302bc418c1a) docs: clarify node taints/labels for worker nodes
+* [`b44551ccd`](https://github.com/siderolabs/talos/commit/b44551ccdb0dd0ceaffd2e484c86ce91b25fe841) feat: update Linux to 6.6.13
+* [`385707c5f`](https://github.com/siderolabs/talos/commit/385707c5f39e733c8f27532435cd14f5f2ff067d) docs: update vmware.sh
+* [`d1a79b845`](https://github.com/siderolabs/talos/commit/d1a79b845f025defafb468fb6b5e86957cfad4fc) docs: fix small typo in etcd maintenance guide
+* [`cf0603330`](https://github.com/siderolabs/talos/commit/cf0603330a5c852163642a6b3844d1dcc3892cf6) docs: copy generated JSON schema to host
+* [`f11139c22`](https://github.com/siderolabs/talos/commit/f11139c229765cf82cadc84e6fa81d860005100b) docs: document local path provisioner install
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/google/go-containerregistry**     v0.18.0 -> v0.19.0
+* **github.com/siderolabs/go-debug**             v0.2.3 -> v0.3.0
+* **github.com/siderolabs/talos**                e0dfbb8fba3c -> v1.7.0-alpha.0
+* **github.com/siderolabs/talos/pkg/machinery**  e0dfbb8fba3c -> v1.7.0-alpha.0
+* **github.com/sigstore/cosign/v2**              v2.2.2 -> v2.2.3
+* **github.com/u-root/u-root**                   v0.12.0 -> v0.13.1
+* **go.uber.org/zap**                            v1.26.0 -> v1.27.0
+* **golang.org/x/net**                           v0.20.0 -> v0.21.0
+* **golang.org/x/sys**                           v0.16.0 -> v0.17.0
+
+Previous release can be found at [v0.2.2](https://github.com/siderolabs/image-factory/releases/tag/v0.2.2)
+
 ## [image-factory 0.2.2](https://github.com/siderolabs/image-factory/releases/tag/v0.2.2) (2024-01-23)
 
 Welcome to the v0.2.2 release of image-factory!
