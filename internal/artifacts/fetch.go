@@ -115,7 +115,7 @@ func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, i
 
 	_, bundleVerified, err := cosign.VerifyImageSignatures(ctx, digestRef, &m.options.ImageVerifyOptions)
 	if err != nil {
-		return fmt.Errorf("failed to verify image signature: %w", err)
+		return fmt.Errorf("failed to verify image signature for %s: %w", digestRef.Name(), err)
 	}
 
 	logger.Info("image signature verified", zap.Bool("bundle_verified", bundleVerified))
@@ -151,6 +151,17 @@ func (m *Manager) fetchImager(tag string) error {
 
 // fetchExtensionImage fetches a specified extension image and exports it to the storage as OCI.
 func (m *Manager) fetchExtensionImage(arch Arch, ref ExtensionRef, destPath string) error {
+	imageRef := m.imageRegistry.Repo(ref.TaggedReference.RepositoryStr()).Digest(ref.Digest)
+
+	if err := m.fetchImageByDigest(imageRef, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
+		return err
+	}
+
+	return os.Rename(destPath+tmpSuffix, destPath)
+}
+
+// fetchOverlayImage fetches a specified overlay image and exports it to the storage as OCI.
+func (m *Manager) fetchOverlayImage(arch Arch, ref OverlayRef, destPath string) error {
 	imageRef := m.imageRegistry.Repo(ref.TaggedReference.RepositoryStr()).Digest(ref.Digest)
 
 	if err := m.fetchImageByDigest(imageRef, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {

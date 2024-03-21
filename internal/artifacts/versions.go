@@ -95,9 +95,26 @@ type ExtensionRef struct {
 	imageDigest string
 }
 
+// OverlayRef is a ref to the overlay for some Talos version.
+type OverlayRef struct {
+	Name            string
+	TaggedReference name.Tag
+	Digest          string
+}
+
 type extensionsDescriptions map[string]struct {
 	Author      string `yaml:"author"`
 	Description string `yaml:"description"`
+}
+
+type overlaysDescriptions struct {
+	Overlays []overlaysDescription `yaml:"overlays"`
+}
+
+type overlaysDescription struct {
+	Name   string `yaml:"name"`
+	Image  string `yaml:"image"`
+	Digest string `yaml:"digest"`
 }
 
 func (m *Manager) fetchOfficialExtensions(tag string) error {
@@ -126,6 +143,36 @@ func (m *Manager) fetchOfficialExtensions(tag string) error {
 	m.officialExtensions[tag] = extensions
 
 	m.officialExtensionsMu.Unlock()
+
+	return nil
+}
+
+func (m *Manager) fetchOfficialOverlays(tag string) error {
+	var overlays []OverlayRef
+
+	if err := m.fetchImageByTag(OverlayManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+		var extractErr error
+
+		overlays, extractErr = extractOverlayList(r)
+
+		if extractErr == nil {
+			m.logger.Info("extracted the image digests", zap.Int("count", len(overlays)))
+		}
+
+		return extractErr
+	})); err != nil {
+		return err
+	}
+
+	m.officialOverlaysMu.Lock()
+
+	if m.officialOverlays == nil {
+		m.officialOverlays = make(map[string][]OverlayRef)
+	}
+
+	m.officialOverlays[tag] = overlays
+
+	m.officialOverlaysMu.Unlock()
 
 	return nil
 }
@@ -203,4 +250,50 @@ func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
 	}
 
 	return nil, errors.New("failed to find image-digests file")
+}
+
+func extractOverlayList(r io.Reader) ([]OverlayRef, error) {
+	var overlays []OverlayRef
+
+	tr := tar.NewReader(r)
+
+	var overlayInfo overlaysDescriptions
+
+	for {
+		hdr, err := tr.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+
+			return nil, fmt.Errorf("error reading tar header: %w", err)
+		}
+
+		if hdr.Name == "overlays.yaml" {
+			decoder := yaml.NewDecoder(tr)
+
+			if err = decoder.Decode(&overlayInfo); err != nil {
+				return nil, fmt.Errorf("error reading overlays.yaml file: %w", err)
+			}
+
+			for _, overlay := range overlayInfo.Overlays {
+				taggedRef, err := name.NewTag(overlay.Image)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse tagged reference %s: %w", overlay.Image, err)
+				}
+
+				overlays = append(overlays, OverlayRef{
+					Name:            overlay.Name,
+					TaggedReference: taggedRef,
+					Digest:          overlay.Digest,
+				})
+			}
+		}
+	}
+
+	if overlays != nil {
+		return overlays, nil
+	}
+
+	return nil, errors.New("failed to find overlays.yaml file")
 }

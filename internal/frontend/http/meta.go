@@ -14,6 +14,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xslices"
+	"github.com/siderolabs/talos/pkg/imager/quirks"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/pkg/client"
@@ -58,6 +59,39 @@ func (f *Frontend) handleOfficialExtensions(ctx context.Context, w http.Response
 				Digest:      e.Digest,
 				Author:      e.Author,
 				Description: e.Description,
+			}
+		}),
+	)
+}
+
+// handleOfficialOverlays handles list of available official overlays per Talos version.
+func (f *Frontend) handleOfficialOverlays(ctx context.Context, w http.ResponseWriter, _ *http.Request, p httprouter.Params) error {
+	versionTag := p.ByName("version")
+	if !strings.HasPrefix(versionTag, "v") {
+		versionTag = "v" + versionTag
+	}
+
+	version, err := semver.Parse(versionTag[1:])
+	if err != nil {
+		return fmt.Errorf("error parsing version: %w", err)
+	}
+
+	if !quirks.New(version.String()).SupportsOverlay() {
+		return json.NewEncoder(w).Encode([]client.OverlayInfo{})
+	}
+
+	overlays, err := f.artifactsManager.GetOfficialOverlays(ctx, version.String())
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(w).Encode(
+		xslices.Map(overlays, func(e artifacts.OverlayRef) client.OverlayInfo {
+			return client.OverlayInfo{
+				Name:   e.Name,
+				Image:  e.TaggedReference.RepositoryStr(),
+				Ref:    e.TaggedReference.String(),
+				Digest: e.Digest,
 			}
 		}),
 	)

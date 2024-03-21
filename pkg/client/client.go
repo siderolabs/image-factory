@@ -26,6 +26,14 @@ type ExtensionInfo struct {
 	Description string `json:"description"`
 }
 
+// OverlayInfo defines overlay versions list response item.
+type OverlayInfo struct {
+	Name   string `json:"name"`
+	Image  string `json:"image"`
+	Ref    string `json:"ref"`
+	Digest string `json:"digest"`
+}
+
 // Client is the Image Factory HTTP API client.
 type Client struct {
 	baseURL *url.URL
@@ -85,6 +93,17 @@ func (c *Client) ExtensionsVersions(ctx context.Context, talosVersion string) ([
 	var versions []ExtensionInfo
 
 	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/version/%s/extensions/official", talosVersion), nil, &versions, nil); err != nil {
+		return nil, err
+	}
+
+	return versions, nil
+}
+
+// OverlaysVersions gets the version of the extension for a Talos version.
+func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]OverlayInfo, error) {
+	var versions []OverlayInfo
+
+	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/version/%s/overlays/official", talosVersion), nil, &versions, nil); err != nil {
 		return nil, err
 	}
 

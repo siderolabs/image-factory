@@ -29,8 +29,13 @@ func (m *Manager) GetSchematicExtension(ctx context.Context, schematic *schemati
 
 	extensionPath := filepath.Join(m.schematicsPath, schematicID+".tar")
 
+	schematicBytes, err := yaml.Marshal(schematic)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal schematic overlay info: %w", err)
+	}
+
 	resultCh := m.sf.DoChan(schematicID, func() (any, error) {
-		return nil, m.buildSchematicExtension(schematicID, extensionPath)
+		return nil, m.buildSchematicExtension(schematicID, extensionPath, schematicBytes)
 	})
 
 	select {
@@ -46,7 +51,7 @@ func (m *Manager) GetSchematicExtension(ctx context.Context, schematic *schemati
 }
 
 // schematicExtension builds a "virtual" extension matching a specified schematic.
-func schematicExtension(schematicID string) (io.Reader, error) {
+func schematicExtension(schematicID string, schematicBytes []byte) (io.Reader, error) {
 	manifest := extensions.Manifest{
 		Version: "v1alpha1",
 		Metadata: extensions.Metadata{
@@ -103,9 +108,22 @@ func schematicExtension(schematicID string) (io.Reader, error) {
 	if err = tw.WriteHeader(&tar.Header{
 		Name:     filepath.Join("rootfs/usr/local/share/schematic", schematicID), // empty file
 		Typeflag: tar.TypeReg,
-		Mode:     0o755,
+		Mode:     0o644,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to write rootfs header: %w", err)
+	}
+
+	if err = tw.WriteHeader(&tar.Header{
+		Name:     "rootfs/usr/local/share/schematic/schematic.yaml",
+		Typeflag: tar.TypeReg,
+		Mode:     0o644,
+		Size:     int64(len(schematicBytes)),
+	}); err != nil {
+		return nil, fmt.Errorf("failed to write schematic header: %w", err)
+	}
+
+	if _, err = tw.Write(schematicBytes); err != nil {
+		return nil, fmt.Errorf("failed to write schematic: %w", err)
 	}
 
 	if err = tw.Close(); err != nil {
@@ -116,8 +134,8 @@ func schematicExtension(schematicID string) (io.Reader, error) {
 }
 
 // buildSchematicExtension builds a schematic extension tarball.
-func (m *Manager) buildSchematicExtension(schematicID, extensionPath string) error {
-	tarball, err := schematicExtension(schematicID)
+func (m *Manager) buildSchematicExtension(schematicID, extensionPath string, schematicBytes []byte) error {
+	tarball, err := schematicExtension(schematicID, schematicBytes)
 	if err != nil {
 		return fmt.Errorf("failed to build schematic layer: %w", err)
 	}

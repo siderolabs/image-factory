@@ -19,6 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/talos/pkg/imager"
 	"github.com/siderolabs/talos/pkg/imager/profile"
+	"github.com/siderolabs/talos/pkg/imager/quirks"
 	"github.com/siderolabs/talos/pkg/reporter"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
@@ -249,7 +250,7 @@ func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString
 		}
 	}
 
-	if prof.Arch == string(artifacts.ArchArm64) {
+	if prof.Arch == string(artifacts.ArchArm64) && !quirks.New(versionString).SupportsOverlay() {
 		if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindDTB, &prof.Input.DTB); err != nil {
 			return nil, fmt.Errorf("failed to get dtb: %w", err)
 		}
