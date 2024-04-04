@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/blang/semver/v4"
@@ -202,17 +203,24 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 		return nil, fmt.Errorf("failed to parse minimum Talos version: %w", err)
 	}
 
+	// Prefer opts.ContainerSignatureIssuerRegExp if set as this is more flexible
+	cosignIdentities := []cosign.Identity{
+		{
+			SubjectRegExp: opts.ContainerSignatureSubjectRegExp,
+		},
+	}
+	if len(strings.TrimSpace(opts.ContainerSignatureIssuerRegExp)) > 0 {
+		cosignIdentities[0].IssuerRegExp = opts.ContainerSignatureIssuerRegExp
+	} else {
+		cosignIdentities[0].Issuer = opts.ContainerSignatureIssuer
+	}
+
 	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
 		MinVersion:            minVersion,
 		ImageRegistry:         opts.ImageRegistry,
 		InsecureImageRegistry: opts.InsecureImageRegistry,
 		ImageVerifyOptions: cosign.CheckOpts{
-			Identities: []cosign.Identity{
-				{
-					SubjectRegExp: opts.ContainerSignatureSubjectRegExp,
-					Issuer:        opts.ContainerSignatureIssuer,
-				},
-			},
+			Identities:        cosignIdentities,
 			RootCerts:         rootCerts,
 			IntermediateCerts: intermediateCerts,
 			RekorPubKeys:      rekorPubKeys,

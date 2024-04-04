@@ -20,6 +20,7 @@ type Options struct { //nolint:govet
 
 	// Options to verify container signatures for imager, extensions, etc.
 	ContainerSignatureSubjectRegExp string
+	ContainerSignatureIssuerRegExp  string
 	ContainerSignatureIssuer        string
 
 	// Maximum number of concurrent asset builds.
@@ -90,6 +91,7 @@ var DefaultOptions = Options{
 	ImageRegistry:   "ghcr.io",
 
 	ContainerSignatureSubjectRegExp: `@siderolabs\.com$`,
+	ContainerSignatureIssuerRegExp:  "",
 	ContainerSignatureIssuer:        "https://accounts.google.com",
 
 	AssetBuildMaxConcurrency: 6,
