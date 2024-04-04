@@ -260,7 +260,13 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 }
 
 func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory, error) {
-	repo, err := name.NewRepository(opts.SchematicServiceRepository)
+	var repoOpts []name.Option
+
+	if opts.InsecureSchematicRepository {
+		repoOpts = append(repoOpts, name.Insecure)
+	}
+
+	repo, err := name.NewRepository(opts.SchematicServiceRepository, repoOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}

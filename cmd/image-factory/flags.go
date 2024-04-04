@@ -29,6 +29,12 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.ExternalPXEURL, "external-pxe-url", cmd.DefaultOptions.ExternalPXEURL, "factory external PXE endpoint URL, if not set defaults to --external-url")
 
 	flag.StringVar(&opts.SchematicServiceRepository, "schematic-service-repository", cmd.DefaultOptions.SchematicServiceRepository, "image repository for the schematic service")
+	flag.BoolVar(
+		&opts.InsecureSchematicRepository,
+		"insecure-schematic-service-repository",
+		cmd.DefaultOptions.InsecureSchematicRepository,
+		"allow an insecure connection to the schematics repository",
+	)
 
 	flag.StringVar(&opts.InstallerExternalRepository, "installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
 	flag.StringVar(&opts.InstallerInternalRepository, "installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")

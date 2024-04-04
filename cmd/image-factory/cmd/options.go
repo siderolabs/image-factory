@@ -33,6 +33,8 @@ type Options struct { //nolint:govet
 	// Schematic service OCI registry prefix.
 	// It stores schematics for the image factory as blobs under that path.
 	SchematicServiceRepository string
+	// Allow insecure connection to the schematic service repository.
+	InsecureSchematicRepository bool
 
 	// OCI registry to store installer images has two endpoints:
 	// - one for the image factory to push images to
