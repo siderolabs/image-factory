@@ -166,7 +166,7 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 	}
 
 	// nothing in cache, so build the asset, but make sure we do it only once
-	ch := b.sf.DoChan(profileHash, func() (any, error) {
+	ch := b.sf.DoChan(profileHash, func() (any, error) { //nolint:contextcheck
 		return b.buildAndCache(profileHash, prof, versionString)
 	})
 

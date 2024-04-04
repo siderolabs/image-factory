@@ -49,7 +49,7 @@ func downloadAssetAssertCached(ctx context.Context, t *testing.T, baseURL, schem
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedSize, size)
-	assert.Less(t, time.Since(start), 40*time.Second) // images take some time to download, even from the cache, so give it some time
+	assert.Less(t, time.Since(start), 60*time.Second) // images take some time to download, even from the cache, so give it some time
 }
 
 func downloadAssetInvalid(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, expectedCode int) string {

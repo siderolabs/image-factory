@@ -196,7 +196,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 	// build installer images for each architecture, combine them into a single index and push it
 	key := fmt.Sprintf("%s-%s-%s", img.Name(), schematicID, versionTag)
 
-	resultCh := f.sf.DoChan(key, func() (any, error) {
+	resultCh := f.sf.DoChan(key, func() (any, error) { //nolint:contextcheck
 		// we use here detached context to make sure image is built no matter if the request is canceled
 		return f.buildInstallImage(context.Background(), img, schematic, version, schematicID, versionTag)
 	})

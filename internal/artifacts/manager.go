@@ -129,7 +129,7 @@ func (m *Manager) Get(ctx context.Context, versionString string, arch Arch, kind
 
 	// check if already extracted
 	if _, err = os.Stat(filepath.Join(m.storagePath, tag)); err != nil {
-		resultCh := m.sf.DoChan(tag, func() (any, error) {
+		resultCh := m.sf.DoChan(tag, func() (any, error) { //nolint:contextcheck
 			return nil, m.fetchImager(tag)
 		})
 
@@ -200,7 +200,7 @@ func (m *Manager) GetOfficialExtensions(ctx context.Context, versionString strin
 		return extensions, nil
 	}
 
-	resultCh := m.sf.DoChan("extensions-"+tag, func() (any, error) {
+	resultCh := m.sf.DoChan("extensions-"+tag, func() (any, error) { //nolint:contextcheck
 		return nil, m.fetchOfficialExtensions(tag)
 	})
 
@@ -237,7 +237,7 @@ func (m *Manager) GetOfficialOverlays(ctx context.Context, versionString string)
 		return overlays, nil
 	}
 
-	resultCh := m.sf.DoChan("overlays-"+tag, func() (any, error) {
+	resultCh := m.sf.DoChan("overlays-"+tag, func() (any, error) { //nolint:contextcheck
 		return nil, m.fetchOfficialOverlays(tag)
 	})
 
@@ -274,7 +274,7 @@ func (m *Manager) GetInstallerImage(ctx context.Context, arch Arch, versionStrin
 
 	// check if already fetched
 	if _, err := os.Stat(ociPath); err != nil {
-		resultCh := m.sf.DoChan(ociPath, func() (any, error) {
+		resultCh := m.sf.DoChan(ociPath, func() (any, error) { //nolint:contextcheck
 			return nil, m.fetchInstallerImage(arch, tag, ociPath)
 		})
 
@@ -297,7 +297,7 @@ func (m *Manager) GetExtensionImage(ctx context.Context, arch Arch, ref Extensio
 
 	// check if already fetched
 	if _, err := os.Stat(ociPath); err != nil {
-		resultCh := m.sf.DoChan(ociPath, func() (any, error) {
+		resultCh := m.sf.DoChan(ociPath, func() (any, error) { //nolint:contextcheck
 			return nil, m.fetchExtensionImage(arch, ref, ociPath)
 		})
 
@@ -320,7 +320,7 @@ func (m *Manager) GetOverlayImage(ctx context.Context, arch Arch, ref OverlayRef
 
 	// check if already fetched
 	if _, err := os.Stat(ociPath); err != nil {
-		resultCh := m.sf.DoChan(ociPath, func() (any, error) {
+		resultCh := m.sf.DoChan(ociPath, func() (any, error) { //nolint:contextcheck
 			return nil, m.fetchOverlayImage(arch, ref, ociPath)
 		})
 
