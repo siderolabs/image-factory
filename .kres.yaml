@@ -42,16 +42,16 @@ spec:
         xorriso
         xz
   copyFrom:
-    - stage: ghcr.io/siderolabs/grub:v1.6.0-3-g617d342
+    - stage: ghcr.io/siderolabs/grub:v1.7.0-2-g6101299
       source: /
       destination: /
-    - stage: ghcr.io/siderolabs/grub@sha256:9c17d29995e569a30ef7e35bfc5aedf9fee4de7f285787322c90dc807af08302 # amd64
+    - stage: ghcr.io/siderolabs/grub@sha256:46469ae913378d45f69ac10d2dc8ebea54e914542deab2b2f23c95dac5116335 # amd64
       source: /usr/lib/grub
       destination: /usr/lib/grub
-    - stage: ghcr.io/siderolabs/grub@sha256:29014cfe94f68d815e94b990a381bdc464b78fc989e775c748894ce359bcf3a5 # arm64
+    - stage: ghcr.io/siderolabs/grub@sha256:fd929bae5ad64a3e2a530d6b3cbfab673b60af2e62268a45cf42194df55c116d # arm64
       source: /usr/lib/grub
       destination: /usr/lib/grub
-    - stage: ghcr.io/siderolabs/installer:v1.6.0
+    - stage: ghcr.io/siderolabs/installer:v1.7.0
       source: /usr/share/grub/unicode.pf2
       destination: /usr/share/grub/unicode.pf2
 ---
