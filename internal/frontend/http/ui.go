@@ -141,6 +141,8 @@ func (f *Frontend) handleUISchematics(ctx context.Context, w http.ResponseWriter
 		extensions = append(extensions, name[4:])
 	}
 
+	slices.Sort(extensions)
+
 	overlayData := r.PostForm.Get("overlay")
 
 	overlayName, overlayImage, _ := strings.Cut(overlayData, "@")
