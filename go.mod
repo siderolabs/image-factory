@@ -12,8 +12,8 @@ require (
 	github.com/siderolabs/gen v0.4.8
 	github.com/siderolabs/go-debug v0.3.0
 	github.com/siderolabs/go-pointer v1.0.0
-	github.com/siderolabs/talos v1.7.0-beta.0
-	github.com/siderolabs/talos/pkg/machinery v1.7.0-beta.0
+	github.com/siderolabs/talos v1.7.0-alpha.1.0.20240410135248-145f2406307e
+	github.com/siderolabs/talos/pkg/machinery v1.7.0-alpha.1.0.20240410135248-145f2406307e
 	github.com/sigstore/cosign/v2 v2.2.3
 	github.com/sigstore/sigstore v1.8.3
 	github.com/slok/go-http-metrics v0.11.0
