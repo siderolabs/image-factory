@@ -13,8 +13,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/siderolabs/talos/pkg/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/extensions"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"gopkg.in/yaml.v3"
 
 	"github.com/siderolabs/image-factory/pkg/constants"

@@ -19,8 +19,8 @@ import (
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
-	"github.com/siderolabs/talos/pkg/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/meta"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
@@ -353,7 +353,12 @@ func EnhanceFromSchematic(
 				return prof, xerrors.NewTaggedf[InvalidErrorTag]("official overlay %q is not available for Talos version %s", overlayRef, versionTag)
 			}
 
-			imagePath, err := artifactProducer.GetOverlayImage(ctx, artifacts.Arch(runtime.GOARCH), overlayRef)
+			imageNativePath, err := artifactProducer.GetOverlayImage(ctx, artifacts.Arch(runtime.GOARCH), overlayRef)
+			if err != nil {
+				return prof, fmt.Errorf("error getting extension image %s: %w", overlayRef.TaggedReference, err)
+			}
+
+			imageTargetPath, err := artifactProducer.GetOverlayImage(ctx, artifacts.Arch(prof.Arch), overlayRef)
 			if err != nil {
 				return prof, fmt.Errorf("error getting extension image %s: %w", overlayRef.TaggedReference, err)
 			}
@@ -362,9 +367,11 @@ func EnhanceFromSchematic(
 
 			prof.Overlay = &profile.OverlayOptions{
 				Name:         schematic.Overlay.Name,
-				Image:        profile.ContainerAsset{OCIPath: imagePath},
+				Image:        profile.ContainerAsset{OCIPath: imageNativePath},
 				ExtraOptions: schematic.Overlay.Options,
 			}
+
+			prof.Input.OverlayInstaller = profile.ContainerAsset{OCIPath: imageTargetPath}
 		}
 	}
 

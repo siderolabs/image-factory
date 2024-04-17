@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/talos/pkg/imager"
 	"github.com/siderolabs/talos/pkg/imager/profile"
-	"github.com/siderolabs/talos/pkg/imager/quirks"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/reporter"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"

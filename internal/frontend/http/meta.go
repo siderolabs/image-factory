@@ -14,7 +14,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xslices"
-	"github.com/siderolabs/talos/pkg/imager/quirks"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/pkg/client"

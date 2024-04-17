@@ -35,7 +35,7 @@ import (
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
-func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, talosVersion, schematic string, secureboot bool, platform v1.Platform, baseURL string) {
+func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, talosVersion, schematic string, secureboot bool, platform v1.Platform, baseURL string, overlay bool) {
 	imageName := "installer"
 	if secureboot {
 		imageName += "-secureboot"
@@ -70,7 +70,11 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 	require.NoError(t, err)
 
 	if talosVersion != "v1.3.7" {
-		assert.Len(t, layers, 2, "installer image should have 2 layers: base and artifacts")
+		if overlay {
+			assert.Len(t, layers, 3, "installer image should have 2 layers: base, artifacts and overlay")
+		} else {
+			assert.Len(t, layers, 2, "installer image should have 2 layers: base and artifacts")
+		}
 	}
 
 	expectedFiles := map[string]struct{}{
@@ -85,13 +89,19 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 		expectedFiles[fmt.Sprintf("usr/install/%s/systemd-boot.efi", platform.Architecture)] = struct{}{}
 	}
 
-	if platform.Architecture == "arm64" {
-		if talosVersion != "v1.3.7" {
-			expectedFiles["usr/install/arm64/dtb/allwinner/sun50i-h616-x96-mate.dtb"] = struct{}{}
-		}
+	if !overlay {
+		if platform.Architecture == "arm64" {
+			if talosVersion != "v1.3.7" {
+				expectedFiles["usr/install/arm64/dtb/allwinner/sun50i-h616-x96-mate.dtb"] = struct{}{}
+			}
 
-		expectedFiles["usr/install/arm64/raspberrypi-firmware/boot/bootcode.bin"] = struct{}{}
-		expectedFiles["usr/install/arm64/u-boot/rockpi_4/rkspi_loader.img"] = struct{}{}
+			expectedFiles["usr/install/arm64/raspberrypi-firmware/boot/bootcode.bin"] = struct{}{}
+			expectedFiles["usr/install/arm64/u-boot/rockpi_4/rkspi_loader.img"] = struct{}{}
+		}
+	} else {
+		expectedFiles["overlay/artifacts/arm64/firmware/boot/fixup.dat"] = struct{}{}
+		expectedFiles["overlay/extra-options"] = struct{}{}
+		expectedFiles["overlay/installers/default"] = struct{}{}
 	}
 
 	assertImageContainsFiles(t, img, expectedFiles)
@@ -235,13 +245,47 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 								t.Run(platform.String(), func(t *testing.T) {
 									t.Parallel()
 
-									testInstallerImage(ctx, t, registry, talosVersion, schematicID, secureboot, platform, baseURL)
+									testInstallerImage(ctx, t, registry, talosVersion, schematicID, secureboot, platform, baseURL, false)
 								})
 							}
 						})
 					}
 				})
 			}
+		})
+	}
+
+	overlaySchematicID := createSchematicGetID(ctx, t, c,
+		schematic.Schematic{
+			Overlay: schematic.Overlay{
+				Image: "siderolabs/sbc-raspberrypi",
+				Name:  "rpi_generic",
+			},
+		},
+	)
+
+	for _, talosVersion := range []string{"v1.7.0-beta.1"} {
+		t.Run(talosVersion, func(t *testing.T) {
+			t.Parallel()
+
+			schematicID := overlaySchematicID
+
+			t.Run("overlays", func(t *testing.T) {
+				t.Parallel()
+
+				for _, platform := range []v1.Platform{
+					{
+						Architecture: "arm64",
+						OS:           "linux",
+					},
+				} {
+					t.Run(platform.String(), func(t *testing.T) {
+						t.Parallel()
+
+						testInstallerImage(ctx, t, registry, talosVersion, schematicID, false, platform, baseURL, true)
+					})
+				}
+			})
 		})
 	}
 }

@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-04-04T14:15:53Z by kres latest.
+# Generated on 2024-04-16T17:51:01Z by kres 92eef68.
 
 # common variables
 
@@ -9,6 +9,7 @@ TAG := $(shell git describe --tag --always --dirty --match v[0-9]\*)
 ABBREV_TAG := $(shell git describe --tags >/dev/null 2>/dev/null && git describe --tag --always --match v[0-9]\* --abbrev=0 || echo 'undefined')
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 ARTIFACTS := _out
+IMAGE_TAG ?= $(TAG)
 WITH_DEBUG ?= false
 WITH_RACE ?= false
 REGISTRY ?= ghcr.io
@@ -22,7 +23,7 @@ DEEPCOPY_VERSION ?= v0.5.6
 GOLANGCILINT_VERSION ?= v1.57.2
 GOFUMPT_VERSION ?= v0.6.0
 GO_VERSION ?= 1.22.2
-GOIMPORTS_VERSION ?= v0.19.0
+GOIMPORTS_VERSION ?= v0.20.0
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -115,7 +116,7 @@ If you already have a compatible builder instance, you may use that instead.
 ## Artifacts
 
 All artifacts will be output to ./$(ARTIFACTS). Images will be tagged with the
-registry "$(REGISTRY)", username "$(USERNAME)", and a dynamic tag (e.g. $(IMAGE):$(TAG)).
+registry "$(REGISTRY)", username "$(USERNAME)", and a dynamic tag (e.g. $(IMAGE):$(IMAGE_TAG)).
 The registry and username can be overridden by exporting REGISTRY, and USERNAME
 respectively.
 
@@ -210,7 +211,7 @@ lint: lint-golangci-lint lint-gofumpt lint-govulncheck lint-goimports lint-markd
 
 .PHONY: image-image-factory
 image-image-factory: tailwind  ## Builds image for image-factory.
-	@$(MAKE) target-$@ TARGET_ARGS="--tag=$(REGISTRY)/$(USERNAME)/image-factory:$(TAG)"
+	@$(MAKE) target-$@ TARGET_ARGS="--tag=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG)"
 
 .PHONY: integration.test
 integration.test:

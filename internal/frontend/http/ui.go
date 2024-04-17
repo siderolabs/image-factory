@@ -16,7 +16,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
-	"github.com/siderolabs/talos/pkg/imager/quirks"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"gopkg.in/yaml.v3"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"

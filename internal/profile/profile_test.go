@@ -329,6 +329,9 @@ func TestEnhanceFromSchematic(t *testing.T) {
 	baseProfile := profile.Default[constants.PlatformMetal].DeepCopy()
 	baseProfile.Arch = "amd64"
 
+	baseProfileArm := baseProfile
+	baseProfileArm.Arch = "arm64"
+
 	installerProfile := profile.Default["installer"].DeepCopy()
 	installerProfile.Arch = "amd64"
 
@@ -550,8 +553,8 @@ func TestEnhanceFromSchematic(t *testing.T) {
 			},
 		},
 		{
-			name:        "extensions",
-			baseProfile: baseProfile,
+			name:        "overlays",
+			baseProfile: baseProfileArm,
 			schematic: schematic.Schematic{
 				Overlay: schematic.Overlay{
 					Name:  "rpi_generic",
@@ -571,16 +574,19 @@ func TestEnhanceFromSchematic(t *testing.T) {
 			expectedProfile: profile.Profile{
 				Platform:      constants.PlatformMetal,
 				SecureBoot:    pointer.To(false),
-				Arch:          "amd64",
+				Arch:          "arm64",
 				Version:       "v1.7.0",
 				Customization: profile.CustomizationProfile{},
 				Input: profile.Input{
+					OverlayInstaller: profile.ContainerAsset{
+						OCIPath: "arm64-sha256:abcdef123456.oci",
+					},
 					SystemExtensions: []profile.ContainerAsset{
 						{
-							OCIPath: "amd64-sha256:1234567890.oci",
+							OCIPath: "arm64-sha256:1234567890.oci",
 						},
 						{
-							OCIPath: "amd64-sha256:0987654321.oci",
+							OCIPath: "arm64-sha256:0987654321.oci",
 						},
 						{
 							TarballPath: "7a1dc25b1e08495a5ff4caff05c848fe166e5f5000ed3b717b5612a9ffb0fd4c.tar",

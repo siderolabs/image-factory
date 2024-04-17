@@ -41,6 +41,12 @@ func Hash(p profile.Profile) (string, error) {
 	if p.Output.Kind == profile.OutKindInstaller {
 		hasher.Write([]byte("installer fix #8107"))
 	}
+	// 3. overlay installer layout issues
+	// - https://github.com/siderolabs/talos/pull/8606 (missing +x)
+	// - https://github.com/siderolabs/talos/pull/8607 (wrong arch of the overlay)
+	if p.Output.Kind == profile.OutKindInstaller && p.Overlay != nil {
+		hasher.Write([]byte("overlay installer layout fix"))
+	}
 
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
