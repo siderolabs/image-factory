@@ -210,6 +210,13 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 66625420)
 				})
 
+				t.Run("metal zstd image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.zst", "application/zstd", 78472708)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.zst", "application/zstd", 66625420)
+				})
+
 				t.Run("metal secureboot image", func(t *testing.T) {
 					t.Parallel()
 

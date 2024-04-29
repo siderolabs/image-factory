@@ -41,6 +41,7 @@ spec:
         xfsprogs
         xorriso
         xz
+        zstd
   copyFrom:
     - stage: ghcr.io/siderolabs/grub:v1.7.0-2-g6101299
       source: /

@@ -177,6 +177,23 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
+			path:    "metal-arm64.raw.zst",
+			version: "v1.8.0",
+
+			expectedProfile: profile.Profile{
+				Platform: "metal",
+				Arch:     "arm64",
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatZSTD,
+					ImageOptions: &profile.ImageOptions{
+						DiskFormat: profile.DiskFormatRaw,
+						DiskSize:   profile.MinRAWDiskSize,
+					},
+				},
+			},
+		},
+		{
 			path:    "metal-rpi_generic-arm64.raw.xz",
 			version: "v1.6.0",
 
@@ -374,7 +391,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				},
 				Output: profile.Output{
 					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatXZ,
+					OutFormat: profile.OutFormatZSTD,
 					ImageOptions: &profile.ImageOptions{
 						DiskSize:   profile.MinRAWDiskSize,
 						DiskFormat: profile.DiskFormatRaw,
@@ -409,7 +426,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				},
 				Output: profile.Output{
 					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatXZ,
+					OutFormat: profile.OutFormatZSTD,
 					ImageOptions: &profile.ImageOptions{
 						DiskSize:   profile.MinRAWDiskSize,
 						DiskFormat: profile.DiskFormatRaw,
@@ -453,7 +470,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				},
 				Output: profile.Output{
 					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatXZ,
+					OutFormat: profile.OutFormatZSTD,
 					ImageOptions: &profile.ImageOptions{
 						DiskSize:   profile.MinRAWDiskSize,
 						DiskFormat: profile.DiskFormatRaw,
@@ -601,7 +618,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				},
 				Output: profile.Output{
 					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatXZ,
+					OutFormat: profile.OutFormatZSTD,
 					ImageOptions: &profile.ImageOptions{
 						DiskSize:   profile.MinRAWDiskSize,
 						DiskFormat: profile.DiskFormatRaw,

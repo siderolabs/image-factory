@@ -2,14 +2,14 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-04-16T17:52:56Z by kres 92eef68.
+# Generated on 2024-04-29T16:19:07Z by kres ebc009d.
 
 ARG TOOLCHAIN
 
 FROM alpine:3.18 AS base-image-image-factory
 
 # runs markdownlint
-FROM docker.io/node:21.7.1-alpine3.19 AS lint-markdown
+FROM docker.io/node:21.7.3-alpine3.19 AS lint-markdown
 WORKDIR /src
 RUN npm i -g markdownlint-cli@0.39.0
 RUN npm i sentences-per-line@0.2.1
@@ -175,7 +175,7 @@ COPY --from=image-factory-linux-amd64 / /
 COPY --from=image-factory-linux-arm64 / /
 
 FROM base-image-image-factory AS image-image-factory
-RUN apk add --no-cache --update bash binutils-aarch64 binutils-x86_64 cpio dosfstools efibootmgr kmod mtools pigz qemu-img squashfs-tools tar util-linux xfsprogs xorriso xz
+RUN apk add --no-cache --update bash binutils-aarch64 binutils-x86_64 cpio dosfstools efibootmgr kmod mtools pigz qemu-img squashfs-tools tar util-linux xfsprogs xorriso xz zstd
 ARG TARGETARCH
 COPY --from=image-factory image-factory-linux-${TARGETARCH} /image-factory
 COPY --from=ghcr.io/siderolabs/grub:v1.7.0-2-g6101299 / /

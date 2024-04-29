@@ -178,6 +178,7 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 		profile.OutFormatTar,
 		profile.OutFormatGZ,
 		profile.OutFormatXZ,
+		profile.OutFormatZSTD,
 	} {
 		var ok bool
 

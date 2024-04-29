@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-04-16T17:51:01Z by kres 92eef68.
+# Generated on 2024-04-30T11:03:59Z by kres d15226e.
 
 # common variables
 
@@ -180,10 +180,6 @@ unit-tests:  ## Performs unit tests
 .PHONY: unit-tests-race
 unit-tests-race:  ## Performs unit tests with race detection enabled.
 	@$(MAKE) target-$@
-
-.PHONY: coverage
-coverage:  ## Upload coverage data to codecov.io.
-	bash -c "bash <(curl -s https://codecov.io/bash) -f $(ARTIFACTS)/coverage-unit-tests.txt -X fix"
 
 .PHONY: $(ARTIFACTS)/image-factory-linux-amd64
 $(ARTIFACTS)/image-factory-linux-amd64:
