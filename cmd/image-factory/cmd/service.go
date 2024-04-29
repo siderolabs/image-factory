@@ -25,7 +25,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v2/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	sigstoresignature "github.com/sigstore/sigstore/pkg/signature"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
@@ -203,29 +205,49 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 		return nil, fmt.Errorf("failed to parse minimum Talos version: %w", err)
 	}
 
+	var checkOpts []cosign.CheckOpts
+
+	if len(strings.TrimSpace(opts.ContainerSignaturePublicKeyFile)) > 0 {
+		var keyVerifier sigstoresignature.Verifier
+
+		keyVerifier, err = getPublicKeyVerifier(opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get signature verifier for key %s: %w", opts.ContainerSignaturePublicKeyFile, err)
+		}
+
+		checkOpts = append(checkOpts, cosign.CheckOpts{
+			SigVerifier: keyVerifier,
+			Offline:     true,
+			IgnoreTlog:  true,
+		})
+	}
+
 	// Prefer opts.ContainerSignatureIssuerRegExp if set as this is more flexible
 	cosignIdentities := []cosign.Identity{
 		{
 			SubjectRegExp: opts.ContainerSignatureSubjectRegExp,
 		},
 	}
+
 	if len(strings.TrimSpace(opts.ContainerSignatureIssuerRegExp)) > 0 {
 		cosignIdentities[0].IssuerRegExp = opts.ContainerSignatureIssuerRegExp
 	} else {
 		cosignIdentities[0].Issuer = opts.ContainerSignatureIssuer
 	}
 
+	checkOpts = append(checkOpts, cosign.CheckOpts{
+		RootCerts:         rootCerts,
+		IntermediateCerts: intermediateCerts,
+		RekorPubKeys:      rekorPubKeys,
+		CTLogPubKeys:      ctLogPubKeys,
+		Identities:        cosignIdentities,
+	})
+
 	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
-		MinVersion:            minVersion,
-		ImageRegistry:         opts.ImageRegistry,
-		InsecureImageRegistry: opts.InsecureImageRegistry,
-		ImageVerifyOptions: cosign.CheckOpts{
-			Identities:        cosignIdentities,
-			RootCerts:         rootCerts,
-			IntermediateCerts: intermediateCerts,
-			RekorPubKeys:      rekorPubKeys,
-			CTLogPubKeys:      ctLogPubKeys,
-		},
+		MinVersion:                  minVersion,
+		ImageRegistry:               opts.ImageRegistry,
+		InsecureImageRegistry:       opts.InsecureImageRegistry,
+		ImageVerifyOptions:          checkOpts,
 		TalosVersionRecheckInterval: opts.TalosVersionRecheckInterval,
 		RemoteOptions:               remoteOptions(),
 	})
@@ -312,4 +334,44 @@ func loadPrivateKey(keyPath string) (crypto.PrivateKey, error) {
 	}
 
 	return cryptoutils.UnmarshalPEMToPrivateKey(fileBytes, cryptoutils.SkipPassword)
+}
+
+// Basically taken from https://github.com/sigstore/cosign/blob/main/cmd/cosign/cli/options/signature_digest.go
+func getHashAlgo(algo string) (crypto.Hash, error) {
+	supportedSignatureAlgorithms := map[string]crypto.Hash{
+		"sha224": crypto.SHA224,
+		"sha256": crypto.SHA256,
+		"sha384": crypto.SHA384,
+		"sha512": crypto.SHA512,
+	}
+	normalizedAlgo := strings.ToLower(strings.TrimSpace(algo))
+
+	if normalizedAlgo == "" {
+		return crypto.SHA256, nil
+	}
+
+	ralgo, exists := supportedSignatureAlgorithms[normalizedAlgo]
+	if !exists {
+		return crypto.SHA256, fmt.Errorf("unknown digest algorithm: %s", algo)
+	}
+
+	if !ralgo.Available() {
+		return crypto.SHA256, fmt.Errorf("hash %q is not available on this platform", algo)
+	}
+
+	return ralgo, nil
+}
+
+func getPublicKeyVerifier(opts Options) (sigstoresignature.Verifier, error) {
+	hashAlgo, err := getHashAlgo(opts.ContainerSignaturePublicKeyHashAlgo)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err := os.ReadFile(opts.ContainerSignaturePublicKeyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return signature.LoadPublicKeyRaw(key, hashAlgo)
 }

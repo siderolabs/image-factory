@@ -23,6 +23,8 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.ContainerSignatureSubjectRegExp, "container-signature-subject-regexp", cmd.DefaultOptions.ContainerSignatureSubjectRegExp, "container signature subject regexp")
 	flag.StringVar(&opts.ContainerSignatureIssuerRegExp, "container-signature-issuer-regexp", cmd.DefaultOptions.ContainerSignatureIssuerRegExp, "container signature issuer regexp")
 	flag.StringVar(&opts.ContainerSignatureIssuer, "container-signature-issuer", cmd.DefaultOptions.ContainerSignatureIssuer, "container signature issuer")
+	flag.StringVar(&opts.ContainerSignaturePublicKeyFile, "container-signature-pubkey", cmd.DefaultOptions.ContainerSignaturePublicKeyFile, "container signature public key (optional)")
+	flag.StringVar(&opts.ContainerSignaturePublicKeyHashAlgo, "container-signature-pubkey-hashalgo", cmd.DefaultOptions.ContainerSignaturePublicKeyHashAlgo, "hash algo of the container signature public key (optional)") //nolint:lll
 
 	flag.IntVar(&opts.AssetBuildMaxConcurrency, "asset-builder-max-concurrency", cmd.DefaultOptions.AssetBuildMaxConcurrency, "maximum concurrency for asset builder")
 

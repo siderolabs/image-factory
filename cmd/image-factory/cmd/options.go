@@ -19,9 +19,11 @@ type Options struct { //nolint:govet
 	InsecureImageRegistry bool
 
 	// Options to verify container signatures for imager, extensions, etc.
-	ContainerSignatureSubjectRegExp string
-	ContainerSignatureIssuerRegExp  string
-	ContainerSignatureIssuer        string
+	ContainerSignatureSubjectRegExp     string
+	ContainerSignatureIssuerRegExp      string
+	ContainerSignatureIssuer            string
+	ContainerSignaturePublicKeyFile     string
+	ContainerSignaturePublicKeyHashAlgo string
 
 	// Maximum number of concurrent asset builds.
 	AssetBuildMaxConcurrency int
@@ -90,9 +92,10 @@ var DefaultOptions = Options{
 	MinTalosVersion: "1.2.0",
 	ImageRegistry:   "ghcr.io",
 
-	ContainerSignatureSubjectRegExp: `@siderolabs\.com$`,
-	ContainerSignatureIssuerRegExp:  "",
-	ContainerSignatureIssuer:        "https://accounts.google.com",
+	ContainerSignatureSubjectRegExp:     `@siderolabs\.com$`,
+	ContainerSignatureIssuerRegExp:      "",
+	ContainerSignatureIssuer:            "https://accounts.google.com",
+	ContainerSignaturePublicKeyHashAlgo: "sha256",
 
 	AssetBuildMaxConcurrency: 6,
 

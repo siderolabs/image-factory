@@ -24,7 +24,7 @@ type Options struct { //nolint:govet
 	// MinVersion is the minimum version of Talos to use.
 	MinVersion semver.Version
 	// ImageVerifyOptions are the options for verifying the image signature.
-	ImageVerifyOptions cosign.CheckOpts
+	ImageVerifyOptions []cosign.CheckOpts
 	// TalosVersionRecheckInterval is the interval for rechecking Talos versions.
 	TalosVersionRecheckInterval time.Duration
 	// RemoteOptions is the list of remote options for the puller.

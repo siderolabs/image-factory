@@ -104,6 +104,7 @@ func (m *Manager) fetchImageByTag(imageName, tag string, architecture Arch, imag
 
 // fetchImageByDigest fetches an image by digest, verifies signatures, and exports it to the storage.
 func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, imageHandler imageHandler) error {
+	var err error
 	// set a timeout for fetching, but don't bind it to any context, as we want fetch operation to finish
 	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
 	defer cancel()
@@ -113,12 +114,12 @@ func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, i
 	// verify the image signature, we only accept properly signed images
 	logger.Debug("verifying image signature")
 
-	_, bundleVerified, err := cosign.VerifyImageSignatures(ctx, digestRef, &m.options.ImageVerifyOptions)
+	_, bundleVerified, method, err := verifyImageSignatures(ctx, digestRef, m.options.ImageVerifyOptions)
 	if err != nil {
 		return fmt.Errorf("failed to verify image signature for %s: %w", digestRef.Name(), err)
 	}
 
-	logger.Info("image signature verified", zap.Bool("bundle_verified", bundleVerified))
+	logger.Info("image signature verified", zap.String("verification_method", method), zap.Bool("bundle_verified", bundleVerified))
 
 	// pull down the image and extract the necessary parts
 	logger.Info("pulling the image")
@@ -232,4 +233,35 @@ func untar(logger *zap.Logger, r io.Reader, destination string) error {
 	logger.Info("extracted the image", zap.Int64("size", size), zap.String("destination", destination))
 
 	return nil
+}
+
+// Try to verify the image signature with the given verification options. Return the first option
+// that worked, if any. Only the last encountered error will be returned.
+func verifyImageSignatures(ctx context.Context, digestRef name.Reference, imageVerifyOptions []cosign.CheckOpts) (*cosign.CheckOpts, bool, string, error) {
+	var multiErr error
+
+	if len(imageVerifyOptions) == 0 {
+		return nil, false, "", errors.New("no verification options provided")
+	}
+
+	for _, ivo := range imageVerifyOptions {
+		_, bundleVerified, err := cosign.VerifyImageSignatures(ctx, digestRef, &ivo)
+		if err == nil {
+			// determine verification method
+			var verificationMethod string
+
+			if ivo.SigVerifier != nil {
+				verificationMethod = "public key"
+			} else {
+				verificationMethod = "certificate subject"
+			}
+
+			return &ivo, bundleVerified, verificationMethod, nil
+		}
+
+		multiErr = errors.Join(multiErr, err)
+	}
+
+	// error will be not nil
+	return &cosign.CheckOpts{}, false, "", multiErr
 }
