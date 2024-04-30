@@ -1,0 +1,11 @@
+{{ define "version-doc" }}
+<div class="mb-6 prose dark:prose-invert prose-sm">
+    <p>Documentation for Talos Linux {{ . }}:</p>
+    <ul>
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version . }}/introduction/what-is-new/">What's New</a></li>
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version . }}/introduction/support-matrix/">Support Matrix</a></li>
+    </ul>
+</div>
+{{ end }}
+
+{{ template "version-doc" . }}

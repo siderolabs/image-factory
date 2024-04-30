@@ -41,8 +41,12 @@
                 </svg>
                 <span class="sr-only">Loading...</span>
             </div>
-            <form class="text-gray-900 dark:text-white" hx-trigger="load" hx-get="/ui/versions"
-                hx-indicator="#processing">
+            <form class="text-gray-900 dark:text-white"
+                  id="wizard-form"
+                  hx-indicator="#processing"
+                  hx-disabled-elt="button"
+                  >
+                {{ .WizardHTML }}
             </form>
         </div>
     </main>

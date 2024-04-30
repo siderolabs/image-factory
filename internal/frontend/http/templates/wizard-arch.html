@@ -1,0 +1,30 @@
+{{ define "wizard-arch" }}
+{{ template "hidden-inputs" . }}
+{{ template "header" "Machine Architecture" }}
+<div class="mb-6">
+    {{ template "radio-with-description" dict "name" "arch" "value" "amd64" "current" .SelectedArch "label" "amd64" "extraLabelClass" "font-mono" "description" (dynamic_template "arch-description" (dict "Target" .Target "Arch" "amd64")) }}
+    {{ template "radio-with-description" dict "name" "arch" "value" "arm64" "current" .SelectedArch "label" "arm64" "extraLabelClass" "font-mono" "description" (dynamic_template "arch-description" (dict "Target" .Target "Arch" "arm64")) }}
+    {{ if .SecureBootSupported }}
+        <div class="pt-8">
+            <label class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="secureboot" value="true" {{ if eq .SelectedSecureBoot "true" }}checked{{ end }} class="sr-only peer">
+                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">SecureBoot</span>
+            </label>
+            <div class="ms-2 text-sm">
+                <p class="text-xs font-normal text-gray-500 dark:text-gray-300">Generate <a class="text-blue-600 dark:text-blue-500 underline" target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/">SecureBoot</a> image signed by the Sidero Labs official signing key. Requires UEFI boot and pre-configured hardware.</p>
+            </div>
+        </div>
+    {{ end }}
+    <div class="flex gap-4">
+        {{ if eq .Target "metal" }}
+            {{ template "back-button" "target,selected-version" }}
+        {{ else }}
+            {{ template "back-button" "target,version,selected-platform" }}
+        {{ end }}
+        {{ template "next-button" }}
+    </div>
+</div>
+{{ end }}
+
+{{ template "wizard-arch" . }}

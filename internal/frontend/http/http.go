@@ -140,9 +140,9 @@ func NewFrontend(
 	// UI
 	registerRoute(frontend.router.GET, "/", frontend.handleUI)
 	registerRoute(frontend.router.HEAD, "/", frontend.handleUI)
-	registerRoute(frontend.router.GET, "/ui/schematic-config", frontend.handleUISchematicConfig)
-	registerRoute(frontend.router.GET, "/ui/versions", frontend.handleUIVersions)
-	registerRoute(frontend.router.POST, "/ui/schematics", frontend.handleUISchematics)
+	registerRoute(frontend.router.POST, "/ui/wizard", frontend.handleUIWizard)
+	registerRoute(frontend.router.GET, "/ui/version-doc", frontend.handleUIVersionDoc)
+	registerRoute(frontend.router.POST, "/ui/extensions-list", frontend.handleUIExtensionsList)
 	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
 	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))

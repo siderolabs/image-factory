@@ -1,0 +1,36 @@
+{{ define "wizard-versions" }}
+{{ template "hidden-inputs" . }}
+{{ template "header" "Choose Talos Linux Version" }}
+<div class="mb-6">
+    <select
+        name="version"
+        class="w-64 bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        hx-get="/ui/version-doc" hx-target="#version-doc" hx-params="version"
+    >
+        {{ $defaultVersion := .Versions.DefaultVersion }}
+        {{ range .Versions.Groups }}
+            <optgroup label="{{ .Label }}">
+                {{ range .Versions }}
+                    <option value="{{ . }}" {{ if eq . $defaultVersion }}selected{{ end }}>{{ . }}</option>
+                {{ end }}
+            </optgroup>
+        {{ end }}
+    </select>
+    <div class="mt-6">
+        <p class="text-xs font-normal text-gray-500 dark:text-gray-300">
+            Is is always recommended to run the latest stable version of Talos Linux ({{ .Versions.LatestStable }}).
+            <br>
+            Pre-release versions can be used for testing, but not recommended for production use.
+        </p>
+    </div>
+    <div class="mt-6" id="version-doc">
+        {{ template "version-doc" $defaultVersion }}
+    </div>
+    <div class="flex gap-4">
+        {{ template "back-button" "selected-target" }}
+        {{ template "next-button" }}
+    </div>
+</div>
+{{ end }}
+
+{{ template "wizard-versions" . }}

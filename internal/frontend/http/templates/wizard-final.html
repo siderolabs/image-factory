@@ -1,0 +1,190 @@
+{{ define "wizard-final" }}
+{{ template "hidden-inputs" . }}
+{{ template "header" "Schematic Ready" }}
+<div class="mb-6 text-sm">
+    Your image schematic ID is: <span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">{{ .Schematic }}</span>
+</div>
+
+<div class="mb-6 text-sm font-mono bg-slate-200 dark:bg-slate-700 p-1 whitespace-pre">{{ .Marshaled }}</div>
+
+<div class="mb-6 prose prose-sm dark:prose-invert max-w-none">
+    <h2>First Boot</h2>
+    {{ if eq .Target "metal" }}
+    <p>There are several options for the initial boot of Talos Linux on bare-metal machine (or generic virtual machine):</p>
+    {{ else if eq .Target "cloud" }}
+    <p>Options for the initial boot of Talos Linux on {{ .PlatformMeta.Label }}:</p>
+    {{ else if eq .Target "sbc" }}
+    <p>Use the following disk image for {{ .BoardMeta.Label }}:</p>
+    {{ end }}
+    <dl>
+        {{ if eq .Target "metal" }}
+            {{ if eq .SecureBoot "true" }}
+                {{ template "secureboot-iso" . }}
+                {{ template "secureboot-metal-image" . }}
+            {{ else }}
+                {{ template "iso" . }}
+                {{ template "metal-image" . }}
+                {{ template "pxe-boot" . }}
+            {{ end }}
+        {{ else if eq .Target "cloud" }}
+            {{ range .PlatformMeta.BootMethods }}
+                {{ if eq . "disk-image" }}
+                    {{ template "cloud-image" $ }}
+                {{ else if eq . "iso" }}
+                    {{ template "iso" $ }}
+                {{ else if eq . "pxe" }}
+                    {{ template "pxe-boot" $ }}
+                {{ end }}
+            {{ end }}
+        {{ else if eq .Target "sbc" }}
+            {{ template "board-image" . }}
+        {{ end }}
+    </dl>
+
+    {{ if or (eq .Target "metal") (and (eq .Target "cloud") .PlatformMeta.NotOnlyDiskImage) }}
+    <h2>Initial Install</h2>
+    <p>
+        For the initial Talos Linux install (doesn't apply to disk image boot) put the following installer image to the machine configuration:<br>
+        {{ template "installer-image" . }}
+    </p>
+    {{ end }}
+
+    <h2>Talos Linux Upgrade</h2>
+    <p>
+        Use the following image to <a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/upgrading-talos/" target="_blank">upgrade</a> Talos Linux on the machine:<br>
+        {{ template "installer-image" . }}
+    </p>
+
+    <h2>Documentation</h2>
+    <ul>
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/what-is-new/">What's New in Talos {{ short_version .Version }}</a></li>
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/support-matrix/">Support Matrix for {{ short_version .Version }}</a></li>
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/getting-started/">Getting Started Guide</a></li>
+
+        {{ if eq .Target "metal" }}
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/network-config/">Bare-metal Network Configuration</a></li>
+        {{ else if eq .Target "cloud" }}
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}{{ .PlatformMeta.Documentation }}">{{ .PlatformMeta.Label }} Guide</a></li>
+        {{ else if eq .Target "sbc" }}
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}{{ .BoardMeta.Documentation }}">{{ .BoardMeta.Label }} Guide</a></li>
+        {{ end }}
+
+        {{ if eq .SecureBoot "true" }}
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/">SecureBoot Guide</a></li>
+        {{ end }}
+
+        {{ if .ProductionGuideAvailable }}
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/prodnotes/">Production Cluster Guide</a></li>
+        {{ end }}
+
+        {{ if .TroubleshootingGuideAvailable }}
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/troubleshooting/">Troubleshooting Guide</a></li>
+        {{ end }}
+    </ul>
+
+    {{ if eq .Target "metal" }}
+    <h2>Extra Assets</h2>
+    <dl>
+        {{ if eq .SecureBoot "true" }}
+        {{ template "secureboot-extra-assets" . }}
+        {{ else }}
+        {{ template "extra-assets" . }}
+        {{ end }}
+    </dl>
+    {{ end }}
+</div>
+
+<div class="flex gap-4">
+    {{ template "back-button" "target,version,platform,board,arch,secureboot,extensions,selected-cmdline,selected-overlay-options" }}
+</div>
+{{ end }}
+
+{{ define "iso" }}
+<dt>ISO</dt>
+<dd><a href="{{ printf "%s-%s.iso" .Platform .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "%s-%s.iso" .Platform .Arch | $.ImageBaseURL.JoinPath }}</a>
+
+    {{ if eq .Target "metal" }}
+        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/iso/" target="_blank">ISO documentation</a>)
+    {{ end }}
+</dd>
+{{ end }}
+
+{{ define "secureboot-iso" }}
+<dt>SecureBoot ISO</dt>
+<dd><a href="{{ printf "%s-%s-secureboot.iso" .Platform .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "%s-%s-secureboot.iso" .Platform .Arch | $.ImageBaseURL.JoinPath }}</a>
+        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/" target="_blank">SecureBoot documentation</a>)
+</dd>
+{{ end }}
+
+{{ define "metal-image" }}
+<dt>Disk Image</dt>
+<dd><a href="{{ printf "metal-%s.raw.zst" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s.raw.zst" .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+{{ end }}
+
+{{ define "cloud-image" }}
+<dt>Disk Image</dt>
+<dd><a href="{{ printf "%s-%s.%s" .Platform .Arch .PlatformMeta.DiskImageSuffix | $.ImageBaseURL.JoinPath }}">{{ printf "%s-%s.%s" .Platform .Arch .PlatformMeta.DiskImageSuffix |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+{{ end }}
+
+{{ define "board-image" }}
+<dt>Disk Image</dt>
+<dd><a href="{{ printf "metal%s-arm64.raw.xz" .LegacyBoard | $.ImageBaseURL.JoinPath }}">{{ printf "metal%s-arm64.raw.xz" .LegacyBoard |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+{{ end }}
+
+{{ define "secureboot-metal-image" }}
+<dt>SecureBoot Disk Image</dt>
+<dd><a href="{{ printf "metal-%s-secureboot.raw.zst" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s-secureboot.raw.zst" .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/" target="_blank">SecureBoot documentation</a>)
+</dd>
+{{ end }}
+
+{{ define "pxe-boot" }}
+    <dt>PXE boot (iPXE script)</dt>
+    <dd>{{ printf "%s-%s" .Platform .Arch | $.PXEBaseURL.JoinPath }}</dd>
+
+    {{ if eq .Target "metal" }}
+        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/" target="_blank">PXE documentation</a>)
+    {{ end }}
+{{ end }}
+
+{{ define "installer-image" }}
+<span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">
+    {{ if eq .SecureBoot "true"}}
+        {{ .SecureBootInstallerImage }}
+    {{ else }}
+        {{ .InstallerImage }}
+    {{ end }}
+</span>
+{{ end }}
+
+{{ define "extra-assets" }}
+<dt>Kernel Image</dt>
+<dd><a href="{{ printf "kernel-%s" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "kernel-%s" .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+<dt>Kernel Command Line</dt>
+<dd><a href="{{ printf "cmdline-metal-%s" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "cmdline-metal-%s" .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+<dt>Initramfs Image</dt>
+<dd><a href="{{ printf "initramfs-%s.xz" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "initramfs-%s.xz" .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+{{ end }}
+
+{{ define "secureboot-extra-assets" }}
+<dt>SecureBoot UKI</dt>
+<dd><a href="{{ printf "metal-%s-secureboot-uki.efi" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s-secureboot-uki.efi" .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+{{ end }}
+
+
+{{ template "wizard-final" . }}

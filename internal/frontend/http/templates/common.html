@@ -1,0 +1,119 @@
+{{ define "header" }}
+<h1 class="mb-4 mt-2 text-2xl font-bold">{{ . }}</h1>
+{{ end }}
+
+{{ define "next-button" }}
+<div class="flex mt-4">
+    <button
+        hx-target="#wizard-form"
+        hx-post="/ui/wizard"
+        type="button"
+        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+    >
+        Next
+        <svg class="w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
+        </svg>
+    </button>
+</div>
+{{ end }}
+
+{{ define "back-button" }}
+<div class="flex mt-4">
+    <button
+        hx-target="#wizard-form"
+        hx-post="/ui/wizard"
+        hx-params="{{ . }}"
+        type="button"
+        class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+    >
+        <svg class="rotate-180 w-3.5 h-3.5 me-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
+        </svg>
+        Back
+    </button>
+</div>
+{{ end }}
+
+{{ define "radio-with-description" }}
+<div class="flex mt-4">
+    <div class="flex items-center h-5">
+        <input id="{{ .name }}-{{ .value }}" aria-describedby="{{ .name }}-{{ .value }}-text" type="radio" name="{{ .name }}" value="{{ .value }}" {{ if eq .value .current }}checked{{ end }} class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+    </div>
+    <div class="ps-2 text-sm">
+        <label for="{{ .name }}-{{ .value }}" class="font-medium text-gray-900 dark:text-gray-300 {{ .extraLabelClass }}">{{ .label }}</label>
+        <p id="{{ .name }}-{{ .value }}-text" class="text-xs font-normal text-gray-500 dark:text-gray-300">{{ .description }}</p>
+    </div>
+</div>
+{{ end }}
+
+{{ define "checkbox-with-description" }}
+<div class="flex mt-4">
+    <div class="flex items-center h-5">
+        <input id="{{ .name }}-{{ .value }}-checkbox" aria-describedby="{{ .name }}-{{ .value }}-checkbox-text" type="checkbox" name="{{ .name }}" value="{{ .value }}" {{ if .checked }}checked{{ end }} class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+    </div>
+    <div class="ps-2 text-sm">
+        <label for="{{ .name }}-{{ .value }}-checkbox" class="font-medium text-gray-900 dark:text-gray-300">{{ .label }}</label>
+        <p id="{{ .name }}-{{ .value }}-checkbox-text" class="text-xs font-normal text-gray-500 dark:text-gray-300">{{ .description }}</p>
+    </div>
+</div>
+{{ end }}
+
+{{ define "hidden-inputs" }}
+    {{- if .Target -}}
+    <input type="hidden" name="target" value="{{ .Target }}">
+    <input type="hidden" name="selected-target" value="{{ .Target }}">
+    {{- end -}}
+    {{- if .Version -}}
+    <input type="hidden" name="version" value="{{ .Version }}">
+    <input type="hidden" name="selected-version" value="{{ .Version }}">
+    {{- end -}}
+    {{- if .Arch -}}
+    <input type="hidden" name="arch" value="{{ .Arch }}">
+    <input type="hidden" name="selected-arch" value="{{ .Arch }}">
+    {{- end -}}
+    {{- if .Platform -}}
+    <input type="hidden" name="platform" value="{{ .Platform }}">
+    <input type="hidden" name="selected-platform" value="{{ .Platform }}">
+    {{- end -}}
+    {{- if .Board -}}
+    <input type="hidden" name="board" value="{{ .Board }}">
+    <input type="hidden" name="selected-board" value="{{ .Board }}">
+    {{- end -}}
+    {{- if .SecureBoot -}}
+    <input type="hidden" name="secureboot" value="{{ .SecureBoot }}">
+    <input type="hidden" name="selected-secureboot" value="{{ .SecureBoot }}">
+    {{- end -}}
+    {{ range .Extensions }}
+    <input type="hidden" name="extensions" value="{{ . }}">
+    <input type="hidden" name="selected-extensions" value="{{ . }}">
+    {{ end }}
+    {{- if .CmdlineSet -}}
+    <input type="hidden" name="cmdline" value="{{ .Cmdline }}">
+    <input type="hidden" name="selected-cmdline" value="{{ .Cmdline }}">
+    <input type="hidden" name="overlay-options" value="{{ .OverlayOptions }}">
+    <input type="hidden" name="selected-overlay-options" value="{{ .OverlayOptions }}">
+    {{- end -}}
+{{ end }}
+
+{{ define "platform-description" }}
+    {{ .Platform.Description }}
+    (<a target="_blank" class="text-blue-600 dark:text-blue-500 underline" href="https://www.talos.dev/{{ short_version .Version }}{{ .Platform.Documentation}}">documentation</a>).
+{{ end }}
+
+{{ define "board-description" }}
+    Runs on {{ .Board.Label }} (<a target="_blank" class="text-blue-600 dark:text-blue-500 underline" href="https://www.talos.dev/{{ short_version .Version }}{{ .Board.Documentation}}">documentation</a>).
+{{ end }}
+
+{{ define "arch-description" }}
+    {{ if eq .Arch "amd64" }}
+        Intel, AMD CPUs. Also known as x86_64, if unsure, use this option.
+    {{ end }}
+    {{ if eq .Arch "arm64" }}
+        {{ if eq .Target "metal" }}
+            Ampere Computing and other arm64 CPUs. For Single Board Computers use 'SBC' option on the first screen. For AWS and GCP arm64 VMs use Cloud images.
+        {{ else }}
+            Various ARM64 manufacturers, also known as aarch64.
+        {{ end }}
+    {{ end }}
+{{ end }}
