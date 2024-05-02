@@ -312,12 +312,10 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	}
 
 	// test for v1.7.0 which supports overlays
-	// TODO: frezbo: update to to v1.7.0 when it's released
-	// for now only v1.7.0-alpha.1 or later supports overlays
-	t.Run("v1.7.0-beta.0", func(t *testing.T) {
+	t.Run("v1.7.0", func(t *testing.T) {
 		t.Parallel()
 
-		talosVersion := "v1.7.0-beta.0"
+		talosVersion := "v1.7.0"
 
 		t.Run("installer image", func(t *testing.T) {
 			t.Parallel()

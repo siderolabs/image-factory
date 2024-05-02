@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-04-29T16:19:07Z by kres ebc009d.
+# Generated on 2024-05-02T11:55:49Z by kres d15226e.
 
 ARG TOOLCHAIN
 
@@ -181,7 +181,7 @@ COPY --from=image-factory image-factory-linux-${TARGETARCH} /image-factory
 COPY --from=ghcr.io/siderolabs/grub:v1.7.0-2-g6101299 / /
 COPY --from=ghcr.io/siderolabs/grub@sha256:46469ae913378d45f69ac10d2dc8ebea54e914542deab2b2f23c95dac5116335 /usr/lib/grub /usr/lib/grub
 COPY --from=ghcr.io/siderolabs/grub@sha256:fd929bae5ad64a3e2a530d6b3cbfab673b60af2e62268a45cf42194df55c116d /usr/lib/grub /usr/lib/grub
-COPY --from=ghcr.io/siderolabs/installer:v1.7.0-beta.1 /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
+COPY --from=ghcr.io/siderolabs/installer:v1.7.0 /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
 LABEL org.opencontainers.image.source https://github.com/siderolabs/image-factory
 ENTRYPOINT ["/image-factory"]
 

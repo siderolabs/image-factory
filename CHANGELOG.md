@@ -1,3 +1,66 @@
+## [image-factory 0.3.3](https://github.com/siderolabs/image-factory/releases/tag/v0.3.3) (2024-05-02)
+
+Welcome to the v0.3.3 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Dmitriy Matrenichev
+* Dmitry Sharshakov
+* Utku Ozdemir
+* darox
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`221b442`](https://github.com/siderolabs/image-factory/commit/221b44249f6c635a9e8cb8b7b941401aa50d4b75) feat: support zstd compression
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>20 commits</summary>
+<p>
+
+* [`4c0c626b7`](https://github.com/siderolabs/talos/commit/4c0c626b786f14c5eabdc65e88d2aae92829bf73) feat: use zstd compression in place of xz
+* [`98906ed6e`](https://github.com/siderolabs/talos/commit/98906ed6ea1afc5a758871a7c2d8251fccaef106) fix: use reboot delay only in case of error
+* [`05fd042bb`](https://github.com/siderolabs/talos/commit/05fd042bb3600541a8e2587b66b8b4c4e9f99c27) test: improve the reset integration tests
+* [`8cdf0f7cb`](https://github.com/siderolabs/talos/commit/8cdf0f7cb007790190197356355a16c8e427afab) docs: fix typo in Cilium instructions
+* [`dd1d279da`](https://github.com/siderolabs/talos/commit/dd1d279daa8c2a18c2477839b2c11e5f2f554693) fix: allow more flags in `talosctl cluster create --input-dir`
+* [`ef4394e58`](https://github.com/siderolabs/talos/commit/ef4394e586e42c4b5085299029a2aacb3b89502d) chore: update kernel and other packages
+* [`ccdb4c8b1`](https://github.com/siderolabs/talos/commit/ccdb4c8b10450aa7fb6c32b0559bda73746a03ed) chore: update google.golang.org/grpc to 1.63.2
+* [`c5b59df69`](https://github.com/siderolabs/talos/commit/c5b59df6976095aca5c4bac367084874242e9e80) fix: wait for devices to be discovered before probing filesystems
+* [`0821b9c50`](https://github.com/siderolabs/talos/commit/0821b9c50b86bf9f7d08a1ba7b177abb7e2568c4) feat: add `--non-masquerade-cidrs` flag to `talosctl cluster create`
+* [`2bf613ad3`](https://github.com/siderolabs/talos/commit/2bf613ad3bd1582b520b2f661b7e0bfab4207eed) fix: add endpoints for "virtual" `host-dns` service
+* [`f4163aefe`](https://github.com/siderolabs/talos/commit/f4163aefeda2bf91be36af45239716c53ec982b1) fix: bump priority of OpenStack routes if IPv6 and default gateway
+* [`6fbd1263c`](https://github.com/siderolabs/talos/commit/6fbd1263ccbe20857cca90b5f69906651caa4f54) feat: report process MAC labels
+* [`d46032821`](https://github.com/siderolabs/talos/commit/d460328210ee3beea1b98ea5f23fcda5c2e2fd44) fix: return proper value from Bridge.STP instead of plain nil
+* [`bac1d00c3`](https://github.com/siderolabs/talos/commit/bac1d00c35cb6e1407884298118ee7b4ffc5fdfa) chore: prepare for Talos 1.8
+* [`d6c8067e1`](https://github.com/siderolabs/talos/commit/d6c8067e15d8177c7394abad65b95ea98c597b9d) docs: make 1.7 docs the default
+* [`d7c3a0735`](https://github.com/siderolabs/talos/commit/d7c3a0735eab85dd24e86fe3e0872253067e8f10) docs: add what's new for v1.7
+* [`908f67fa1`](https://github.com/siderolabs/talos/commit/908f67fa15e0de507c2f69fac0851d42376a66ce) feat: add host dns support for resolving member addrs
+* [`0d20b637d`](https://github.com/siderolabs/talos/commit/0d20b637d68a581354361bbceecb90395f24fedb) feat: update Kubernetes to 1.30.0
+* [`ec69d7a78`](https://github.com/siderolabs/talos/commit/ec69d7a7855753e3e458f2cf7c211bf67e703220) chore: replace math/rand with math/rand/v2
+* [`89040ce43`](https://github.com/siderolabs/talos/commit/89040ce4329743fa2037fb1cf65d978801753dbe) chore: update go-blockdevice/v2 library to the latest version
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/siderolabs/talos**                0a785802ea22 -> 4c0c626b786f
+* **github.com/siderolabs/talos/pkg/machinery**  0a785802ea22 -> 4c0c626b786f
+* **golang.org/x/net**                           v0.23.0 -> v0.24.0
+* **golang.org/x/sync**                          v0.6.0 -> v0.7.0
+* **golang.org/x/sys**                           v0.18.0 -> v0.19.0
+
+Previous release can be found at [v0.3.2](https://github.com/siderolabs/image-factory/releases/tag/v0.3.2)
+
+
 ## [image-factory 0.3.2](https://github.com/siderolabs/image-factory/releases/tag/v0.3.2) (2024-04-17)
 
 Welcome to the v0.3.2 release of image-factory!

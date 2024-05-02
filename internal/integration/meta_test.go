@@ -82,13 +82,15 @@ func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				expected: nil,
 			},
 			{
-				version: "v1.7.0-alpha.1",
+				version: "v1.7.0",
 				expected: []string{
 					"rpi_generic",
 					"rockpi4",
 					"rockpi4c",
+					"rock4cplus",
 					"nanopi-r4s",
 					"rock64",
+					"orangepi-r1-plus-lts",
 					"jetson_nano",
 					"bananapi_m64",
 					"libretech_all_h3_cc_h5",

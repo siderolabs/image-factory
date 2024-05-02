@@ -264,7 +264,7 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 		},
 	)
 
-	for _, talosVersion := range []string{"v1.7.0-beta.1"} {
+	for _, talosVersion := range []string{"v1.7.0"} {
 		t.Run(talosVersion, func(t *testing.T) {
 			t.Parallel()
 
