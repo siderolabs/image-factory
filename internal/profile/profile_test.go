@@ -306,6 +306,10 @@ func (mockArtifactProducer) GetOfficialExtensions(context.Context, string) ([]ar
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/intel-ucode:20210608")),
 			Digest:          "sha256:0987654321",
 		},
+		{
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/gasket-driver:20240101")),
+			Digest:          "sha256:abcdef123456",
+		},
 	}, nil
 }
 
@@ -465,6 +469,50 @@ func TestEnhanceFromSchematic(t *testing.T) {
 						},
 						{
 							TarballPath: "9f14d3d939d420f57d8ee3e64c4c2cd29ecb6fa10da4e1c8ac99da4b04d5e463.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatZSTD,
+					ImageOptions: &profile.ImageOptions{
+						DiskSize:   profile.MinRAWDiskSize,
+						DiskFormat: profile.DiskFormatRaw,
+					},
+				},
+			},
+		},
+		{
+			name:        "aliased extensions",
+			baseProfile: baseProfile,
+			schematic: schematic.Schematic{
+				Customization: schematic.Customization{
+					SystemExtensions: schematic.SystemExtensions{
+						OfficialExtensions: []string{
+							"siderolabs/amd-ucode",
+							"siderolabs/gasket",
+						},
+					},
+				},
+			},
+			versionString: "v1.5.1",
+
+			expectedProfile: profile.Profile{
+				Platform:      constants.PlatformMetal,
+				SecureBoot:    pointer.To(false),
+				Arch:          "amd64",
+				Version:       "v1.5.1",
+				Customization: profile.CustomizationProfile{},
+				Input: profile.Input{
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							OCIPath: "amd64-sha256:1234567890.oci",
+						},
+						{
+							OCIPath: "amd64-sha256:abcdef123456.oci",
+						},
+						{
+							TarballPath: "dcf69eb36d2c699ce3050ef2f59fd6f70a6f2d0bf9d34585971aae4991360c89.tar",
 						},
 					},
 				},

@@ -254,6 +254,33 @@ type ArtifactProducer interface {
 	GetInstallerImage(context.Context, artifacts.Arch, string) (string, error)
 }
 
+func findExtension(availableExtensions []artifacts.ExtensionRef, extensionName string) artifacts.ExtensionRef {
+	for _, availableExtension := range availableExtensions {
+		if availableExtension.TaggedReference.RepositoryStr() == extensionName {
+			return availableExtension
+		}
+	}
+
+	return artifacts.ExtensionRef{}
+}
+
+func extensionNameAlias(extensionName string) (string, bool) {
+	switch extensionName {
+	case "siderolabs/v4l-uvc": // wrong name in the extension manifest
+		return "siderolabs/v4l-uvc-drivers", true
+	case "siderolabs/usb-modem": // wrong name in the extension manifest
+		return "siderolabs/usb-modem-drivers", true
+	case "siderolabs/gasket": // wrong name in the extension manifest
+		return "siderolabs/gasket-driver", true
+	case "siderolabs/talos-vmtoolsd": // wrong name in the extension manifest
+		return "siderolabs/vmtoolsd-guest-agent", true
+	case "siderolabs/xe-guest-utilities": // extension got renamed
+		return "siderolabs/xen-guest-agent", true
+	default:
+		return "", false
+	}
+}
+
 // EnhanceFromSchematic enhances the profile with the schematic.
 //
 //nolint:gocognit,gocyclo,cyclop
@@ -301,13 +328,12 @@ func EnhanceFromSchematic(
 			}
 
 			for _, extensionName := range schematic.Customization.SystemExtensions.OfficialExtensions {
-				var extensionRef artifacts.ExtensionRef
+				extensionRef := findExtension(availableExtensions, extensionName)
 
-				for _, availableExtension := range availableExtensions {
-					if availableExtension.TaggedReference.RepositoryStr() == extensionName {
-						extensionRef = availableExtension
-
-						break
+				if value.IsZero(extensionRef) {
+					// try with aliases if not found
+					if aliasedName, ok := extensionNameAlias(extensionName); ok {
+						extensionRef = findExtension(availableExtensions, aliasedName)
 					}
 				}
 
