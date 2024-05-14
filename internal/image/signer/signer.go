@@ -93,7 +93,7 @@ func (s *Signer) SignImage(ctx context.Context, imageRef name.Digest, pusher *re
 		return fmt.Errorf("error generating signature layer: %w", err)
 	}
 
-	signatures, err := mutate.AppendSignatures(empty.Signatures(), signatureLayer)
+	signatures, err := mutate.AppendSignatures(empty.Signatures(), true, signatureLayer)
 	if err != nil {
 		return fmt.Errorf("error appending signatures: %w", err)
 	}

@@ -1,8 +1,8 @@
-# syntax = docker/dockerfile-upstream:1.7.0-labs
+# syntax = docker/dockerfile-upstream:1.7.1-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-05-02T11:55:49Z by kres d15226e.
+# Generated on 2024-05-14T17:27:20Z by kres ce88e1c.
 
 ARG TOOLCHAIN
 
@@ -19,7 +19,7 @@ COPY ./README.md ./README.md
 RUN markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules node_modules/sentences-per-line/index.js .
 
 # Installs tailwindcss
-FROM docker.io/node:21.7.1-alpine3.19 AS tailwind-base
+FROM docker.io/node:21.7.3-alpine3.19 AS tailwind-base
 WORKDIR /src
 COPY package.json package-lock.json .
 RUN --mount=type=cache,target=/src/node_modules npm ci

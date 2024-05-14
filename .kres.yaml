@@ -140,7 +140,7 @@ spec:
     stages:
       - name: tailwind-base
         description: "Installs tailwindcss"
-        from: docker.io/node:21.7.1-alpine3.19
+        from: docker.io/node:21.7.3-alpine3.19
         workdir: /src
         steps:
           - copy:

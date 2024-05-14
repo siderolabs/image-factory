@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-04-04T14:15:53Z by kres latest.
+# Generated on 2024-05-14T17:12:32Z by kres ce88e1c.
 
 # options for analysis running
 run:
@@ -54,7 +54,6 @@ linters-settings:
   goimports:
     local-prefixes: github.com/siderolabs/image-factory/
   gomodguard: { }
-  gomnd: { }
   govet:
     enable-all: true
   lll:
@@ -109,17 +108,18 @@ linters:
   disable:
     - exhaustivestruct
     - exhaustruct
+    - err113
     - forbidigo
     - funlen
     - gochecknoglobals
     - gochecknoinits
     - godox
-    - goerr113
     - gomnd
     - gomoddirectives
     - gosec
     - inamedparam
     - ireturn
+    - mnd
     - nestif
     - nonamedreturns
     - nosnakecase
