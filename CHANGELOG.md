@@ -1,3 +1,82 @@
+## [image-factory 0.4.0](https://github.com/siderolabs/image-factory/releases/tag/v0.4.0) (2024-05-15)
+
+Welcome to the v0.4.0 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Spencer Smith
+* Artem Chernyshev
+* Andrew Rynhard
+* Birger J. Nordølum
+* Mattias Cockburn
+* Noel Georgi
+* Serge Logvinov
+* Simon-Boyer
+* Steve Francis
+* USBAkimbo
+* Utku Ozdemir
+* Will Bush
+* dhaines-quera
+
+### Changes
+<details><summary>4 commits</summary>
+<p>
+
+* [`b0b6bff`](https://github.com/siderolabs/image-factory/commit/b0b6bffc36355b235cdee065a4bb3827cf27264e) feat: implement wizard-like UI for the Image Factory
+* [`8ccd284`](https://github.com/siderolabs/image-factory/commit/8ccd284b885bd3246bc41b898c82eddd4aecd5ad) feat: allow key-based image verification as option
+* [`4643056`](https://github.com/siderolabs/image-factory/commit/46430564a05d1430837acfd9e5d080c400e7456d) chore: rekres/update dependencies
+* [`116721a`](https://github.com/siderolabs/image-factory/commit/116721a73640c80a78e88b59ce0b71e2c16bc2f3) fix: workaround extension name inconsistencies
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>23 commits</summary>
+<p>
+
+* [`b86edc677`](https://github.com/siderolabs/talos/commit/b86edc6776f77a65d3a254cf0f0d713ce7a9145e) chore: update office hours in talos repo
+* [`cfa25d22d`](https://github.com/siderolabs/talos/commit/cfa25d22dc30b877ea47ba1bfae3ca5f29977f1b) chore: remove docs prior to 1.0 from website navigation
+* [`120705459`](https://github.com/siderolabs/talos/commit/12070545996af3435454654500cd75a50111cca9) chore: handle I/O error for xfs_repair
+* [`b7afe2669`](https://github.com/siderolabs/talos/commit/b7afe2669b2a9a32ca37bbcc7a7e8af4879cf403) feat: update Linux 6.6.30
+* [`26519ceed`](https://github.com/siderolabs/talos/commit/26519ceed0c790abd851de310409baf6af89e2b7) docs: update proxmox.md
+* [`851b91a0e`](https://github.com/siderolabs/talos/commit/851b91a0e22055443eabace9b89a566e0cbec679) fix: don't enable hostDNS for versions of Talos which do not have it
+* [`42ac5cd0c`](https://github.com/siderolabs/talos/commit/42ac5cd0c2ef610f055afb208384e60fc9389e82) fix: check for `nil` machine config during installation
+* [`1d29111d4`](https://github.com/siderolabs/talos/commit/1d29111d4310cc16078248e66817843e6e740821) chore: update Go to 1.22.3
+* [`f4d7b9d9a`](https://github.com/siderolabs/talos/commit/f4d7b9d9a921cdaf33b9efdae1569dd921628270) feat: gather plaform dns names
+* [`0b0f9995a`](https://github.com/siderolabs/talos/commit/0b0f9995a6cd2b41f48dc867f4e0248284e53463) docs: add resource information, some grammar fixes
+* [`763dae250`](https://github.com/siderolabs/talos/commit/763dae2508242ee91a7e38e5962facb334691289) fix: add cluster name to the worker machine config
+* [`4aac5b4ec`](https://github.com/siderolabs/talos/commit/4aac5b4ec30f4a9ee0f2e4a4239b399357930b6c) feat: mount /sys/kernel/security into kubelet
+* [`817f18153`](https://github.com/siderolabs/talos/commit/817f18153f592f5bf38884f05aed2e4ce2fd3ad7) docs: remove mention of enabling KubePrism after v1.6
+* [`c08d79732`](https://github.com/siderolabs/talos/commit/c08d797326686434dc035de3ca40200293d74701) docs: fix the variable name typo
+* [`478b862b4`](https://github.com/siderolabs/talos/commit/478b862b4c38bd5a5ba1313a3779f9395e4ba38d) fix: do not fail cli action tracker when boot id cannot be read
+* [`be510f9eb`](https://github.com/siderolabs/talos/commit/be510f9eb2b84a88ce730fab36bf575c976efa8b) docs: fix grpc_tunnel value to true
+* [`b7b8a8d8f`](https://github.com/siderolabs/talos/commit/b7b8a8d8fa6335d3f0036c50792971adefe5e240) docs: add logs example for the certificate errors troubleshooting
+* [`8df5b85ec`](https://github.com/siderolabs/talos/commit/8df5b85ec7e8ca53fd73c9c095ee5c453d5c4e51) release(v1.8.0-alpha.0): prepare release
+* [`07f78182c`](https://github.com/siderolabs/talos/commit/07f78182c621296e6c694b64ead8f14695b2e3b7) fix: use a fresh context for etcd unlock
+* [`84cd7dbec`](https://github.com/siderolabs/talos/commit/84cd7dbec4ce01a8f80a855267e1c44dfc6dcacc) feat: update Linux to 6.6.29
+* [`70fdca6a4`](https://github.com/siderolabs/talos/commit/70fdca6a43abcb48030239047500fa8819f9346d) chore: update minimum hardware requirement for vmware ova
+* [`b690ffeb8`](https://github.com/siderolabs/talos/commit/b690ffeb899c4a133f98e212826830e3b320abe4) test: improve DNS resolver test stability
+* [`5aa0299b6`](https://github.com/siderolabs/talos/commit/5aa0299b6e3efefa7077aab5955526a5136b8761) style: use correct capitalization for openstack
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/prometheus/client_golang**        v1.19.0 -> v1.19.1
+* **github.com/siderolabs/talos**                4c0c626b786f -> b86edc6776f7
+* **github.com/siderolabs/talos/pkg/machinery**  4c0c626b786f -> b86edc6776f7
+* **github.com/sigstore/cosign/v2**              v2.2.3 -> v2.2.4
+* **github.com/slok/go-http-metrics**            v0.11.0 -> v0.12.0
+* **golang.org/x/net**                           v0.24.0 -> v0.25.0
+* **golang.org/x/sys**                           v0.19.0 -> v0.20.0
+
+Previous release can be found at [v0.3.3](https://github.com/siderolabs/image-factory/releases/tag/v0.3.3)
+
 ## [image-factory 0.3.3](https://github.com/siderolabs/image-factory/releases/tag/v0.3.3) (2024-05-02)
 
 Welcome to the v0.3.3 release of image-factory!
