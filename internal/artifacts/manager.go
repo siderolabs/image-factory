@@ -137,7 +137,7 @@ func (m *Manager) Get(ctx context.Context, versionString string, arch Arch, kind
 		select {
 		case result := <-resultCh:
 			if result.Err != nil {
-				return "", err
+				return "", result.Err
 			}
 		case <-ctx.Done():
 			return "", ctx.Err()
