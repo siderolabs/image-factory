@@ -13,6 +13,8 @@ type Options struct { //nolint:govet
 
 	// Asset builder options: minimum supported Talos version.
 	MinTalosVersion string
+	// Whether to skip beta/alpha versions and such when obtaining valid Talos versions
+	SkipVersionFilter bool
 	// Image registry for source images: imager, extensions, etc..
 	ImageRegistry string
 	// Allow insecure connection to the image registry
@@ -89,8 +91,9 @@ type SecureBootOptions struct { //nolint:govet
 var DefaultOptions = Options{
 	HTTPListenAddr: ":8080",
 
-	MinTalosVersion: "1.2.0",
-	ImageRegistry:   "ghcr.io",
+	MinTalosVersion:   "1.2.0",
+	SkipVersionFilter: false,
+	ImageRegistry:     "ghcr.io",
 
 	ContainerSignatureSubjectRegExp:     `@siderolabs\.com$`,
 	ContainerSignatureIssuerRegExp:      "",
