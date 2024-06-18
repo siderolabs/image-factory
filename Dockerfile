@@ -1,22 +1,21 @@
-# syntax = docker/dockerfile-upstream:1.7.1-labs
+# syntax = docker/dockerfile-upstream:1.8.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-05-14T17:27:20Z by kres ce88e1c.
+# Generated on 2024-06-30T11:34:44Z by kres 4c9f215.
 
 ARG TOOLCHAIN
 
 FROM alpine:3.18 AS base-image-image-factory
 
 # runs markdownlint
-FROM docker.io/node:21.7.3-alpine3.19 AS lint-markdown
+FROM docker.io/oven/bun:1.1.13-alpine AS lint-markdown
 WORKDIR /src
-RUN npm i -g markdownlint-cli@0.39.0
-RUN npm i sentences-per-line@0.2.1
+RUN bun i markdownlint-cli@0.41.0 sentences-per-line@0.2.1
 COPY .markdownlint.json .
 COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
-RUN markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules node_modules/sentences-per-line/index.js .
+RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules node_modules/sentences-per-line/index.js .
 
 # Installs tailwindcss
 FROM docker.io/node:21.7.3-alpine3.19 AS tailwind-base
@@ -25,19 +24,25 @@ COPY package.json package-lock.json .
 RUN --mount=type=cache,target=/src/node_modules npm ci
 
 # base toolchain image
-FROM ${TOOLCHAIN} AS toolchain
+FROM --platform=${BUILDPLATFORM} ${TOOLCHAIN} AS toolchain
 RUN apk --update --no-cache add bash curl build-base protoc protobuf-dev
+
+# tailwind update
+FROM tailwind-base AS tailwind-update
+COPY tailwind.config.js .
+COPY internal/frontend/http internal/frontend/http
+RUN --mount=type=cache,target=/src/node_modules node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
 
 # build tools
 FROM --platform=${BUILDPLATFORM} toolchain AS tools
-ENV GO111MODULE on
+ENV GO111MODULE=on
 ARG CGO_ENABLED
-ENV CGO_ENABLED ${CGO_ENABLED}
+ENV CGO_ENABLED=${CGO_ENABLED}
 ARG GOTOOLCHAIN
-ENV GOTOOLCHAIN ${GOTOOLCHAIN}
+ENV GOTOOLCHAIN=${GOTOOLCHAIN}
 ARG GOEXPERIMENT
-ENV GOEXPERIMENT ${GOEXPERIMENT}
-ENV GOPATH /go
+ENV GOEXPERIMENT=${GOEXPERIMENT}
+ENV GOPATH=/go
 ARG DEEPCOPY_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg go install github.com/siderolabs/deep-copy@${DEEPCOPY_VERSION} \
 	&& mv /go/bin/deep-copy /bin/deep-copy
@@ -46,18 +51,13 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
 	&& mv /go/bin/golangci-lint /bin/golangci-lint
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg go install golang.org/x/vuln/cmd/govulncheck@latest \
 	&& mv /go/bin/govulncheck /bin/govulncheck
-ARG GOIMPORTS_VERSION
-RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg go install golang.org/x/tools/cmd/goimports@${GOIMPORTS_VERSION} \
-	&& mv /go/bin/goimports /bin/goimports
 ARG GOFUMPT_VERSION
 RUN go install mvdan.cc/gofumpt@${GOFUMPT_VERSION} \
 	&& mv /go/bin/gofumpt /bin/gofumpt
 
-# tailwind update
-FROM tailwind-base AS tailwind-update
-COPY tailwind.config.js .
-COPY internal/frontend/http internal/frontend/http
-RUN --mount=type=cache,target=/src/node_modules node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
+# Copies assets
+FROM scratch AS tailwind-copy
+COPY --from=tailwind-update /src/internal/frontend/http/css/output.css internal/frontend/http/css/output.css
 
 # tools and sources
 FROM tools AS base
@@ -80,10 +80,6 @@ RUN mkdir -p internal/version/data && \
     echo -n ${SHA} > internal/version/data/sha && \
     echo -n ${TAG} > internal/version/data/tag
 
-# Copies assets
-FROM scratch AS tailwind-copy
-COPY --from=tailwind-update /src/internal/frontend/http/css/output.css internal/frontend/http/css/output.css
-
 # builds the integration test binary
 FROM base AS integration-build
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
@@ -92,15 +88,11 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
 FROM base AS lint-gofumpt
 RUN FILES="$(gofumpt -l .)" && test -z "${FILES}" || (echo -e "Source code is not formatted with 'gofumpt -w .':\n${FILES}"; exit 1)
 
-# runs goimports
-FROM base AS lint-goimports
-RUN FILES="$(goimports -l -local github.com/siderolabs/image-factory/ .)" && test -z "${FILES}" || (echo -e "Source code is not formatted with 'goimports -w -local github.com/siderolabs/image-factory/ .':\n${FILES}"; exit 1)
-
 # runs golangci-lint
 FROM base AS lint-golangci-lint
 WORKDIR /src
 COPY .golangci.yml .
-ENV GOGC 50
+ENV GOGC=50
 RUN golangci-lint config verify --config .golangci.yml
 RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/root/.cache/golangci-lint --mount=type=cache,target=/go/pkg golangci-lint run --config .golangci.yml
 
@@ -182,6 +174,6 @@ COPY --from=ghcr.io/siderolabs/grub:v1.7.0-2-g6101299 / /
 COPY --from=ghcr.io/siderolabs/grub@sha256:46469ae913378d45f69ac10d2dc8ebea54e914542deab2b2f23c95dac5116335 /usr/lib/grub /usr/lib/grub
 COPY --from=ghcr.io/siderolabs/grub@sha256:fd929bae5ad64a3e2a530d6b3cbfab673b60af2e62268a45cf42194df55c116d /usr/lib/grub /usr/lib/grub
 COPY --from=ghcr.io/siderolabs/installer:v1.7.0 /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
-LABEL org.opencontainers.image.source https://github.com/siderolabs/image-factory
+LABEL org.opencontainers.image.source=https://github.com/siderolabs/image-factory
 ENTRYPOINT ["/image-factory"]
 
