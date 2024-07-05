@@ -102,7 +102,7 @@
 {{ end }}
 
 {{ define "board-description" }}
-    Runs on {{ .Board.Label }} (<a target="_blank" class="text-blue-600 dark:text-blue-500 underline" href="https://www.talos.dev/{{ short_version .Version }}{{ .Board.Documentation}}">documentation</a>).
+    Runs on {{ .Board.Label }}{{ if .Board.Documentation }} (<a target="_blank" class="text-blue-600 dark:text-blue-500 underline" href="https://www.talos.dev/{{ short_version .Version }}{{ .Board.Documentation}}">documentation</a>){{ end }}.
 {{ end }}
 
 {{ define "arch-description" }}
