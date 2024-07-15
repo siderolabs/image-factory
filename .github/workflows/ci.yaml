@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-06-30T11:34:44Z by kres 4c9f215.
+# Generated on 2024-07-15T08:10:41Z by kres 8c8b007.
 
 name: default
 concurrency:
@@ -101,12 +101,14 @@ jobs:
       - name: push-image-factory
         if: github.event_name != 'pull_request'
         env:
+          PLATFORM: linux/amd64,linux/arm64
           PUSH: "true"
         run: |
           make image-image-factory
       - name: push-image-factory-latest
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
+          PLATFORM: linux/amd64,linux/arm64
           PUSH: "true"
         run: |
           make image-image-factory IMAGE_TAG=latest

@@ -16,6 +16,8 @@ kind: common.Image
 name: image-image-factory
 spec:
   baseImage: alpine:3.18
+  extraEnvironment:
+    PLATFORM: linux/amd64,linux/arm64
   additionalImages: []
   allowedLocalPaths:
     - tailwind.config.js
