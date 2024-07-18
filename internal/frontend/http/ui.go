@@ -25,8 +25,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
 	"github.com/siderolabs/image-factory/internal/version"
+	"github.com/siderolabs/image-factory/pkg/metadata"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 

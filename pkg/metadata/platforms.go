@@ -11,6 +11,9 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 )
 
+// Arch represents an architecture supported by Talos.
+type Arch = artifacts.Arch
+
 // Platform represents a platform supported by Talos.
 type Platform struct {
 	Name string
@@ -19,7 +22,7 @@ type Platform struct {
 	Description string
 
 	MinVersion          semver.Version
-	Architectures       []artifacts.Arch
+	Architectures       []Arch
 	Documentation       string
 	DiskImageSuffix     string
 	BootMethods         []string
@@ -45,7 +48,7 @@ func Platforms() []Platform {
 			Label:       "Amazon Web Services (AWS)",
 			Description: "Runs on AWS VMs booted from an AMI",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
+			Architectures:   []Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
 			Documentation:   "/talos-guides/install/cloud-platforms/aws/",
 			DiskImageSuffix: "raw.xz",
 			BootMethods: []string{
@@ -58,7 +61,7 @@ func Platforms() []Platform {
 			Label:       "Google Cloud (GCP)",
 			Description: "Runs on Google Cloud VMs booted from a disk image",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
+			Architectures:   []Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
 			Documentation:   "/talos-guides/install/cloud-platforms/gcp/",
 			DiskImageSuffix: "raw.tar.gz",
 			BootMethods: []string{
@@ -71,7 +74,7 @@ func Platforms() []Platform {
 			Label:       "Equinix Metal",
 			Description: "Runs on Equinix Metal bare-metal servers",
 
-			Architectures: []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
+			Architectures: []Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
 			Documentation: "/talos-guides/install/bare-metal-platforms/equinix-metal/",
 			BootMethods: []string{
 				"pxe",
@@ -85,7 +88,7 @@ func Platforms() []Platform {
 			Label:       "Microsoft Azure",
 			Description: "Runs on Microsoft Azure Linux Virtual Machines",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
+			Architectures:   []Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
 			Documentation:   "/talos-guides/install/cloud-platforms/azure/",
 			DiskImageSuffix: "vhd.xz",
 			BootMethods: []string{
@@ -98,7 +101,7 @@ func Platforms() []Platform {
 			Label:       "Digital Ocean",
 			Description: "Runs on Digital Ocean droplets",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64},
+			Architectures:   []Arch{artifacts.ArchAmd64},
 			Documentation:   "/talos-guides/install/cloud-platforms/digitalocean/",
 			DiskImageSuffix: "raw.gz",
 			BootMethods: []string{
@@ -111,7 +114,7 @@ func Platforms() []Platform {
 			Label:       "OpenStack",
 			Description: "Runs on OpenStack virtual machines",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
+			Architectures:   []Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
 			Documentation:   "/talos-guides/install/cloud-platforms/openstack/",
 			DiskImageSuffix: "raw.xz",
 			BootMethods: []string{
@@ -126,7 +129,7 @@ func Platforms() []Platform {
 			Label:       "VMWare",
 			Description: "Runs on VMWare ESXi virtual machines",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64},
+			Architectures:   []Arch{artifacts.ArchAmd64},
 			Documentation:   "/talos-guides/install/virtualized-platforms/vmware/",
 			DiskImageSuffix: "ova",
 			BootMethods: []string{
@@ -141,7 +144,7 @@ func Platforms() []Platform {
 			Label:       "Akamai",
 			Description: "Runs on Akamai Cloud (Linode) virtual machines",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64},
+			Architectures:   []Arch{artifacts.ArchAmd64},
 			MinVersion:      semver.MustParse("1.7.0"),
 			Documentation:   "/talos-guides/install/cloud-platforms/akamai/",
 			DiskImageSuffix: "raw.gz",
@@ -156,7 +159,7 @@ func Platforms() []Platform {
 			Label:       "Hetzner",
 			Description: "Runs on Hetzner virtual machines",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64},
+			Architectures:   []Arch{artifacts.ArchAmd64},
 			Documentation:   "/talos-guides/install/cloud-platforms/hetzner/",
 			DiskImageSuffix: "raw.xz",
 			BootMethods: []string{
@@ -169,7 +172,7 @@ func Platforms() []Platform {
 			Label:       "Nocloud",
 			Description: "Runs on various hypervisors supporting 'nocloud' metadata (Proxmox, Oxide Computer, etc.)",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
+			Architectures:   []Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
 			Documentation:   "/talos-guides/install/cloud-platforms/nocloud/",
 			DiskImageSuffix: "raw.xz",
 			BootMethods: []string{
@@ -185,7 +188,7 @@ func Platforms() []Platform {
 			Label:       "Oracle Cloud",
 			Description: "Runs on Oracle Cloud virtual machines",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
+			Architectures:   []Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
 			Documentation:   "/talos-guides/install/cloud-platforms/oracle/",
 			DiskImageSuffix: "raw.xz",
 			BootMethods: []string{
@@ -199,7 +202,7 @@ func Platforms() []Platform {
 			Label:       "UpCloud",
 			Description: "Runs on UpCloud virtual machines",
 
-			Architectures:   []artifacts.Arch{artifacts.ArchAmd64},
+			Architectures:   []Arch{artifacts.ArchAmd64},
 			Documentation:   "/talos-guides/install/cloud-platforms/ucloud/",
 			DiskImageSuffix: "raw.xz",
 			BootMethods: []string{
@@ -212,7 +215,7 @@ func Platforms() []Platform {
 			Label:       "Vultr",
 			Description: "Runs on Vultr Cloud Compute virtual machines",
 
-			Architectures: []artifacts.Arch{artifacts.ArchAmd64},
+			Architectures: []Arch{artifacts.ArchAmd64},
 			Documentation: "/talos-guides/install/cloud-platforms/vultr/",
 			BootMethods: []string{
 				"iso",

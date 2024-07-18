@@ -57,6 +57,11 @@ func New(baseURL string, options ...Option) (*Client, error) {
 	return c, nil
 }
 
+// BaseURL returns the base URL of the client.
+func (c *Client) BaseURL() string {
+	return c.baseURL.String()
+}
+
 // SchematicCreate generates new schematic from the configuration.
 func (c *Client) SchematicCreate(ctx context.Context, schematic schematic.Schematic) (string, error) {
 	data, err := schematic.Marshal()
