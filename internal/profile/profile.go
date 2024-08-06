@@ -276,6 +276,14 @@ func extensionNameAlias(extensionName string) (string, bool) {
 		return "siderolabs/vmtoolsd-guest-agent", true
 	case "siderolabs/xe-guest-utilities": // extension got renamed
 		return "siderolabs/xen-guest-agent", true
+	case "siderolabs/nvidia-container-toolkit": // extension got renamed
+		return "siderolabs/nvidia-container-toolkit-lts", true
+	case "siderolabs/nvidia-open-gpu-kernel-modules": // extension got renamed
+		return "siderolabs/nvidia-open-gpu-kernel-modules-lts", true
+	case "siderolabs/nonfree-kmod-nvidia": // extension got renamed
+		return "siderolabs/nonfree-kmod-nvidia-lts", true
+	case "siderolabs/nvidia-fabricmanager": // extension got renamed
+		return "siderolabs/nvidia-fabric-manager-lts", true
 	default:
 		return "", false
 	}

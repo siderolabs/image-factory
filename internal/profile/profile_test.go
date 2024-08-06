@@ -310,6 +310,22 @@ func (mockArtifactProducer) GetOfficialExtensions(context.Context, string) ([]ar
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/gasket-driver:20240101")),
 			Digest:          "sha256:abcdef123456",
 		},
+		{
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-container-toolkit-lts:v535.0.0-v1.15.0")),
+			Digest:          "sha256:nvidia-toolkit",
+		},
+		{
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-open-gpu-kernel-modules-lts:v535.0.0")),
+			Digest:          "sha256:nvidia-open",
+		},
+		{
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nonfree-kmod-nvidia-lts:v535.0.0")),
+			Digest:          "sha256:nvidia-nonfree",
+		},
+		{
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-fabricmanager:v535.0.0")),
+			Digest:          "sha256:nvidia-fabric",
+		},
 	}, nil
 }
 
@@ -469,6 +485,58 @@ func TestEnhanceFromSchematic(t *testing.T) {
 						},
 						{
 							TarballPath: "9f14d3d939d420f57d8ee3e64c4c2cd29ecb6fa10da4e1c8ac99da4b04d5e463.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatZSTD,
+					ImageOptions: &profile.ImageOptions{
+						DiskSize:   profile.MinRAWDiskSize,
+						DiskFormat: profile.DiskFormatRaw,
+					},
+				},
+			},
+		},
+		{
+			name:        "aliased nvidia extensions",
+			baseProfile: baseProfile,
+			schematic: schematic.Schematic{
+				Customization: schematic.Customization{
+					SystemExtensions: schematic.SystemExtensions{
+						OfficialExtensions: []string{
+							"siderolabs/nvidia-container-toolkit",
+							"siderolabs/nvidia-open-gpu-kernel-modules",
+							"siderolabs/nonfree-kmod-nvidia",
+							"siderolabs/nvidia-fabricmanager",
+						},
+					},
+				},
+			},
+			versionString: "v1.7.0",
+
+			expectedProfile: profile.Profile{
+				Platform:      constants.PlatformMetal,
+				SecureBoot:    pointer.To(false),
+				Arch:          "amd64",
+				Version:       "v1.7.0",
+				Customization: profile.CustomizationProfile{},
+				Input: profile.Input{
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							OCIPath: "amd64-sha256:nvidia-toolkit.oci",
+						},
+						{
+							OCIPath: "amd64-sha256:nvidia-open.oci",
+						},
+						{
+							OCIPath: "amd64-sha256:nvidia-nonfree.oci",
+						},
+						{
+							OCIPath: "amd64-sha256:nvidia-fabric.oci",
+						},
+						{
+							TarballPath: "2335edfd1451ebc3e268956e4b12f2afc5a0799a082e8ffdbbd5dc55af123a27.tar",
 						},
 					},
 				},
