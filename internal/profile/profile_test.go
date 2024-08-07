@@ -366,7 +366,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 	baseProfile := profile.Default[constants.PlatformMetal].DeepCopy()
 	baseProfile.Arch = "amd64"
 
-	baseProfileArm := baseProfile
+	baseProfileArm := baseProfile.DeepCopy()
 	baseProfileArm.Arch = "arm64"
 
 	installerProfile := profile.Default["installer"].DeepCopy()
@@ -374,6 +374,9 @@ func TestEnhanceFromSchematic(t *testing.T) {
 
 	secureBootInstallerProfile := installerProfile.DeepCopy()
 	secureBootInstallerProfile.SecureBoot = pointer.To(true)
+
+	securebootISOProfile := profile.Default["secureboot-iso"].DeepCopy()
+	securebootISOProfile.Arch = installerProfile.Arch
 
 	secureBootService, err := secureboot.NewService(secureboot.Options{
 		Enabled:         true,
@@ -681,6 +684,50 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				},
 				Output: profile.Output{
 					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
+		{
+			name:        "secureboot ISO",
+			baseProfile: securebootISOProfile,
+			schematic: schematic.Schematic{
+				Customization: schematic.Customization{
+					SecureBoot: schematic.SecureBootCustomization{
+						IncludeWellKnownCertificates: true,
+					},
+				},
+			},
+			versionString: "v1.7.1",
+
+			expectedProfile: profile.Profile{
+				Platform:      constants.PlatformMetal,
+				Arch:          "amd64",
+				Version:       "v1.7.1",
+				SecureBoot:    pointer.To(true),
+				Customization: profile.CustomizationProfile{},
+				Input: profile.Input{
+					SecureBoot: &profile.SecureBootAssets{
+						SecureBootSigner: profile.SigningKeyAndCertificate{
+							KeyPath:  "sign-key.pem",
+							CertPath: "sign-cert.pem",
+						},
+						PCRSigner: profile.SigningKey{
+							KeyPath: "pcr-key.pem",
+						},
+						IncludeWellKnownCerts: true,
+					},
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							TarballPath: "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind: profile.OutKindISO,
+					ISOOptions: &profile.ISOOptions{
+						SDBootEnrollKeys: profile.SDBootEnrollKeysIfSafe,
+					},
 					OutFormat: profile.OutFormatRaw,
 				},
 			},

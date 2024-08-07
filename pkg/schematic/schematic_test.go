@@ -49,6 +49,17 @@ func TestID(t *testing.T) {
 			},
 			expectedID: "d308a2a5ee2277bed5fbaa104fcbc8d59122abfa737df987a95b4ca763459a7f",
 		},
+		{
+			name: "secureboot",
+			cfg: schematic.Schematic{
+				Customization: schematic.Customization{
+					SecureBoot: schematic.SecureBootCustomization{
+						IncludeWellKnownCertificates: true,
+					},
+				},
+			},
+			expectedID: "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6",
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -108,6 +119,11 @@ func TestUnmarshalID(t *testing.T) {
 			name:       "overlay with empty customization",
 			cfg:        []byte(`{"overlay": {"name": "rpi_generic", "image": "siderolabs/sbc-raspberrypi"},"customization":{}}`),
 			expectedID: "ee21ef4a5ef808a9b7484cc0dda0f25075021691c8c09a276591eedb638ea1f9",
+		},
+		{
+			name:       "secureboot customization",
+			cfg:        []byte(`{"customization":{"secureboot": {"includeWellKnownCertificates": true}}}`),
+			expectedID: "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

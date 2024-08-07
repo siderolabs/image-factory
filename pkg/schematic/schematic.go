@@ -30,6 +30,8 @@ type Customization struct {
 	Meta []MetaValue `yaml:"meta,omitempty"`
 	// SystemExtensions represents the Talos system extensions to be installed.
 	SystemExtensions SystemExtensions `yaml:"systemExtensions,omitempty"`
+	// SecureBoot represents the secure boot options for the image.
+	SecureBoot SecureBootCustomization `yaml:"secureboot,omitempty"`
 }
 
 // MetaValue provides initial META contents for the image.
@@ -53,6 +55,12 @@ type Overlay struct { //nolint:govet
 	Image   string         `yaml:"image"`
 	Name    string         `yaml:"name"`
 	Options map[string]any `yaml:"options,omitempty"`
+}
+
+// SecureBootCustomization represents the secure boot options for the image.
+type SecureBootCustomization struct {
+	// Include well-known UEFI certificates in the auto-enrollment database.
+	IncludeWellKnownCertificates bool `yaml:"includeWellKnownCertificates,omitempty"`
 }
 
 // InvalidErrorTag is a tag for invalid schematic errors.

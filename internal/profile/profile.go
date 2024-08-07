@@ -312,7 +312,13 @@ func EnhanceFromSchematic(
 			return prof, err
 		}
 
-		prof.Input.SecureBoot = secureBootAssets
+		secureBootAssetsCopy := secureBootAssets.DeepCopy()
+
+		if schematic.Customization.SecureBoot.IncludeWellKnownCertificates {
+			secureBootAssetsCopy.IncludeWellKnownCerts = true
+		}
+
+		prof.Input.SecureBoot = &secureBootAssetsCopy
 	}
 
 	if schematic.Overlay.Name != "" && !quirks.New(versionTag).SupportsOverlay() {

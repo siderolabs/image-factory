@@ -39,6 +39,9 @@ customization:
       officialExtensions: # optional
         - siderolabs/gvisor
         - siderolabs/amd-ucode
+    secureboot: # optional, only applies to SecureBoot images
+       # optional, include well-known UEFI certificates into auto-enrollment database (SecureBoot ISO only)
+      includeWellKnownCertificates: true
 overlay: # optional
   image: ghcr.io/siderolabs/sbc-raspberry-pi # overlay image
   name: rpi_generic # overlay name
