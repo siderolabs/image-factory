@@ -160,5 +160,16 @@ func SBCs() []SBC {
 			Label:         "Radxa ROCK PI 4C",
 			Documentation: "/talos-guides/install/single-board-computers/rockpi_4c/",
 		},
+		{
+			Name: "helios64",
+
+			OverlayName:  "helios64",
+			OverlayImage: "siderolabs/sbc-rockchip",
+
+			Label:         "Kobol Helios64",
+			Documentation: "", // missing
+
+			MinVersion: semver.MustParse("1.8.0-alpha.2"),
+		},
 	}
 }
