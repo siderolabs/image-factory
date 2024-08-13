@@ -46,6 +46,12 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	logger.Info("starting", zap.String("name", version.Name), zap.String("version", version.Tag), zap.String("sha", version.SHA))
 	defer logger.Info("shutting down", zap.String("name", version.Name))
 
+	// many image generation steps rely on SOURCE_DATE_EPOCH
+	// to ensure reproducibility, set it to a fixed value
+	if err := os.Setenv("SOURCE_DATE_EPOCH", "1559424892"); err != nil { // this value matches `pkgs` SOURCE_DATE_EPOCH
+		return err
+	}
+
 	artifactsManager, err := buildArtifactsManager(ctx, logger, opts)
 	if err != nil {
 		return err
