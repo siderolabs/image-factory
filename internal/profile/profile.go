@@ -201,6 +201,10 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 		if path, ok = strings.CutSuffix(path, "."+diskFormat.String()); ok {
 			prof.Output.ImageOptions.DiskFormat = diskFormat
 
+			if diskFormat == profile.DiskFormatQCOW2 {
+				prof.Output.ImageOptions.DiskFormatOptions = "cluster_size=8k"
+			}
+
 			break
 		}
 	}

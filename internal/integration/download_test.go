@@ -18,6 +18,8 @@ import (
 
 	"github.com/h2non/filetype"
 	"github.com/siderolabs/gen/optional"
+	"github.com/siderolabs/gen/xtesting/must"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -118,7 +120,7 @@ func downloadAssetAndValidateInitramfs(ctx context.Context, t *testing.T, baseUR
 	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, size)
 }
 
-func downloadCmdlineAndMatch(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, expectedSubstrings ...string) {
+func downloadCmdlineAndMatch(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, expected string) {
 	t.Helper()
 
 	resp := downloadAsset(ctx, t, baseURL, schematicID, talosVersion, path)
@@ -131,18 +133,46 @@ func downloadCmdlineAndMatch(ctx context.Context, t *testing.T, baseURL string, 
 
 	cmdline := string(cmdlineBytes)
 
-	for _, expectedSubstring := range expectedSubstrings {
-		assert.Contains(t, cmdline, expectedSubstring)
-	}
+	assert.Equal(t, expected, cmdline)
 
 	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, int64(len(cmdlineBytes)))
+}
+
+func schematicExtraInfo(t *testing.T, schematicID string, talosVersion string) string {
+	t.Helper()
+
+	if !quirks.New(talosVersion).SupportsOverlay() {
+		return ""
+	}
+
+	schematic := must.Value(testSchematics[schematicID].Marshal())(t)
+
+	return string(schematic)
+}
+
+func sizePicker(talosVersion string, v ...any) int64 {
+	if len(v)%2 != 0 {
+		panic("sizePicker: odd number of arguments")
+	}
+
+	talosVersion = strings.TrimPrefix(talosVersion, "v")
+
+	for i := 0; i < len(v); i += 2 {
+		k := v[i].(string)
+
+		if strings.HasPrefix(talosVersion, k) {
+			return int64(v[i+1].(int))
+		}
+	}
+
+	panic("sizePicker: no match")
 }
 
 func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	const MiB = 1024 * 1024
 
 	talosVersions := []string{
-		"v1.5.0",
+		"v1.8.0-alpha.2",
 		"v1.5.1",
 	}
 
@@ -156,22 +186,22 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run("iso", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", 82724864)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", 122007552)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 82724864, "1.8", 106475520))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 122007552, "1.8", 90738688))
 				})
 
 				t.Run("secureboot iso", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", 82724864)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", 122007552)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 82724864, "1.8", 110477312))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 122007552, "1.8", 94748672))
 				})
 
 				t.Run("kernel", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "kernel-amd64", "application/vnd.microsoft.portable-executable", 16708992)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "kernel-arm64", "application/vnd.microsoft.portable-executable", 69356032)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "kernel-amd64", "application/vnd.microsoft.portable-executable", sizePicker(talosVersion, "1.5", 16708992, "1.8", 18727936))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "kernel-arm64", "application/vnd.microsoft.portable-executable", sizePicker(talosVersion, "1.5", 69356032, "1.8", 21787136))
 				})
 
 				t.Run("initramfs", func(t *testing.T) {
@@ -179,12 +209,14 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 					downloadAssetAndValidateInitramfs(ctx, t, baseURL, emptySchematicID, talosVersion, "initramfs-amd64.xz",
 						initramfsSpec{
-							schematicID: emptySchematicID,
+							schematicID:        emptySchematicID,
+							schematicExtraInfo: schematicExtraInfo(t, emptySchematicID, talosVersion),
 						},
 					)
 					downloadAssetAndValidateInitramfs(ctx, t, baseURL, emptySchematicID, talosVersion, "initramfs-arm64.xz",
 						initramfsSpec{
-							schematicID: emptySchematicID,
+							schematicID:        emptySchematicID,
+							schematicExtraInfo: schematicExtraInfo(t, emptySchematicID, talosVersion),
 						},
 					)
 				})
@@ -192,56 +224,67 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run("UKI", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot-uki.efi", "application/vnd.microsoft.portable-executable", 77691056)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot-uki.efi", "application/vnd.microsoft.portable-executable", 114564272)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot-uki.efi", "application/vnd.microsoft.portable-executable", sizePicker(talosVersion, "1.5", 77691056, "1.8", 98469552))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot-uki.efi", "application/vnd.microsoft.portable-executable", sizePicker(talosVersion, "1.5", 114564272, "1.8", 82733744))
 				})
 
 				t.Run("installer image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-amd64.tar", "application/x-tar", 167482880)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar", 222793728)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-amd64.tar", "application/x-tar", sizePicker(talosVersion, "1.5", 167482880, "1.8", 185155584))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar", sizePicker(talosVersion, "1.5", 222793728, "1.8", 170119168))
 				})
 
 				t.Run("metal image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", 78472708)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 66625420)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 78472708, "1.8", 101464300))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 66625420, "1.8", 83998408))
 				})
 
 				t.Run("metal zstd image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.zst", "application/zstd", 78472708)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.zst", "application/zstd", 66625420)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.zst", "application/zstd", sizePicker(talosVersion, "1.5", 78472708, "1.8", 100120864))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.zst", "application/zstd", sizePicker(talosVersion, "1.5", 66_625_420, "1.8", 83_651_316))
+				})
+
+				t.Run("metal qcow2 image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.qcow2", "", sizePicker(talosVersion, "1.5", 92176384, "1.8", 119808000))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.qcow2", "", sizePicker(talosVersion, "1.5", 119808000, "1.8", 90415104))
 				})
 
 				t.Run("metal secureboot image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.raw.xz", "application/x-xz", 78472708)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.raw.xz", "application/x-xz", 66625420)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 78472708, "1.8", 97975380))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 66625420, "1.8", 82420728))
 				})
 
 				t.Run("aws image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "aws-amd64.raw.xz", "application/x-xz", 78472708)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "aws-arm64.raw.xz", "application/x-xz", 66625420)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "aws-amd64.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 78472708, "1.8", 103249176))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "aws-arm64.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 66625420, "1.8", 85783432))
 				})
 
 				t.Run("gcp image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "gcp-amd64.raw.tar.gz", "application/gzip", 78472708)
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "gcp-arm64.raw.tar.gz", "application/gzip", 70625420)
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "gcp-amd64.raw.tar.gz", "application/gzip", sizePicker(talosVersion, "1.5", 78472708, "1.8", 102107964))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "gcp-arm64.raw.tar.gz", "application/gzip", sizePicker(talosVersion, "1.5", 70625420, "1.8", 84214192))
 				})
 
 				t.Run("rpi image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 107183936)
+					if quirks.New(talosVersion).SupportsOverlay() {
+						downloadAssetAndMatchSize(ctx, t, baseURL, rpiGenericOverlaySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 136632380)
+					} else {
+						downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 107183936)
+					}
 				})
 			})
 
@@ -251,32 +294,42 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run("iso", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", 112222208)
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", 150120448)
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 112222208, "1.8", 133283840))
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 150120448, "1.8", 115824640))
 				})
 
 				t.Run("secureboot iso", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", 112222208)
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", 150120448)
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 112222208, "1.8", 137740288))
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 150120448, "1.8", 119914496))
 				})
 
 				t.Run("metal image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", 108049020)
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 91484764)
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 108049020, "1.8", 128244948))
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 91484764, "1.8", 109057716))
 				})
 
 				t.Run("rpi image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 132095368)
+					if quirks.New(talosVersion).SupportsOverlay() {
+						downloadAssetAndMatchSize(ctx, t, baseURL, rpiGenericOverlaySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 136632380)
+					} else {
+						downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 132095368)
+					}
 				})
 
 				t.Run("initramfs", func(t *testing.T) {
 					t.Parallel()
+
+					gasketName := "gasket"
+
+					if quirks.New(talosVersion).SupportsOverlay() {
+						gasketName = "gasket-driver"
+					}
 
 					downloadAssetAndValidateInitramfs(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "initramfs-amd64.xz",
 						initramfsSpec{
@@ -286,10 +339,11 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 							extensions: []string{
 								"amd-ucode",
 								"gvisor",
-								"gasket",
+								gasketName,
 							},
-							modulesDepMatch: optional.Some("gasket"),
-							schematicID:     systemExtensionsSchematicID,
+							modulesDepMatch:    optional.Some("gasket"),
+							schematicID:        systemExtensionsSchematicID,
+							schematicExtraInfo: schematicExtraInfo(t, systemExtensionsSchematicID, talosVersion),
 						},
 					)
 					downloadAssetAndValidateInitramfs(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "initramfs-arm64.xz",
@@ -300,10 +354,11 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 							extensions: []string{
 								"amd-ucode",
 								"gvisor",
-								"gasket",
+								gasketName,
 							},
-							modulesDepMatch: optional.Some("gasket"),
-							schematicID:     systemExtensionsSchematicID,
+							modulesDepMatch:    optional.Some("gasket"),
+							schematicID:        systemExtensionsSchematicID,
+							schematicExtraInfo: schematicExtraInfo(t, systemExtensionsSchematicID, talosVersion),
 						},
 					)
 				})
@@ -338,7 +393,7 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				initramfsSpec{
 					schematicID:        rpiGenericOverlaySchematicID,
 					skipMlxfw:          true,
-					schematicExtraInfo: strings.TrimPrefix(rpiGenericOverlay, "\n"),
+					schematicExtraInfo: string(must.Value(testSchematics[rpiGenericOverlaySchematicID].Marshal())(t)),
 				},
 			)
 		})
@@ -372,12 +427,14 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 				downloadAssetAndValidateInitramfs(ctx, t, baseURL, emptySchematicID, talosVersion, "initramfs-amd64.xz",
 					initramfsSpec{
-						schematicID: emptySchematicID,
+						schematicID:        emptySchematicID,
+						schematicExtraInfo: schematicExtraInfo(t, emptySchematicID, talosVersion),
 					},
 				)
 				downloadAssetAndValidateInitramfs(ctx, t, baseURL, emptySchematicID, talosVersion, "initramfs-arm64.xz",
 					initramfsSpec{
-						schematicID: emptySchematicID,
+						schematicID:        emptySchematicID,
+						schematicExtraInfo: schematicExtraInfo(t, emptySchematicID, talosVersion),
 					},
 				)
 			})
@@ -427,9 +484,10 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 							"gvisor",
 							"gasket",
 						},
-						modulesDepMatch: optional.Some("gasket"),
-						schematicID:     systemExtensionsSchematicID,
-						skipMlxfw:       true,
+						modulesDepMatch:    optional.Some("gasket"),
+						schematicID:        systemExtensionsSchematicID,
+						skipMlxfw:          true,
+						schematicExtraInfo: schematicExtraInfo(t, systemExtensionsSchematicID, talosVersion),
 					},
 				)
 				downloadAssetAndValidateInitramfs(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "initramfs-arm64.xz",
@@ -442,9 +500,10 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 							"gvisor",
 							"gasket",
 						},
-						modulesDepMatch: optional.Some("gasket"),
-						schematicID:     systemExtensionsSchematicID,
-						skipMlxfw:       true,
+						modulesDepMatch:    optional.Some("gasket"),
+						schematicID:        systemExtensionsSchematicID,
+						skipMlxfw:          true,
+						schematicExtraInfo: schematicExtraInfo(t, systemExtensionsSchematicID, talosVersion),
 					},
 				)
 			})
@@ -454,31 +513,55 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("cmdline", func(t *testing.T) {
 		t.Parallel()
 
-		talosVersion := talosVersions[0]
+		for _, talosVersion := range talosVersions {
+			t.Run(talosVersion, func(t *testing.T) {
+				t.Parallel()
 
-		t.Run("default metal", func(t *testing.T) {
-			t.Parallel()
+				t.Run("default metal", func(t *testing.T) {
+					t.Parallel()
 
-			downloadCmdlineAndMatch(ctx, t, baseURL, emptySchematicID, talosVersion, "cmdline-metal-amd64", "talos.platform=metal")
-		})
+					expected := "talos.platform=metal console=ttyS0 console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512"
 
-		t.Run("default aws", func(t *testing.T) {
-			t.Parallel()
+					if !quirks.New(talosVersion).SupportsMetalPlatformConsoleTTYS0() {
+						expected = strings.ReplaceAll(expected, " console=ttyS0", "")
+					}
 
-			downloadCmdlineAndMatch(ctx, t, baseURL, emptySchematicID, talosVersion, "cmdline-aws-arm64", "talos.platform=aws")
-		})
+					downloadCmdlineAndMatch(ctx, t, baseURL, emptySchematicID, talosVersion, "cmdline-metal-amd64", expected)
+				})
 
-		t.Run("extra metal", func(t *testing.T) {
-			t.Parallel()
+				t.Run("default aws", func(t *testing.T) {
+					t.Parallel()
 
-			downloadCmdlineAndMatch(ctx, t, baseURL, extraArgsSchematicID, talosVersion, "cmdline-metal-amd64", "talos.platform=metal", "nolapic", "nomodeset")
-		})
+					expected := "talos.platform=aws console=tty1 console=ttyS0 net.ifnames=0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512"
 
-		t.Run("meta contents", func(t *testing.T) {
-			t.Parallel()
+					downloadCmdlineAndMatch(ctx, t, baseURL, emptySchematicID, talosVersion, "cmdline-aws-arm64", expected)
+				})
 
-			downloadCmdlineAndMatch(ctx, t, baseURL, metaSchematicID, talosVersion, "cmdline-metal-amd64", "talos.environment=INSTALLER_META_BASE64=MHhhPXsiZXh0ZXJuYWxJUHMiOlsiMS4yLjMuNCJdfQ==")
-		})
+				t.Run("extra metal", func(t *testing.T) {
+					t.Parallel()
+
+					expected := "talos.platform=metal console=ttyS0 console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512 nolapic nomodeset"
+
+					if !quirks.New(talosVersion).SupportsMetalPlatformConsoleTTYS0() {
+						expected = strings.ReplaceAll(expected, " console=ttyS0", "")
+					}
+
+					downloadCmdlineAndMatch(ctx, t, baseURL, extraArgsSchematicID, talosVersion, "cmdline-metal-amd64", expected)
+				})
+
+				t.Run("meta contents", func(t *testing.T) {
+					t.Parallel()
+
+					expected := "talos.platform=metal console=ttyS0 console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512 talos.environment=INSTALLER_META_BASE64=MHhhPXsiZXh0ZXJuYWxJUHMiOlsiMS4yLjMuNCJdfQ=="
+
+					if !quirks.New(talosVersion).SupportsMetalPlatformConsoleTTYS0() {
+						expected = strings.ReplaceAll(expected, " console=ttyS0", "")
+					}
+
+					downloadCmdlineAndMatch(ctx, t, baseURL, metaSchematicID, talosVersion, "cmdline-metal-amd64", expected)
+				})
+			})
+		}
 	})
 
 	t.Run("invalid", func(t *testing.T) {

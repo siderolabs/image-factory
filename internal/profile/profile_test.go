@@ -229,8 +229,9 @@ func TestParseFromPath(t *testing.T) {
 					Kind:      profile.OutKindImage,
 					OutFormat: profile.OutFormatTar,
 					ImageOptions: &profile.ImageOptions{
-						DiskFormat: profile.DiskFormatQCOW2,
-						DiskSize:   profile.DefaultRAWDiskSize,
+						DiskFormat:        profile.DiskFormatQCOW2,
+						DiskFormatOptions: "cluster_size=8k",
+						DiskSize:          profile.DefaultRAWDiskSize,
 					},
 				},
 			},

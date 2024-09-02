@@ -3,7 +3,7 @@
 <div class="mb-6">
     {{ template "radio-with-description" dict "name" "target" "value" "metal" "current" .SelectedTarget "label" "Bare-metal Machine" "description" "x86-64, arm64 bare-metal machines, generic virtual machines. If unsure, use this option." }}
     {{ template "radio-with-description" dict "name" "target" "value" "cloud" "current" .SelectedTarget "label" "Cloud Server" "description" "AWS, GCP, Azure, VMWare, Equinix Metal and others, including homelab clouds like Proxmox." }}
-    {{ template "radio-with-description" dict "name" "target" "value" "sbc" "current" .SelectedTarget "label" "Small Board Computer" "description" "SBCs: Raspberry Pi, Pine64, Jetson Nano, etc." }}
+    {{ template "radio-with-description" dict "name" "target" "value" "sbc" "current" .SelectedTarget "label" "Single Board Computer" "description" "Raspberry Pi, Pine64, Jetson Nano, etc." }}
     {{ template "next-button" }}
 </div>
 {{ end }}

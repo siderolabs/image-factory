@@ -62,6 +62,16 @@ func SBCs() []SBC {
 			MinVersion: semver.MustParse("1.3.0"),
 		},
 		{
+			Name: "nanopi_r5s",
+
+			OverlayName:  "nanopi-r5s",
+			OverlayImage: "siderolabs/sbc-rockchip",
+
+			Label: "Friendlyelec Nano PI R5S",
+
+			MinVersion: semver.MustParse("1.8.0-alpha.2"),
+		},
+		{
 			Name: "jetson_nano",
 
 			BoardName: "jetson_nano",

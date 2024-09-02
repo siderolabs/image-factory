@@ -30,14 +30,50 @@ const (
 	metaSchematicID                = "fe866116408a5a13dab7d5003eb57a00954ea81ebeec3fbbcd1a6d4462a00036"
 	rpiGenericOverlaySchematicID   = "ee21ef4a5ef808a9b7484cc0dda0f25075021691c8c09a276591eedb638ea1f9"
 	securebootWellKnownSchematicID = "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6"
-
-	rpiGenericOverlay = `
-overlay:
-    image: siderolabs/sbc-raspberrypi
-    name: rpi_generic
-customization: {}
-`
 )
+
+var testSchematics = map[string]*schematic.Schematic{
+	emptySchematicID: {},
+	extraArgsSchematicID: {
+		Customization: schematic.Customization{
+			ExtraKernelArgs: []string{"nolapic", "nomodeset"},
+		},
+	},
+	systemExtensionsSchematicID: {
+		Customization: schematic.Customization{
+			SystemExtensions: schematic.SystemExtensions{
+				OfficialExtensions: []string{
+					"siderolabs/amd-ucode",
+					"siderolabs/gvisor",
+					"siderolabs/gasket-driver",
+				},
+			},
+		},
+	},
+	metaSchematicID: {
+		Customization: schematic.Customization{
+			Meta: []schematic.MetaValue{
+				{
+					Key:   0xa,
+					Value: `{"externalIPs":["1.2.3.4"]}`,
+				},
+			},
+		},
+	},
+	rpiGenericOverlaySchematicID: {
+		Overlay: schematic.Overlay{
+			Name:  "rpi_generic",
+			Image: "siderolabs/sbc-raspberrypi",
+		},
+	},
+	securebootWellKnownSchematicID: {
+		Customization: schematic.Customization{
+			SecureBoot: schematic.SecureBootCustomization{
+				IncludeWellKnownCertificates: true,
+			},
+		},
+	},
+}
 
 func createSchematicGetID(ctx context.Context, t *testing.T, c *client.Client, schematic schematic.Schematic) string {
 	t.Helper()
@@ -73,75 +109,31 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 	require.NoError(t, err)
 
 	t.Run("empty", func(t *testing.T) {
-		assert.Equal(t, emptySchematicID, createSchematicGetID(ctx, t, c, schematic.Schematic{}))
+		assert.Equal(t, emptySchematicID, createSchematicGetID(ctx, t, c, *testSchematics[emptySchematicID]))
 	})
 
 	t.Run("kernel args", func(t *testing.T) {
-		assert.Equal(t, extraArgsSchematicID, createSchematicGetID(ctx, t, c,
-			schematic.Schematic{
-				Customization: schematic.Customization{
-					ExtraKernelArgs: []string{"nolapic", "nomodeset"},
-				},
-			},
-		))
+		assert.Equal(t, extraArgsSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[extraArgsSchematicID]))
 	})
 
 	t.Run("system extensions", func(t *testing.T) {
-		assert.Equal(t, systemExtensionsSchematicID, createSchematicGetID(ctx, t, c,
-			schematic.Schematic{
-				Customization: schematic.Customization{
-					SystemExtensions: schematic.SystemExtensions{
-						OfficialExtensions: []string{
-							"siderolabs/amd-ucode",
-							"siderolabs/gvisor",
-							"siderolabs/gasket-driver",
-						},
-					},
-				},
-			},
-		))
+		assert.Equal(t, systemExtensionsSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[systemExtensionsSchematicID]))
 	})
 
 	t.Run("meta", func(t *testing.T) {
-		assert.Equal(t, metaSchematicID, createSchematicGetID(ctx, t, c,
-			schematic.Schematic{
-				Customization: schematic.Customization{
-					Meta: []schematic.MetaValue{
-						{
-							Key:   0xa,
-							Value: `{"externalIPs":["1.2.3.4"]}`,
-						},
-					},
-				},
-			},
-		))
+		assert.Equal(t, metaSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[metaSchematicID]))
 	})
 
 	t.Run("secureboot well-known certs", func(t *testing.T) {
-		assert.Equal(t, securebootWellKnownSchematicID, createSchematicGetID(ctx, t, c,
-			schematic.Schematic{
-				Customization: schematic.Customization{
-					SecureBoot: schematic.SecureBootCustomization{
-						IncludeWellKnownCertificates: true,
-					},
-				},
-			},
-		))
+		assert.Equal(t, securebootWellKnownSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[securebootWellKnownSchematicID]))
 	})
 
 	t.Run("rpi generic overlay", func(t *testing.T) {
-		assert.Equal(t, rpiGenericOverlaySchematicID, createSchematicGetID(ctx, t, c,
-			schematic.Schematic{
-				Overlay: schematic.Overlay{
-					Name:  "rpi_generic",
-					Image: "siderolabs/sbc-raspberrypi",
-				},
-			},
-		))
+		assert.Equal(t, rpiGenericOverlaySchematicID, createSchematicGetID(ctx, t, c, *testSchematics[rpiGenericOverlaySchematicID]))
 	})
 
 	t.Run("empty once again", func(t *testing.T) {
-		assert.Equal(t, emptySchematicID, createSchematicGetID(ctx, t, c, schematic.Schematic{}))
+		assert.Equal(t, emptySchematicID, createSchematicGetID(ctx, t, c, *testSchematics[emptySchematicID]))
 	})
 
 	t.Run("invalid", func(t *testing.T) {

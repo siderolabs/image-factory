@@ -117,8 +117,12 @@
 {{ end }}
 
 {{ define "metal-image" }}
-<dt>Disk Image</dt>
+<dt>Disk Image (raw)</dt>
 <dd><a href="{{ printf "metal-%s.raw.zst" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s.raw.zst" .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+<dt>Disk Image (qcow2)</dt>
+<dd><a href="{{ printf "metal-%s.qcow2" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s.qcow2" .Arch |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
 {{ end }}

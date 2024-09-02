@@ -8,6 +8,7 @@ package integration_test
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"os"
 	"os/exec"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/klauspost/compress/zstd"
 	"github.com/siderolabs/gen/optional"
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/talos/pkg/machinery/extensions"
@@ -92,11 +94,26 @@ func assertInitramfs(t *testing.T, path string, expected initramfsSpec) {
 		eatPadding(t, in)
 	}
 
-	// this section should contain the original Talos initramfs, xz-compressed
-	xzR, err := xz.NewReader(in)
+	// this section should contain the original Talos initramfs, xz/zstd-compressed
+	magic, err := in.Peek(4)
 	require.NoError(t, err)
 
-	in = bufio.NewReader(xzR)
+	var compressedReader io.Reader
+
+	switch {
+	case bytes.Equal(magic, []byte{0xfd, '7', 'z', 'X'}):
+		// xz-compressed
+		compressedReader, err = xz.NewReader(in)
+		require.NoError(t, err)
+	case bytes.Equal(magic, []byte{0x28, 0xb5, 0x2f, 0xfd}):
+		// zstd-compressed
+		compressedReader, err = zstd.NewReader(in)
+		require.NoError(t, err)
+	default:
+		t.Fatalf("unexpected magic: %v", magic)
+	}
+
+	in = bufio.NewReader(compressedReader)
 
 	r = &discarder{r: in}
 

@@ -154,6 +154,20 @@ func Platforms() []Platform {
 		},
 		// Exoscale: no documentation on Talos side, skipping.
 		{
+			Name: "cloudstack",
+
+			Label:       "Apache CloudStack",
+			Description: "Runs on Apache CloudStack virtual machines",
+
+			Architectures:   []Arch{artifacts.ArchAmd64, artifacts.ArchArm64},
+			Documentation:   "/talos-guides/install/cloud-platforms/cloudstack/",
+			DiskImageSuffix: "raw.gz",
+			BootMethods: []string{
+				"disk-image",
+			},
+			MinVersion: semver.MustParse("1.8.0-alpha.2"),
+		},
+		{
 			Name: "hcloud",
 
 			Label:       "Hetzner",
