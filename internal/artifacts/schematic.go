@@ -22,24 +22,30 @@ import (
 )
 
 // GetSchematicExtension returns a path to the tarball with "virtual" extension matching a specified schematic.
-func (m *Manager) GetSchematicExtension(ctx context.Context, versiontag string, schematic *schematic.Schematic) (string, error) {
+func (m *Manager) GetSchematicExtension(ctx context.Context, versionTag string, schematic *schematic.Schematic) (string, error) {
 	schematicID, err := schematic.ID()
 	if err != nil {
 		return "", err
 	}
 
-	extensionPath := filepath.Join(m.schematicsPath, schematicID+".tar")
+	cacheID := fmt.Sprintf("%s-%v", schematicID, quirks.New(versionTag).SupportsOverlay())
+	extensionPath := filepath.Join(m.schematicsPath, cacheID+".tar")
+
+	if _, err = os.Stat(extensionPath); err == nil {
+		// already built
+		return extensionPath, nil
+	}
 
 	var schematicInfo []byte
 
-	if quirks.New(versiontag).SupportsOverlay() {
+	if quirks.New(versionTag).SupportsOverlay() {
 		schematicInfo, err = yaml.Marshal(schematic)
 		if err != nil {
 			return "", fmt.Errorf("failed to marshal schematic overlay info: %w", err)
 		}
 	}
 
-	resultCh := m.sf.DoChan(schematicID, func() (any, error) {
+	resultCh := m.sf.DoChan(cacheID, func() (any, error) {
 		return nil, m.buildSchematicExtension(schematicID, extensionPath, schematicInfo)
 	})
 
