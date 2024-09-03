@@ -1,9 +1,9 @@
 {{ define "wizard-start" }}
 {{ template "header" "Hardware Type" }}
 <div class="mb-6">
-    {{ template "radio-with-description" dict "name" "target" "value" "metal" "current" .SelectedTarget "label" "Bare-metal Machine" "description" "x86-64, arm64 bare-metal machines, generic virtual machines. If unsure, use this option." }}
-    {{ template "radio-with-description" dict "name" "target" "value" "cloud" "current" .SelectedTarget "label" "Cloud Server" "description" "AWS, GCP, Azure, VMWare, Equinix Metal and others, including homelab clouds like Proxmox." }}
-    {{ template "radio-with-description" dict "name" "target" "value" "sbc" "current" .SelectedTarget "label" "Single Board Computer" "description" "Raspberry Pi, Pine64, Jetson Nano, etc." }}
+    {{ template "radio-with-description" dict "name" "target" "value" "metal" "current" .SelectedTarget "label" "Bare-metal Machine" "description" "Suitable for x86-64 and arm64 bare-metal machines, as well as generic virtual machines. If unsure, choose this option." }}
+    {{ template "radio-with-description" dict "name" "target" "value" "cloud" "current" .SelectedTarget "label" "Cloud Server" "description" "Compatible with AWS, GCP, Azure, VMWare, Equinix Metal, and other platforms, including homelab environments like Proxmox." }}
+    {{ template "radio-with-description" dict "name" "target" "value" "sbc" "current" .SelectedTarget "label" "Single Board Computer" "description" "Supports Raspberry Pi, Pine64, Jetson Nano, and similar devices." }}
     {{ template "next-button" }}
 </div>
 {{ end }}

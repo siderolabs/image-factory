@@ -107,13 +107,13 @@
 
 {{ define "arch-description" }}
     {{ if eq .Arch "amd64" }}
-        Intel, AMD CPUs. Also known as x86_64, if unsure, use this option.
-    {{ end }}
-    {{ if eq .Arch "arm64" }}
-        {{ if eq .Target "metal" }}
-            Ampere Computing and other arm64 CPUs. For Single Board Computers use 'SBC' option on the first screen. For AWS and GCP arm64 VMs use Cloud images.
-        {{ else }}
-            Various ARM64 manufacturers, also known as aarch64.
+            Compatible with Intel and AMD CPUs, also referred to as x86_64. If unsure, select this option.
         {{ end }}
-    {{ end }}
+        {{ if eq .Arch "arm64" }}
+            {{ if eq .Target "metal" }}
+                Suitable for Ampere Computing and other arm64 CPUs. For Single Board Computers, choose the 'SBC' option on the first screen. For AWS and GCP arm64 VMs, use Cloud images.
+            {{ else }}
+                Compatible with various ARM64 manufacturers, also known as aarch64.
+            {{ end }}
+        {{ end }}
 {{ end }}

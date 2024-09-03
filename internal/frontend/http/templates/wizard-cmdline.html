@@ -15,18 +15,16 @@
 
     <div class="ms-2 prose dark:prose-invert prose-sm">
         <p>
-            This step allows to customize the default <a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/reference/kernel/">kernel command line arguments</a>.
+            This step allows you to customize the default <a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/reference/kernel/">kernel command line arguments</a>.
         </p>
         <p>
-            The syntax accepted is the same as the kernel command line syntax, e.g. <code>console=ttyS0,115200</code>, but prefixing the argument with <code>-</code> removes the argument from the default command line (e.g. <code>-console</code>).
+            The syntax accepted is the same as the kernel command line syntax, e.g., <code>console=ttyS0,115200</code>. Prefixing an argument with <code>-</code> removes it from the default command line (e.g., <code>-console</code>).
         </p>
         {{ if eq .SecureBoot "true" }}
         <p>With SecureBoot, the kernel command line is signed and cannot be modified, so this is the only opportunity to customize it.</p>
         {{ else }}
         <p>
-            Please note, that the kernel command line customization is only accepted for the initial boot images (ISO, PXE, disk image), and
-            ignored for <code>installer</code> images. For the upgrade/install command line customization, use the <code>machine.install.extraKernelArgs</code> machine
-            configuration field.
+            Please note that kernel command line customization is only accepted for the initial boot images (ISO, PXE, disk image) and is ignored for <code>installer</code> images. For upgrade/install command line customization, use the <code>machine.install.extraKernelArgs</code> machine configuration field.
         </p>
         {{ end }}
         <p>
@@ -47,14 +45,13 @@
 
     <div class="ms-2 prose dark:prose-invert prose-sm">
         <p>
-            This step allows to customize the overlay options for <a target="_blank" href="https://github.com/{{ .BoardMeta.OverlayImage }}">{{ .BoardMeta.OverlayImage }} overlay</a>.
+            This step allows you to customize the overlay options for the <a target="_blank" href="https://github.com/{{ .BoardMeta.OverlayImage }}">{{ .BoardMeta.OverlayImage }} overlay</a>.
         </p>
         <p>
-            The syntax accepted is the YAML (JSON) key-value pairs.
-            The list of options available is specific to the overlay image used, and can be found in the overlay image documentation.
+            The accepted syntax is YAML (JSON) key-value pairs. The available options are specific to the overlay image and can be found in its documentation.
         </p>
         <p>
-            Skip this step if unsure.
+            If unsure, you can skip this step.
         </p>
     </div>
     {{ end }}

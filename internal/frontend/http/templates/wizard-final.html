@@ -10,11 +10,11 @@
 <div class="mb-6 prose prose-sm dark:prose-invert max-w-none">
     <h2>First Boot</h2>
     {{ if eq .Target "metal" }}
-    <p>There are several options for the initial boot of Talos Linux on bare-metal machine (or generic virtual machine):</p>
+        <p>Here are the options for the initial boot of Talos Linux on a bare-metal machine or a generic virtual machine:</p>
     {{ else if eq .Target "cloud" }}
-    <p>Options for the initial boot of Talos Linux on {{ .PlatformMeta.Label }}:</p>
+        <p>Here are the options for the initial boot of Talos Linux on {{ .PlatformMeta.Label }}:</p>
     {{ else if eq .Target "sbc" }}
-    <p>Use the following disk image for {{ .BoardMeta.Label }}:</p>
+        <p>Use the following disk image for {{ .BoardMeta.Label }}:</p>
     {{ end }}
     <dl>
         {{ if eq .Target "metal" }}
@@ -42,16 +42,16 @@
     </dl>
 
     {{ if or (eq .Target "metal") (and (eq .Target "cloud") .PlatformMeta.NotOnlyDiskImage) }}
-    <h2>Initial Install</h2>
-    <p>
-        For the initial Talos Linux install (doesn't apply to disk image boot) put the following installer image to the machine configuration:<br>
-        {{ template "installer-image" . }}
-    </p>
+        <h2>Initial Installation</h2>
+        <p>
+            For the initial installation of Talos Linux (not applicable for disk image boot), add the following installer image to the machine configuration:<br>
+            {{ template "installer-image" . }}
+        </p>
     {{ end }}
 
-    <h2>Talos Linux Upgrade</h2>
+    <h2>Upgrading Talos Linux</h2>
     <p>
-        Use the following image to <a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/upgrading-talos/" target="_blank">upgrade</a> Talos Linux on the machine:<br>
+        To <a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/upgrading-talos/" target="_blank">upgrade</a> Talos Linux on the machine, use the following image:<br>
         {{ template "installer-image" . }}
     </p>
 
