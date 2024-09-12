@@ -36,6 +36,13 @@ func (f *Frontend) handleSchematicCreate(ctx context.Context, w http.ResponseWri
 		return err
 	}
 
+	if (r.Header.Get("Accept") == "text/plain") {
+		w.Header().Add("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusCreated)
+		
+		return 	io.WriteString(w, id)
+	}
+	
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
