@@ -356,7 +356,7 @@ func (f *Frontend) wizardArch(_ context.Context, params WizardParams) (string, a
 
 // wizardExtensions handles the 'pick extensions' step.
 func (f *Frontend) wizardExtensions(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
-	extensions, err := f.artifactsManager.GetOfficialExtensions(ctx, params.Version)
+	extensions, err := f.getOfficialExtensions(ctx, params.Version)
 	if err != nil {
 		return "", nil, nil, err
 	}
@@ -534,7 +534,7 @@ func (f *Frontend) handleUIExtensionsList(ctx context.Context, w http.ResponseWr
 	filter := r.FormValue("search")
 	extensions := r.Form["extensions"]
 
-	extensionList, err := f.artifactsManager.GetOfficialExtensions(ctx, version)
+	extensionList, err := f.getOfficialExtensions(ctx, version)
 	if err != nil {
 		return err
 	}
@@ -660,7 +660,7 @@ func (f *Frontend) handleUISchematicConfig(ctx context.Context, w http.ResponseW
 		return fmt.Errorf("error parsing version: %w", err)
 	}
 
-	extensions, err := f.artifactsManager.GetOfficialExtensions(ctx, version.String())
+	extensions, err := f.getOfficialExtensions(ctx, version.String())
 	if err != nil {
 		return err
 	}
@@ -784,4 +784,15 @@ func (f *Frontend) handleUISchematics(ctx context.Context, w http.ResponseWriter
 			string(artifacts.ArchArm64),
 		},
 	})
+}
+
+func (f *Frontend) getOfficialExtensions(ctx context.Context, version string) ([]artifacts.ExtensionRef, error) {
+	extensions, err := f.artifactsManager.GetOfficialExtensions(ctx, version)
+	if err != nil {
+		return nil, err
+	}
+
+	return xslices.Filter(extensions, func(ext artifacts.ExtensionRef) bool {
+		return ext.TaggedReference.Context().RepositoryStr() != "siderolabs/metal-agent" // hide the internal metal-agent extension on the UI
+	}), nil
 }

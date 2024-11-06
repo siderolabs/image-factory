@@ -172,7 +172,7 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	const MiB = 1024 * 1024
 
 	talosVersions := []string{
-		"v1.8.0-alpha.2",
+		"v1.8.2",
 		"v1.5.1",
 	}
 
