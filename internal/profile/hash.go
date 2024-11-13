@@ -48,6 +48,12 @@ func Hash(p profile.Profile) (string, error) {
 		hasher.Write([]byte("overlay installer layout fix"))
 	}
 
+	// 4. SecureBoot iso generation issue
+	// - https://github.com/siderolabs/talos/issues/9565
+	if p.Output.Kind == profile.OutKindISO && p.SecureBootEnabled() {
+		hasher.Write([]byte("secureboot iso gen fix #9565"))
+	}
+
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 

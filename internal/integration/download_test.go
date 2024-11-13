@@ -193,8 +193,8 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run("secureboot iso", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 82724864, "1.8", 110477312))
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 122007552, "1.8", 94748672))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 162*MiB, "1.8", 198*MiB))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 232*MiB, "1.8", 169*MiB))
 				})
 
 				t.Run("kernel", func(t *testing.T) {
@@ -301,8 +301,8 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run("secureboot iso", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 112222208, "1.8", 137740288))
-					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 150120448, "1.8", 119914496))
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-amd64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 214*MiB, "1.8", 250*MiB))
+					downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-arm64-secureboot.iso", "application/x-iso9660-image", sizePicker(talosVersion, "1.5", 280*MiB, "1.8", 218*MiB))
 				})
 
 				t.Run("metal image", func(t *testing.T) {
