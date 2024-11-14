@@ -1,3 +1,30 @@
+## [image-factory 0.6.1](https://github.com/siderolabs/image-factory/releases/tag/v0.6.1) (2024-11-14)
+
+Welcome to the v0.6.1 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Noel Georgi
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`96c8455`](https://github.com/siderolabs/image-factory/commit/96c845517aeda1ea7b4c80c6203ce7e5643f33ab) chore: bump generated data
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.6.0](https://github.com/siderolabs/image-factory/releases/tag/v0.6.0)
+
 ## [image-factory 0.6.0](https://github.com/siderolabs/image-factory/releases/tag/v0.6.0) (2024-11-14)
 
 Welcome to the v0.6.0 release of image-factory!
