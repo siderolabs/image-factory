@@ -327,6 +327,14 @@ func (mockArtifactProducer) GetOfficialExtensions(context.Context, string) ([]ar
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-fabricmanager:v535.0.0")),
 			Digest:          "sha256:nvidia-fabric",
 		},
+		{
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/i915-ucode:2023048")),
+			Digest:          "sha256:i915-ucode",
+		},
+		{
+			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/amdgpu-firmware:2023048")),
+			Digest:          "sha256:amdgpu-firmware",
+		},
 	}, nil
 }
 
@@ -541,6 +549,49 @@ func TestEnhanceFromSchematic(t *testing.T) {
 						},
 						{
 							TarballPath: "2335edfd1451ebc3e268956e4b12f2afc5a0799a082e8ffdbbd5dc55af123a27.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindImage,
+					OutFormat: profile.OutFormatZSTD,
+					ImageOptions: &profile.ImageOptions{
+						DiskSize:   profile.MinRAWDiskSize,
+						DiskFormat: profile.DiskFormatRaw,
+					},
+				},
+			},
+		},
+		{
+			name:        "aliased i915 and amdgpu extensions",
+			baseProfile: baseProfile,
+			schematic: schematic.Schematic{
+				Customization: schematic.Customization{
+					SystemExtensions: schematic.SystemExtensions{
+						OfficialExtensions: []string{
+							"siderolabs/i915-ucode",
+							"siderolabs/amdgpu-firmware",
+						},
+					},
+				},
+			},
+			versionString: "v1.9.0",
+			expectedProfile: profile.Profile{
+				Platform:      constants.PlatformMetal,
+				SecureBoot:    pointer.To(false),
+				Arch:          "amd64",
+				Version:       "v1.9.0",
+				Customization: profile.CustomizationProfile{},
+				Input: profile.Input{
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							OCIPath: "amd64-sha256:i915-ucode.oci",
+						},
+						{
+							OCIPath: "amd64-sha256:amdgpu-firmware.oci",
+						},
+						{
+							TarballPath: "838b9b4504a5600db14dbbb2abc128c32b3fc3c145781adf8ce23b2d79e4246e.tar",
 						},
 					},
 				},

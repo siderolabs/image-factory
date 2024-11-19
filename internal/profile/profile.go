@@ -288,6 +288,10 @@ func extensionNameAlias(extensionName string) (string, bool) {
 		return "siderolabs/nonfree-kmod-nvidia-lts", true
 	case "siderolabs/nvidia-fabricmanager": // extension got renamed
 		return "siderolabs/nvidia-fabric-manager-lts", true
+	case "siderolabs/i915-ucode": // extension got renamed
+		return "siderolabs/i915", true
+	case "siderolabs/amdgpu-firmware": // extension got renamed
+		return "siderolabs/amdgpu", true
 	default:
 		return "", false
 	}
