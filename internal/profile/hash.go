@@ -54,6 +54,12 @@ func Hash(p profile.Profile) (string, error) {
 		hasher.Write([]byte("secureboot iso gen fix #9565"))
 	}
 
+	// 5. VMWare build issue on non-amd64 platforms
+	// - https://github.com/siderolabs/image-factory/issues/164
+	if p.Platform == "vmware" {
+		hasher.Write([]byte("vmware build fix #164"))
+	}
+
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
