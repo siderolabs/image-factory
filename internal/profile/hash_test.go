@@ -233,7 +233,7 @@ func TestHashProfile(t *testing.T) {
 				},
 			},
 
-			expected: "8648a631a8b749834dd6aff57447f67900d6bad7590db0a39e4dc19b32467a72",
+			expected: "d10010ec0b2f3a56b51d1314d067ac3d156034bee3a3eb3d999df68b863941c3",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

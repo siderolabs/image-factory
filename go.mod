@@ -13,12 +13,12 @@ require (
 	github.com/siderolabs/gen v0.7.0
 	github.com/siderolabs/go-debug v0.4.0
 	github.com/siderolabs/go-pointer v1.0.0
-	github.com/siderolabs/talos v1.9.0-alpha.2.0.20241120140534-c4c1a0d7c73d
-	github.com/siderolabs/talos/pkg/machinery v1.9.0-alpha.2.0.20241120140534-c4c1a0d7c73d
+	github.com/siderolabs/talos v1.9.0-alpha.3.0.20241128105750-e9058461e41c
+	github.com/siderolabs/talos/pkg/machinery v1.9.0-alpha.3.0.20241128105750-e9058461e41c
 	github.com/sigstore/cosign/v2 v2.4.0
 	github.com/sigstore/sigstore v1.8.8
 	github.com/slok/go-http-metrics v0.12.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/u-root/u-root v0.14.0
 	github.com/ulikunitz/xz v0.5.12
 	go.uber.org/zap v1.27.0
@@ -116,7 +116,7 @@ require (
 	github.com/containernetworking/cni v1.2.3 // indirect
 	github.com/coreos/go-oidc/v3 v3.11.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-	github.com/cosi-project/runtime v0.7.1 // indirect
+	github.com/cosi-project/runtime v0.7.2 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20231011164504-785e29786b46 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
@@ -222,6 +222,7 @@ require (
 	github.com/pin/tftp/v3 v3.1.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pkg/xattr v0.4.10 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240917153116-6f2963f01587 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
@@ -239,7 +240,7 @@ require (
 	github.com/siderolabs/crypto v0.5.0 // indirect
 	github.com/siderolabs/go-api-signature v0.3.6 // indirect
 	github.com/siderolabs/go-blockdevice v0.4.8 // indirect
-	github.com/siderolabs/go-blockdevice/v2 v2.0.5 // indirect
+	github.com/siderolabs/go-blockdevice/v2 v2.0.6 // indirect
 	github.com/siderolabs/go-circular v0.2.1 // indirect
 	github.com/siderolabs/go-cmd v0.1.3 // indirect
 	github.com/siderolabs/go-copy v0.1.0 // indirect

@@ -60,6 +60,12 @@ func Hash(p profile.Profile) (string, error) {
 		hasher.Write([]byte("vmware build fix #164"))
 	}
 
+	// 6. Installer tarball missing directory headers
+	// - https://github.com/siderolabs/talos/pull/9772
+	if p.Output.Kind == profile.OutKindInstaller {
+		hasher.Write([]byte("installer tarball fix #9772"))
+	}
+
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
