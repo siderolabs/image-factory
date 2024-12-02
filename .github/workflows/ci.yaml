@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-08-07T12:15:26Z by kres dbf015a.
+# Generated on 2024-12-02T10:42:38Z by kres 232fe63.
 
 name: default
 concurrency:
@@ -77,7 +77,7 @@ jobs:
         run: |
           make unit-tests-race
       - name: coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: _out/coverage-unit-tests.txt
           token: ${{ secrets.CODECOV_TOKEN }}

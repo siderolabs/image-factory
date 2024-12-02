@@ -118,7 +118,7 @@ func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 			return nil, r.Err
 		}
 
-		return r.Val.([]byte), nil //nolint:forcetypeassert
+		return r.Val.([]byte), nil //nolint:forcetypeassert,errcheck
 	}
 }
 

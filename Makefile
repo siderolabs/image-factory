@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-08-30T14:42:37Z by kres b5ca957.
+# Generated on 2024-12-02T10:56:32Z by kres 232fe63.
 
 # common variables
 
@@ -17,15 +17,15 @@ WITH_RACE ?= false
 REGISTRY ?= ghcr.io
 USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
-PROTOBUF_GO_VERSION ?= 1.34.2
+PROTOBUF_GO_VERSION ?= 1.35.2
 GRPC_GO_VERSION ?= 1.5.1
-GRPC_GATEWAY_VERSION ?= 2.22.0
+GRPC_GATEWAY_VERSION ?= 2.24.0
 VTPROTOBUF_VERSION ?= 0.6.0
-GOIMPORTS_VERSION ?= 0.24.0
+GOIMPORTS_VERSION ?= 0.27.0
 DEEPCOPY_VERSION ?= v0.5.6
-GOLANGCILINT_VERSION ?= v1.60.3
+GOLANGCILINT_VERSION ?= v1.62.0
 GOFUMPT_VERSION ?= v0.7.0
-GO_VERSION ?= 1.23.0
+GO_VERSION ?= 1.23.3
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -41,11 +41,13 @@ PLATFORM ?= linux/amd64
 PROGRESS ?= auto
 PUSH ?= false
 CI_ARGS ?=
+BUILDKIT_MULTI_PLATFORM ?= 1
 COMMON_ARGS = --file=Dockerfile
 COMMON_ARGS += --provenance=false
 COMMON_ARGS += --progress=$(PROGRESS)
 COMMON_ARGS += --platform=$(PLATFORM)
 COMMON_ARGS += --push=$(PUSH)
+COMMON_ARGS += --build-arg=BUILDKIT_MULTI_PLATFORM=$(BUILDKIT_MULTI_PLATFORM)
 COMMON_ARGS += --build-arg=ARTIFACTS="$(ARTIFACTS)"
 COMMON_ARGS += --build-arg=SHA="$(SHA)"
 COMMON_ARGS += --build-arg=TAG="$(TAG)"
@@ -150,9 +152,18 @@ target-%:  ## Builds the specified target defined in the Dockerfile. The build r
 
 local-%:  ## Builds the specified target defined in the Dockerfile using the local output type. The build result will be output to the specified local destination.
 	@$(MAKE) target-$* TARGET_ARGS="--output=type=local,dest=$(DEST) $(TARGET_ARGS)"
+	@PLATFORM=$(PLATFORM) DEST=$(DEST) bash -c '\
+	  for platform in $$(tr "," "\n" <<< "$$PLATFORM"); do \
+	    echo $$platform; \
+	    directory="$${platform//\//_}"; \
+	    if [[ -d "$$DEST/$$directory" ]]; then \
+	      mv "$$DEST/$$directory/"* $$DEST; \
+	      rmdir "$$DEST/$$directory/"; \
+	    fi; \
+	  done'
 
 generate:  ## Generate .proto definitions.
-	@$(MAKE) local-$@ DEST=./
+	@$(MAKE) local-$@ DEST=./ BUILDKIT_MULTI_PLATFORM=0
 
 lint-golangci-lint:  ## Runs golangci-lint linter.
 	@$(MAKE) target-$@
@@ -223,7 +234,7 @@ integration: integration.test
 
 .PHONY: tailwind
 tailwind:
-	@$(MAKE) local-tailwind-copy PUSH=false DEST=.
+	@$(MAKE) local-tailwind-copy PUSH=false DEST=. BUILDKIT_MULTI_PLATFORM=0
 
 .PHONY: rekres
 rekres:

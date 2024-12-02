@@ -1,17 +1,17 @@
-# syntax = docker/dockerfile-upstream:1.9.0-labs
+# syntax = docker/dockerfile-upstream:1.11.1-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-08-30T14:42:37Z by kres b5ca957.
+# Generated on 2024-12-02T10:58:17Z by kres 232fe63.
 
 ARG TOOLCHAIN
 
-FROM alpine:3.18 AS base-image-image-factory
+FROM alpine:3.20.3 AS base-image-image-factory
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.1.26-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.1.36-alpine AS lint-markdown
 WORKDIR /src
-RUN bun i markdownlint-cli@0.41.0 sentences-per-line@0.2.1
+RUN bun i markdownlint-cli@0.43.0 sentences-per-line@0.2.1
 COPY .markdownlint.json .
 COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
@@ -167,13 +167,13 @@ COPY --from=image-factory-linux-amd64 / /
 COPY --from=image-factory-linux-arm64 / /
 
 FROM base-image-image-factory AS image-image-factory
-RUN apk add --no-cache --update bash binutils-aarch64 binutils-x86_64 cpio dosfstools efibootmgr kmod mtools pigz qemu-img squashfs-tools tar util-linux xfsprogs xorriso xz zstd
+RUN apk add --no-cache --update bash binutils-aarch64 binutils-x86_64 cpio dosfstools e2fsprogs efibootmgr kmod mtools pigz qemu-img squashfs-tools tar util-linux xfsprogs xorriso xz zstd
 ARG TARGETARCH
 COPY --from=image-factory image-factory-linux-${TARGETARCH} /image-factory
-COPY --from=ghcr.io/siderolabs/grub:v1.7.0-2-g6101299 / /
-COPY --from=ghcr.io/siderolabs/grub@sha256:46469ae913378d45f69ac10d2dc8ebea54e914542deab2b2f23c95dac5116335 /usr/lib/grub /usr/lib/grub
-COPY --from=ghcr.io/siderolabs/grub@sha256:fd929bae5ad64a3e2a530d6b3cbfab673b60af2e62268a45cf42194df55c116d /usr/lib/grub /usr/lib/grub
-COPY --from=ghcr.io/siderolabs/installer:v1.7.0 /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
+COPY --from=ghcr.io/siderolabs/grub:v1.9.0 / /
+COPY --from=ghcr.io/siderolabs/grub@sha256:4aea36c88627add06512a14c7e571b43405b6eeeca0a8ad295b8c4e31bf57721 /usr/lib/grub /usr/lib/grub
+COPY --from=ghcr.io/siderolabs/grub@sha256:d82f11c8a7dc61fcdcc1d93d9550a1624eb291829a90700983e1c5b1a3b6cc26 /usr/lib/grub /usr/lib/grub
+COPY --from=ghcr.io/siderolabs/installer:v1.9.0-alpha.2 /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/image-factory
 ENTRYPOINT ["/image-factory"]
 
