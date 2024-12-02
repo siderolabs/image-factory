@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-12-02T10:56:32Z by kres 232fe63.
+# Generated on 2024-12-02T11:43:21Z by kres 232fe63.
 
 # common variables
 
@@ -234,7 +234,7 @@ integration: integration.test
 
 .PHONY: tailwind
 tailwind:
-	@$(MAKE) local-tailwind-copy PUSH=false DEST=. BUILDKIT_MULTI_PLATFORM=0
+	@$(MAKE) local-tailwind-copy PUSH=false DEST=. PLATFORM=linux/amd64 BUILDKIT_MULTI_PLATFORM=0
 
 .PHONY: rekres
 rekres:

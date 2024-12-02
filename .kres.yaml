@@ -136,7 +136,7 @@ spec:
     enabled: true
     phony: true
     script:
-      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=. BUILDKIT_MULTI_PLATFORM=0"
+      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=. PLATFORM=linux/amd64 BUILDKIT_MULTI_PLATFORM=0"
   docker:
     description: "Runs tailwind update"
     enabled: true
