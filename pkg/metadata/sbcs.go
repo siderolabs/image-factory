@@ -181,5 +181,16 @@ func SBCs() []SBC {
 
 			MinVersion: semver.MustParse("1.8.0-alpha.2"),
 		},
+		{
+			Name: "turingrk1",
+
+			OverlayName:  "turingrk1",
+			OverlayImage: "siderolabs/sbc-rockchip",
+
+			Label:         "Turing RK1",
+			Documentation: "/talos-guides/install/single-board-computers/turing_rk1/",
+
+			MinVersion: semver.MustParse("1.9.0-beta.0"),
+		},
 	}
 }
