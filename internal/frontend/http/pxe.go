@@ -62,18 +62,6 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 		return fmt.Errorf("error validating profile: %w", err)
 	}
 
-	if prof.SecureBootEnabled() {
-		return ensure.Value(template.New("secureboot.ipxe").
-			Parse(securebootIPXE)).
-			Execute(w,
-				struct {
-					UKIURL string
-				}{
-					UKIURL: f.options.ExternalPXEURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("%s-%s-secureboot.uki.efi", prof.Platform, prof.Arch)).String(),
-				},
-			)
-	}
-
 	// build the cmdline
 	asset, err := f.assetBuilder.Build(ctx, prof, version.String())
 	if err != nil {
@@ -90,6 +78,20 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 	cmdline, err := io.ReadAll(reader)
 	if err != nil {
 		return err
+	}
+
+	if prof.SecureBootEnabled() {
+		return ensure.Value(template.New("secureboot.ipxe").
+			Parse(securebootIPXE)).
+			Execute(w,
+				struct {
+					UKIURL  string
+					Cmdline string
+				}{
+					UKIURL:  f.options.ExternalPXEURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("%s-%s-secureboot-uki.efi", prof.Platform, prof.Arch)).String(),
+					Cmdline: string(cmdline),
+				},
+			)
 	}
 
 	return ensure.Value(template.New("standard.ipxe").
