@@ -20,6 +20,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -328,6 +329,7 @@ func remoteOptions() []remote.Option {
 			authn.NewMultiKeychain(
 				authn.DefaultKeychain,
 				github.Keychain,
+				google.Keychain,
 			),
 		),
 	}
