@@ -194,6 +194,7 @@ func Platforms() []Platform {
 				"iso",
 				"pxe",
 			},
+			SecureBootSupported: true,
 		},
 		// OpenNebula: no documentation on Talos side, skipping.
 		{
