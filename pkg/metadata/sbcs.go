@@ -149,6 +149,17 @@ func SBCs() []SBC {
 			MinVersion: semver.MustParse("1.8.0-alpha.1"),
 		},
 		{
+			Name: "rock5b",
+
+			OverlayName:  "rock5b",
+			OverlayImage: "siderolabs/sbc-rockchip",
+
+			Label:         "Radxa ROCK 5B",
+			Documentation: "/talos-guides/install/single-board-computers/rock5b/",
+
+			MinVersion: semver.MustParse("1.9.2"),
+		},
+		{
 			Name: "rockpi_4",
 
 			BoardName: "rockpi_4",
