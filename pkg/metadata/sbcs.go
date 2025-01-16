@@ -38,6 +38,15 @@ func SBCs() []SBC {
 			Documentation: "/talos-guides/install/single-board-computers/rpi_generic/",
 		},
 		{
+			Name:         "rpi_custom",
+			BoardName:    "rpi_generic",
+			OverlayName:  "rpi_generic",
+			OverlayImage: "samip5/siderolabs/sbc-raspberrypi",
+
+			Label:         "Raspberry Pi Series (Custom edition)",
+			Documentation: "/talos-guides/install/single-board-computers/rpi_generic/",
+		},
+		{
 			Name: "bananapi_m64",
 
 			BoardName: "bananapi_m64",
