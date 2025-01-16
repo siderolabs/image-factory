@@ -17,19 +17,10 @@
         <p>Use the following disk image for {{ .BoardMeta.Label }}:</p>
     {{ end }}
     <dl>
-        {{ if eq .Target "metal" }}
-            {{ if eq .SecureBoot "true" }}
-                {{ template "secureboot-iso" . }}
-                {{ template "secureboot-metal-image" . }}
-            {{ else }}
-                {{ template "iso" . }}
-                {{ template "metal-image" . }}
-                {{ template "pxe-boot" . }}
-            {{ end }}
-        {{ else if eq .Target "cloud" }}
+        {{ if or (eq .Target "metal") (eq .Target "cloud") }}
             {{ range .PlatformMeta.BootMethods }}
                 {{ if eq . "disk-image" }}
-                    {{ template "cloud-image" $ }}
+                    {{ template "disk-image" $ }}
                 {{ else if eq . "iso" }}
                     {{ template "iso" $ }}
                 {{ else if eq . "pxe" }}
@@ -100,62 +91,73 @@
 {{ end }}
 
 {{ define "iso" }}
-<dt>ISO</dt>
-<dd><a href="{{ printf "%s-%s.iso" .Platform .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "%s-%s.iso" .Platform .Arch | $.ImageBaseURL.JoinPath }}</a>
+    {{ if eq .SecureBoot "true" }}
+    <dt>SecureBoot ISO</dt>
+    <dd><a href="{{ .PlatformMeta.SecureBootISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootISOPath .Arch | $.ImageBaseURL.JoinPath }}</a>
+            (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/" target="_blank">SecureBoot documentation</a>)
+    </dd>
+    {{ else}}
+    <dt>ISO</dt>
+    <dd><a href="{{ .PlatformMeta.ISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.ISOPath .Arch | $.ImageBaseURL.JoinPath }}</a>
 
-    {{ if eq .Target "metal" }}
-        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/iso/" target="_blank">ISO documentation</a>)
+        {{ if eq .Target "metal" }}
+            (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/iso/" target="_blank">ISO documentation</a>)
+        {{ end }}
+    </dd>
     {{ end }}
-</dd>
 {{ end }}
 
-{{ define "secureboot-iso" }}
-<dt>SecureBoot ISO</dt>
-<dd><a href="{{ printf "%s-%s-secureboot.iso" .Platform .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "%s-%s-secureboot.iso" .Platform .Arch | $.ImageBaseURL.JoinPath }}</a>
-        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/" target="_blank">SecureBoot documentation</a>)
-</dd>
+{{ define "disk-image" }}
+    {{ if eq .SecureBoot "true" }}
+        <dt>SecureBoot Disk Image</dt>
+        <dd><a href="{{ .PlatformMeta.SecureBootDiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootDiskImageDefaultPath .Arch |
+                $.ImageBaseURL.JoinPath }}</a>
+            {{ if eq .Target "metal" }}
+                (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/" target="_blank">SecureBoot documentation</a>)
+            {{ end }}
+        </dd>
+    {{ else }}
+        {{ if eq .Target "metal" }}
+        <dt>Disk Image (raw)</dt>
+        <dd><a href="{{ .PlatformMeta.DiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.DiskImageDefaultPath .Arch |
+                $.ImageBaseURL.JoinPath }}</a>
+        </dd>
+        <dt>Disk Image (qcow2)</dt>
+        <dd><a href="{{ .PlatformMeta.DiskImagePath .Arch "qcow2" | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.DiskImagePath .Arch "qcow2" |
+                $.ImageBaseURL.JoinPath }}</a>
+        </dd>
+        {{ else }}
+        <dt>Disk Image</dt>
+        <dd><a href="{{ .PlatformMeta.DiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.DiskImageDefaultPath .Arch |
+                $.ImageBaseURL.JoinPath }}</a>
+        </dd>
+        {{ end }}
+    {{ end}}
 {{ end }}
 
-{{ define "metal-image" }}
-<dt>Disk Image (raw)</dt>
-<dd><a href="{{ printf "metal-%s.raw.zst" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s.raw.zst" .Arch |
-        $.ImageBaseURL.JoinPath }}</a>
-</dd>
-<dt>Disk Image (qcow2)</dt>
-<dd><a href="{{ printf "metal-%s.qcow2" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s.qcow2" .Arch |
-        $.ImageBaseURL.JoinPath }}</a>
-</dd>
-{{ end }}
+{{ define "pxe-boot" }}
+    {{ if eq .SecureBoot "true" }}
+        <dt>SecureBoot PXE (iPXE script)</dt>
+        <dd>{{ .PlatformMeta.SecureBootPXEScriptPath .Arch | $.PXEBaseURL.JoinPath }}</dd>
 
-{{ define "cloud-image" }}
-<dt>Disk Image</dt>
-<dd><a href="{{ printf "%s-%s.%s" .Platform .Arch .PlatformMeta.DiskImageSuffix | $.ImageBaseURL.JoinPath }}">{{ printf "%s-%s.%s" .Platform .Arch .PlatformMeta.DiskImageSuffix |
-        $.ImageBaseURL.JoinPath }}</a>
-</dd>
+        {{ if eq .Target "metal" }}
+            (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/" target="_blank">PXE documentation</a>)
+        {{ end }}
+    {{ else }}
+        <dt>PXE boot (iPXE script)</dt>
+        <dd>{{ .PlatformMeta.PXEScriptPath .Arch | $.PXEBaseURL.JoinPath }}</dd>
+
+        {{ if eq .Target "metal" }}
+            (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/" target="_blank">PXE documentation</a>)
+        {{ end }}
+    {{ end }}
 {{ end }}
 
 {{ define "board-image" }}
 <dt>Disk Image</dt>
-<dd><a href="{{ printf "metal%s-arm64.raw.xz" .LegacyBoard | $.ImageBaseURL.JoinPath }}">{{ printf "metal%s-arm64.raw.xz" .LegacyBoard |
+<dd><a href="{{ .BoardMeta.DiskImagePath .Version | $.ImageBaseURL.JoinPath }}">{{ .BoardMeta.DiskImagePath .Version |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
-{{ end }}
-
-{{ define "secureboot-metal-image" }}
-<dt>SecureBoot Disk Image</dt>
-<dd><a href="{{ printf "metal-%s-secureboot.raw.zst" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s-secureboot.raw.zst" .Arch |
-        $.ImageBaseURL.JoinPath }}</a>
-        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/" target="_blank">SecureBoot documentation</a>)
-</dd>
-{{ end }}
-
-{{ define "pxe-boot" }}
-    <dt>PXE boot (iPXE script)</dt>
-    <dd>{{ printf "%s-%s" .Platform .Arch | $.PXEBaseURL.JoinPath }}</dd>
-
-    {{ if eq .Target "metal" }}
-        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/" target="_blank">PXE documentation</a>)
-    {{ end }}
 {{ end }}
 
 {{ define "installer-image" }}
@@ -170,26 +172,26 @@
 
 {{ define "extra-assets" }}
 <dt>Kernel Image</dt>
-<dd><a href="{{ printf "kernel-%s" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "kernel-%s" .Arch |
+<dd><a href="{{ .PlatformMeta.KernelPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.KernelPath .Arch |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
 <dt>Kernel Command Line</dt>
-<dd><a href="{{ printf "cmdline-metal-%s" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "cmdline-metal-%s" .Arch |
+<dd><a href="{{ .PlatformMeta.CmdlinePath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.CmdlinePath .Arch |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
 <dt>Initramfs Image</dt>
-<dd><a href="{{ printf "initramfs-%s.xz" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "initramfs-%s.xz" .Arch |
+<dd><a href="{{ .PlatformMeta.InitramfsPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.InitramfsPath .Arch |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
 <dt>UKI</dt>
-<dd><a href="{{ printf "metal-%s-uki.efi" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s-uki.efi" .Arch |
+<dd><a href="{{ .PlatformMeta.UKIPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.UKIPath .Arch |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
 {{ end }}
 
 {{ define "secureboot-extra-assets" }}
 <dt>SecureBoot UKI</dt>
-<dd><a href="{{ printf "metal-%s-secureboot-uki.efi" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s-secureboot-uki.efi" .Arch |
+<dd><a href="{{ .PlatformMeta.SecureBootUKIPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootUKIPath .Arch |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
 {{ end }}

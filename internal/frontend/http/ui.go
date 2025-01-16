@@ -22,11 +22,11 @@ import (
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
+	"github.com/siderolabs/talos/pkg/machinery/platforms"
 	"gopkg.in/yaml.v3"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/version"
-	"github.com/siderolabs/image-factory/pkg/metadata"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -134,8 +134,8 @@ type WizardParams struct { //nolint:govet
 	SelectedOverlayOptions string
 
 	// Dynamically set fields.
-	PlatformMeta metadata.Platform
-	BoardMeta    metadata.SBC
+	PlatformMeta platforms.Platform
+	BoardMeta    platforms.SBC
 }
 
 // WizardParamsFromRequest extracts the wizard parameters from the request.
@@ -166,14 +166,15 @@ func WizardParamsFromRequest(r *http.Request) WizardParams {
 	switch {
 	case params.Target == TargetMetal:
 		params.Platform = constants.PlatformMetal
+		params.PlatformMeta = platforms.MetalPlatform()
 	case params.Target == TargetSBC:
 		params.Platform = constants.PlatformMetal
 
 		if params.Board != "" {
-			if idx := slices.IndexFunc(metadata.SBCs(), func(p metadata.SBC) bool {
+			if idx := slices.IndexFunc(platforms.SBCs(), func(p platforms.SBC) bool {
 				return p.Name == params.Board
 			}); idx != -1 {
-				params.BoardMeta = metadata.SBCs()[idx]
+				params.BoardMeta = platforms.SBCs()[idx]
 			}
 
 			if params.Arch == "" {
@@ -185,17 +186,17 @@ func WizardParamsFromRequest(r *http.Request) WizardParams {
 			}
 		}
 	case params.Target == TargetCloud && params.Platform != "":
-		if idx := slices.IndexFunc(metadata.Platforms(), func(p metadata.Platform) bool {
+		if idx := slices.IndexFunc(platforms.CloudPlatforms(), func(p platforms.Platform) bool {
 			return p.Name == params.Platform
 		}); idx != -1 {
-			params.PlatformMeta = metadata.Platforms()[idx]
+			params.PlatformMeta = platforms.CloudPlatforms()[idx]
 
 			if len(params.PlatformMeta.Architectures) == 1 && params.Arch == "" {
 				if params.SelectedArch != "" {
 					// going back, reset platform choice
 					params.SelectedPlatform, params.Platform = params.Platform, ""
 				} else {
-					params.Arch = string(params.PlatformMeta.Architectures[0])
+					params.Arch = params.PlatformMeta.Architectures[0]
 				}
 			}
 		}
@@ -282,9 +283,9 @@ func (f *Frontend) wizardClouds(_ context.Context, params WizardParams) (string,
 
 	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
 
-	allPlatforms := metadata.Platforms()
+	allPlatforms := platforms.CloudPlatforms()
 
-	allPlatforms = xslices.Filter(allPlatforms, func(p metadata.Platform) bool {
+	allPlatforms = xslices.Filter(allPlatforms, func(p platforms.Platform) bool {
 		if value.IsZero(&p.MinVersion) {
 			return true
 		}
@@ -295,7 +296,7 @@ func (f *Frontend) wizardClouds(_ context.Context, params WizardParams) (string,
 	return "wizard-cloud",
 		struct {
 			WizardParams
-			Platforms []metadata.Platform
+			Platforms []platforms.Platform
 		}{
 			WizardParams: params,
 			Platforms:    allPlatforms,
@@ -312,9 +313,9 @@ func (f *Frontend) wizardSBCs(_ context.Context, params WizardParams) (string, a
 
 	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
 
-	allSBCs := metadata.SBCs()
+	allSBCs := platforms.SBCs()
 
-	allSBCs = xslices.Filter(allSBCs, func(p metadata.SBC) bool {
+	allSBCs = xslices.Filter(allSBCs, func(p platforms.SBC) bool {
 		if value.IsZero(&p.MinVersion) {
 			return true
 		}
@@ -325,7 +326,7 @@ func (f *Frontend) wizardSBCs(_ context.Context, params WizardParams) (string, a
 	return "wizard-sbc",
 		struct {
 			WizardParams
-			SBCs []metadata.SBC
+			SBCs []platforms.SBC
 		}{
 			WizardParams: params,
 			SBCs:         allSBCs,
@@ -406,26 +407,19 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 
 	slices.Sort(extensions)
 
-	var (
-		overlay     schematic.Overlay
-		legacyBoard string
-	)
+	var overlay schematic.Overlay
 
-	if params.Target == TargetSBC {
-		if quirks.New(params.Version).SupportsOverlay() {
-			overlay.Name = params.BoardMeta.OverlayName
-			overlay.Image = params.BoardMeta.OverlayImage
+	if params.Target == TargetSBC && quirks.New(params.Version).SupportsOverlay() {
+		overlay.Name = params.BoardMeta.OverlayName
+		overlay.Image = params.BoardMeta.OverlayImage
 
-			var overlayOptsParsed map[string]any
+		var overlayOptsParsed map[string]any
 
-			if err := yaml.Unmarshal([]byte(params.OverlayOptions), &overlayOptsParsed); err != nil {
-				return "", nil, nil, fmt.Errorf("error parsing overlay options: %w", err)
-			}
-
-			overlay.Options = overlayOptsParsed
-		} else {
-			legacyBoard = "-" + params.BoardMeta.BoardName
+		if err := yaml.Unmarshal([]byte(params.OverlayOptions), &overlayOptsParsed); err != nil {
+			return "", nil, nil, fmt.Errorf("error parsing overlay options: %w", err)
 		}
+
+		overlay.Options = overlayOptsParsed
 	}
 
 	requestedSchematic := schematic.Schematic{
@@ -464,7 +458,6 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 
 			TroubleshootingGuideAvailable bool
 			ProductionGuideAvailable      bool
-			LegacyBoard                   string
 		}{
 			WizardParams: params,
 
@@ -479,7 +472,6 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 
 			TroubleshootingGuideAvailable: talosVersion.GTE(semver.MustParse("1.6.0")),
 			ProductionGuideAvailable:      talosVersion.GTE(semver.MustParse("1.5.0")),
-			LegacyBoard:                   legacyBoard,
 		},
 		params.URLValues(),
 		nil
