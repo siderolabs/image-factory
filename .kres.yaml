@@ -53,7 +53,7 @@ spec:
     - stage: ghcr.io/siderolabs/grub@sha256:d82f11c8a7dc61fcdcc1d93d9550a1624eb291829a90700983e1c5b1a3b6cc26 # arm64
       source: /usr/lib/grub
       destination: /usr/lib/grub
-    - stage: ghcr.io/siderolabs/installer:v1.9.0-alpha.2
+    - stage: ghcr.io/siderolabs/installer:v1.9.1
       source: /usr/share/grub/unicode.pf2
       destination: /usr/share/grub/unicode.pf2
 ---
