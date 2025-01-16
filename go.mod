@@ -2,6 +2,8 @@ module github.com/siderolabs/image-factory
 
 go 1.23.4
 
+replace github.com/foxboron/go-uefi => github.com/DmitriyMV/go-uefi v0.0.0-20250116094413-7754845fe9f0
+
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/google/go-containerregistry v0.20.2
