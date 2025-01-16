@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-12-02T10:42:38Z by kres 232fe63.
+# Generated on 2025-01-16T11:42:04Z by kres 3b3f992.
 
 # options for analysis running
 run:
@@ -17,7 +17,6 @@ output:
       path: stdout
   print-issued-lines: true
   print-linter-name: true
-  uniq-by-line: true
   path-prefix: ""
 
 # all available settings of specific linters
@@ -134,6 +133,7 @@ linters:
     - perfsprint # complains about us using fmt.Sprintf in non-performance critical code, updating just kres took too long
     - goimports # same as gci
     - musttag # seems to be broken - goes into imported libraries and reports issues there
+    - exportloopref # WARN The linter 'exportloopref' is deprecated (since v1.60.2) due to: Since Go1.22 (loopvar) this linter is no longer relevant. Replaced by copyloopvar.
 
 issues:
   exclude: [ ]
@@ -143,6 +143,7 @@ issues:
   max-issues-per-linter: 10
   max-same-issues: 3
   new: false
+  uniq-by-line: true
 
 severity:
   default-severity: error

@@ -12,11 +12,11 @@ require (
 	github.com/klauspost/compress v1.17.11
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/prometheus/client_golang v1.20.5
-	github.com/siderolabs/gen v0.7.0
+	github.com/siderolabs/gen v0.8.0
 	github.com/siderolabs/go-debug v0.4.0
 	github.com/siderolabs/go-pointer v1.0.0
-	github.com/siderolabs/talos v1.10.0-alpha.0
-	github.com/siderolabs/talos/pkg/machinery v1.10.0-alpha.0
+	github.com/siderolabs/talos v1.10.0-alpha.0.0.20250116132416-4310b290d5cf
+	github.com/siderolabs/talos/pkg/machinery v1.10.0-alpha.0.0.20250116132416-4310b290d5cf
 	github.com/sigstore/cosign/v2 v2.4.1
 	github.com/sigstore/sigstore v1.8.10
 	github.com/slok/go-http-metrics v0.13.0
@@ -32,7 +32,7 @@ require (
 
 require (
 	cel.dev/expr v0.18.0 // indirect
-	cloud.google.com/go/compute/metadata v0.5.2 // indirect
+	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/0x5a17ed/itkit v0.6.0 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20240806141605-e8a1dd7889d6 // indirect
@@ -75,21 +75,21 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.32.5 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.28.5 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.46 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.20 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.24 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.24 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.32.7 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.28.7 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.48 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.22 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.26 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.26 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.20.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.18.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kms v1.37.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.24.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.33.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.37.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.24.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.33.3 // indirect
 	github.com/aws/smithy-go v1.22.1 // indirect
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20231024185945-8841054dbdb8 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -101,7 +101,7 @@ require (
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/cloudflare/circl v1.5.0 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
-	github.com/containerd/cgroups/v3 v3.0.4 // indirect
+	github.com/containerd/cgroups/v3 v3.0.5 // indirect
 	github.com/containerd/containerd/api v1.8.0 // indirect
 	github.com/containerd/containerd/v2 v2.0.1 // indirect
 	github.com/containerd/continuity v0.4.4 // indirect
@@ -118,14 +118,14 @@ require (
 	github.com/containernetworking/cni v1.2.3 // indirect
 	github.com/coreos/go-oidc/v3 v3.11.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-	github.com/cosi-project/runtime v0.7.6 // indirect
+	github.com/cosi-project/runtime v0.8.1 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20231011164504-785e29786b46 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v27.3.1+incompatible // indirect
+	github.com/docker/cli v27.4.1+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -168,7 +168,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/go-github/v55 v55.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/go-tpm v0.9.1 // indirect
+	github.com/google/go-tpm v0.9.3 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/nftables v0.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -239,10 +239,10 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.8.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
-	github.com/siderolabs/crypto v0.5.0 // indirect
+	github.com/siderolabs/crypto v0.5.1 // indirect
 	github.com/siderolabs/go-api-signature v0.3.6 // indirect
 	github.com/siderolabs/go-blockdevice v0.4.8 // indirect
-	github.com/siderolabs/go-blockdevice/v2 v2.0.8 // indirect
+	github.com/siderolabs/go-blockdevice/v2 v2.0.11 // indirect
 	github.com/siderolabs/go-circular v0.2.1 // indirect
 	github.com/siderolabs/go-cmd v0.1.3 // indirect
 	github.com/siderolabs/go-copy v0.1.0 // indirect
@@ -296,10 +296,10 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241206012308-a4fef0638583 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241206012308-a4fef0638583 // indirect
-	google.golang.org/grpc v1.68.1 // indirect
-	google.golang.org/protobuf v1.35.2 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241223144023-3abc09e42ca8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241223144023-3abc09e42ca8 // indirect
+	google.golang.org/grpc v1.69.2 // indirect
+	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

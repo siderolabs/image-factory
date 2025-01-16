@@ -28,8 +28,6 @@ spec:
   customCommands:
     - apk add --no-cache --update
         bash
-        binutils-aarch64
-        binutils-x86_64
         cpio
         dosfstools
         e2fsprogs

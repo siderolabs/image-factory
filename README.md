@@ -82,7 +82,7 @@ Supported image paths:
 * `cmdline-<platform>[-<board>]-<arch>[-secureboot]` (e.g. `cmdline-metal-amd64`) - kernel command line
 * `initramfs-<arch>.xz` (e.g. `initramfs-amd64.xz`) - initramfs image (including system extensions if configured)
 * `<platform>-<arch>[-secureboot].iso` (e.g. `metal-amd64.iso`) - ISO image
-* `<platform>-<arch>-secureboot-uki.efi` (e.g. `metal-amd64-secureboot-uki.efi) UEFI UKI image (Secure Boot compatible)
+* `<platform>-<arch>[-secureboot]-uki.efi` (e.g. `metal-amd64-secureboot-uki.efi`) UEFI UKI image (Secure Boot compatible)
 * `installer-<arch>[-secureboot].tar` (e.g. `installer-amd64.tar`) is a custom Talos Linux installer image (including system extensions if configured)
 * disk images in different formats (see Talos Linux documentation for a full list):
   * `metal-<arch>[-secureboot].raw.xz` (e.g. `metal-amd64.raw.xz`) - raw disk image for metal platform

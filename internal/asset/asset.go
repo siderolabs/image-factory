@@ -240,7 +240,7 @@ func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString
 		return nil, fmt.Errorf("failed to get initramfs: %w", err)
 	}
 
-	if prof.SecureBootEnabled() {
+	if quirks.New(versionString).SupportsUKI() {
 		if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindSystemdBoot, &prof.Input.SDBoot); err != nil {
 			return nil, fmt.Errorf("failed to get systemd-boot: %w", err)
 		}

@@ -147,6 +147,19 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
+			path:    "metal-amd64-uki.efi",
+			version: "v1.6.0",
+
+			expectedProfile: profile.Profile{
+				Platform: "metal",
+				Arch:     "amd64",
+				Output: profile.Output{
+					Kind:      profile.OutKindUKI,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
+		{
 			path:    "installer-amd64.tar",
 			version: "v1.6.0",
 

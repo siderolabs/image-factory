@@ -221,7 +221,14 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					)
 				})
 
-				t.Run("UKI", func(t *testing.T) {
+				t.Run("regular UKI", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-uki.efi", "application/vnd.microsoft.portable-executable", sizePicker(talosVersion, "1.5", 77691056, "1.8", 98469552))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-uki.efi", "application/vnd.microsoft.portable-executable", sizePicker(talosVersion, "1.5", 114564272, "1.8", 82733744))
+				})
+
+				t.Run("SecureBoot UKI", func(t *testing.T) {
 					t.Parallel()
 
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot-uki.efi", "application/vnd.microsoft.portable-executable", sizePicker(talosVersion, "1.5", 77691056, "1.8", 98469552))

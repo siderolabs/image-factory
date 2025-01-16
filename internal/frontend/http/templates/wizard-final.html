@@ -181,6 +181,10 @@
 <dd><a href="{{ printf "initramfs-%s.xz" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "initramfs-%s.xz" .Arch |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
+<dt>UKI</dt>
+<dd><a href="{{ printf "metal-%s-uki.efi" .Arch | $.ImageBaseURL.JoinPath }}">{{ printf "metal-%s-uki.efi" .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
 {{ end }}
 
 {{ define "secureboot-extra-assets" }}
