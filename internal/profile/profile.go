@@ -23,9 +23,9 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/meta"
 
-	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/internal/secureboot"
-	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/artifacts"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/secureboot"
+	schematicpkg "github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 // InvalidErrorTag tags errors related to invalid profiles.

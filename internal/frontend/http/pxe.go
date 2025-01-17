@@ -17,7 +17,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/ensure"
 
-	"github.com/siderolabs/image-factory/internal/profile"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/profile"
 )
 
 //go:embed standard.ipxe

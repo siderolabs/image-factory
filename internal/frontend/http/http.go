@@ -25,14 +25,14 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
-	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/internal/asset"
-	"github.com/siderolabs/image-factory/internal/image/signer"
-	"github.com/siderolabs/image-factory/internal/profile"
-	"github.com/siderolabs/image-factory/internal/schematic"
-	"github.com/siderolabs/image-factory/internal/schematic/storage"
-	"github.com/siderolabs/image-factory/internal/secureboot"
-	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/artifacts"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/asset"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/image/signer"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/profile"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic/storage"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/secureboot"
+	schematicpkg "github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 // Frontend is the HTTP frontend.

@@ -8,7 +8,7 @@ package main
 import (
 	"flag"
 
-	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
+	"github.com/skyssolutions/siderolabs-image-factory/cmd/image-factory/cmd"
 )
 
 func initFlags() cmd.Options {

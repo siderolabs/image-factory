@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/siderolabs/image-factory/internal/schematic/storage"
-	"github.com/siderolabs/image-factory/internal/schematic/storage/cache"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic/storage"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic/storage/cache"
 )
 
 type mockStorage struct {

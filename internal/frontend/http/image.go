@@ -17,7 +17,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/siderolabs/image-factory/internal/profile"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/profile"
 )
 
 // handleImage handles downloading of boot assets.

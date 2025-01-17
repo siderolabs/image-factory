@@ -16,8 +16,8 @@ import (
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 
-	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/pkg/client"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/artifacts"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/client"
 )
 
 // handleVersions handles list of Talos versions available.

@@ -24,9 +24,9 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
-	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/internal/image/signer"
-	factoryprofile "github.com/siderolabs/image-factory/internal/profile"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/artifacts"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/image/signer"
+	factoryprofile "github.com/skyssolutions/siderolabs-image-factory/internal/profile"
 )
 
 // BootAsset is an interface to access a boot asset.

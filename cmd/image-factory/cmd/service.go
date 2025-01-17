@@ -32,14 +32,14 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/internal/asset"
-	frontendhttp "github.com/siderolabs/image-factory/internal/frontend/http"
-	"github.com/siderolabs/image-factory/internal/schematic"
-	"github.com/siderolabs/image-factory/internal/schematic/storage/cache"
-	"github.com/siderolabs/image-factory/internal/schematic/storage/registry"
-	"github.com/siderolabs/image-factory/internal/secureboot"
-	"github.com/siderolabs/image-factory/internal/version"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/artifacts"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/asset"
+	frontendhttp "github.com/skyssolutions/siderolabs-image-factory/internal/frontend/http"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic/storage/cache"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic/storage/registry"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/secureboot"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/version"
 )
 
 // RunFactory runs the image factory with specified options.

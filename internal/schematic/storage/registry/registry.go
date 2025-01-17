@@ -22,8 +22,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/gen/xerrors"
 
-	"github.com/siderolabs/image-factory/internal/regtransport"
-	"github.com/siderolabs/image-factory/internal/schematic/storage"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/regtransport"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic/storage"
 )
 
 // SchematicMediaType is a media type for the schematic stored in the OCI registry.

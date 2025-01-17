@@ -24,10 +24,10 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"gopkg.in/yaml.v3"
 
-	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/internal/version"
-	"github.com/siderolabs/image-factory/pkg/metadata"
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/artifacts"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/version"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/metadata"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 var templateFuncs template.FuncMap

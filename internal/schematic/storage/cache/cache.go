@@ -14,7 +14,7 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 	"golang.org/x/sync/singleflight"
 
-	"github.com/siderolabs/image-factory/internal/schematic/storage"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic/storage"
 )
 
 // Storage is a schematic storage in-memory cache.

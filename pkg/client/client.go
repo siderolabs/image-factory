@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 // ExtensionInfo defines extensions versions list response item.

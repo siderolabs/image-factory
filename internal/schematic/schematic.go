@@ -11,8 +11,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
-	"github.com/siderolabs/image-factory/internal/schematic/storage"
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/schematic/storage"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 // Factory is the schematic factory.

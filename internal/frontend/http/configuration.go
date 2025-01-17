@@ -12,7 +12,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 // handleSchematicCreate handles creation of the schematic.

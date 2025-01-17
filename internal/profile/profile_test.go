@@ -16,10 +16,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 
-	"github.com/siderolabs/image-factory/internal/artifacts"
-	imageprofile "github.com/siderolabs/image-factory/internal/profile"
-	"github.com/siderolabs/image-factory/internal/secureboot"
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/artifacts"
+	imageprofile "github.com/skyssolutions/siderolabs-image-factory/internal/profile"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/secureboot"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 func TestParseFromPath(t *testing.T) {

@@ -8,7 +8,7 @@ package metadata
 import (
 	"github.com/blang/semver/v4"
 
-	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/artifacts"
 )
 
 // Arch represents an architecture supported by Talos.

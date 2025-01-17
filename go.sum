@@ -765,8 +765,6 @@ github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 h1:JIAuq3EEf9cgbU6AtGPK4CTG3Zf6CKMNqf0MHTggAUA=
 github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966/go.mod h1:sUM3LWHvSMaG192sy56D9F7CNvL7jUJVXoqM1QKLnog=
-github.com/skyssolutions/siderolabs-image-factory v0.2.2-0.20250117004233-9a4b2d8a4c26 h1:HKcA7XnT3SNNOrCR5w2Ry2Va24Oy6X4blM0AZX49P6Q=
-github.com/skyssolutions/siderolabs-image-factory v0.2.2-0.20250117004233-9a4b2d8a4c26/go.mod h1:Kh8IO2UXjp/zUulgH+B81PF95CrJH+w67W40ly4kuVE=
 github.com/slok/go-http-metrics v0.13.0 h1:lQDyJJx9wKhmbliyUsZ2l6peGnXRHjsjoqPt5VYzcP8=
 github.com/slok/go-http-metrics v0.13.0/go.mod h1:HIr7t/HbN2sJaunvnt9wKP9xoBBVZFo1/KiHU3b0w+4=
 github.com/smallstep/assert v0.0.0-20200723003110-82e2b9b3b262 h1:unQFBIznI+VYD1/1fApl1A+9VcBk+9dcqGfnePY87LY=

@@ -56,6 +56,9 @@ func (m *Manager) fetchTalosVersions() (any, error) {
 		}
 
 		if len(version.Pre) > 0 {
+			if version.Pre[0].VersionStr == "skylab" {
+				return true
+			}
 			if !(version.Major == maxVersion.Major && version.Minor == maxVersion.Minor) {
 				return false // ignore pre-releases for older versions
 			}

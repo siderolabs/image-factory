@@ -17,8 +17,8 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"gopkg.in/yaml.v3"
 
-	"github.com/siderolabs/image-factory/pkg/constants"
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/constants"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 // GetSchematicExtension returns a path to the tarball with "virtual" extension matching a specified schematic.

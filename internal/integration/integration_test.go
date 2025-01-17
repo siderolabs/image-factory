@@ -23,7 +23,7 @@ import (
 	"go.uber.org/zap/zaptest"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
+	"github.com/skyssolutions/siderolabs-image-factory/cmd/image-factory/cmd"
 )
 
 func setupFactory(t *testing.T) (context.Context, string) {

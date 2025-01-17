@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/siderolabs/image-factory/pkg/client"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/client"
 )
 
 func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {

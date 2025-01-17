@@ -18,8 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/siderolabs/image-factory/pkg/client"
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/client"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 // well known schematic IDs, they will be created with the test run

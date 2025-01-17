@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	factoryprofile "github.com/siderolabs/image-factory/internal/profile"
+	factoryprofile "github.com/skyssolutions/siderolabs-image-factory/internal/profile"
 )
 
 func TestCleanProfile(t *testing.T) {

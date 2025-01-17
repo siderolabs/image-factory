@@ -4,7 +4,7 @@ go 1.23.4
 
 replace github.com/foxboron/go-uefi => github.com/DmitriyMV/go-uefi v0.0.0-20250116094413-7754845fe9f0
 
-replace github.com/siderolabs/image-factory => github.com/skyssolutions/siderolabs-image-factory v0.2.2-0.20250117004233-9a4b2d8a4c26
+replace github.com/siderolabs/image-factory => github.com/skyssolutions/siderolabs-image-factory v0.0.0-20250116233535-c40600ee9c5e
 
 require (
 	github.com/blang/semver/v4 v4.0.0
@@ -17,7 +17,6 @@ require (
 	github.com/siderolabs/gen v0.8.0
 	github.com/siderolabs/go-debug v0.4.0
 	github.com/siderolabs/go-pointer v1.0.0
-	github.com/siderolabs/image-factory v0.6.5
 	github.com/siderolabs/talos v1.10.0-alpha.0.0.20250116132416-4310b290d5cf
 	github.com/siderolabs/talos/pkg/machinery v1.10.0-alpha.0.0.20250116132416-4310b290d5cf
 	github.com/sigstore/cosign/v2 v2.4.1

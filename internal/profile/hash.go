@@ -33,7 +33,7 @@ func Hash(p profile.Profile) (string, error) {
 
 	// update the hash value to force rebuild assets once the bug is fixed
 	//
-	// 1. errata https://github.com/siderolabs/image-factory/issues/65
+	// 1. errata https://github.com/skyssolutions/siderolabs-image-factory/issues/65
 	if p.Board != "" {
 		hasher.Write([]byte("board fix #65"))
 	}
@@ -55,7 +55,7 @@ func Hash(p profile.Profile) (string, error) {
 	}
 
 	// 5. VMWare build issue on non-amd64 platforms
-	// - https://github.com/siderolabs/image-factory/issues/164
+	// - https://github.com/skyssolutions/siderolabs-image-factory/issues/164
 	if p.Platform == "vmware" {
 		hasher.Write([]byte("vmware build fix #164"))
 	}

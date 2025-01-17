@@ -31,8 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/siderolabs/image-factory/pkg/client"
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/client"
+	"github.com/skyssolutions/siderolabs-image-factory/pkg/schematic"
 )
 
 func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, talosVersion, schematic string, secureboot bool, platform v1.Platform, baseURL string, overlay bool) {

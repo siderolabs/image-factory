@@ -2,7 +2,7 @@
 commit = "HEAD"
 
 project_name = "image-factory"
-github_repo = "siderolabs/image-factory"
+github_repo = "skyssolutions/siderolabs-image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
 previous = "v0.6.0"

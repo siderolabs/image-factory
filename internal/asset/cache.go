@@ -18,8 +18,8 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
 
-	"github.com/siderolabs/image-factory/internal/image/signer"
-	"github.com/siderolabs/image-factory/internal/regtransport"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/image/signer"
+	"github.com/skyssolutions/siderolabs-image-factory/internal/regtransport"
 )
 
 // registryCache is using OCI registry to cache assets.

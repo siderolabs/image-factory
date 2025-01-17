@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sys/unix"
 
-	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
+	"github.com/skyssolutions/siderolabs-image-factory/cmd/image-factory/cmd"
 )
 
 func main() {
