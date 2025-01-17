@@ -4,6 +4,8 @@ go 1.23.4
 
 replace github.com/foxboron/go-uefi => github.com/DmitriyMV/go-uefi v0.0.0-20250116094413-7754845fe9f0
 
+replace github.com/siderolabs/image-factory => github.com/skyssolutions/siderolabs-image-factory v0.2.2-0.20250117004233-9a4b2d8a4c26
+
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/google/go-containerregistry v0.20.3
