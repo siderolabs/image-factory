@@ -1,4 +1,4 @@
-module github.com/siderolabs/image-factory
+module github.com/skyssolutions/siderolabs-image-factory
 
 go 1.23.4
 
@@ -15,6 +15,7 @@ require (
 	github.com/siderolabs/gen v0.8.0
 	github.com/siderolabs/go-debug v0.4.0
 	github.com/siderolabs/go-pointer v1.0.0
+	github.com/siderolabs/image-factory v0.6.5
 	github.com/siderolabs/talos v1.10.0-alpha.0.0.20250116132416-4310b290d5cf
 	github.com/siderolabs/talos/pkg/machinery v1.10.0-alpha.0.0.20250116132416-4310b290d5cf
 	github.com/sigstore/cosign/v2 v2.4.1
