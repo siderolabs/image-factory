@@ -1,4 +1,5 @@
 #!ipxe
 
+imgfree
 kernel {{ .UKIURL }} {{ .Cmdline }}
 boot

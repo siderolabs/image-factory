@@ -1,5 +1,6 @@
 #!ipxe
 
+imgfree
 kernel {{ .KernelURL }} {{ .Cmdline }}
 initrd {{ .InitramfsURL }}
 boot

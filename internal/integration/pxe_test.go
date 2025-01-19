@@ -43,9 +43,9 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	}
 
 	const (
-		metalInsecureExpected   = "#!ipxe\n\nkernel ENDPOINT/image/CONFIG/VERSION/kernel-amd64 talos.platform=metal console=ttyS0 console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512\ninitrd ENDPOINT/image/CONFIG/VERSION/initramfs-amd64.xz\nboot\n"    //nolint:lll
-		equinixInsecureExpected = "#!ipxe\n\nkernel ENDPOINT/image/CONFIG/VERSION/kernel-amd64 talos.platform=equinixMetal console=ttyS1,115200n8 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512\ninitrd ENDPOINT/image/CONFIG/VERSION/initramfs-amd64.xz\nboot\n" //nolint:lll
-		securebootExpected      = "#!ipxe\n\nkernel ENDPOINT/image/CONFIG/VERSION/metal-amd64-secureboot-uki.efi talos.platform=metal console=ttyS0 console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512 lockdown=confidentiality\nboot\n"
+		metalInsecureExpected   = "#!ipxe\n\nimgfree\nkernel ENDPOINT/image/CONFIG/VERSION/kernel-amd64 talos.platform=metal console=ttyS0 console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512\ninitrd ENDPOINT/image/CONFIG/VERSION/initramfs-amd64.xz\nboot\n"    //nolint:lll
+		equinixInsecureExpected = "#!ipxe\n\nimgfree\nkernel ENDPOINT/image/CONFIG/VERSION/kernel-amd64 talos.platform=equinixMetal console=ttyS1,115200n8 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512\ninitrd ENDPOINT/image/CONFIG/VERSION/initramfs-amd64.xz\nboot\n" //nolint:lll
+		securebootExpected      = "#!ipxe\n\nimgfree\nkernel ENDPOINT/image/CONFIG/VERSION/metal-amd64-secureboot-uki.efi talos.platform=metal console=ttyS0 console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512 lockdown=confidentiality\nboot\n"
 	)
 
 	for _, talosVersion := range talosVersions {
