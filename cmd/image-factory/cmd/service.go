@@ -252,6 +252,7 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 
 	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
 		MinVersion:                  minVersion,
+		SkipVersionFilter:           opts.SkipVersionFilter,
 		ImageRegistry:               opts.ImageRegistry,
 		InsecureImageRegistry:       opts.InsecureImageRegistry,
 		ImageVerifyOptions:          checkOpts,
