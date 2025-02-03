@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/siderolabs/gen/xslices"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -42,6 +44,8 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 	}
 
 	ref := registry.Repo(imageName, schematic).Tag(talosVersion)
+
+	q := quirks.New(talosVersion)
 
 	_, err := remote.Head(ref)
 	require.NoError(t, err)
@@ -81,16 +85,20 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 		"bin/installer": {},
 	}
 
-	if !secureboot {
-		expectedFiles[fmt.Sprintf("usr/install/%s/vmlinuz", platform.Architecture)] = struct{}{}
-		expectedFiles[fmt.Sprintf("usr/install/%s/initramfs.xz", platform.Architecture)] = struct{}{}
-	} else {
+	switch {
+	case q.UseSDBootForUEFI():
+		expectedFiles[fmt.Sprintf("usr/install/%s/vmlinuz.efi", platform.Architecture)] = struct{}{}
+		expectedFiles[fmt.Sprintf("usr/install/%s/systemd-boot.efi", platform.Architecture)] = struct{}{}
+	case secureboot:
 		expectedFiles[fmt.Sprintf("usr/install/%s/vmlinuz.efi.signed", platform.Architecture)] = struct{}{}
 		expectedFiles[fmt.Sprintf("usr/install/%s/systemd-boot.efi", platform.Architecture)] = struct{}{}
+	default:
+		expectedFiles[fmt.Sprintf("usr/install/%s/vmlinuz", platform.Architecture)] = struct{}{}
+		expectedFiles[fmt.Sprintf("usr/install/%s/initramfs.xz", platform.Architecture)] = struct{}{}
 	}
 
 	if !overlay {
-		if platform.Architecture == "arm64" {
+		if platform.Architecture == "arm64" && !q.SupportsOverlay() {
 			if talosVersion != "v1.3.7" {
 				expectedFiles["usr/install/arm64/dtb/allwinner/sun50i-h616-x96-mate.dtb"] = struct{}{}
 			}
@@ -131,6 +139,8 @@ func assertImageContainsFiles(t *testing.T, img v1.Image, files map[string]struc
 		return crane.Export(img, w)
 	})
 
+	extraFiles := map[string]struct{}{}
+
 	eg.Go(func() error {
 		tr := tar.NewReader(r)
 
@@ -144,12 +154,18 @@ func assertImageContainsFiles(t *testing.T, img v1.Image, files map[string]struc
 				return fmt.Errorf("error reading tar header: %w", err)
 			}
 
-			delete(files, hdr.Name)
+			if _, ok := files[hdr.Name]; !ok {
+				if strings.HasPrefix(hdr.Name, "usr/install/") {
+					extraFiles[hdr.Name] = struct{}{}
+				}
+			} else {
+				delete(files, hdr.Name)
+			}
 		}
 	})
 
 	assert.NoError(t, eg.Wait())
-	assert.Empty(t, files)
+	assert.Empty(t, files, "extra files: %v, missing files %v", extraFiles, files)
 }
 
 func assertImageSignature(ctx context.Context, t *testing.T, ref name.Reference, baseURL string) {
@@ -193,6 +209,7 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 		"v1.3.7",
 		"v1.5.0",
 		"v1.5.1",
+		"v1.10.0-alpha.1",
 	}
 
 	registry, err := name.NewRegistry(registryAddr)

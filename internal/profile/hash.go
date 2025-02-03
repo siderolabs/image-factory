@@ -66,6 +66,12 @@ func Hash(p profile.Profile) (string, error) {
 		hasher.Write([]byte("installer tarball fix #9772"))
 	}
 
+	// 7. Installer containing wrong assets
+	// - https://github.com/siderolabs/talos/pull/10278
+	if p.Output.Kind == profile.OutKindInstaller {
+		hasher.Write([]byte("installer tarball fix #10278"))
+	}
+
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
