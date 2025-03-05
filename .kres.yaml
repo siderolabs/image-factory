@@ -12,50 +12,161 @@ spec:
       GOOS: linux
       GOARCH: arm64
 ---
+kind: golang.Toolchain
+spec:
+  makefile:
+    extraVariables:
+      - name: PKGS_PREFIX
+        defaultValue: ghcr.io/siderolabs
+      - name: PKGS
+        defaultValue: v1.10.0-alpha.0-49-g347ad26
+  docker:
+    extraArgs:
+      - PKGS_PREFIX
+      - PKGS
+---
+kind: common.Docker
+spec:
+  extraBuildArgs:
+    - PKGS_PREFIX
+    - PKGS
+---
 kind: common.Image
 name: image-image-factory
 spec:
-  baseImage: alpine:3.20.3
   extraEnvironment:
     PLATFORM: linux/amd64,linux/arm64
-  additionalImages: []
+  additionalImages: [] # so we copy same fhs and ca-certificates as the version of other tools
   allowedLocalPaths:
     - tailwind.config.js
     - package.json
     - package-lock.json
   dependsOn:
     - tailwind
-  customCommands:
-    - apk add --no-cache --update
-        bash
-        cpio
-        dosfstools
-        e2fsprogs
-        efibootmgr
-        kmod
-        mtools
-        pigz
-        qemu-img
-        squashfs-tools
-        tar
-        util-linux
-        xfsprogs
-        xorriso
-        xz
-        zstd
+  entrypoint: /usr/bin/image-factory
   copyFrom:
-    - stage: ghcr.io/siderolabs/grub:v1.9.0
+    - name: pkg-fhs
+      stage: ${PKGS_PREFIX}/fhs:${PKGS}
       source: /
       destination: /
-    - stage: ghcr.io/siderolabs/grub@sha256:4aea36c88627add06512a14c7e571b43405b6eeeca0a8ad295b8c4e31bf57721 # amd64
+    - name: pkg-ca-certificates
+      stage: ${PKGS_PREFIX}/ca-certificates:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-musl
+      stage: ${PKGS_PREFIX}/musl:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-cpio
+      stage: ${PKGS_PREFIX}/cpio:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-dosfstools
+      stage: ${PKGS_PREFIX}/dosfstools:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-grub
+      stage: ${PKGS_PREFIX}/grub:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-grub-amd64
+      stage: ${PKGS_PREFIX}/grub:${PKGS}
+      platform: linux/amd64
       source: /usr/lib/grub
       destination: /usr/lib/grub
-    - stage: ghcr.io/siderolabs/grub@sha256:d82f11c8a7dc61fcdcc1d93d9550a1624eb291829a90700983e1c5b1a3b6cc26 # arm64
+    - name: pkg-grub-arm64
+      stage: ${PKGS_PREFIX}/grub:${PKGS}
+      platform: linux/arm64
       source: /usr/lib/grub
       destination: /usr/lib/grub
-    - stage: ghcr.io/siderolabs/installer:v1.9.0-alpha.2
+    - name: pkg-grub-unicode
+      stage: ghcr.io/siderolabs/installer:v1.9.4
       source: /usr/share/grub/unicode.pf2
       destination: /usr/share/grub/unicode.pf2
+    - name: pkg-kmod
+      stage: ${PKGS_PREFIX}/kmod:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-libattr
+      stage: ${PKGS_PREFIX}/libattr:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-lininih
+      stage: ${PKGS_PREFIX}/libinih:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-liblzma
+      stage: ${PKGS_PREFIX}/liblzma:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-linurcu
+      stage: ${PKGS_PREFIX}/liburcu:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-openssl
+      stage: ${PKGS_PREFIX}/openssl:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-xfsprogs
+      stage: ${PKGS_PREFIX}/xfsprogs:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-e2fsprogs
+      stage: ${PKGS_PREFIX}/e2fsprogs:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-glib
+      stage: ${PKGS_PREFIX}/glib:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-linburn
+      stage: ${PKGS_PREFIX}/libburn:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-libisoburn
+      stage: ${PKGS_PREFIX}/libisoburn:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-linisofs
+      stage: ${PKGS_PREFIX}/libisofs:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-mtools
+      stage: ${PKGS_PREFIX}/mtools:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-pcre2
+      stage: ${PKGS_PREFIX}/pcre2:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-pigz
+      stage: ${PKGS_PREFIX}/pigz:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-qemu-tools
+      stage: ${PKGS_PREFIX}/qemu-tools:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-squashfs-tools
+      stage: ${PKGS_PREFIX}/squashfs-tools:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-tar
+      stage: ${PKGS_PREFIX}/tar:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-xz
+      stage: ${PKGS_PREFIX}/xz:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-zlib
+      stage: ${PKGS_PREFIX}/zlib:${PKGS}
+      source: /
+      destination: /
+    - name: pkg-zstd
+      stage: ${PKGS_PREFIX}/zstd:${PKGS}
+      source: /
+      destination: /
 ---
 kind: auto.CustomSteps
 spec:
@@ -134,7 +245,7 @@ spec:
     enabled: true
     phony: true
     script:
-      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=. PLATFORM=linux/amd64 BUILDKIT_MULTI_PLATFORM=0"
+      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=. BUILDKIT_MULTI_PLATFORM=0"
   docker:
     description: "Runs tailwind update"
     enabled: true

@@ -51,7 +51,7 @@ func (s *mockStorage) Collect(chan<- prometheus.Metric) {
 }
 
 func TestStorage(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	underlying := &mockStorage{}

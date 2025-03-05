@@ -1,21 +1,81 @@
-# syntax = docker/dockerfile-upstream:1.12.1-labs
+# syntax = docker/dockerfile-upstream:1.14.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-01-16T11:42:04Z by kres 3b3f992.
+# Generated on 2025-03-05T16:03:37Z by kres e2c7efe.
 
 ARG TOOLCHAIN
-
-FROM alpine:3.20.3 AS base-image-image-factory
+ARG PKGS_PREFIX
+ARG PKGS
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.1.43-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.2.4-alpine AS lint-markdown
 WORKDIR /src
-RUN bun i markdownlint-cli@0.43.0 sentences-per-line@0.3.0
+RUN bun i markdownlint-cli@0.44.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
 COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
 RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules sentences-per-line .
+
+FROM ${PKGS_PREFIX}/ca-certificates:${PKGS} AS pkg-ca-certificates
+
+FROM ${PKGS_PREFIX}/cpio:${PKGS} AS pkg-cpio
+
+FROM ${PKGS_PREFIX}/dosfstools:${PKGS} AS pkg-dosfstools
+
+FROM ${PKGS_PREFIX}/e2fsprogs:${PKGS} AS pkg-e2fsprogs
+
+FROM ${PKGS_PREFIX}/fhs:${PKGS} AS pkg-fhs
+
+FROM ${PKGS_PREFIX}/glib:${PKGS} AS pkg-glib
+
+FROM ${PKGS_PREFIX}/grub:${PKGS} AS pkg-grub
+
+FROM --platform=linux/amd64 ${PKGS_PREFIX}/grub:${PKGS} AS pkg-grub-amd64
+
+FROM --platform=linux/arm64 ${PKGS_PREFIX}/grub:${PKGS} AS pkg-grub-arm64
+
+FROM ghcr.io/siderolabs/installer:v1.9.4 AS pkg-grub-unicode
+
+FROM ${PKGS_PREFIX}/kmod:${PKGS} AS pkg-kmod
+
+FROM ${PKGS_PREFIX}/libattr:${PKGS} AS pkg-libattr
+
+FROM ${PKGS_PREFIX}/libisoburn:${PKGS} AS pkg-libisoburn
+
+FROM ${PKGS_PREFIX}/liblzma:${PKGS} AS pkg-liblzma
+
+FROM ${PKGS_PREFIX}/libburn:${PKGS} AS pkg-linburn
+
+FROM ${PKGS_PREFIX}/libinih:${PKGS} AS pkg-lininih
+
+FROM ${PKGS_PREFIX}/libisofs:${PKGS} AS pkg-linisofs
+
+FROM ${PKGS_PREFIX}/liburcu:${PKGS} AS pkg-linurcu
+
+FROM ${PKGS_PREFIX}/mtools:${PKGS} AS pkg-mtools
+
+FROM ${PKGS_PREFIX}/musl:${PKGS} AS pkg-musl
+
+FROM ${PKGS_PREFIX}/openssl:${PKGS} AS pkg-openssl
+
+FROM ${PKGS_PREFIX}/pcre2:${PKGS} AS pkg-pcre2
+
+FROM ${PKGS_PREFIX}/pigz:${PKGS} AS pkg-pigz
+
+FROM ${PKGS_PREFIX}/qemu-tools:${PKGS} AS pkg-qemu-tools
+
+FROM ${PKGS_PREFIX}/squashfs-tools:${PKGS} AS pkg-squashfs-tools
+
+FROM ${PKGS_PREFIX}/tar:${PKGS} AS pkg-tar
+
+FROM ${PKGS_PREFIX}/xfsprogs:${PKGS} AS pkg-xfsprogs
+
+FROM ${PKGS_PREFIX}/xz:${PKGS} AS pkg-xz
+
+FROM ${PKGS_PREFIX}/zlib:${PKGS} AS pkg-zlib
+
+FROM ${PKGS_PREFIX}/zstd:${PKGS} AS pkg-zstd
 
 # Installs tailwindcss
 FROM docker.io/node:21.7.3-alpine3.19 AS tailwind-base
@@ -166,14 +226,39 @@ FROM scratch AS image-factory-all
 COPY --from=image-factory-linux-amd64 / /
 COPY --from=image-factory-linux-arm64 / /
 
-FROM base-image-image-factory AS image-image-factory
-RUN apk add --no-cache --update bash cpio dosfstools e2fsprogs efibootmgr kmod mtools pigz qemu-img squashfs-tools tar util-linux xfsprogs xorriso xz zstd
+FROM scratch AS image-image-factory
 ARG TARGETARCH
-COPY --from=image-factory image-factory-linux-${TARGETARCH} /image-factory
-COPY --from=ghcr.io/siderolabs/grub:v1.9.0 / /
-COPY --from=ghcr.io/siderolabs/grub@sha256:4aea36c88627add06512a14c7e571b43405b6eeeca0a8ad295b8c4e31bf57721 /usr/lib/grub /usr/lib/grub
-COPY --from=ghcr.io/siderolabs/grub@sha256:d82f11c8a7dc61fcdcc1d93d9550a1624eb291829a90700983e1c5b1a3b6cc26 /usr/lib/grub /usr/lib/grub
-COPY --from=ghcr.io/siderolabs/installer:v1.9.0-alpha.2 /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
+COPY --from=image-factory image-factory-linux-${TARGETARCH} /usr/bin/image-factory
+COPY --from=pkg-fhs / /
+COPY --from=pkg-ca-certificates / /
+COPY --from=pkg-musl / /
+COPY --from=pkg-cpio / /
+COPY --from=pkg-dosfstools / /
+COPY --from=pkg-grub / /
+COPY --from=pkg-grub-amd64 /usr/lib/grub /usr/lib/grub
+COPY --from=pkg-grub-arm64 /usr/lib/grub /usr/lib/grub
+COPY --from=pkg-grub-unicode /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
+COPY --from=pkg-kmod / /
+COPY --from=pkg-libattr / /
+COPY --from=pkg-lininih / /
+COPY --from=pkg-liblzma / /
+COPY --from=pkg-linurcu / /
+COPY --from=pkg-openssl / /
+COPY --from=pkg-xfsprogs / /
+COPY --from=pkg-e2fsprogs / /
+COPY --from=pkg-glib / /
+COPY --from=pkg-linburn / /
+COPY --from=pkg-libisoburn / /
+COPY --from=pkg-linisofs / /
+COPY --from=pkg-mtools / /
+COPY --from=pkg-pcre2 / /
+COPY --from=pkg-pigz / /
+COPY --from=pkg-qemu-tools / /
+COPY --from=pkg-squashfs-tools / /
+COPY --from=pkg-tar / /
+COPY --from=pkg-xz / /
+COPY --from=pkg-zlib / /
+COPY --from=pkg-zstd / /
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/image-factory
-ENTRYPOINT ["/image-factory"]
+ENTRYPOINT ["/usr/bin/image-factory"]
 

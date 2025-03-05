@@ -382,7 +382,7 @@ func (mockArtifactProducer) GetInstallerImage(_ context.Context, arch artifacts.
 func TestEnhanceFromSchematic(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
 	baseProfile := profile.Default[constants.PlatformMetal].DeepCopy()
