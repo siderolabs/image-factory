@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-03-06T11:14:29Z by kres e2c7efe.
+# Generated on 2025-03-06T14:29:08Z by kres e2c7efe.
 
 # common variables
 
@@ -241,7 +241,7 @@ integration: integration.test
 
 .PHONY: tailwind
 tailwind:
-	@$(MAKE) local-tailwind-copy PUSH=false DEST=.
+	@$(MAKE) local-tailwind-copy PUSH=false DEST=. PLATFORM=$(OPERATING_SYSTEM)/$(GOARCH)
 
 .PHONY: rekres
 rekres:

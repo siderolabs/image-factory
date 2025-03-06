@@ -245,7 +245,7 @@ spec:
     enabled: true
     phony: true
     script:
-      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=."
+      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=. PLATFORM=$(OPERATING_SYSTEM)/$(GOARCH)"
   docker:
     description: "Runs tailwind update"
     enabled: true
