@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-03-05T16:03:37Z by kres e2c7efe.
+# Generated on 2025-03-06T11:14:29Z by kres e2c7efe.
 
 ARG TOOLCHAIN
 ARG PKGS_PREFIX
@@ -78,10 +78,10 @@ FROM ${PKGS_PREFIX}/zlib:${PKGS} AS pkg-zlib
 FROM ${PKGS_PREFIX}/zstd:${PKGS} AS pkg-zstd
 
 # Installs tailwindcss
-FROM docker.io/node:21.7.3-alpine3.19 AS tailwind-base
+FROM docker.io/oven/bun:1.2.4-alpine AS tailwind-base
 WORKDIR /src
 COPY package.json package-lock.json .
-RUN --mount=type=cache,target=/src/node_modules npm ci
+RUN --mount=type=cache,target=/src/node_modules bun install
 
 # base toolchain image
 FROM --platform=${BUILDPLATFORM} ${TOOLCHAIN} AS toolchain

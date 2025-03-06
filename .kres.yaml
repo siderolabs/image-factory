@@ -245,14 +245,14 @@ spec:
     enabled: true
     phony: true
     script:
-      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=. BUILDKIT_MULTI_PLATFORM=0"
+      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=."
   docker:
     description: "Runs tailwind update"
     enabled: true
     stages:
       - name: tailwind-base
         description: "Installs tailwindcss"
-        from: docker.io/node:21.7.3-alpine3.19
+        from: docker.io/oven/bun:1.2.4-alpine
         workdir: /src
         steps:
           - copy:
@@ -261,7 +261,7 @@ spec:
           - script:
               cache:
                 - /src/node_modules
-              command: npm ci
+              command: bun install
       - name: tailwind-update
         description: "tailwind update"
         from: tailwind-base

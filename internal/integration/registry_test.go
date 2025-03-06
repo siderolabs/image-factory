@@ -85,6 +85,12 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 		"bin/installer": {},
 	}
 
+	if q.SupportsUnifiedInstaller() {
+		expectedFiles = map[string]struct{}{
+			"usr/bin/installer": {}, // new fhs hierarchy
+		}
+	}
+
 	switch {
 	case q.UseSDBootForUEFI():
 		expectedFiles[fmt.Sprintf("usr/install/%s/vmlinuz.efi", platform.Architecture)] = struct{}{}
@@ -209,7 +215,7 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 		"v1.3.7",
 		"v1.5.0",
 		"v1.5.1",
-		"v1.10.0-alpha.1",
+		"v1.10.0-alpha.2",
 	}
 
 	registry, err := name.NewRegistry(registryAddr)
