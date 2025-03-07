@@ -45,138 +45,227 @@ spec:
     - tailwind
   entrypoint: /usr/bin/image-factory
   copyFrom:
-    - name: pkg-fhs
-      stage: ${PKGS_PREFIX}/fhs:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-ca-certificates
-      stage: ${PKGS_PREFIX}/ca-certificates:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-musl
-      stage: ${PKGS_PREFIX}/musl:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-cpio
-      stage: ${PKGS_PREFIX}/cpio:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-dosfstools
-      stage: ${PKGS_PREFIX}/dosfstools:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-grub
-      stage: ${PKGS_PREFIX}/grub:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-grub-amd64
-      stage: ${PKGS_PREFIX}/grub:${PKGS}
-      platform: linux/amd64
-      source: /usr/lib/grub
-      destination: /usr/lib/grub
-    - name: pkg-grub-arm64
-      stage: ${PKGS_PREFIX}/grub:${PKGS}
-      platform: linux/arm64
-      source: /usr/lib/grub
-      destination: /usr/lib/grub
-    - name: pkg-grub-unicode
-      stage: ghcr.io/siderolabs/installer:v1.9.4
-      source: /usr/share/grub/unicode.pf2
-      destination: /usr/share/grub/unicode.pf2
-    - name: pkg-kmod
-      stage: ${PKGS_PREFIX}/kmod:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-libattr
-      stage: ${PKGS_PREFIX}/libattr:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-lininih
-      stage: ${PKGS_PREFIX}/libinih:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-liblzma
-      stage: ${PKGS_PREFIX}/liblzma:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-linurcu
-      stage: ${PKGS_PREFIX}/liburcu:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-openssl
-      stage: ${PKGS_PREFIX}/openssl:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-xfsprogs
-      stage: ${PKGS_PREFIX}/xfsprogs:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-e2fsprogs
-      stage: ${PKGS_PREFIX}/e2fsprogs:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-glib
-      stage: ${PKGS_PREFIX}/glib:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-linburn
-      stage: ${PKGS_PREFIX}/libburn:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-libisoburn
-      stage: ${PKGS_PREFIX}/libisoburn:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-linisofs
-      stage: ${PKGS_PREFIX}/libisofs:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-mtools
-      stage: ${PKGS_PREFIX}/mtools:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-pcre2
-      stage: ${PKGS_PREFIX}/pcre2:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-pigz
-      stage: ${PKGS_PREFIX}/pigz:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-qemu-tools
-      stage: ${PKGS_PREFIX}/qemu-tools:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-squashfs-tools
-      stage: ${PKGS_PREFIX}/squashfs-tools:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-tar
-      stage: ${PKGS_PREFIX}/tar:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-xz
-      stage: ${PKGS_PREFIX}/xz:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-zlib
-      stage: ${PKGS_PREFIX}/zlib:${PKGS}
-      source: /
-      destination: /
-    - name: pkg-zstd
-      stage: ${PKGS_PREFIX}/zstd:${PKGS}
-      source: /
-      destination: /
+    - name: imager-tools
+      stage: imager-tools
 ---
 kind: auto.CustomSteps
 spec:
   steps:
+    - name: imager-base
+      toplevel: true
+    - name: imager-tools
+      toplevel: true
     - name: integration.test
       toplevel: true
     - name: integration
       toplevel: true
     - name: tailwind
       toplevel: true
+---
+kind: custom.Step
+name: imager-base
+spec:
+  makefile:
+    enabled: true
+    phony: true
+  docker:
+    enabled: true
+    stages:
+      - name: pkg-fhs
+        from: ${PKGS_PREFIX}/fhs:${PKGS}
+      - name: pkg-ca-certificates
+        from: ${PKGS_PREFIX}/ca-certificates:${PKGS}
+      - name: pkg-musl
+        from: ${PKGS_PREFIX}/musl:${PKGS}
+      - name: pkg-cpio
+        from: ${PKGS_PREFIX}/cpio:${PKGS}
+      - name: pkg-dosfstools
+        from: ${PKGS_PREFIX}/dosfstools:${PKGS}
+      - name: pkg-grub
+        from: ${PKGS_PREFIX}/grub:${PKGS}
+      - name: pkg-grub-amd64
+        from: ${PKGS_PREFIX}/grub:${PKGS}
+        platform: linux/amd64
+      - name: pkg-grub-arm64
+        from: ${PKGS_PREFIX}/grub:${PKGS}
+        platform: linux/arm64
+      - name: pkg-grub-unicode
+        from: ${PKGS_PREFIX}/installer:v1.9.4
+      - name: pkg-kmod
+        from: ${PKGS_PREFIX}/kmod:${PKGS}
+      - name: pkg-libattr
+        from: ${PKGS_PREFIX}/libattr:${PKGS}
+      - name: pkg-libinih
+        from: ${PKGS_PREFIX}/libinih:${PKGS}
+      - name: pkg-liblzma
+        from: ${PKGS_PREFIX}/liblzma:${PKGS}
+      - name: pkg-liburcu
+        from: ${PKGS_PREFIX}/liburcu:${PKGS}
+      - name: pkg-openssl
+        from: ${PKGS_PREFIX}/openssl:${PKGS}
+      - name: pkg-xfsprogs
+        from: ${PKGS_PREFIX}/xfsprogs:${PKGS}
+      - name: pkg-e2fsprogs
+        from: ${PKGS_PREFIX}/e2fsprogs:${PKGS}
+      - name: pkg-glib
+        from: ${PKGS_PREFIX}/glib:${PKGS}
+      - name: pkg-libburn
+        from: ${PKGS_PREFIX}/libburn:${PKGS}
+      - name: pkg-libisoburn
+        from: ${PKGS_PREFIX}/libisoburn:${PKGS}
+      - name: pkg-libisofs
+        from: ${PKGS_PREFIX}/libisofs:${PKGS}
+      - name: pkg-mtools
+        from: ${PKGS_PREFIX}/mtools:${PKGS}
+      - name: pkg-pcre2
+        from: ${PKGS_PREFIX}/pcre2:${PKGS}
+      - name: pkg-pigz
+        from: ${PKGS_PREFIX}/pigz:${PKGS}
+      - name: pkg-qemu-tools
+        from: ${PKGS_PREFIX}/qemu-tools:${PKGS}
+      - name: pkg-squashfs-tools
+        from: ${PKGS_PREFIX}/squashfs-tools:${PKGS}
+      - name: pkg-tar
+        from: ${PKGS_PREFIX}/tar:${PKGS}
+      - name: pkg-xz
+        from: ${PKGS_PREFIX}/xz:${PKGS}
+      - name: pkg-zlib
+        from: ${PKGS_PREFIX}/zlib:${PKGS}
+      - name: pkg-zstd
+        from: ${PKGS_PREFIX}/zstd:${PKGS}
+---
+kind: custom.Step
+name: imager-tools
+spec:
+  makefile:
+    enabled: true
+    phony: true
+  docker:
+    enabled: true
+    stages:
+      - name: imager-tools
+        description: copies the imager tools
+        steps:
+          - copy:
+              from: pkg-fhs
+              src: /
+              dst: /
+          - copy:
+              from: pkg-ca-certificates
+              src: /
+              dst: /
+          - copy:
+              from: pkg-musl
+              src: /
+              dst: /
+          - copy:
+              from: pkg-cpio
+              src: /
+              dst: /
+          - copy:
+              from: pkg-dosfstools
+              src: /
+              dst: /
+          - copy:
+              from: pkg-grub
+              src: /
+              dst: /
+          - copy:
+              from: pkg-grub-amd64
+              src: /usr/lib/grub
+              dst: /usr/lib/grub
+          - copy:
+              from: pkg-grub-arm64
+              src: /usr/lib/grub
+              dst: /usr/lib/grub
+          - copy:
+              from: pkg-grub-unicode
+              src: /usr/share/grub/unicode.pf2
+              dst: /usr/share/grub/unicode.pf2
+          - copy:
+              from: pkg-kmod
+              src: /
+              dst: /
+          - copy:
+              from: pkg-libattr
+              src: /
+              dst: /
+          - copy:
+              from: pkg-libinih
+              src: /
+              dst: /
+          - copy:
+              from: pkg-liblzma
+              src: /
+              dst: /
+          - copy:
+              from: pkg-liburcu
+              src: /
+              dst: /
+          - copy:
+              from: pkg-openssl
+              src: /
+              dst: /
+          - copy:
+              from: pkg-xfsprogs
+              src: /
+              dst: /
+          - copy:
+              from: pkg-e2fsprogs
+              src: /
+              dst: /
+          - copy:
+              from: pkg-glib
+              src: /
+              dst: /
+          - copy:
+              from: pkg-libburn
+              src: /
+              dst: /
+          - copy:
+              from: pkg-libisoburn
+              src: /
+              dst: /
+          - copy:
+              from: pkg-libisofs
+              src: /
+              dst: /
+          - copy:
+              from: pkg-mtools
+              src: /
+              dst: /
+          - copy:
+              from: pkg-pcre2
+              src: /
+              dst: /
+          - copy:
+              from: pkg-pigz
+              src: /
+              dst: /
+          - copy:
+              from: pkg-qemu-tools
+              src: /
+              dst: /
+          - copy:
+              from: pkg-squashfs-tools
+              src: /
+              dst: /
+          - copy:
+              from: pkg-tar
+              src: /
+              dst: /
+          - copy:
+              from: pkg-xz
+              src: /
+              dst: /
+          - copy:
+              from: pkg-zlib
+              src: /
+              dst: /
+          - copy:
+              from: pkg-zstd
+              src: /
+              dst: /
 ---
 kind: custom.Step
 name: integration.test
@@ -225,6 +314,7 @@ spec:
       - docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
   ghaction:
     enabled: true
+    condition: on-pull-request
     environment:
       REGISTRY: registry.dev.siderolabs.io
       TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache"

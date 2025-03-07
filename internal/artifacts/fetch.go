@@ -19,6 +19,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -174,7 +175,13 @@ func (m *Manager) fetchOverlayImage(arch Arch, ref OverlayRef, destPath string) 
 
 // fetchInstallerImage fetches a Talos installer image and exports it to the storage.
 func (m *Manager) fetchInstallerImage(arch Arch, versionTag string, destPath string) error {
-	if err := m.fetchImageByTag(InstallerImage, versionTag, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
+	installerImage := InstallerImage
+
+	if quirks.New(versionTag).SupportsUnifiedInstaller() {
+		installerImage = InstallerBaseImage
+	}
+
+	if err := m.fetchImageByTag(installerImage, versionTag, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
 		return err
 	}
 

@@ -6,6 +6,7 @@ package profile_test
 
 import (
 	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -754,6 +755,34 @@ func TestEnhanceFromSchematic(t *testing.T) {
 			},
 		},
 		{
+			name:          "installer 1.10",
+			baseProfile:   installerProfile,
+			versionString: "v1.10.0-alpha.2",
+
+			expectedProfile: profile.Profile{
+				Platform:      constants.PlatformMetal,
+				SecureBoot:    pointer.To(false),
+				Arch:          "amd64",
+				Version:       "v1.10.0-alpha.2",
+				Customization: profile.CustomizationProfile{},
+				Input: profile.Input{
+					BaseInstaller: profile.ContainerAsset{
+						ImageRef: "siderolabs/installer-base:v1.10.0-alpha.2",
+						OCIPath:  "installer-amd64-v1.10.0-alpha.2.oci",
+					},
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							TarballPath: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
+		{
 			name:        "secureboot ISO",
 			baseProfile: securebootISOProfile,
 			schematic: schematic.Schematic{
@@ -841,7 +870,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				Overlay: &profile.OverlayOptions{
 					Name: "rpi_generic",
 					Image: profile.ContainerAsset{
-						OCIPath: "amd64-sha256:abcdef123456.oci",
+						OCIPath: runtime.GOARCH + "-sha256:abcdef123456.oci",
 					},
 				},
 				Output: profile.Output{

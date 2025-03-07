@@ -335,7 +335,13 @@ func EnhanceFromSchematic(
 
 	if prof.Output.Kind == profile.OutKindInstaller {
 		if installerImagePath, err := artifactProducer.GetInstallerImage(ctx, artifacts.Arch(prof.Arch), versionTag); err == nil {
-			prof.Input.BaseInstaller.ImageRef = artifacts.InstallerImage + ":" + versionTag // fake reference
+			installerImage := artifacts.InstallerImage
+
+			if quirks.New(versionTag).SupportsUnifiedInstaller() {
+				installerImage = artifacts.InstallerBaseImage
+			}
+
+			prof.Input.BaseInstaller.ImageRef = installerImage + ":" + versionTag // fake reference
 			prof.Input.BaseInstaller.OCIPath = installerImagePath
 		} else {
 			return prof, fmt.Errorf("failed to get base installer: %w", err)

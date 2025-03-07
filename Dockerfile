@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-03-06T11:14:29Z by kres e2c7efe.
+# Generated on 2025-03-07T07:16:04Z by kres e2c7efe.
 
 ARG TOOLCHAIN
 ARG PKGS_PREFIX
@@ -35,23 +35,23 @@ FROM --platform=linux/amd64 ${PKGS_PREFIX}/grub:${PKGS} AS pkg-grub-amd64
 
 FROM --platform=linux/arm64 ${PKGS_PREFIX}/grub:${PKGS} AS pkg-grub-arm64
 
-FROM ghcr.io/siderolabs/installer:v1.9.4 AS pkg-grub-unicode
+FROM ${PKGS_PREFIX}/installer:v1.9.4 AS pkg-grub-unicode
 
 FROM ${PKGS_PREFIX}/kmod:${PKGS} AS pkg-kmod
 
 FROM ${PKGS_PREFIX}/libattr:${PKGS} AS pkg-libattr
 
+FROM ${PKGS_PREFIX}/libburn:${PKGS} AS pkg-libburn
+
+FROM ${PKGS_PREFIX}/libinih:${PKGS} AS pkg-libinih
+
 FROM ${PKGS_PREFIX}/libisoburn:${PKGS} AS pkg-libisoburn
+
+FROM ${PKGS_PREFIX}/libisofs:${PKGS} AS pkg-libisofs
 
 FROM ${PKGS_PREFIX}/liblzma:${PKGS} AS pkg-liblzma
 
-FROM ${PKGS_PREFIX}/libburn:${PKGS} AS pkg-linburn
-
-FROM ${PKGS_PREFIX}/libinih:${PKGS} AS pkg-lininih
-
-FROM ${PKGS_PREFIX}/libisofs:${PKGS} AS pkg-linisofs
-
-FROM ${PKGS_PREFIX}/liburcu:${PKGS} AS pkg-linurcu
+FROM ${PKGS_PREFIX}/liburcu:${PKGS} AS pkg-liburcu
 
 FROM ${PKGS_PREFIX}/mtools:${PKGS} AS pkg-mtools
 
@@ -86,6 +86,39 @@ RUN --mount=type=cache,target=/src/node_modules bun install
 # base toolchain image
 FROM --platform=${BUILDPLATFORM} ${TOOLCHAIN} AS toolchain
 RUN apk --update --no-cache add bash curl build-base protoc protobuf-dev
+
+# copies the imager tools
+FROM scratch AS imager-tools
+COPY --from=pkg-fhs / /
+COPY --from=pkg-ca-certificates / /
+COPY --from=pkg-musl / /
+COPY --from=pkg-cpio / /
+COPY --from=pkg-dosfstools / /
+COPY --from=pkg-grub / /
+COPY --from=pkg-grub-amd64 /usr/lib/grub /usr/lib/grub
+COPY --from=pkg-grub-arm64 /usr/lib/grub /usr/lib/grub
+COPY --from=pkg-grub-unicode /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
+COPY --from=pkg-kmod / /
+COPY --from=pkg-libattr / /
+COPY --from=pkg-libinih / /
+COPY --from=pkg-liblzma / /
+COPY --from=pkg-liburcu / /
+COPY --from=pkg-openssl / /
+COPY --from=pkg-xfsprogs / /
+COPY --from=pkg-e2fsprogs / /
+COPY --from=pkg-glib / /
+COPY --from=pkg-libburn / /
+COPY --from=pkg-libisoburn / /
+COPY --from=pkg-libisofs / /
+COPY --from=pkg-mtools / /
+COPY --from=pkg-pcre2 / /
+COPY --from=pkg-pigz / /
+COPY --from=pkg-qemu-tools / /
+COPY --from=pkg-squashfs-tools / /
+COPY --from=pkg-tar / /
+COPY --from=pkg-xz / /
+COPY --from=pkg-zlib / /
+COPY --from=pkg-zstd / /
 
 # tailwind update
 FROM tailwind-base AS tailwind-update
@@ -229,36 +262,7 @@ COPY --from=image-factory-linux-arm64 / /
 FROM scratch AS image-image-factory
 ARG TARGETARCH
 COPY --from=image-factory image-factory-linux-${TARGETARCH} /usr/bin/image-factory
-COPY --from=pkg-fhs / /
-COPY --from=pkg-ca-certificates / /
-COPY --from=pkg-musl / /
-COPY --from=pkg-cpio / /
-COPY --from=pkg-dosfstools / /
-COPY --from=pkg-grub / /
-COPY --from=pkg-grub-amd64 /usr/lib/grub /usr/lib/grub
-COPY --from=pkg-grub-arm64 /usr/lib/grub /usr/lib/grub
-COPY --from=pkg-grub-unicode /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
-COPY --from=pkg-kmod / /
-COPY --from=pkg-libattr / /
-COPY --from=pkg-lininih / /
-COPY --from=pkg-liblzma / /
-COPY --from=pkg-linurcu / /
-COPY --from=pkg-openssl / /
-COPY --from=pkg-xfsprogs / /
-COPY --from=pkg-e2fsprogs / /
-COPY --from=pkg-glib / /
-COPY --from=pkg-linburn / /
-COPY --from=pkg-libisoburn / /
-COPY --from=pkg-linisofs / /
-COPY --from=pkg-mtools / /
-COPY --from=pkg-pcre2 / /
-COPY --from=pkg-pigz / /
-COPY --from=pkg-qemu-tools / /
-COPY --from=pkg-squashfs-tools / /
-COPY --from=pkg-tar / /
-COPY --from=pkg-xz / /
-COPY --from=pkg-zlib / /
-COPY --from=pkg-zstd / /
+COPY --from=imager-tools / /
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/image-factory
 ENTRYPOINT ["/usr/bin/image-factory"]
 

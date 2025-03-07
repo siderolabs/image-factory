@@ -235,6 +235,48 @@ func TestHashProfile(t *testing.T) {
 
 			expected: "28a53cf4327cdaac8d42b9801191bc91a296980cacd51b2b1922be9c84fe1c19",
 		},
+		{
+			name:     "empty1.10",
+			expected: "9bd6614d6687009c562d4ad92f89fbb603d843cda17fea099a00d7df80344f31",
+		},
+		{
+			name: "installer profile 1.10",
+			in: profile.Profile{
+				Platform:   constants.PlatformMetal,
+				SecureBoot: pointer.To(false),
+				Arch:       "amd64",
+				Version:    "v1.10.0-alpha.2",
+				Customization: profile.CustomizationProfile{
+					ExtraKernelArgs: []string{"foo", "bar"},
+				},
+				Input: profile.Input{
+					Kernel: profile.FileAsset{
+						Path: "/tmp/foo/kernel-amd64-v1.10.0-alpha.2",
+					},
+					Initramfs: profile.FileAsset{
+						Path: "/tmp/foo/initramfs-amd64-v1.10.0-alpha.2",
+					},
+					BaseInstaller: profile.ContainerAsset{
+						ImageRef: "ghcr.io/siderolabs/installer-base:v1.10.0-alpha.2",
+						OCIPath:  "/tmp/foo/installer-amd64-v1.10.0-alpha.2.oci",
+					},
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							OCIPath: "/var/run/amd64-sha256:1234567890.oci",
+						},
+						{
+							TarballPath: "/path/some/c36dec8c835049f60b10b8e02c689c47f775a07e9a9d909786e3aacb30af9675.tar",
+						},
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+
+			expected: "1376b90b64d8271544f1de5455449170997c1c23a335091a7734055d8353beb8",
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

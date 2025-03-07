@@ -21,6 +21,7 @@ import (
 	"github.com/siderolabs/gen/optional"
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/talos/pkg/machinery/extensions"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/u-root/u-root/pkg/cpio"
@@ -56,7 +57,7 @@ func eatPadding(t *testing.T, in *bufio.Reader) {
 	}
 }
 
-func assertInitramfs(t *testing.T, path string, expected initramfsSpec) {
+func assertInitramfs(t *testing.T, path, talosVersion string, expected initramfsSpec) {
 	t.Helper()
 
 	f, err := os.Open(path)
@@ -223,7 +224,13 @@ func assertInitramfs(t *testing.T, path string, expected initramfsSpec) {
 
 		require.NoError(t, exec.Command("unsquashfs", "-d", dest, modulesSqshPath).Run())
 
-		modulesDepPath, err := filepath.Glob(filepath.Join(dest, "lib/modules/*/modules.dep"))
+		modulesPathGlob := "lib/modules/*/modules.dep"
+
+		if quirks.New(talosVersion).SupportsUnifiedInstaller() {
+			modulesPathGlob = "usr/lib/modules/*/modules.dep"
+		}
+
+		modulesDepPath, err := filepath.Glob(filepath.Join(dest, modulesPathGlob))
 		require.NoError(t, err)
 		require.Len(t, modulesDepPath, 1)
 

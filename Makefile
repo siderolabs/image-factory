@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-03-06T14:29:08Z by kres e2c7efe.
+# Generated on 2025-03-07T06:25:21Z by kres e2c7efe.
 
 # common variables
 
@@ -142,7 +142,7 @@ else
 GO_LDFLAGS += -s
 endif
 
-all: unit-tests image-factory image-image-factory integration.test integration tailwind lint
+all: unit-tests image-factory image-image-factory imager-base imager-tools integration.test integration tailwind lint
 
 $(ARTIFACTS):  ## Creates artifacts directory.
 	@mkdir -p $(ARTIFACTS)
@@ -228,6 +228,12 @@ lint: lint-golangci-lint lint-gofumpt lint-govulncheck lint-markdown  ## Run all
 .PHONY: image-image-factory
 image-image-factory: tailwind  ## Builds image for image-factory.
 	@$(MAKE) registry-$@ IMAGE_NAME="image-factory"
+
+.PHONY: imager-base
+imager-base:
+
+.PHONY: imager-tools
+imager-tools:
 
 .PHONY: integration.test
 integration.test:
