@@ -83,7 +83,8 @@ Supported image paths:
 * `initramfs-<arch>.xz` (e.g. `initramfs-amd64.xz`) - initramfs image (including system extensions if configured)
 * `<platform>-<arch>[-secureboot].iso` (e.g. `metal-amd64.iso`) - ISO image
 * `<platform>-<arch>[-secureboot]-uki.efi` (e.g. `metal-amd64-secureboot-uki.efi`) UEFI UKI image (Secure Boot compatible)
-* `installer-<arch>[-secureboot].tar` (e.g. `installer-amd64.tar`) is a custom Talos Linux installer image (including system extensions if configured)
+* `installer-<arch>[-secureboot].tar` (e.g. `installer-amd64.tar`) is a custom Talos Linux installer image for `metal` platform (including system extensions if configured)
+* `<platform>-installer-<arch>[-secureboot].tar` (e.g. `aws-installer-amd64.tar`) is a custom Talos Linux installer image for specific platform (including system extensions if configured)
 * disk images in different formats (see Talos Linux documentation for a full list):
   * `metal-<arch>[-secureboot].raw.xz` (e.g. `metal-amd64.raw.xz`) - raw disk image for metal platform
   * `aws-<arch>.raw.xz` (e.g. `aws-amd64.raw.xz`) - raw disk image for AWS platform, that can be imported as an AMI
@@ -177,9 +178,20 @@ The Talos Linux `installer` image is used for the initial install and upgrades.
 It can be pulled from the Image Factory OCI registry.
 If the image hasn't been created yet, it will be built on demand automatically.
 
-### `docker pull <registry>/installer[-secureboot]/<schematic>:<version>`
+### Legacy `installer` Image
+
+#### `docker pull <registry>/installer[-secureboot]/<schematic>:<version>`
 
 Example: `docker pull factory.talos.dev/installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.5.0`
+
+### `installer` Image
+
+#### `docker pull <registry>/<platform>-installer[-secureboot]/<version>`
+
+Examples:
+
+* `docker pull factory.talos.dev/metal-installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.5.0`
+* `docker pull factory.talos.dev/aws-installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.5.0`
 
 Pulls the Talos Linux `installer` image with the specified schematic and Talos Linux version.
 The image platform (architecture) will be determined by the architecture of the Talos Linux Linux machine.

@@ -23,6 +23,7 @@ import (
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
+//nolint:maintidx
 func TestParseFromPath(t *testing.T) {
 	t.Parallel()
 
@@ -166,6 +167,32 @@ func TestParseFromPath(t *testing.T) {
 
 			expectedProfile: profile.Profile{
 				Platform: "metal",
+				Arch:     "amd64",
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
+		{
+			path:    "metal-installer-amd64.tar",
+			version: "v1.10.0",
+
+			expectedProfile: profile.Profile{
+				Platform: "metal",
+				Arch:     "amd64",
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
+		{
+			path:    "digital-ocean-installer-amd64.tar",
+			version: "v1.10.0",
+
+			expectedProfile: profile.Profile{
+				Platform: "digital-ocean",
 				Arch:     "amd64",
 				Output: profile.Output{
 					Kind:      profile.OutKindInstaller,
@@ -899,12 +926,14 @@ func TestInstallerProfile(t *testing.T) {
 
 	for _, test := range []struct { //nolint:govet
 		arch       artifacts.Arch
+		platform   string
 		secureboot bool
 
 		expectedProfile profile.Profile
 	}{
 		{
 			arch:       artifacts.ArchAmd64,
+			platform:   "metal",
 			secureboot: false,
 
 			expectedProfile: profile.Profile{
@@ -918,6 +947,7 @@ func TestInstallerProfile(t *testing.T) {
 		},
 		{
 			arch:       artifacts.ArchArm64,
+			platform:   "metal",
 			secureboot: true,
 
 			expectedProfile: profile.Profile{
@@ -930,11 +960,25 @@ func TestInstallerProfile(t *testing.T) {
 				},
 			},
 		},
+		{
+			arch:       artifacts.ArchAmd64,
+			platform:   "hcloud",
+			secureboot: false,
+
+			expectedProfile: profile.Profile{
+				Platform: "hcloud",
+				Arch:     "amd64",
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+				},
+			},
+		},
 	} {
 		t.Run(fmt.Sprintf("%s-%v", string(test.arch), test.secureboot), func(t *testing.T) {
 			t.Parallel()
 
-			actualProfile := imageprofile.InstallerProfile(test.secureboot, test.arch)
+			actualProfile := imageprofile.InstallerProfile(test.secureboot, test.arch, test.platform)
 			require.Equal(t, test.expectedProfile, actualProfile)
 		})
 	}

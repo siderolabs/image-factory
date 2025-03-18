@@ -133,7 +133,7 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 		return prof, nil
 	}
 
-	// <platform>-<arch>-secureboot-uki.efi
+	// <platform>-<arch>[-secureboot]-uki.efi
 	if rest, ok := strings.CutSuffix(path, "-uki.efi"); ok {
 		prof.Output.Kind = profile.OutKindUKI
 		prof.Output.OutFormat = profile.OutFormatRaw
@@ -150,7 +150,7 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 		if rest, ok = strings.CutSuffix(rest, ".tar"); ok {
 			prof.Output.Kind = profile.OutKindInstaller
 			prof.Output.OutFormat = profile.OutFormatRaw
-			prof.Platform = constants.PlatformMetal // doesn't matter for installer output
+			prof.Platform = constants.PlatformMetal // default installer platform
 
 			rest, ok = strings.CutSuffix(rest, "-secureboot")
 			if ok {
@@ -158,6 +158,20 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 			}
 
 			if err := parseArch(rest, &prof); err != nil {
+				return prof, err
+			}
+
+			return prof, nil
+		}
+	}
+
+	// <platform>-installer-<arch>[-secureboot].tar
+	if platform, rest, ok := strings.Cut(path, "-installer-"); ok {
+		if rest, ok = strings.CutSuffix(rest, ".tar"); ok {
+			prof.Output.Kind = profile.OutKindInstaller
+			prof.Output.OutFormat = profile.OutFormatRaw
+
+			if err := parsePlatformArch(platform+"-"+rest, version, &prof); err != nil {
 				return prof, err
 			}
 
@@ -233,13 +247,17 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 }
 
 // InstallerProfile returns a profile to be used for installer image.
-func InstallerProfile(secureboot bool, arch artifacts.Arch) profile.Profile {
+func InstallerProfile(secureboot bool, arch artifacts.Arch, platform string) profile.Profile {
 	var prof profile.Profile
+
+	if platform == "" {
+		platform = constants.PlatformMetal
+	}
 
 	prof.Output.Kind = profile.OutKindInstaller
 	prof.Output.OutFormat = profile.OutFormatRaw
 	prof.Arch = string(arch)
-	prof.Platform = constants.PlatformMetal // doesn't matter for installer output
+	prof.Platform = platform
 
 	if secureboot {
 		prof.SecureBoot = pointer.To(true)
@@ -431,25 +449,29 @@ func EnhanceFromSchematic(
 	}
 
 	// skip customizations for profile kinds which don't support it
-	//
-	// initramfs/kernel can't carry extra kernel args & META
-	// !secureboot (non-UKI) installer can't carry extra kernel args & META
 	// UKI installer has kernel args embedded in the UKI image
-	if !(prof.Output.Kind == profile.OutKindInitramfs || prof.Output.Kind == profile.OutKindKernel || (prof.Output.Kind == profile.OutKindInstaller && !prof.SecureBootEnabled())) {
+	switch prof.Output.Kind { //nolint:exhaustive
+	// skip customizations for initramfs/kernel completely since it cannot support extra kernel args & META
+	case profile.OutKindInitramfs, profile.OutKindKernel:
+	// installer and UKI support extra kernel args if either secure boot is enabled or the version supports unified installer
+	case profile.OutKindInstaller, profile.OutKindUKI:
+		if prof.SecureBootEnabled() || quirks.New(versionTag).SupportsUnifiedInstaller() {
+			prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
+		}
+	// all other output supports cmdline & META
+	default:
 		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
 
-		if prof.Output.Kind != profile.OutKindInstaller {
-			prof.Customization.MetaContents = append(prof.Customization.MetaContents,
-				xslices.Map(schematic.Customization.Meta,
-					func(mv schematicpkg.MetaValue) meta.Value {
-						return meta.Value{
-							Key:   mv.Key,
-							Value: mv.Value,
-						}
-					},
-				)...,
-			)
-		}
+		prof.Customization.MetaContents = append(prof.Customization.MetaContents,
+			xslices.Map(schematic.Customization.Meta,
+				func(mv schematicpkg.MetaValue) meta.Value {
+					return meta.Value{
+						Key:   mv.Key,
+						Value: mv.Value,
+					}
+				},
+			)...,
+		)
 	}
 
 	prof.Version = versionTag

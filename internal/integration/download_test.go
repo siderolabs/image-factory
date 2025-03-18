@@ -120,6 +120,54 @@ func downloadAssetAndValidateInitramfs(ctx context.Context, t *testing.T, baseUR
 	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, size)
 }
 
+func downloadAssetAndValidateUKI(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, ukiSpec ukiSpec) {
+	t.Helper()
+
+	resp := downloadAsset(ctx, t, baseURL, schematicID, talosVersion, path)
+	body := resp.Body
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	d := t.TempDir()
+	ukiPath := filepath.Join(d, "uki.efi")
+
+	out, err := os.Create(ukiPath)
+	require.NoError(t, err)
+
+	size, err := io.Copy(out, body)
+	require.NoError(t, err)
+
+	require.NoError(t, out.Close())
+
+	assertUKI(t, ukiPath, ukiSpec)
+
+	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, size)
+}
+
+func downloadInstallerAndValidateUKI(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path, arch string, ukiSpec ukiSpec) {
+	t.Helper()
+
+	resp := downloadAsset(ctx, t, baseURL, schematicID, talosVersion, path)
+	body := resp.Body
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	d := t.TempDir()
+	installerPath := filepath.Join(d, "installer.tar")
+
+	out, err := os.Create(installerPath)
+	require.NoError(t, err)
+
+	size, err := io.Copy(out, body)
+	require.NoError(t, err)
+
+	require.NoError(t, out.Close())
+
+	assertInstallerTarUKIArtifact(t, installerPath, arch, ukiSpec)
+
+	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, size)
+}
+
 func downloadCmdlineAndMatch(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, expected string) {
 	t.Helper()
 
@@ -237,11 +285,70 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot-uki.efi", "application/vnd.microsoft.portable-executable", sizePicker(talosVersion, "1.5", 114564272, "1.8", 82733744, "1.9", 82733744, "1.10", 86*MiB))
 				})
 
-				t.Run("installer image", func(t *testing.T) {
+				t.Run("nocloud UKI", func(t *testing.T) {
+					t.Parallel()
+
+					expected := "talos.platform=nocloud console=tty1 console=ttyS0 net.ifnames=0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512"
+
+					if quirks.New(talosVersion).SupportsSELinux() {
+						expected += " selinux=1"
+					}
+
+					downloadAssetAndValidateUKI(ctx, t, baseURL, emptySchematicID, talosVersion, "nocloud-amd64-uki.efi", ukiSpec{
+						expectedCmdline: expected,
+					})
+				})
+
+				t.Run("legacy installer image", func(t *testing.T) {
+					if quirks.New(talosVersion).SupportsUnifiedInstaller() {
+						t.Skip()
+					}
+
 					t.Parallel()
 
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-amd64.tar", "application/x-tar", sizePicker(talosVersion, "1.5", 167482880, "1.8", 185155584, "1.9", 136*MiB, "1.10", 127*MiB))
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar", sizePicker(talosVersion, "1.5", 222793728, "1.8", 170119168, "1.9", 126*MiB, "1.10", 116*MiB))
+				})
+
+				t.Run("installer image", func(t *testing.T) {
+					if !quirks.New(talosVersion).SupportsUnifiedInstaller() {
+						t.Skip()
+					}
+
+					t.Parallel()
+
+					expectedMetalCmdlineAMD64 := "talos.platform=metal console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512 selinux=1"
+					expectedMetalCmdlineARM64 := "talos.platform=metal console=ttyAMA0 console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512 selinux=1"
+
+					expectedAWSCmdline := "talos.platform=aws console=tty1 console=ttyS0 net.ifnames=0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512 selinux=1"
+
+					downloadInstallerAndValidateUKI(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-amd64.tar", "amd64", ukiSpec{
+						expectedCmdline: expectedMetalCmdlineAMD64,
+					})
+					downloadInstallerAndValidateUKI(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-installer-amd64.tar", "amd64", ukiSpec{
+						expectedCmdline: expectedMetalCmdlineAMD64,
+					})
+
+					downloadInstallerAndValidateUKI(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "arm64", ukiSpec{
+						expectedCmdline: expectedMetalCmdlineARM64,
+					})
+					downloadInstallerAndValidateUKI(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-installer-arm64.tar", "arm64", ukiSpec{
+						expectedCmdline: expectedMetalCmdlineARM64,
+					})
+
+					downloadInstallerAndValidateUKI(ctx, t, baseURL, emptySchematicID, talosVersion, "aws-installer-amd64.tar", "amd64", ukiSpec{
+						expectedCmdline: expectedAWSCmdline,
+					})
+
+					downloadInstallerAndValidateUKI(ctx, t, baseURL, emptySchematicID, talosVersion, "aws-installer-arm64.tar", "arm64", ukiSpec{
+						expectedCmdline: expectedAWSCmdline,
+					})
+
+					expectedNoCloudCmdline := "talos.platform=nocloud console=tty1 console=ttyS0 net.ifnames=0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512 selinux=1"
+
+					downloadInstallerAndValidateUKI(ctx, t, baseURL, emptySchematicID, talosVersion, "nocloud-installer-amd64.tar", "amd64", ukiSpec{
+						expectedCmdline: expectedNoCloudCmdline,
+					})
 				})
 
 				t.Run("metal image", func(t *testing.T) {
@@ -517,6 +624,70 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				)
 			})
 		})
+	})
+
+	t.Run("uki extra args", func(t *testing.T) {
+		t.Parallel()
+
+		for _, talosVersion := range talosVersions {
+			t.Run(talosVersion, func(t *testing.T) {
+				if !quirks.New(talosVersion).SupportsUnifiedInstaller() {
+					t.Skip()
+				}
+
+				t.Parallel()
+
+				expected := "talos.platform=metal console=tty0 console=ttyS0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512"
+
+				if !quirks.New(talosVersion).SupportsMetalPlatformConsoleTTYS0() {
+					expected = strings.ReplaceAll(expected, " console=ttyS0", "")
+				}
+
+				if quirks.New(talosVersion).SupportsSELinux() {
+					expected += " selinux=1"
+				}
+
+				expected += " nolapic nomodeset"
+
+				downloadAssetAndValidateUKI(ctx, t, baseURL, extraArgsSchematicID, talosVersion, "metal-amd64-uki.efi", ukiSpec{
+					expectedCmdline: expected,
+				})
+			})
+		}
+	})
+
+	t.Run("installer extra args", func(t *testing.T) {
+		t.Parallel()
+
+		for _, talosVersion := range talosVersions {
+			t.Run(talosVersion, func(t *testing.T) {
+				if !quirks.New(talosVersion).SupportsUnifiedInstaller() {
+					t.Skip()
+				}
+
+				t.Parallel()
+
+				expected := "talos.platform=metal console=tty0 console=ttyS0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512"
+
+				if !quirks.New(talosVersion).SupportsMetalPlatformConsoleTTYS0() {
+					expected = strings.ReplaceAll(expected, " console=ttyS0", "")
+				}
+
+				if quirks.New(talosVersion).SupportsSELinux() {
+					expected += " selinux=1"
+				}
+
+				expected += " nolapic nomodeset"
+
+				downloadInstallerAndValidateUKI(ctx, t, baseURL, extraArgsSchematicID, talosVersion, "installer-amd64.tar", "amd64", ukiSpec{
+					expectedCmdline: expected,
+				})
+
+				downloadInstallerAndValidateUKI(ctx, t, baseURL, extraArgsSchematicID, talosVersion, "metal-installer-amd64.tar", "amd64", ukiSpec{
+					expectedCmdline: expected,
+				})
+			})
+		}
 	})
 
 	t.Run("cmdline", func(t *testing.T) {

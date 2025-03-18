@@ -35,6 +35,8 @@ func (f *Frontend) handleHealth(_ context.Context, _ http.ResponseWriter, _ *htt
 }
 
 type requestedImage struct {
+	imageName  string
+	platform   string
 	secureboot bool
 }
 
@@ -43,24 +45,35 @@ func getRequestedImage(p httprouter.Params) (requestedImage, error) {
 
 	switch image {
 	case "installer":
-		return requestedImage{secureboot: false}, nil
+		// defaults to metal image
+		return requestedImage{
+			imageName:  image,
+			secureboot: false,
+		}, nil
 	case "installer-secureboot":
-		return requestedImage{secureboot: true}, nil
+		return requestedImage{
+			imageName:  image,
+			secureboot: true,
+		}, nil
 	default:
+		// newer installer has `-installer` as suffix
+		// Eg: metal-installer, metal-installer-secureboot, digital-ocean-installer etc
+		// first try `-installer-secureboot` and then `-installer`
+		platform, ok := strings.CutSuffix(image, "-installer-secureboot")
+		if ok {
+			return requestedImage{imageName: image, platform: platform, secureboot: true}, nil
+		}
+
+		if platform, ok = strings.CutSuffix(image, "-installer"); ok {
+			return requestedImage{imageName: image, platform: platform, secureboot: false}, nil
+		}
+
 		return requestedImage{}, fmt.Errorf("invalid image: %s", image)
 	}
 }
 
 func (img requestedImage) Name() string {
-	if img.secureboot {
-		return "installer-secureboot"
-	}
-
-	return "installer"
-}
-
-func (img requestedImage) SecureBoot() bool {
-	return img.secureboot
+	return img.imageName
 }
 
 // handleBlob handles image blob download.
@@ -228,7 +241,7 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 	var imageIndex v1.ImageIndex = empty.Index
 
 	for _, arch := range []artifacts.Arch{artifacts.ArchAmd64, artifacts.ArchArm64} {
-		prof := profile.InstallerProfile(img.SecureBoot(), arch)
+		prof := profile.InstallerProfile(img.secureboot, arch, img.platform)
 
 		prof, err := profile.EnhanceFromSchematic(ctx, prof, schematic, f.artifactsManager, f.secureBootService, versionTag)
 		if err != nil {

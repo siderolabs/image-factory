@@ -257,7 +257,7 @@ func (m *Manager) GetOfficialOverlays(ctx context.Context, versionString string)
 	return overlays, nil
 }
 
-// GetInstallerImage pulls and stoers in OCI layout installer image.
+// GetInstallerImage pulls and stores in OCI layout installer-base image.
 func (m *Manager) GetInstallerImage(ctx context.Context, arch Arch, versionString string) (string, error) {
 	version, err := semver.ParseTolerant(versionString)
 	if err != nil {
