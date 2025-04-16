@@ -1,10 +1,10 @@
 {{ define "wizard-cmdline" }}
 {{ template "hidden-inputs" . }}
-{{ template "header" "Customization" }}
+{{ template "header" (t .Localizer "customization.title") }}
 <div class="mb-6">
     <div class="mb-6">
         <label for="extra-args" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-            Extra kernel command line arguments:
+            {{ t .Localizer "customization.cmdline" }}
         </label>
         <input id="extra-args" name="cmdline" value="{{ .SelectedCmdline }}"
             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
@@ -15,27 +15,27 @@
 
     <div class="ms-2 prose dark:prose-invert prose-sm">
         <p>
-            This step allows you to customize the default <a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/reference/kernel/">kernel command line arguments</a>.
+            {{ t .Localizer "customization.cmdline.description" }}<a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/reference/kernel/">{{ t .Localizer "customization.cmdline.arguments" }}</a>.
         </p>
         <p>
-            The syntax accepted is the same as the kernel command line syntax, e.g., <code>console=ttyS0,115200</code>. Prefixing an argument with <code>-</code> removes it from the default command line (e.g., <code>-console</code>).
+            {{ t .Localizer "customization.cmdline.example" }}<code>console=ttyS0,115200</code>{{ t .Localizer "customization.cmdline.prefix" }}<code>-</code>{{ t .Localizer "customization.cmdline.removes" }}<code>-console</code>).
         </p>
         {{ if eq .SecureBoot "true" }}
-        <p>With SecureBoot, the kernel command line is signed and cannot be modified, so this is the only opportunity to customize it.</p>
+        <p>{{ t .Localizer "customization.cmdline.secure_boot" }}</p>
         {{ else }}
         <p>
-            Please note that kernel command line customization is only accepted for the initial boot images (ISO, PXE, disk image) and is ignored for <code>installer</code> images. For upgrade/install command line customization, use the <code>machine.install.extraKernelArgs</code> machine configuration field.
+            {{ t .Localizer "customization.cmdline.note" }}<code>installer</code>{{ t .Localizer "customization.cmdline.upgrade" }}<code>machine.install.extraKernelArgs</code>{{ t .Localizer "customization.cmdline.configuration" }}
         </p>
         {{ end }}
         <p>
-            Skip this step if unsure.
+            {{ t .Localizer "customization.cmdline.skip" }}
         </p>
     </div>
 
     {{ if .OverlayOptionsEnabled }}
     <div class="mb-6 mt-6">
         <label for="extra-overlay-options" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-            Extra overlay options (advanced):
+            {{ t .Localizer "customization.overlay" }}
         </label>
         <textarea id="extra-overlay-options" name="overlay-options"
             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full h-16 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
@@ -45,20 +45,20 @@
 
     <div class="ms-2 prose dark:prose-invert prose-sm">
         <p>
-            This step allows you to customize the overlay options for the <a target="_blank" href="https://github.com/{{ .BoardMeta.OverlayImage }}">{{ .BoardMeta.OverlayImage }} overlay</a>.
+            {{ t .Localizer "customization.overlay.description" }}<a target="_blank" href="https://github.com/{{ .BoardMeta.OverlayImage }}">{{ .BoardMeta.OverlayImage }} {{ t .Localizer "customization.overlay.name" }}</a>.
         </p>
         <p>
-            The accepted syntax is YAML (JSON) key-value pairs. The available options are specific to the overlay image and can be found in its documentation.
+            {{ t .Localizer "customization.overlay.syntax" }}
         </p>
         <p>
-            If unsure, you can skip this step.
+            {{ t .Localizer "customization.overlay.skip" }}
         </p>
     </div>
     {{ end }}
 
     <div class="flex gap-4">
-        {{ template "back-button" "target,version,platform,board,arch,secureboot,selected-extensions" }}
-        {{ template "next-button" }}
+        {{ template "back-button" (dict "Params" "target,version,platform,board,arch,secureboot,selected-extensions" "Localizer" .Localizer) }}
+        {{ template "next-button" . }}
     </div>
 </div>
 {{ end }}

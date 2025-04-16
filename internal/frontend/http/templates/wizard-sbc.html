@@ -1,14 +1,14 @@
 {{ define "wizard-sbc" }}
 {{ template "hidden-inputs" . }}
-{{ template "header" "Single Board Computer" }}
+{{ template "header" (t .Localizer "singleboard.title") }}
 <div class="mb-6">
     {{ range .SBCs }}
-    {{ template "radio-with-description" dict "name" "board" "value" .Name "current" $.SelectedBoard "label" .Label "description" (dynamic_template "board-description" (dict "Board" . "Version" $.Version))  }}
+    {{ template "radio-with-description" dict "name" "board" "value" .Name "current" $.SelectedBoard "label" .Label "description" (dynamic_template "board-description" (dict "Board" . "Version" $.Version "Localizer" $.Localizer))  }}
     {{ end }}
 
     <div class="flex gap-4">
-        {{ template "back-button" "target,selected-version" }}
-        {{ template "next-button" }}
+        {{ template "back-button" (dict "Params" "target,selected-version" "Localizer" .Localizer) }}
+        {{ template "next-button" . }}
     </div>
 </div>
 {{ end }}

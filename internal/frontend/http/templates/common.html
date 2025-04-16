@@ -10,7 +10,7 @@
         type="button"
         class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
     >
-        Next
+        {{ t .Localizer "button.next" }}
         <svg class="w-3.5 h-3.5 ms-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
         </svg>
@@ -23,14 +23,14 @@
     <button
         hx-target="#wizard-form"
         hx-post="/ui/wizard"
-        hx-params="{{ . }}"
+        hx-params="{{ .Params }}"
         type="button"
         class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
     >
         <svg class="rotate-180 w-3.5 h-3.5 me-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
         </svg>
-        Back
+        {{ t .Localizer "button.back" }}
     </button>
 </div>
 {{ end }}
@@ -98,22 +98,22 @@
 
 {{ define "platform-description" }}
     {{ .Platform.Description }}
-    (<a target="_blank" class="text-blue-600 dark:text-blue-500 underline" href="https://www.talos.dev/{{ short_version .Version }}{{ .Platform.Documentation}}">documentation</a>).
+    (<a target="_blank" class="text-blue-600 dark:text-blue-500 underline" href="https://www.talos.dev/{{ short_version .Version }}{{ .Platform.Documentation}}">{{ t .Localizer "common.documentation" }}</a>).
 {{ end }}
 
 {{ define "board-description" }}
-    Runs on {{ .Board.Label }}{{ if .Board.Documentation }} (<a target="_blank" class="text-blue-600 dark:text-blue-500 underline" href="https://www.talos.dev/{{ short_version .Version }}{{ .Board.Documentation}}">documentation</a>){{ end }}.
+    {{ t .Localizer "common.runs_on" }} {{ .Board.Label }}{{ if .Board.Documentation }} (<a target="_blank" class="text-blue-600 dark:text-blue-500 underline" href="https://www.talos.dev/{{ short_version .Version }}{{ .Board.Documentation}}">{{ t .Localizer "common.documentation" }}</a>){{ end }}.
 {{ end }}
 
 {{ define "arch-description" }}
     {{ if eq .Arch "amd64" }}
-            Compatible with Intel and AMD CPUs, also referred to as x86_64. If unsure, select this option.
+            {{ t .Localizer "architecture.amd64" }}
         {{ end }}
         {{ if eq .Arch "arm64" }}
             {{ if eq .Target "metal" }}
-                Suitable for Ampere Computing and other arm64 CPUs. For Single Board Computers, choose the 'SBC' option on the first screen. For AWS and GCP arm64 VMs, use Cloud images.
+                {{ t .Localizer "architecture.arm64" }}
             {{ else }}
-                Compatible with various ARM64 manufacturers, also known as aarch64.
+                {{ t .Localizer "architecture.other" }}
             {{ end }}
         {{ end }}
 {{ end }}

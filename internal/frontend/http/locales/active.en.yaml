@@ -1,0 +1,278 @@
+- id: lang.name
+  translation: Language
+
+- id: lang.en
+  translation: English
+
+- id: lang.ru
+  translation: Russian
+
+- id: app.name
+  translation: "Image Factory"
+
+- id: distro.name
+  translation: "Talos Linux"
+
+- id: page.header
+  translation: "Talos Linux Image Factory"
+
+- id: info.developed_by
+  translation: "The Talos Linux Image Factory, developed by "
+
+- id: info.offers
+  translation: ", offers a method to download various boot assets for "
+
+- id: info.more
+  translation: "For more information about the Image Factory API and the available image formats, please visit "
+
+- id: info.github
+  translation: "the GitHub repository"
+
+- id: info.version
+  translation: "Version"
+
+- id: interface.loading
+  translation: "Loading..."
+
+- id: button.next
+  translation: "Next"
+
+- id: button.search
+  translation: "Search"
+
+- id: button.back
+  translation: "Back"
+
+- id: hardware.title
+  translation: "Hardware Type"
+
+- id: hardware.bmm.name
+  translation: "Bare-metal Machine"
+
+- id: hardware.cs.name
+  translation: "Cloud Server"
+
+- id: hardware.sbc.name
+  translation: "Single Board Computer"
+
+- id: hardware.bmm.description
+  translation: "Suitable for x86-64 and arm64 bare-metal machines, as well as generic virtual machines. If unsure, choose this option."
+
+- id: hardware.cs.description
+  translation: "Compatible with AWS, GCP, Azure, VMWare, Equinix Metal, and other platforms, including homelab environments like Proxmox."
+
+- id: hardware.sbc.description
+  translation: "Supports Raspberry Pi, Pine64, Jetson Nano, and similar devices."
+
+- id: versions.title
+  translation: "Choose Talos Linux Version"
+
+- id: versions.recommendation
+  translation: "We strongly recommend using the latest stable version of Talos Linux"
+
+- id: versions.recommendation.pre_release
+  translation: "Pre-release versions are suitable for testing purposes but are not advised for production environments."
+
+- id: docs.title
+  translation: "Documentation for Talos Linux"
+
+- id: docs.new
+  translation: "What's New"
+
+- id: docs.matrix
+  translation: "Support Matrix"
+
+- id: architecture.title
+  translation: "Machine Architecture"
+
+- id: architecture.amd64
+  translation: "Compatible with Intel and AMD CPUs, also referred to as x86_64. If unsure, select this option."
+
+- id: architecture.arm64
+  translation: "Suitable for Ampere Computing and other arm64 CPUs. For Single Board Computers, choose the 'SBC' option on the first screen. For AWS and GCP arm64 VMs, use Cloud images."
+
+- id: architecture.other
+  translation: "Compatible with various ARM64 manufacturers, also known as aarch64."
+
+- id: architecture.secure_boot.name
+  translation: "SecureBoot"
+
+- id: architecture.secure_boot.create
+  translation: "Create a "
+
+- id: architecture.secure_boot.description
+  translation: " image signed with the official Sidero Labs signing key. This requires UEFI boot and pre-configured hardware."
+
+- id: cloud.title
+  translation: "Cloud"
+
+- id: singleboard.title
+  translation: "Single Board Computer"
+
+- id: common.runs_on
+  translation: "Runs on"
+
+- id: common.documentation
+  translation: "documentation"
+
+- id: extensions.title
+  translation: "System Extensions"
+
+- id: extensions.description
+  translation: " enhance the Talos Linux base image with additional features such as extra drivers, hardware firmware, container runtimes, guest agents, and more."
+
+- id: extensions.select
+  translation: "Select the extensions needed for your environment. If unsure, you can skip this step."
+
+- id: customization.title
+  translation: "Customization"
+
+- id: customization.cmdline
+  translation: "Extra kernel command line arguments:"
+
+- id: customization.cmdline.description
+  translation: "This step allows you to customize the default "
+
+- id: customization.cmdline.arguments
+  translation: "kernel command line arguments"
+
+- id: customization.cmdline.example
+  translation: "The syntax accepted is the same as the kernel command line syntax, e.g., "
+
+- id: customization.cmdline.prefix
+  translation: ". Prefixing an argument with "
+
+- id: customization.cmdline.removes
+  translation: " removes it from the default command line (e.g., "
+
+- id: customization.cmdline.secure_boot
+  translation: "With SecureBoot, the kernel command line is signed and cannot be modified, so this is the only opportunity to customize it."
+
+- id: customization.cmdline.note
+  translation: "Please note that kernel command line customization is only accepted for the initial boot images (ISO, PXE, disk image) and is ignored for "
+
+- id: customization.cmdline.upgrade
+  translation: " images. For upgrade/install command line customization, use the "
+
+- id: customization.cmdline.configuration
+  translation: " machine configuration field."
+
+- id: customization.cmdline.skip
+  translation: "Skip this step if unsure."
+
+- id: customization.overlay
+  translation: "Extra overlay options (advanced):"
+
+- id: customization.overlay.description
+  translation: "This step allows you to customize the overlay options for the "
+
+- id: customization.overlay.name
+  translation: "overlay"
+
+- id: customization.overlay.syntax
+  translation: "The accepted syntax is YAML (JSON) key-value pairs. The available options are specific to the overlay image and can be found in its documentation."
+
+- id: customization.overlay.skip
+  translation: "If unsure, you can skip this step."
+
+- id: final.title
+  translation: "Schematic Ready"
+
+- id: final.image
+  translation: "Your image schematic ID is: "
+
+- id: final.first_boot
+  translation: "First Boot"
+
+- id: final.first_boot.metal
+  translation: "Here are the options for the initial boot of Talos Linux on a bare-metal machine or a generic virtual machine:"
+
+- id: final.first_boot.cloud
+  translation: "Here are the options for the initial boot of Talos Linux on"
+
+- id: final.first_boot.sbc
+  translation: "Use the following disk image for"
+
+- id: final.initial_installation
+  translation: "Initial Installation"
+
+- id: final.initial_installation.description
+  translation: "For the initial installation of Talos Linux (not applicable for disk image boot), add the following installer image to the machine configuration:"
+
+- id: final.upgrading
+  translation: "Upgrading Talos Linux"
+
+- id: final.upgrading.name
+  translation: "upgrade"
+
+- id: final.upgrading.to
+  translation: "To "
+
+- id: final.upgrading.description
+  translation: " Talos Linux on the machine, use the following image:"
+
+- id: final.documentation
+  translation: "Documentation"
+
+- id: final.documentation.new
+  translation: "What's New in Talos "
+
+- id: final.documentation.matrix
+  translation: "Support Matrix for "
+
+- id: final.documentation.getting_started
+  translation: "Getting Started Guide"
+
+- id: final.documentation.metal
+  translation: "Bare-metal Network Configuration"
+
+- id: final.documentation.cloud
+  translation: "Guide"
+
+- id: final.documentation.sbc
+  translation: "Guide"
+
+- id: final.documentation.secure_boot
+  translation: "SecureBoot Guide"
+
+- id: final.documentation.production
+  translation: "Production Cluster Guide"
+
+- id: final.documentation.troubleshooting
+  translation: "Troubleshooting Guide"
+
+- id: final.extra
+  translation: "Extra Assets"
+
+- id: final.extra.kernel_image
+  translation: "Kernel Image"
+
+- id: final.extra.cmdline
+  translation: "Kernel Command Line"
+
+- id: final.extra.initramfs
+  translation: "Initramfs Image"
+
+- id: final.disk_image.secure_boot
+  translation: "SecureBoot Disk Image"
+
+- id: final.disk_image.secure_boot_docs
+  translation: "SecureBoot documentation"
+
+- id: final.disk_image.iso_docs
+  translation: "ISO documentation"
+
+- id: final.disk_image.all
+  translation: "Disk Image"
+
+- id: final.pxe.secure_boot
+  translation: "SecureBoot PXE"
+
+- id: final.pxe.boot
+  translation: "PXE boot"
+
+- id: final.pxe.docs
+  translation: "PXE documentation"
+
+- id: final.board_image
+  translation: "Disk Image"

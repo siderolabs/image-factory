@@ -1,14 +1,14 @@
 {{ define "wizard-cloud" }}
 {{ template "hidden-inputs" . }}
-{{ template "header" "Cloud" }}
+{{ template "header" (t .Localizer "cloud.title") }}
 <div class="mb-6">
     {{ range .Platforms }}
-    {{ template "radio-with-description" dict "name" "platform" "value" .Name "current" $.SelectedPlatform "label" .Label "description" (dynamic_template "platform-description" (dict "Platform" . "Version" $.Version)) }}
+    {{ template "radio-with-description" dict "name" "platform" "value" .Name "current" $.SelectedPlatform "label" .Label "description" (dynamic_template "platform-description" (dict "Platform" . "Version" $.Version "Localizer" $.Localizer)) }}
     {{ end }}
 
     <div class="flex gap-4">
-        {{ template "back-button" "target,selected-version" }}
-        {{ template "next-button" }}
+        {{ template "back-button" (dict "Params" "target,selected-version" "Localizer" .Localizer) }}
+        {{ template "next-button" . }}
     </div>
 </div>
 {{ end }}

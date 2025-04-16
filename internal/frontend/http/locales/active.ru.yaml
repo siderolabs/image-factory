@@ -1,0 +1,279 @@
+- id: lang.name
+  translation: Язык
+
+- id: lang.en
+  translation: Английский
+
+- id: lang.ru
+  translation: Русский
+
+- id: app.name
+  translation: "Генератор Образов"
+
+- id: distro.name
+  translation: "Talos Linux"
+
+- id: page.header
+  translation: "Генератор образов Talos Linux"
+
+- id: info.developed_by
+  translation: "Генератор образов Talos Linux, разработанный "
+
+- id: info.offers
+  translation: ", предоставляет способ создания различных загрузочных образов для "
+
+- id: info.more
+  translation: "Для получения дополнительной информации об API генератора образов и доступных форматах образов, посетите "
+
+- id: info.github
+  translation: "репозиторий на GitHub"
+
+- id: info.version
+  translation: "Версия"
+
+- id: interface.loading
+  translation: "Загрузка..."
+
+- id: button.next
+  translation: "Далее"
+
+- id: button.back
+  translation: "Назад"
+
+- id: button.search
+  translation: "Поиск"
+
+- id: hardware.title
+  translation: "Тип оборудования"
+
+- id: hardware.bmm.name
+  translation: "Физический сервер"
+
+- id: hardware.cs.name
+  translation: "Облачный сервер"
+
+- id: hardware.sbc.name
+  translation: "Одноплатный компьютер"
+
+- id: hardware.bmm.description
+  translation: "Подходит для физических машин x86-64 и arm64, а также для виртуальных машин. Если не уверены — выберите этот вариант."
+
+- id: hardware.cs.description
+  translation: "Совместим с AWS, GCP, Azure, VMWare, Equinix Metal и другими платформами, включая домашние кластеры, такие как Proxmox."
+
+- id: hardware.sbc.description
+  translation: "Поддерживаются Raspberry Pi, Pine64, Jetson Nano и подобные устройства."
+
+- id: versions.title
+  translation: "Выбор версии Talos Linux"
+
+- id: versions.recommendation
+  translation: "Настоятельно рекомендуем использовать последнюю стабильную версию Talos Linux"
+
+- id: versions.recommendation.pre_release
+  translation: "Предрелизные версии подходят для тестирования, но не рекомендуются для продакшена."
+
+- id: docs.title
+  translation: "Документация Talos Linux"
+
+- id: docs.new
+  translation: "Что нового"
+
+- id: docs.matrix
+  translation: "Матрица поддержки"
+
+- id: architecture.title
+  translation: "Архитектура машины"
+
+- id: architecture.amd64
+  translation: "Совместима с процессорами Intel и AMD, также известными как x86_64. Если не уверены — выберите этот вариант."
+
+- id: architecture.arm64
+  translation: "Подходит для процессоров Ampere и других ARM64. Для одноплатников выберите 'SBC' на первом экране. Для облачных ARM64 ВМ (AWS, GCP) используйте облачные образы."
+
+- id: architecture.other
+  translation: "Совместимa с различными производителями ARM64, также известна как aarch64."
+
+- id: architecture.secure_boot.name
+  translation: "SecureBoot"
+
+- id: architecture.secure_boot.create
+  translation: "Создать "
+
+- id: architecture.secure_boot.description
+  translation: " образ, подписанный официальным ключом Sidero Labs. Требует UEFI-загрузку и предварительно настроенное оборудование."
+
+- id: cloud.title
+  translation: "Облако"
+
+- id: singleboard.title
+  translation: "Одноплатный компьютер"
+
+- id: common.runs_on
+  translation: "Работает на"
+
+- id: common.documentation
+  translation: "документация"
+
+- id: extensions.title
+  translation: "Системные расширения"
+
+- id: extensions.description
+  translation: " дополняют базовый образ Talos Linux дополнительными функциями, такими как драйверы, прошивки, контейнерные среды, агенты и прочее."
+
+- id: extensions.select
+  translation: "Выберите расширения, необходимые для вашей среды. Если не уверены — можно пропустить этот шаг."
+
+- id: customization.title
+  translation: "Кастомизация"
+
+- id: customization.cmdline
+  translation: "Дополнительные параметры командной строки ядра:"
+
+- id: customization.cmdline.description
+  translation: "На этом этапе вы можете изменить параметры "
+
+- id: customization.cmdline.arguments
+  translation: "командной строки ядра"
+
+- id: customization.cmdline.example
+  translation: "Допустимый синтаксис — такой же, как и у обычной командной строки ядра, например, "
+
+- id: customization.cmdline.prefix
+  translation: ". Приставка "
+
+- id: customization.cmdline.removes
+  translation: " удаляет параметр из строки по умолчанию (например, "
+
+- id: customization.cmdline.secure_boot
+  translation: "При использовании SecureBoot командная строка подписана и не может быть изменена, так что это единственная возможность внести изменения."
+
+- id: customization.cmdline.note
+  translation: "Обратите внимание, что настройка командной строки ядра применяется только к начальному образу (ISO, PXE, дисковый образ) и игнорируется для "
+
+- id: customization.cmdline.upgrade
+  translation: " образов. Для изменения настройке командной строки ядра при обновлении/установке используйте поле "
+
+- id: customization.cmdline.configuration
+  translation: " в конфигурации машины."
+
+- id: customization.cmdline.skip
+  translation: "Пропустите этот шаг, если не уверены."
+
+- id: customization.overlay
+  translation: "Дополнительные настройки overlay (для продвинутых):"
+
+- id: customization.overlay.description
+  translation: "На этом шаге вы можете изменить параметры overlay для "
+
+- id: customization.overlay.name
+  translation: "overlay"
+
+- id: customization.overlay.syntax
+  translation: "Допустимый синтаксис — YAML (JSON) в виде пар ключ-значение. Доступные параметры зависят от overlay и описаны в его документации."
+
+- id: customization.overlay.skip
+  translation: "Если не уверены — можно пропустить."
+
+- id: final.title
+  translation: "Образ готов"
+
+- id: final.image
+  translation: "Идентификатор вашего образа: "
+
+- id: final.first_boot
+  translation: "Первый запуск"
+
+- id: final.first_boot.metal
+  translation: "Ниже представлены варианты начальной загрузки Talos Linux для физического сервера или обычной ВМ:"
+
+- id: final.first_boot.cloud
+  translation: "Ниже представлены варианты начальной загрузки Talos Linux в среде"
+
+- id: final.first_boot.sbc
+  translation: "Используйте следующий дисковый образ для"
+
+- id: final.initial_installation
+  translation: "Первичная установка"
+
+- id: final.initial_installation.description
+  translation: "Для первичной установки Talos Linux (не относится к загрузке с диска), добавьте следующий образ установщика в конфигурацию машины:"
+
+- id: final.upgrading
+  translation: "Обновление Talos Linux"
+
+- id: final.upgrading.name
+  translation: "обновления"
+
+- id: final.upgrading.to
+  translation: "Для "
+
+- id: final.upgrading.description
+  translation: " Talos Linux на машине, используйте следующий образ:"
+
+- id: final.documentation
+  translation: "Документация"
+
+- id: final.documentation.new
+  translation: "Что нового в Talos "
+
+- id: final.documentation.matrix
+  translation: "Матрица поддержки для "
+
+- id: final.documentation.getting_started
+  translation: "Руководство по началу работы"
+
+- id: final.documentation.metal
+  translation: "Настройка сети для bare-metal"
+
+- id: final.documentation.cloud
+  translation: "Руководство"
+
+- id: final.documentation.sbc
+  translation: "Руководство"
+
+- id: final.documentation.secure_boot
+  translation: "Руководство по SecureBoot"
+
+- id: final.documentation.production
+  translation: "Руководство по продакшн-кластеру"
+
+- id: final.documentation.troubleshooting
+  translation: "Руководство по устранению неисправностей"
+
+- id: final.extra
+  translation: "Дополнительные образы"
+
+- id: final.extra.kernel_image
+  translation: "Образ ядра"
+
+- id: final.extra.cmdline
+  translation: "Командная строка ядра"
+
+- id: final.extra.initramfs
+  translation: "Образ initramfs"
+
+- id: final.disk_image.secure_boot
+  translation: "Дисковый образ с SecureBoot"
+
+- id: final.disk_image.secure_boot_docs
+  translation: "документация по SecureBoot"
+
+- id: final.disk_image.iso_docs
+  translation: "документация по ISO"
+
+- id: final.disk_image.all
+  translation: "Дисковый образ"
+
+- id: final.pxe.secure_boot
+  translation: "PXE с SecureBoot"
+
+- id: final.pxe.boot
+  translation: "PXE-загрузка"
+
+- id: final.pxe.docs
+  translation: "Документация по PXE"
+
+- id: final.board_image
+  translation: "Дисковый образ"
+

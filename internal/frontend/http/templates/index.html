@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>Image Factory</title>
+	<title>{{ t .Localizer "app.name" }}</title>
     <link rel="shortcut icon" href=/favicons/favicon.ico>
     <link rel=apple-touch-icon href=/favicons/apple-touch-icon-180x180.png sizes=180x180>
     <link rel=icon type=image/png href=/favicons/favicon-16x16.png sizes=16x16>
@@ -16,15 +16,15 @@
     <main>
         <div class="md:container md:mx-auto">
             <div class="prose dark:prose-invert mt-4">
-                <h1>Talos Linux Image Factory</h1>
+                <h1>{{ t .Localizer "page.header" }}</h1>
                 <p>
-                    The Talos Linux Image Factory, developed by <a href="https://siderolabs.com/">Sidero Labs, Inc.</a>, offers a method to download various boot assets for <a href="https://talos.dev/">Talos Linux</a>.
+                    {{ t .Localizer "info.developed_by" }}<a href="https://siderolabs.com/">Sidero Labs, Inc.</a>{{ t .Localizer "info.offers" }}<a href="https://talos.dev/">{{ t .Localizer "distro.name" }}</a>.
                 </p>
                 <p>
-                    For more information about the Image Factory API and the available image formats, please visit <a href="https://github.com/siderolabs/image-factory">the GitHub repository</a>.
+                    {{ t .Localizer "info.more" }}<a href="https://github.com/siderolabs/image-factory">{{ t .Localizer "info.github" }}</a>.
                 </p>
                 <p class="tracking-tight text-gray-500 text-xs dark:text-gray-400">
-                    Version: {{ .Version }}
+                    {{ t .Localizer "info.version" }}: {{ .Version }}
                 </p>
             </div>
             <div id="processing" class="htmx-indicator">
@@ -37,17 +37,32 @@
                         d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
                         fill="currentFill" />
                 </svg>
-                <span class="sr-only">Loading...</span>
+                <span class="sr-only">{{ t .Localizer "interface.loading" }}</span>
             </div>
             <form class="text-gray-900 dark:text-white"
                   id="wizard-form"
                   hx-indicator="#processing"
-                  hx-disabled-elt="button"
-                  >
-                {{ .WizardHTML }}
-            </form>
-        </div>
-    </main>
+				  hx-disabled-elt="button"
+				  >
+				  {{ .WizardHTML }}
+			</form>
+			<!-- 🌐 Language Switcher -->
+			<div class="mt-8 flex justify-end items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+				<label for="lang">{{ t .Localizer "lang.name" }}</label>
+				<form>
+					<select name="lang"
+					hx-get="" hx-params="lang"
+					class="w-32 bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
+					{{ $lang := .Lang }}
+					{{ $localizer := .Localizer }}
+					{{ range .Bundle.LanguageTags }}
+						<option value="{{. }}" {{ if eq $lang (printf "%s" .) }}selected{{ end }}>{{ t $localizer (printf "lang.%s" .) }}</option>
+					{{ end }}
+					</select>
+				</form>
+			</div>
+		</div>
+	</main>
 </body>
 
 </html>

@@ -17,6 +17,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/julienschmidt/httprouter"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/gen/xerrors"
 	metrics "github.com/slok/go-http-metrics/metrics/prometheus"
@@ -144,6 +145,7 @@ func NewFrontend(
 	registerRoute(frontend.router.GET, "/ui/version-doc", frontend.handleUIVersionDoc)
 	registerRoute(frontend.router.POST, "/ui/extensions-list", frontend.handleUIExtensionsList)
 	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
+
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
 	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 
@@ -177,4 +179,21 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 		}
 	}
+}
+
+// Use several ways to detect language.
+func (f *Frontend) getLocalizer(r *http.Request) *i18n.Localizer {
+	lang := r.URL.Query().Get("lang")
+
+	if lang == "" {
+		if cookie, err := r.Cookie("lang"); err == nil {
+			lang = cookie.Value
+		}
+	}
+
+	if lang == "" {
+		lang = r.Header.Get("Accept-Language")
+	}
+
+	return i18n.NewLocalizer(getLocalizerBundle(), lang, "en")
 }
