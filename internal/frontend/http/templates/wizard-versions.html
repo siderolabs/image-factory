@@ -1,6 +1,6 @@
 {{ define "wizard-versions" }}
 {{ template "hidden-inputs" . }}
-{{ template "header" "Choose Talos Linux Version" }}
+{{ template "header" (t .Localizer "versions.title") }}
 <div class="mb-6">
     <select
         name="version"
@@ -18,17 +18,17 @@
     </select>
     <div class="mt-6">
         <p class="text-xs font-normal text-gray-500 dark:text-gray-300">
-                    We strongly recommend using the latest stable version of Talos Linux ({{ .Versions.LatestStable }}).
+                    {{ t .Localizer "versions.recommendation" }} ({{ .Versions.LatestStable }}).
                     <br>
-                    Pre-release versions are suitable for testing purposes but are not advised for production environments.
+                    {{ t .Localizer "versions.recommendation.pre_release" }}
         </p>
     </div>
     <div class="mt-6" id="version-doc">
-        {{ template "version-doc" $defaultVersion }}
+        {{ template "version-doc" (dict "Version" $defaultVersion "Localizer" .Localizer) }}
     </div>
     <div class="flex gap-4">
-        {{ template "back-button" "selected-target" }}
-        {{ template "next-button" }}
+        {{ template "back-button" (dict "Params" "selected-target" "Localizer" .Localizer) }}
+        {{ template "next-button" . }}
     </div>
 </div>
 {{ end }}
