@@ -17,17 +17,17 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/siderolabs/gen/maps"
 	"github.com/siderolabs/gen/value"
 	"github.com/siderolabs/gen/xslices"
+	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/version"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/platforms"
 	"gopkg.in/yaml.v3"
-
-	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/internal/version"
-	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 var templateFuncs template.FuncMap
@@ -72,6 +72,14 @@ func init() {
 
 			return template.HTML(out.String()), nil
 		},
+		"t": func(localizer *i18n.Localizer, key string) string {
+			translated, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: key})
+			if err != nil {
+				return "missing translation"
+			}
+
+			return translated
+		},
 	}
 }
 
@@ -88,10 +96,17 @@ func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.
 		return nil
 	}
 
-	templateName, data, _, err := f.wizard(ctx, r)
+	templateName, data, _, err := f.wizard(ctx, r, f.getLocalizer(r))
 	if err != nil {
 		return err
 	}
+
+	params, err := extractParams(data)
+	if err != nil {
+		return err
+	}
+
+	params.Localizer = f.getLocalizer(r)
 
 	var buf bytes.Buffer
 
@@ -102,9 +117,13 @@ func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.
 	return getTemplates().ExecuteTemplate(w, "index.html", struct {
 		Version    string
 		WizardHTML template.HTML
+		Localizer  *i18n.Localizer
+		Lang       string
 	}{
 		Version:    version.Tag,
 		WizardHTML: template.HTML(buf.String()),
+		Localizer:  params.Localizer,
+		Lang:       getCurrentLang(r),
 	})
 }
 
@@ -136,6 +155,25 @@ type WizardParams struct { //nolint:govet
 	// Dynamically set fields.
 	PlatformMeta platforms.Platform
 	BoardMeta    platforms.SBC
+
+	// Localizer
+	Localizer *i18n.Localizer
+}
+
+func getCurrentLang(r *http.Request) string {
+	lang := r.URL.Query().Get("lang")
+
+	if lang == "" {
+		if cookie, err := r.Cookie("lang"); err == nil {
+			lang = cookie.Value
+		}
+	}
+
+	if lang == "" {
+		lang = "en"
+	}
+
+	return lang
 }
 
 // WizardParamsFromRequest extracts the wizard parameters from the request.
@@ -485,8 +523,9 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 		nil
 }
 
-func (f *Frontend) wizard(ctx context.Context, r *http.Request) (string, any, url.Values, error) {
+func (f *Frontend) wizard(ctx context.Context, r *http.Request, localizer *i18n.Localizer) (string, any, url.Values, error) {
 	params := WizardParamsFromRequest(r)
+	params.Localizer = localizer
 
 	switch {
 	case params.Target == "":
@@ -514,7 +553,7 @@ func (f *Frontend) wizard(ctx context.Context, r *http.Request) (string, any, ur
 
 // handleUIWizard handles '/ui/wizard'.
 func (f *Frontend) handleUIWizard(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
-	templateName, data, query, err := f.wizard(ctx, r)
+	templateName, data, query, err := f.wizard(ctx, r, f.getLocalizer(r))
 	if err != nil {
 		return err
 	}
@@ -641,7 +680,13 @@ func (f *Frontend) getTalosVersions(ctx context.Context, selectedVersion string)
 func (f *Frontend) handleUIVersionDoc(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	version := r.FormValue("version")
 
-	return getTemplates().ExecuteTemplate(w, "version-doc.html", version)
+	return getTemplates().ExecuteTemplate(w, "version-doc.html", struct {
+		Localizer *i18n.Localizer
+		Version   string
+	}{
+		Version:   version,
+		Localizer: f.getLocalizer(r),
+	})
 }
 
 func (f *Frontend) getOfficialExtensions(ctx context.Context, version string) ([]artifacts.ExtensionRef, error) {
@@ -653,4 +698,57 @@ func (f *Frontend) getOfficialExtensions(ctx context.Context, version string) ([
 	return xslices.Filter(extensions, func(ext artifacts.ExtensionRef) bool {
 		return ext.TaggedReference.Context().RepositoryStr() != "siderolabs/metal-agent" // hide the internal metal-agent extension on the UI
 	}), nil
+}
+
+// extractParams extracts the WizardParams from the provided data.
+func extractParams(data any) (WizardParams, error) {
+	switch v := data.(type) {
+	case WizardParams:
+		return v, nil
+	case struct {
+		WizardParams
+		Versions any
+	}:
+		return v.WizardParams, nil
+	case struct {
+		WizardParams
+		Platforms []platforms.Platform
+	}:
+		return v.WizardParams, nil
+	case struct {
+		WizardParams
+		SBCs []platforms.SBC
+	}:
+		return v.WizardParams, nil
+	case struct {
+		WizardParams
+		SecureBootSupported bool
+	}:
+		return v.WizardParams, nil
+	case struct {
+		WizardParams
+		AvailableExtensions []artifacts.ExtensionRef
+	}:
+		return v.WizardParams, nil
+	case struct {
+		WizardParams
+		OverlayOptionsEnabled bool
+	}:
+		return v.WizardParams, nil
+	case struct {
+		WizardParams
+
+		Schematic                     string
+		Marshaled                     string
+		ImageBaseURL                  *url.URL
+		PXEBaseURL                    *url.URL
+		InstallerImage                string
+		SecureBootInstallerImage      string
+		TroubleshootingGuideAvailable bool
+		ProductionGuideAvailable      bool
+	}:
+		return v.WizardParams, nil
+	default:
+		return WizardParams{}, fmt.Errorf("unknown wizard data type: %T", data)
+	}
 }

@@ -1,10 +1,10 @@
 {{ define "wizard-start" }}
-{{ template "header" "Hardware Type" }}
+{{ template "header" (t .Localizer "hardware.title") }}
 <div class="mb-6">
-    {{ template "radio-with-description" dict "name" "target" "value" "metal" "current" .SelectedTarget "label" "Bare-metal Machine" "description" "Suitable for x86-64 and arm64 bare-metal machines, as well as generic virtual machines. If unsure, choose this option." }}
-    {{ template "radio-with-description" dict "name" "target" "value" "cloud" "current" .SelectedTarget "label" "Cloud Server" "description" "Compatible with AWS, GCP, Azure, VMWare, Equinix Metal, and other platforms, including homelab environments like Proxmox." }}
-    {{ template "radio-with-description" dict "name" "target" "value" "sbc" "current" .SelectedTarget "label" "Single Board Computer" "description" "Supports Raspberry Pi, Pine64, Jetson Nano, and similar devices." }}
-    {{ template "next-button" }}
+    {{ template "radio-with-description" dict "name" "target" "value" "metal" "current" .SelectedTarget "label" (t .Localizer "hardware.bmm.name") "description" (t .Localizer "hardware.bmm.description") }}
+    {{ template "radio-with-description" dict "name" "target" "value" "cloud" "current" .SelectedTarget "label" (t .Localizer "hardware.cs.name") "description" (t .Localizer "hardware.cs.description") }}
+    {{ template "radio-with-description" dict "name" "target" "value" "sbc" "current" .SelectedTarget "label" (t .Localizer "hardware.sbc.name") "description" (t .Localizer "hardware.sbc.description") }}
+    {{ template "next-button" . }}
 </div>
 {{ end }}
 

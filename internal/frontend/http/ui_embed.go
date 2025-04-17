@@ -24,6 +24,9 @@ var faviconsFS embed.FS
 //go:embed templates/*.html
 var templatesFS embed.FS
 
+//go:embed locales/*.yaml
+var localesFS embed.FS
+
 var templatesOnce = sync.OnceValue(func() *template.Template {
 	return template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS, "templates/*.html"))
 })

@@ -17,14 +17,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/julienschmidt/httprouter"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/gen/xerrors"
-	metrics "github.com/slok/go-http-metrics/metrics/prometheus"
-	"github.com/slok/go-http-metrics/middleware"
-	httproutermiddleware "github.com/slok/go-http-metrics/middleware/httprouter"
-	"go.uber.org/zap"
-	"golang.org/x/sync/singleflight"
-
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/image/signer"
@@ -33,6 +28,13 @@ import (
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/internal/secureboot"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
+	metrics "github.com/slok/go-http-metrics/metrics/prometheus"
+	"github.com/slok/go-http-metrics/middleware"
+	httproutermiddleware "github.com/slok/go-http-metrics/middleware/httprouter"
+	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
+	"golang.org/x/text/language"
+	"gopkg.in/yaml.v3"
 )
 
 // Frontend is the HTTP frontend.
@@ -46,6 +48,7 @@ type Frontend struct {
 	puller            *remote.Puller
 	pusher            *remote.Pusher
 	imageSigner       *signer.Signer
+	localizerBundle   *i18n.Bundle
 	sf                singleflight.Group
 	options           Options
 }
@@ -144,8 +147,27 @@ func NewFrontend(
 	registerRoute(frontend.router.GET, "/ui/version-doc", frontend.handleUIVersionDoc)
 	registerRoute(frontend.router.POST, "/ui/extensions-list", frontend.handleUIExtensionsList)
 	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
+
+	// Locale
+	registerRoute(frontend.router.GET, "/set-lang", frontend.handleSetLang)
+
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
 	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
+
+	bundle := i18n.NewBundle(language.English)
+	bundle.RegisterUnmarshalFunc("yaml", yaml.Unmarshal)
+
+	yamlFiles := []string{
+		"locales/active.en.yaml",
+		"locales/active.ru.yaml",
+	}
+	for _, file := range yamlFiles {
+		if _, err := bundle.LoadMessageFileFS(localesFS, file); err != nil {
+			return nil, fmt.Errorf("failed to load translation file %s: %w", file, err)
+		}
+	}
+
+	frontend.localizerBundle = bundle
 
 	return frontend, nil
 }
@@ -177,4 +199,47 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 		}
 	}
+}
+
+// Use several ways to detect language.
+func (f *Frontend) getLocalizer(r *http.Request) *i18n.Localizer {
+	lang := r.URL.Query().Get("lang")
+
+	if lang == "" {
+		if cookie, err := r.Cookie("lang"); err == nil {
+			lang = cookie.Value
+		}
+	}
+
+	if lang == "" {
+		lang = r.Header.Get("Accept-Language")
+	}
+
+	return i18n.NewLocalizer(f.localizerBundle, lang, "en")
+}
+
+// Set chosen language.
+func (f *Frontend) handleSetLang(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+	lang := r.URL.Query().Get("lang")
+	if lang == "" {
+		http.Error(w, "missing lang param", http.StatusBadRequest)
+
+		return nil
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:   "lang",
+		Value:  lang,
+		Path:   "/",
+		MaxAge: 60 * 60 * 24 * 365,
+	})
+
+	returnTo := r.URL.Query().Get("return")
+	if returnTo == "" {
+		returnTo = "/"
+	}
+
+	http.Redirect(w, r, returnTo, http.StatusFound)
+
+	return nil
 }
