@@ -2,14 +2,14 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-03-18T18:37:39Z by kres ec5ec04.
+# Generated on 2025-04-17T10:39:42Z by kres fd5cab0.
 
 ARG TOOLCHAIN
 ARG PKGS_PREFIX
 ARG PKGS
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.2.4-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.2.9-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.44.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
@@ -140,7 +140,7 @@ ARG DEEPCOPY_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/siderolabs/deep-copy@${DEEPCOPY_VERSION} \
 	&& mv /go/bin/deep-copy /bin/deep-copy
 ARG GOLANGCILINT_VERSION
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/golangci/golangci-lint/cmd/golangci-lint@${GOLANGCILINT_VERSION} \
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCILINT_VERSION} \
 	&& mv /go/bin/golangci-lint /bin/golangci-lint
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install golang.org/x/vuln/cmd/govulncheck@latest \
 	&& mv /go/bin/govulncheck /bin/govulncheck
@@ -186,7 +186,6 @@ FROM base AS lint-golangci-lint
 WORKDIR /src
 COPY .golangci.yml .
 ENV GOGC=50
-RUN golangci-lint config verify --config .golangci.yml
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/root/.cache/golangci-lint,id=image-factory/root/.cache/golangci-lint,sharing=locked --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg golangci-lint run --config .golangci.yml
 
 # runs govulncheck
