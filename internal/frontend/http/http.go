@@ -159,6 +159,7 @@ func NewFrontend(
 
 	yamlFiles := []string{
 		"locales/active.en.yaml",
+		"locales/active.ru.yaml",
 	}
 	for _, file := range yamlFiles {
 		if _, err := bundle.LoadMessageFileFS(localesFS, file); err != nil {

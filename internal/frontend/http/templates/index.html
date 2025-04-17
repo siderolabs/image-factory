@@ -54,6 +54,7 @@
 					<select name="lang" id="lang" onchange="this.form.submit()" 
 						class="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 px-2 py-1">
 						<option value="en" {{ if eq .Lang "en" }}selected{{ end }}>{{ t .Localizer "lang.en" }}</option>
+						<option value="ru" {{ if eq .Lang "ru" }}selected{{ end }}>{{ t .Localizer "lang.ru" }}</option>
 					</select>
 				</form>
 			</div>
