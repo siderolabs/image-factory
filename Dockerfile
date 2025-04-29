@@ -78,7 +78,7 @@ FROM ${PKGS_PREFIX}/zlib:${PKGS} AS pkg-zlib
 FROM ${PKGS_PREFIX}/zstd:${PKGS} AS pkg-zstd
 
 # Installs tailwindcss
-FROM docker.io/oven/bun:1.2.4-alpine AS tailwind-base
+FROM --platform=${BUILDPLATFORM} docker.io/oven/bun:1.2.4-alpine AS tailwind-base
 WORKDIR /src
 COPY package.json package-lock.json .
 RUN --mount=type=cache,target=/src/node_modules,id=image-factory/src/node_modules bun install
