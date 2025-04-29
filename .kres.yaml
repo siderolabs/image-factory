@@ -59,6 +59,10 @@ spec:
       toplevel: true
     - name: integration
       toplevel: true
+    - name: update-to-talos-main
+      toplevel: true
+    - name: integration-talos-main
+      toplevel: true
     - name: tailwind
       toplevel: true
 ---
@@ -296,6 +300,43 @@ spec:
       - "@$(MAKE) local-$@ DEST=$(ARTIFACTS)"
 ---
 kind: custom.Step
+name: update-to-talos-main
+spec:
+  docker:
+    enabled: true
+    stages:
+      - name: update-to-talos-main
+        description: updates go.mod to use the latest talos main
+        from: base
+        steps:
+          - script:
+              command: go get -u github.com/siderolabs/talos@main
+              cache:
+                - /root/.cache/go-build
+                - /go/pkg
+          - script:
+              command: go get -u github.com/siderolabs/talos/pkg/machinery@main
+              cache:
+                - /root/.cache/go-build
+                - /go/pkg
+      - name: copy-out-go-mod
+        description: copies out the go.mod and go.sum
+        steps:
+          - copy:
+              from: update-to-talos-main
+              src: /src/go.mod
+              dst: /go.mod
+          - copy:
+              from: update-to-talos-main
+              src: /src/go.sum
+              dst: /go.sum
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - "@$(MAKE) local-copy-out-go-mod DEST=."
+---
+kind: custom.Step
 name: integration
 spec:
   makefile:
@@ -318,6 +359,36 @@ spec:
     environment:
       REGISTRY: registry.dev.siderolabs.io
       TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache"
+---
+kind: custom.Step
+name: integration-talos-main
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - update-to-talos-main
+    variables:
+      - name: RUN_TESTS
+        defaultValue: TestIntegration
+      - name: TEST_FLAGS
+        defaultValue: ""
+    script:
+        - "@$(MAKE) integration"
+  ghaction:
+    enabled: true
+    cronOnly: true
+    environment:
+      REGISTRY: registry.dev.siderolabs.io
+      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache"
+    jobs:
+      - name: integration-talos-main
+        runnerLabels:
+          - generic
+        triggerLabels:
+        - integration/talos-main
+        crons:
+          - '30 7 * * *'
 ---
 kind: common.Build
 spec:
@@ -343,6 +414,7 @@ spec:
       - name: tailwind-base
         description: "Installs tailwindcss"
         from: docker.io/oven/bun:1.2.4-alpine
+        platform: "${BUILDPLATFORM}"
         workdir: /src
         steps:
           - copy:

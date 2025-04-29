@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-04-22T17:26:01Z by kres fd5cab0.
+# Generated on 2025-04-30T14:48:55Z by kres 6cbcbd1.
 
 # common variables
 
@@ -22,9 +22,9 @@ GRPC_GO_VERSION ?= 1.5.1
 GRPC_GATEWAY_VERSION ?= 2.26.3
 VTPROTOBUF_VERSION ?= 0.6.0
 GOIMPORTS_VERSION ?= 0.32.0
-GOMOCK_VERSION ?= 0.5.1
+GOMOCK_VERSION ?= 0.5.2
 DEEPCOPY_VERSION ?= v0.5.6
-GOLANGCILINT_VERSION ?= v2.1.1
+GOLANGCILINT_VERSION ?= v2.1.5
 GOFUMPT_VERSION ?= v0.8.0
 GO_VERSION ?= 1.24.2
 GO_BUILDFLAGS ?=
@@ -145,7 +145,7 @@ else
 GO_LDFLAGS += -s
 endif
 
-all: unit-tests image-factory image-image-factory imager-base imager-tools integration.test integration tailwind lint
+all: unit-tests image-factory image-image-factory lint
 
 $(ARTIFACTS):  ## Creates artifacts directory.
 	@mkdir -p $(ARTIFACTS)
@@ -247,6 +247,14 @@ integration: integration.test
 	@$(MAKE) image-image-factory PUSH=true
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
+
+.PHONY: update-to-talos-main
+update-to-talos-main:
+	@$(MAKE) local-copy-out-go-mod DEST=.
+
+.PHONY: integration-talos-main
+integration-talos-main: update-to-talos-main
+	@$(MAKE) integration
 
 .PHONY: tailwind
 tailwind:

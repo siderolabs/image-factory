@@ -1,15 +1,15 @@
-# syntax = docker/dockerfile-upstream:1.14.1-labs
+# syntax = docker/dockerfile-upstream:1.15.1-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-04-17T10:39:42Z by kres fd5cab0.
+# Generated on 2025-04-30T10:18:31Z by kres fd5cab0-dirty.
 
 ARG TOOLCHAIN
 ARG PKGS_PREFIX
 ARG PKGS
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.2.9-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.2.11-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.44.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
@@ -78,7 +78,7 @@ FROM ${PKGS_PREFIX}/zlib:${PKGS} AS pkg-zlib
 FROM ${PKGS_PREFIX}/zstd:${PKGS} AS pkg-zstd
 
 # Installs tailwindcss
-FROM docker.io/oven/bun:1.2.4-alpine AS tailwind-base
+FROM --platform=${BUILDPLATFORM} docker.io/oven/bun:1.2.4-alpine AS tailwind-base
 WORKDIR /src
 COPY package.json package-lock.json .
 RUN --mount=type=cache,target=/src/node_modules,id=image-factory/src/node_modules bun install
@@ -205,6 +205,11 @@ WORKDIR /src
 ARG TESTPKGS
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg --mount=type=cache,target=/tmp,id=image-factory/tmp go test -v -covermode=atomic -coverprofile=coverage.txt -coverpkg=${TESTPKGS} -count 1 ${TESTPKGS}
 
+# updates go.mod to use the latest talos main
+FROM base AS update-to-talos-main
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go get -u github.com/siderolabs/talos@main
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go get -u github.com/siderolabs/talos/pkg/machinery@main
+
 FROM embed-generate AS embed-abbrev-generate
 WORKDIR /src
 ARG ABBREV_TAG
@@ -217,6 +222,11 @@ COPY --from=integration-build /src/integration.test /integration.test
 
 FROM scratch AS unit-tests
 COPY --from=unit-tests-run /src/coverage.txt /coverage-unit-tests.txt
+
+# copies out the go.mod and go.sum
+FROM scratch AS copy-out-go-mod
+COPY --from=update-to-talos-main /src/go.mod /go.mod
+COPY --from=update-to-talos-main /src/go.sum /go.sum
 
 # cleaned up specs and compiled versions
 FROM scratch AS generate

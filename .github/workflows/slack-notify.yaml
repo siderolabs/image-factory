@@ -1,12 +1,13 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-12-02T10:42:38Z by kres 232fe63.
+# Generated on 2025-04-30T10:10:43Z by kres fd5cab0-dirty.
 
 name: slack-notify
 "on":
   workflow_run:
     workflows:
       - default
+      - integration-talos-main-cron
     types:
       - completed
 jobs:
