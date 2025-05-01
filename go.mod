@@ -14,8 +14,8 @@ require (
 	github.com/siderolabs/gen v0.8.0
 	github.com/siderolabs/go-debug v0.5.0
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/talos v1.10.0-beta.1
-	github.com/siderolabs/talos/pkg/machinery v1.10.0-beta.1
+	github.com/siderolabs/talos v1.10.0
+	github.com/siderolabs/talos/pkg/machinery v1.10.0
 	github.com/sigstore/cosign/v2 v2.5.0
 	github.com/sigstore/sigstore v1.9.3
 	github.com/slok/go-http-metrics v0.13.0
@@ -267,9 +267,9 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/api v0.33.0-rc.1 // indirect
-	k8s.io/apimachinery v0.33.0-rc.1 // indirect
-	k8s.io/client-go v0.33.0-rc.1 // indirect
+	k8s.io/api v0.33.0 // indirect
+	k8s.io/apimachinery v0.33.0 // indirect
+	k8s.io/client-go v0.33.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
