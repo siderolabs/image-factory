@@ -1,3 +1,61 @@
+## [image-factory 0.7.0](https://github.com/siderolabs/image-factory/releases/tag/v0.7.0) (2025-05-01)
+
+Welcome to the v0.7.0 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Noel Georgi
+* Dmitrii Sharshakov
+* Joakim Nohlgård
+* Marat Bakeev
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`5b85f95`](https://github.com/siderolabs/image-factory/commit/5b85f95cb46746fb9e7050fe95f74ba19ffba506) chore: bump deps
+* [`cdfab7d`](https://github.com/siderolabs/image-factory/commit/cdfab7ded77a7114cf04e3a292ee63f0c6ef35ee) chore(ci): add an cron ci for talos main integration test
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>18 commits</summary>
+<p>
+
+* [`e6bd83041`](https://github.com/siderolabs/talos/commit/e6bd83041b8f26addbb2af8ab20cf1634a4302cd) release(v1.10.0): prepare release
+* [`d0b0c9829`](https://github.com/siderolabs/talos/commit/d0b0c9829b7049357469b8b190d4fc58aa044b38) test: replace platform metadata test
+* [`889baabb4`](https://github.com/siderolabs/talos/commit/889baabb4cea743204c573b30d6e62ea9127cf85) fix: disk image generation with image cache
+* [`947d4b1f9`](https://github.com/siderolabs/talos/commit/947d4b1f9f4fe9ee0ba3779d689a021f72cc0a68) fix: preserve kubelet image suffix
+* [`9ea205bc9`](https://github.com/siderolabs/talos/commit/9ea205bc9ddca97fd32033d7be57d87b23fd9865) fix: handle encryption type mismatch
+* [`4e1357822`](https://github.com/siderolabs/talos/commit/4e135782256f3b6ec55c846b8abea09692bea3f7) feat: allow SideroLink unique token in machine config
+* [`eaa575cb8`](https://github.com/siderolabs/talos/commit/eaa575cb8f76f366c3040ec9e459bbda32017083) feat(kernel): add bcache kernel module to core talos
+* [`b248a370a`](https://github.com/siderolabs/talos/commit/b248a370a807540c4ec04d55b6f36952d6787f74) chore: show bound driver in pcidevices info
+* [`204fad29a`](https://github.com/siderolabs/talos/commit/204fad29a89246f03e4bfc42679439c72015f08b) fix: handle correctly changing platform network config
+* [`75aeb5f07`](https://github.com/siderolabs/talos/commit/75aeb5f07a8e652fdfdcd1d0409813d086e40d7b) feat: add version compatibility for Talos 1.11
+* [`3761e535a`](https://github.com/siderolabs/talos/commit/3761e535a7c46828ac6d26aaeb7a5477559fefef) feat: update Kubernetes to 1.33.0
+* [`5205870c4`](https://github.com/siderolabs/talos/commit/5205870c4bfef4b1a5762e949274ed503fe1f3cb) fix: force DNS runner shutdown on timeout
+* [`1f3d91462`](https://github.com/siderolabs/talos/commit/1f3d91462a6aaf871344d52f6e1493b45652e6df) fix: fix Gvisor tests with containerd patch
+* [`3bbbacfa9`](https://github.com/siderolabs/talos/commit/3bbbacfa9d048f6357af7a23f11445464f8fae7d) chore(ci): add provision test with bios
+* [`6576ce088`](https://github.com/siderolabs/talos/commit/6576ce088c1e62ed022a23fdc52893ab9b121a5b) fix: set media type to OCI for image cache layer
+* [`431e0224c`](https://github.com/siderolabs/talos/commit/431e0224ce84846daea8f5896bbefe3548d91441) feat: update Linux 6.12.24, containerd 2.0.5
+* [`bece55108`](https://github.com/siderolabs/talos/commit/bece551081db1729109d24c6fd3ad187c51c00fe) fix: extension services logging to console
+* [`d4b8090c1`](https://github.com/siderolabs/talos/commit/d4b8090c1281bce534d957f5e4718ba9b67b8293) fix: sync PCR extension with volume provisioning lifecycle
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/siderolabs/talos**                v1.10.0-beta.1 -> v1.10.0
+* **github.com/siderolabs/talos/pkg/machinery**  v1.10.0-beta.1 -> v1.10.0
+
+Previous release can be found at [v0.6.9](https://github.com/siderolabs/image-factory/releases/tag/v0.6.9)
+
 ## [image-factory 0.6.9](https://github.com/siderolabs/image-factory/releases/tag/v0.6.9) (2025-04-28)
 
 Welcome to the v0.6.9 release of image-factory!
