@@ -245,20 +245,20 @@ func TestHashProfile(t *testing.T) {
 				Platform:   constants.PlatformMetal,
 				SecureBoot: pointer.To(false),
 				Arch:       "amd64",
-				Version:    "v1.10.0-alpha.2",
+				Version:    "v1.10.0",
 				Customization: profile.CustomizationProfile{
 					ExtraKernelArgs: []string{"foo", "bar"},
 				},
 				Input: profile.Input{
 					Kernel: profile.FileAsset{
-						Path: "/tmp/foo/kernel-amd64-v1.10.0-alpha.2",
+						Path: "/tmp/foo/kernel-amd64-v1.10.0",
 					},
 					Initramfs: profile.FileAsset{
-						Path: "/tmp/foo/initramfs-amd64-v1.10.0-alpha.2",
+						Path: "/tmp/foo/initramfs-amd64-v1.10.0",
 					},
 					BaseInstaller: profile.ContainerAsset{
-						ImageRef: "ghcr.io/siderolabs/installer-base:v1.10.0-alpha.2",
-						OCIPath:  "/tmp/foo/installer-amd64-v1.10.0-alpha.2.oci",
+						ImageRef: "ghcr.io/siderolabs/installer-base:v1.10.0",
+						OCIPath:  "/tmp/foo/installer-amd64-v1.10.0.oci",
 					},
 					SystemExtensions: []profile.ContainerAsset{
 						{
@@ -275,7 +275,7 @@ func TestHashProfile(t *testing.T) {
 				},
 			},
 
-			expected: "1376b90b64d8271544f1de5455449170997c1c23a335091a7734055d8353beb8",
+			expected: "1b58cf317b4b56ecf0df6857f73659f558add4b75c2a26ad2fcd7de5e41c2670",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

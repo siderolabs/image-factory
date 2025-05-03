@@ -784,18 +784,18 @@ func TestEnhanceFromSchematic(t *testing.T) {
 		{
 			name:          "installer 1.10",
 			baseProfile:   installerProfile,
-			versionString: "v1.10.0-alpha.2",
+			versionString: "v1.10.0",
 
 			expectedProfile: profile.Profile{
 				Platform:      constants.PlatformMetal,
 				SecureBoot:    pointer.To(false),
 				Arch:          "amd64",
-				Version:       "v1.10.0-alpha.2",
+				Version:       "v1.10.0",
 				Customization: profile.CustomizationProfile{},
 				Input: profile.Input{
 					BaseInstaller: profile.ContainerAsset{
-						ImageRef: "siderolabs/installer-base:v1.10.0-alpha.2",
-						OCIPath:  "installer-amd64-v1.10.0-alpha.2.oci",
+						ImageRef: "siderolabs/installer-base:v1.10.0",
+						OCIPath:  "installer-amd64-v1.10.0.oci",
 					},
 					SystemExtensions: []profile.ContainerAsset{
 						{
