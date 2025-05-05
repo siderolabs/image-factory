@@ -2,7 +2,7 @@
   translation: Язык
 
 - id: lang.en
-  translation: Английский
+  translation: English
 
 - id: lang.ru
   translation: Русский
@@ -276,4 +276,3 @@
 
 - id: final.board_image
   translation: "Дисковый образ"
-
