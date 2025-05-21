@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-04-30T14:48:55Z by kres 6cbcbd1.
+# Generated on 2025-05-21T08:07:26Z by kres 9f64b0d.
 
 # common variables
 
@@ -21,12 +21,12 @@ PROTOBUF_GO_VERSION ?= 1.36.6
 GRPC_GO_VERSION ?= 1.5.1
 GRPC_GATEWAY_VERSION ?= 2.26.3
 VTPROTOBUF_VERSION ?= 0.6.0
-GOIMPORTS_VERSION ?= 0.32.0
+GOIMPORTS_VERSION ?= 0.33.0
 GOMOCK_VERSION ?= 0.5.2
 DEEPCOPY_VERSION ?= v0.5.6
-GOLANGCILINT_VERSION ?= v2.1.5
+GOLANGCILINT_VERSION ?= v2.1.6
 GOFUMPT_VERSION ?= v0.8.0
-GO_VERSION ?= 1.24.2
+GO_VERSION ?= 1.24.3
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -250,7 +250,7 @@ integration: integration.test
 
 .PHONY: update-to-talos-main
 update-to-talos-main:
-	@$(MAKE) local-copy-out-go-mod DEST=.
+	@$(MAKE) local-copy-out-go-mod DEST=. TARGET_ARGS="--no-cache-filter=update-to-talos-main"
 
 .PHONY: integration-talos-main
 integration-talos-main: update-to-talos-main

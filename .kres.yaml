@@ -334,7 +334,7 @@ spec:
     enabled: true
     phony: true
     script:
-      - "@$(MAKE) local-copy-out-go-mod DEST=."
+      - "@$(MAKE) local-copy-out-go-mod DEST=. TARGET_ARGS=\"--no-cache-filter=update-to-talos-main\""
 ---
 kind: custom.Step
 name: integration
