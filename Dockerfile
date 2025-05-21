@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-05-21T08:07:26Z by kres 9f64b0d.
+# Generated on 2025-05-21T13:20:38Z by kres 9f64b0d.
 
 ARG TOOLCHAIN
 ARG PKGS_PREFIX
@@ -57,6 +57,8 @@ FROM ${PKGS_PREFIX}/mtools:${PKGS} AS pkg-mtools
 
 FROM ${PKGS_PREFIX}/musl:${PKGS} AS pkg-musl
 
+FROM ${PKGS_PREFIX}/open-vmdk:${PKGS} AS pkg-open-vmdk
+
 FROM ${PKGS_PREFIX}/openssl:${PKGS} AS pkg-openssl
 
 FROM ${PKGS_PREFIX}/pcre2:${PKGS} AS pkg-pcre2
@@ -104,6 +106,7 @@ COPY --from=pkg-libinih / /
 COPY --from=pkg-liblzma / /
 COPY --from=pkg-liburcu / /
 COPY --from=pkg-openssl / /
+COPY --from=pkg-open-vmdk / /
 COPY --from=pkg-xfsprogs / /
 COPY --from=pkg-e2fsprogs / /
 COPY --from=pkg-glib / /

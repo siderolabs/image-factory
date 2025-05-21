@@ -393,6 +393,13 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "gcp-arm64.raw.tar.gz", "application/gzip", sizePicker(talosVersion, "1.5", 70625420, "1.8", 84214192, "1.9", 84214192, "1.10", 95*MiB))
 				})
 
+				t.Run("vmware image", func(t *testing.T) {
+					t.Parallel()
+
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "vmware-amd64.ova", "application/x-tar", sizePicker(talosVersion, "1.5", 79*MiB, "1.8", 98*MiB, "1.9", 98*MiB, "1.10", 197*MiB))
+					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "vmware-arm64.ova", "application/x-tar", sizePicker(talosVersion, "1.5", 69*MiB, "1.8", 81*MiB, "1.9", 87*MiB, "1.10", 89*MiB))
+				})
+
 				t.Run("rpi image", func(t *testing.T) {
 					t.Parallel()
 

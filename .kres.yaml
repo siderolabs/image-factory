@@ -19,7 +19,7 @@ spec:
       - name: PKGS_PREFIX
         defaultValue: ghcr.io/siderolabs
       - name: PKGS
-        defaultValue: v1.10.0
+        defaultValue: v1.11.0-alpha.0-17-g2563e47
   docker:
     extraArgs:
       - PKGS_PREFIX
@@ -107,6 +107,8 @@ spec:
         from: ${PKGS_PREFIX}/liburcu:${PKGS}
       - name: pkg-openssl
         from: ${PKGS_PREFIX}/openssl:${PKGS}
+      - name: pkg-open-vmdk
+        from: ${PKGS_PREFIX}/open-vmdk:${PKGS}
       - name: pkg-xfsprogs
         from: ${PKGS_PREFIX}/xfsprogs:${PKGS}
       - name: pkg-e2fsprogs
@@ -208,6 +210,10 @@ spec:
               dst: /
           - copy:
               from: pkg-openssl
+              src: /
+              dst: /
+          - copy:
+              from: pkg-open-vmdk
               src: /
               dst: /
           - copy:
