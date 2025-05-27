@@ -337,6 +337,38 @@ func (m *Manager) GetOverlayImage(ctx context.Context, arch Arch, ref OverlayRef
 	return ociPath, nil
 }
 
+// GetOverlayArtifact returns the artifact path for the given version, arch and kind.
+func (m *Manager) GetOverlayArtifact(ctx context.Context, arch Arch, ref OverlayRef, kind OverlayKind) (string, error) {
+	extractedPath := filepath.Join(m.storagePath, string(arch)+"-"+ref.Digest+"-overlay")
+
+	// check if already extracted
+	if _, err := os.Stat(extractedPath); err != nil {
+		resultCh := m.sf.DoChan(extractedPath, func() (any, error) { //nolint:contextcheck
+			return nil, m.extractOverlay(arch, ref)
+		})
+
+		// wait for the fetch to finish
+		select {
+		case result := <-resultCh:
+			if result.Err != nil {
+				return "", result.Err
+			}
+		case <-ctx.Done():
+			return "", ctx.Err()
+		}
+	}
+
+	// build the path
+	path := filepath.Join(extractedPath, string(kind))
+
+	_, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to find overlay artifact: %w", err)
+	}
+
+	return path, nil
+}
+
 func (m *Manager) parseTag(ctx context.Context, versionString string) (string, error) {
 	version, err := semver.ParseTolerant(versionString)
 	if err != nil {

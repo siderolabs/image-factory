@@ -45,6 +45,14 @@ const (
 	KindRPiFirmware Kind = "raspberrypi-firmware"
 )
 
+// OverlayKind if the kind of overlay artifacts.
+type OverlayKind string
+
+// Supported overlay kinds.
+const (
+	OverlayKindProfiles OverlayKind = "profiles"
+)
+
 // FetchTimeout controls overall timeout for fetching artifacts for a release.
 const FetchTimeout = 20 * time.Minute
 

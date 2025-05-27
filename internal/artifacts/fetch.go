@@ -143,7 +143,22 @@ func (m *Manager) fetchImager(tag string) error {
 	destinationPath := filepath.Join(m.storagePath, tag)
 
 	if err := m.fetchImageByTag(ImagerImage, tag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
-		return untar(logger, r, destinationPath+tmpSuffix)
+		return untarWithPrefix(logger, r, usrInstallPrefix, destinationPath+tmpSuffix)
+	})); err != nil {
+		return err
+	}
+
+	return os.Rename(destinationPath+tmpSuffix, destinationPath)
+}
+
+// extractOverlay fetches 'overlay' container, and saves to the storage path.
+func (m *Manager) extractOverlay(arch Arch, ref OverlayRef) error {
+	imageRef := m.imageRegistry.Repo(ref.TaggedReference.RepositoryStr()).Digest(ref.Digest)
+
+	destinationPath := filepath.Join(m.storagePath, string(arch)+"-"+ref.Digest+"-overlay")
+
+	if err := m.fetchImageByDigest(imageRef, arch, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
+		return untarWithPrefix(logger, r, overlaysPrefix, destinationPath+tmpSuffix)
 	})); err != nil {
 		return err
 	}
@@ -188,9 +203,12 @@ func (m *Manager) fetchInstallerImage(arch Arch, versionTag string, destPath str
 	return os.Rename(destPath+tmpSuffix, destPath)
 }
 
-func untar(logger *zap.Logger, r io.Reader, destination string) error {
-	const usrInstallPrefix = "usr/install/"
+const (
+	usrInstallPrefix = "usr/install/"
+	overlaysPrefix   = ""
+)
 
+func untarWithPrefix(logger *zap.Logger, r io.Reader, prefix, destination string) error {
 	tr := tar.NewReader(r)
 
 	size := int64(0)
@@ -205,7 +223,7 @@ func untar(logger *zap.Logger, r io.Reader, destination string) error {
 			return fmt.Errorf("error reading tar header: %w", err)
 		}
 
-		if hdr.Typeflag != tar.TypeReg || !strings.HasPrefix(hdr.Name, usrInstallPrefix) { // skip
+		if hdr.Typeflag != tar.TypeReg || !strings.HasPrefix(hdr.Name, prefix) { // skip
 			_, err = io.Copy(io.Discard, tr)
 			if err != nil {
 				return fmt.Errorf("error skipping data: %w", err)
@@ -214,7 +232,7 @@ func untar(logger *zap.Logger, r io.Reader, destination string) error {
 			continue
 		}
 
-		destPath := filepath.Join(destination, hdr.Name[len(usrInstallPrefix):])
+		destPath := filepath.Join(destination, hdr.Name[len(prefix):])
 
 		if err = os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 			return fmt.Errorf("error creating directory %q: %w", filepath.Dir(destPath), err)

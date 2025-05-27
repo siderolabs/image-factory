@@ -72,6 +72,12 @@ func Hash(p profile.Profile) (string, error) {
 		hasher.Write([]byte("installer tarball fix #10278"))
 	}
 
+	// 8. Images with overlays do not import properly profile overrides.
+	// - https://github.com/siderolabs/talos/issues/11093
+	if p.Overlay != nil {
+		hasher.Write([]byte("overlay profile fix #11093"))
+	}
+
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 

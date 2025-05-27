@@ -9,6 +9,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -19,9 +21,11 @@ import (
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
+	"github.com/siderolabs/talos/pkg/machinery/config/merge"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/meta"
+	"gopkg.in/yaml.v3"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/secureboot"
@@ -273,6 +277,7 @@ type ArtifactProducer interface {
 	GetOfficialOverlays(context.Context, string) ([]artifacts.OverlayRef, error)
 	GetExtensionImage(context.Context, artifacts.Arch, artifacts.ExtensionRef) (string, error)
 	GetOverlayImage(context.Context, artifacts.Arch, artifacts.OverlayRef) (string, error)
+	GetOverlayArtifact(ctx context.Context, arch artifacts.Arch, ref artifacts.OverlayRef, kind artifacts.OverlayKind) (string, error)
 	GetInstallerImage(context.Context, artifacts.Arch, string) (string, error)
 }
 
@@ -317,7 +322,7 @@ func extensionNameAlias(extensionName string) (string, bool) {
 
 // EnhanceFromSchematic enhances the profile with the schematic.
 //
-//nolint:gocognit,gocyclo,cyclop
+//nolint:gocognit,gocyclo,cyclop,maintidx
 func EnhanceFromSchematic(
 	ctx context.Context,
 	prof profile.Profile,
@@ -436,6 +441,10 @@ func EnhanceFromSchematic(
 				return prof, fmt.Errorf("error getting extension image %s: %w", overlayRef.TaggedReference, err)
 			}
 
+			if err := MergeOverlayProfile(ctx, artifactProducer, &prof, overlayRef); err != nil {
+				return prof, fmt.Errorf("error merging overlay profile: %w", err)
+			}
+
 			metricSystemExtensionHit.WithLabelValues(schematic.Overlay.Name).Inc()
 
 			prof.Overlay = &profile.OverlayOptions{
@@ -477,6 +486,54 @@ func EnhanceFromSchematic(
 	prof.Version = versionTag
 
 	return prof, nil
+}
+
+// MergeOverlayProfile merges the overlay profile into the main profile.
+//
+// Only some fields from the overlay profile are merged into the main profile.
+func MergeOverlayProfile(
+	ctx context.Context,
+	artifactProducer ArtifactProducer,
+	prof *profile.Profile,
+	overlayRef artifacts.OverlayRef,
+) error {
+	overlayProfilePath, err := artifactProducer.GetOverlayArtifact(ctx, artifacts.Arch(prof.Arch), overlayRef, artifacts.OverlayKindProfiles)
+	if err != nil {
+		return fmt.Errorf("error getting overlay profiles %s: %w", overlayRef.TaggedReference, err)
+	}
+
+	var overlayProfile profile.Profile
+
+	overlayProfileData, err := os.ReadFile(filepath.Join(overlayProfilePath, overlayRef.Name+".yaml"))
+	if err != nil {
+		return fmt.Errorf("error reading overlay profile %s: %w", overlayProfilePath, err)
+	}
+
+	if err = yaml.Unmarshal(overlayProfileData, &overlayProfile); err != nil {
+		return fmt.Errorf("error unmarshalling overlay profile %s: %w", overlayProfilePath, err)
+	}
+
+	// zero out fields in the overlay profile which are set explicitly by the Image Factory
+	overlayProfile.Input = profile.Input{}
+	overlayProfile.Arch = ""
+	overlayProfile.Platform = ""
+	overlayProfile.Overlay = nil
+	overlayProfile.Version = ""
+	overlayProfile.SecureBoot = nil
+	overlayProfile.Output.Kind = profile.OutputKind(0)
+	overlayProfile.Output.OutFormat = profile.OutFormat(0)
+
+	if overlayProfile.Output.ImageOptions != nil {
+		overlayProfile.Output.ImageOptions.DiskFormat = profile.DiskFormat(0)
+		overlayProfile.Output.ImageOptions.DiskFormatOptions = ""
+		overlayProfile.Output.ImageOptions.DiskSize = 0
+	}
+
+	if err = merge.Merge(prof, &overlayProfile); err != nil {
+		return fmt.Errorf("error merging overlay profile %s: %w", overlayProfilePath, err)
+	}
+
+	return nil
 }
 
 var (

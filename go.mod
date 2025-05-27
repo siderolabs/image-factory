@@ -12,6 +12,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/siderolabs/gen v0.8.1
+	github.com/siderolabs/go-blockdevice/v2 v2.0.17
 	github.com/siderolabs/go-debug v0.5.0
 	github.com/siderolabs/go-pointer v1.0.1
 	github.com/siderolabs/talos v1.11.0-alpha.0.0.20250521125339-7c057edd5f36
@@ -209,7 +210,6 @@ require (
 	github.com/siderolabs/crypto v0.5.1 // indirect
 	github.com/siderolabs/go-api-signature v0.3.6 // indirect
 	github.com/siderolabs/go-blockdevice v0.4.8 // indirect
-	github.com/siderolabs/go-blockdevice/v2 v2.0.17 // indirect
 	github.com/siderolabs/go-cmd v0.1.3 // indirect
 	github.com/siderolabs/go-copy v0.1.0 // indirect
 	github.com/siderolabs/go-procfs v0.1.2 // indirect

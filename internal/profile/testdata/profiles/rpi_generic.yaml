@@ -1,0 +1,10 @@
+arch: arm64
+platform: metal
+secureboot: false
+output:
+  kind: image
+  outFormat: .xz
+  imageOptions:
+    diskSize: 1306525696
+    diskFormat: raw
+    bootloader: grub

@@ -406,6 +406,14 @@ func (mockArtifactProducer) GetInstallerImage(_ context.Context, arch artifacts.
 	return fmt.Sprintf("installer-%s-%s.oci", arch, tag), nil
 }
 
+func (mockArtifactProducer) GetOverlayArtifact(_ context.Context, _ artifacts.Arch, ref artifacts.OverlayRef, kind artifacts.OverlayKind) (string, error) {
+	if ref.Name != "rpi_generic" {
+		return "", fmt.Errorf("unsupported overlay name: %s", ref.Name)
+	}
+
+	return "./testdata/" + string(kind), nil
+}
+
 //nolint:maintidx
 func TestEnhanceFromSchematic(t *testing.T) {
 	t.Parallel()
@@ -421,6 +429,9 @@ func TestEnhanceFromSchematic(t *testing.T) {
 
 	installerProfile := profile.Default["installer"].DeepCopy()
 	installerProfile.Arch = "amd64"
+
+	installerProfileArm := installerProfile.DeepCopy()
+	installerProfileArm.Arch = "arm64"
 
 	secureBootInstallerProfile := installerProfile.DeepCopy()
 	secureBootInstallerProfile.SecureBoot = pointer.To(true)
@@ -854,7 +865,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 			},
 		},
 		{
-			name:        "overlays",
+			name:        "disk image with overlay",
 			baseProfile: baseProfileArm,
 			schematic: schematic.Schematic{
 				Overlay: schematic.Overlay{
@@ -906,6 +917,66 @@ func TestEnhanceFromSchematic(t *testing.T) {
 					ImageOptions: &profile.ImageOptions{
 						DiskSize:   profile.MinRAWDiskSize,
 						DiskFormat: profile.DiskFormatRaw,
+						Bootloader: profile.DiskImageBootloaderGrub,
+					},
+				},
+			},
+		},
+		{
+			name:        "installer with overlay",
+			baseProfile: installerProfileArm,
+			schematic: schematic.Schematic{
+				Overlay: schematic.Overlay{
+					Name:  "rpi_generic",
+					Image: "ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0",
+				},
+				Customization: schematic.Customization{
+					SystemExtensions: schematic.SystemExtensions{
+						OfficialExtensions: []string{
+							"siderolabs/amd-ucode",
+						},
+					},
+					ExtraKernelArgs: []string{"noapic", "nolapic"},
+				},
+			},
+			versionString: "v1.10.0",
+
+			expectedProfile: profile.Profile{
+				Platform:   constants.PlatformMetal,
+				SecureBoot: pointer.To(false),
+				Arch:       "arm64",
+				Version:    "v1.10.0",
+				Customization: profile.CustomizationProfile{
+					ExtraKernelArgs: []string{"noapic", "nolapic"},
+				},
+				Input: profile.Input{
+					BaseInstaller: profile.ContainerAsset{
+						ImageRef: "siderolabs/installer-base:v1.10.0",
+						OCIPath:  "installer-arm64-v1.10.0.oci",
+					},
+					OverlayInstaller: profile.ContainerAsset{
+						OCIPath: "arm64-sha256:abcdef123456.oci",
+					},
+					SystemExtensions: []profile.ContainerAsset{
+						{
+							OCIPath: "arm64-sha256:1234567890.oci",
+						},
+						{
+							TarballPath: "3a7a22dbd031ad1618c04c293432bc52547fea4168884b34bc5993e12aa08562.tar",
+						},
+					},
+				},
+				Overlay: &profile.OverlayOptions{
+					Name: "rpi_generic",
+					Image: profile.ContainerAsset{
+						OCIPath: runtime.GOARCH + "-sha256:abcdef123456.oci",
+					},
+				},
+				Output: profile.Output{
+					Kind:      profile.OutKindInstaller,
+					OutFormat: profile.OutFormatRaw,
+					ImageOptions: &profile.ImageOptions{
+						Bootloader: profile.DiskImageBootloaderGrub,
 					},
 				},
 			},

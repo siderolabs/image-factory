@@ -17,11 +17,17 @@ import (
 	"time"
 
 	"github.com/h2non/filetype"
+	"github.com/klauspost/compress/zstd"
 	"github.com/siderolabs/gen/optional"
+	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/gen/xtesting/must"
+	"github.com/siderolabs/go-blockdevice/v2/blkid"
+	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/ulikunitz/xz"
+	"go.uber.org/zap/zaptest"
 )
 
 func downloadAsset(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string) *http.Response {
@@ -66,13 +72,8 @@ func downloadAssetInvalid(ctx context.Context, t *testing.T, baseURL string, sch
 	return string(body)
 }
 
-func downloadAssetAndMatchSize(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, fileType string, expectedSize int64) {
+func matchSizeAndType(t *testing.T, body io.Reader, fileType string, expectedSize int64) int64 {
 	t.Helper()
-
-	resp := downloadAsset(ctx, t, baseURL, schematicID, talosVersion, path)
-	body := resp.Body
-
-	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	magic := make([]byte, 65536)
 
@@ -93,7 +94,79 @@ func downloadAssetAndMatchSize(ctx context.Context, t *testing.T, baseURL string
 
 	assert.InDelta(t, expectedSize, rest+int64(n), float64(expectedSize)*0.1)
 
-	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, rest+int64(n))
+	return rest + int64(n)
+}
+
+func downloadAssetAndMatchSize(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, fileType string, expectedSize int64) {
+	t.Helper()
+
+	resp := downloadAsset(ctx, t, baseURL, schematicID, talosVersion, path)
+	body := resp.Body
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	size := matchSizeAndType(t, body, fileType, expectedSize)
+
+	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, size)
+}
+
+func downloadDiskImageMatchSizeAndPartitions(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, fileType string, expectedSize int64, expectedPartitions []string) {
+	t.Helper()
+
+	resp := downloadAsset(ctx, t, baseURL, schematicID, talosVersion, path)
+
+	d := t.TempDir()
+	compressedPath := filepath.Join(d, "disk-image.compressed")
+
+	out, err := os.Create(compressedPath)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		require.NoError(t, out.Close())
+	})
+
+	body := io.TeeReader(resp.Body, out)
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	size := matchSizeAndType(t, body, fileType, expectedSize)
+
+	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, size)
+
+	// now decompress
+	_, err = out.Seek(0, io.SeekStart)
+	require.NoError(t, err)
+
+	decompressedPath := filepath.Join(d, "disk-image.decompressed")
+	decompressedFile, err := os.Create(decompressedPath)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		require.NoError(t, decompressedFile.Close())
+	})
+
+	var in io.Reader
+
+	switch fileType {
+	case "application/x-xz":
+		in, err = xz.NewReader(out)
+		require.NoError(t, err)
+	case "application/zstd":
+		in, err = zstd.NewReader(out)
+		require.NoError(t, err)
+	default:
+		t.Fatalf("unsupported file type: %s", fileType)
+	}
+
+	_, err = io.Copy(decompressedFile, in)
+	require.NoError(t, err)
+
+	info, err := blkid.ProbePath(decompressedPath, blkid.WithProbeLogger(zaptest.NewLogger(t)))
+	require.NoError(t, err)
+
+	assert.Equal(t, "gpt", info.Name)
+
+	assert.Equal(t, expectedPartitions, xslices.Map(info.Parts, func(p blkid.NestedProbeResult) string { return pointer.SafeDeref(p.PartitionLabel) }))
 }
 
 func downloadAssetAndValidateInitramfs(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, initramfsSpec initramfsSpec) {
@@ -216,11 +289,62 @@ func sizePicker(talosVersion string, v ...any) int64 {
 	panic("sizePicker: no match")
 }
 
+func sdBootPartitions(talosVersion string) []string {
+	partitions := []string{
+		"EFI",
+		"META",
+	}
+
+	if !quirks.New(talosVersion).SkipDataPartitions() {
+		partitions = append(partitions, "STATE", "EPHEMERAL")
+	}
+
+	return partitions
+}
+
+func dualBootPartitions(talosVersion string) []string {
+	partitions := []string{
+		"EFI",
+		"BIOS",
+		"BOOT",
+		"META",
+	}
+
+	if !quirks.New(talosVersion).SkipDataPartitions() {
+		partitions = append(partitions, "STATE", "EPHEMERAL")
+	}
+
+	return partitions
+}
+
+func grubPartitions(talosVersion string) []string {
+	return dualBootPartitions(talosVersion)
+}
+
+func defaultPartitions(talosVersion, arch string) []string {
+	switch arch {
+	case "amd64":
+		if quirks.New(talosVersion).UseSDBootForUEFI() {
+			return dualBootPartitions(talosVersion)
+		} else {
+			return grubPartitions(talosVersion)
+		}
+	case "arm64":
+		if quirks.New(talosVersion).UseSDBootForUEFI() {
+			return sdBootPartitions(talosVersion)
+		} else {
+			return grubPartitions(talosVersion)
+		}
+	default:
+		panic("defaultPartitions: unsupported architecture: " + arch)
+	}
+}
+
 func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	const MiB = 1024 * 1024
 
 	talosVersions := []string{
-		"v1.10.0",
+		"v1.10.2",
 		"v1.9.4",
 		"v1.8.2",
 		"v1.5.1",
@@ -354,15 +478,27 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run("metal image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 78472708, "1.8", 101464300, "1.9", 101464300, "1.10", 192*MiB))
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 66625420, "1.8", 83998408, "1.9", 83998408, "1.10", 86*MiB))
+					downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz",
+						sizePicker(talosVersion, "1.5", 78472708, "1.8", 101464300, "1.9", 101464300, "1.10", 192*MiB),
+						defaultPartitions(talosVersion, "amd64"),
+					)
+					downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz",
+						sizePicker(talosVersion, "1.5", 66625420, "1.8", 83998408, "1.9", 83998408, "1.10", 86*MiB),
+						defaultPartitions(talosVersion, "arm64"),
+					)
 				})
 
 				t.Run("metal zstd image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.zst", "application/zstd", sizePicker(talosVersion, "1.5", 78472708, "1.8", 100120864, "1.9", 100120864, "1.10", 191*MiB))
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.zst", "application/zstd", sizePicker(talosVersion, "1.5", 66_625_420, "1.8", 83_651_316, "1.9", 83_651_316, "1.10", 86*MiB))
+					downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.zst", "application/zstd",
+						sizePicker(talosVersion, "1.5", 78472708, "1.8", 100120864, "1.9", 100120864, "1.10", 191*MiB),
+						defaultPartitions(talosVersion, "amd64"),
+					)
+					downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.raw.zst", "application/zstd",
+						sizePicker(talosVersion, "1.5", 66_625_420, "1.8", 83_651_316, "1.9", 83_651_316, "1.10", 86*MiB),
+						defaultPartitions(talosVersion, "arm64"),
+					)
 				})
 
 				t.Run("metal qcow2 image", func(t *testing.T) {
@@ -375,8 +511,14 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run("metal secureboot image", func(t *testing.T) {
 					t.Parallel()
 
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 78472708, "1.8", 97975380, "1.9", 97975380, "1.10", 95*MiB))
-					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.raw.xz", "application/x-xz", sizePicker(talosVersion, "1.5", 66625420, "1.8", 82420728, "1.9", 82420728, "1.10", 86*MiB))
+					downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot.raw.xz", "application/x-xz",
+						sizePicker(talosVersion, "1.5", 78472708, "1.8", 97975380, "1.9", 97975380, "1.10", 95*MiB),
+						sdBootPartitions(talosVersion),
+					)
+					downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64-secureboot.raw.xz", "application/x-xz",
+						sizePicker(talosVersion, "1.5", 66625420, "1.8", 82420728, "1.9", 82420728, "1.10", 86*MiB),
+						sdBootPartitions(talosVersion),
+					)
 				})
 
 				t.Run("aws image", func(t *testing.T) {
@@ -404,9 +546,9 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					t.Parallel()
 
 					if quirks.New(talosVersion).SupportsOverlay() {
-						downloadAssetAndMatchSize(ctx, t, baseURL, rpiGenericOverlaySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 136632380)
+						downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, rpiGenericOverlaySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 136632380, grubPartitions(talosVersion))
 					} else {
-						downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 107183936)
+						downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 107183936, grubPartitions(talosVersion))
 					}
 				})
 			})
