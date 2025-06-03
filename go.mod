@@ -6,6 +6,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/google/go-containerregistry v0.20.3
 	github.com/h2non/filetype v1.1.3
+	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/klauspost/compress v1.18.0
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
@@ -151,7 +152,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-envparse v0.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect

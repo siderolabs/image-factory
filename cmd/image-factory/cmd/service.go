@@ -35,6 +35,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	frontendhttp "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic"
 	"github.com/siderolabs/image-factory/internal/schematic/storage/cache"
 	"github.com/siderolabs/image-factory/internal/schematic/storage/registry"
@@ -52,6 +53,8 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	if err := os.Setenv("SOURCE_DATE_EPOCH", "1559424892"); err != nil { // this value matches `pkgs` SOURCE_DATE_EPOCH
 		return err
 	}
+
+	defer remotewrap.ShutdownTransport()
 
 	artifactsManager, err := buildArtifactsManager(ctx, logger, opts)
 	if err != nil {
@@ -115,6 +118,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	}
 
 	frontendOptions.RemoteOptions = append(frontendOptions.RemoteOptions, remoteOptions()...)
+	frontendOptions.RegistryRefreshInterval = opts.RegistryRefreshInterval
 
 	frontendHTTP, err := frontendhttp.NewFrontend(logger, configFactory, assetBuilder, artifactsManager, secureBootService, frontendOptions)
 	if err != nil {
@@ -257,6 +261,7 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 		ImageVerifyOptions:          checkOpts,
 		TalosVersionRecheckInterval: opts.TalosVersionRecheckInterval,
 		RemoteOptions:               remoteOptions(),
+		RegistryRefreshInterval:     opts.RegistryRefreshInterval,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize artifacts manager: %w", err)
@@ -267,8 +272,9 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 
 func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, cacheSigningKey crypto.PrivateKey, opts Options) (*asset.Builder, error) {
 	builderOptions := asset.Options{
-		AllowedConcurrency: opts.AssetBuildMaxConcurrency,
-		CacheSigningKey:    cacheSigningKey,
+		AllowedConcurrency:      opts.AssetBuildMaxConcurrency,
+		CacheSigningKey:         cacheSigningKey,
+		RegistryRefreshInterval: opts.RegistryRefreshInterval,
 	}
 
 	builderOptions.RemoteOptions = append(builderOptions.RemoteOptions, remoteOptions()...)
@@ -308,7 +314,7 @@ func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory
 		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
 
-	storage, err := registry.NewStorage(repo, remoteOptions())
+	storage, err := registry.NewStorage(repo, opts.RegistryRefreshInterval, remoteOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize storage: %w", err)
 	}

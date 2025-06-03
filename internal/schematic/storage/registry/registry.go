@@ -10,6 +10,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -23,6 +24,7 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 
 	"github.com/siderolabs/image-factory/internal/regtransport"
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 )
 
@@ -33,8 +35,8 @@ const SchematicMediaType types.MediaType = "application/vnd.sidero.dev-image.sch
 //
 // Schematic ID is a sha256 of the contents, so it matches registry content-addressable storage.
 type Storage struct {
-	pusher     *remote.Pusher
-	puller     *remote.Puller
+	pusher     remotewrap.Pusher
+	puller     remotewrap.Puller
 	repository name.Repository
 }
 
@@ -45,19 +47,19 @@ var _ storage.Storage = (*Storage)(nil)
 var digestPrefix = digest.Canonical.String() + ":"
 
 // NewStorage creates a new storage.
-func NewStorage(repository name.Repository, remoteOpts []remote.Option) (*Storage, error) {
+func NewStorage(repository name.Repository, registryRefreshInterval time.Duration, remoteOpts []remote.Option) (*Storage, error) {
 	s := &Storage{
 		repository: repository,
 	}
 
 	var err error
 
-	s.pusher, err = remote.NewPusher(append(remoteOpts, remote.WithNondistributable)...)
+	s.pusher, err = remotewrap.NewPusher(registryRefreshInterval, append(remoteOpts, remote.WithNondistributable)...)
 	if err != nil {
 		return nil, err
 	}
 
-	s.puller, err = remote.NewPuller(remoteOpts...)
+	s.puller, err = remotewrap.NewPuller(registryRefreshInterval, remoteOpts...)
 	if err != nil {
 		return nil, err
 	}

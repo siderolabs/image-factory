@@ -358,13 +358,14 @@ spec:
     script:
       - "@$(MAKE) image-image-factory PUSH=true"
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+      - docker run -d -p 5100:5000 --name=local registry:3
       - docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
   ghaction:
     enabled: true
     condition: on-pull-request
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache"
+      TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache"
 ---
 kind: custom.Step
 name: integration-talos-main

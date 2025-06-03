@@ -14,18 +14,18 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/regtransport"
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 // registryCache is using OCI registry to cache assets.
 type registryCache struct {
-	puller          *remote.Puller
-	pusher          *remote.Pusher
+	puller          remotewrap.Puller
+	pusher          remotewrap.Pusher
 	imageSigner     *signer.Signer
 	logger          *zap.Logger
 	cacheRepository name.Repository

@@ -29,6 +29,8 @@ type Options struct { //nolint:govet
 	TalosVersionRecheckInterval time.Duration
 	// RemoteOptions is the list of remote options for the puller.
 	RemoteOptions []remote.Option
+	// RegistryRefreshInterval is the interval for refreshing the image registry connections.
+	RegistryRefreshInterval time.Duration
 }
 
 // Kind is the artifact kind.

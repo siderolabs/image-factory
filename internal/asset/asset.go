@@ -27,6 +27,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	factoryprofile "github.com/siderolabs/image-factory/internal/profile"
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 // BootAsset is an interface to access a boot asset.
@@ -53,9 +54,10 @@ type Builder struct {
 
 // Options configures the asset builder.
 type Options struct {
-	CacheRepository name.Repository
-	CacheSigningKey crypto.PrivateKey
-	RemoteOptions   []remote.Option
+	CacheRepository         name.Repository
+	CacheSigningKey         crypto.PrivateKey
+	RemoteOptions           []remote.Option
+	RegistryRefreshInterval time.Duration
 
 	AllowedConcurrency int
 }
@@ -69,12 +71,12 @@ func NewBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, options
 
 	var err error
 
-	cache.puller, err = remote.NewPuller(options.RemoteOptions...)
+	cache.puller, err = remotewrap.NewPuller(options.RegistryRefreshInterval, options.RemoteOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating puller: %w", err)
 	}
 
-	cache.pusher, err = remote.NewPusher(options.RemoteOptions...)
+	cache.pusher, err = remotewrap.NewPusher(options.RegistryRefreshInterval, options.RemoteOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating pusher: %w", err)
 	}

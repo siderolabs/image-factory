@@ -20,6 +20,8 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
+
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 // Manager supports loading, caching and serving Talos release artifacts.
@@ -29,7 +31,7 @@ type Manager struct { //nolint:govet
 	schematicsPath string
 	logger         *zap.Logger
 	imageRegistry  name.Registry
-	pullers        map[Arch]*remote.Puller
+	pullers        map[Arch]remotewrap.Puller
 
 	sf singleflight.Group
 
@@ -67,10 +69,11 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 		return nil, fmt.Errorf("failed to parse image registry: %w", err)
 	}
 
-	pullers := make(map[Arch]*remote.Puller, 2)
+	pullers := make(map[Arch]remotewrap.Puller, 2)
 
 	for _, arch := range []Arch{ArchAmd64, ArchArm64} {
-		pullers[arch], err = remote.NewPuller(
+		pullers[arch], err = remotewrap.NewPuller(
+			options.RegistryRefreshInterval,
 			append(
 				[]remote.Option{
 					remote.WithPlatform(v1.Platform{

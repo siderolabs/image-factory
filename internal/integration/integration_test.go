@@ -24,6 +24,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 func setupFactory(t *testing.T) (context.Context, string) {
@@ -41,9 +42,12 @@ func setupFactory(t *testing.T) (context.Context, string) {
 	options.InstallerExternalRepository = installerExternalRepository
 	options.InstallerInternalRepository = installerInternalRepository
 	options.CacheRepository = cacheRepository
+	options.RegistryRefreshInterval = time.Minute // use a short interval for the tests
 
 	setupSecureBoot(t, &options)
 	setupCacheSigningKey(t, &options)
+
+	t.Cleanup(remotewrap.ShutdownTransport)
 
 	eg, ctx := errgroup.WithContext(ctx)
 

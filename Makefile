@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-05-21T13:20:38Z by kres 9f64b0d.
+# Generated on 2025-06-05T06:10:04Z by kres fc6afbe.
 
 # common variables
 
@@ -246,6 +246,7 @@ integration.test:
 integration: integration.test
 	@$(MAKE) image-image-factory PUSH=true
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker run -d -p 5100:5000 --name=local registry:3
 	docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
 
 .PHONY: update-to-talos-main

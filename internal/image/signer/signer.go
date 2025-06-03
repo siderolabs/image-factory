@@ -12,7 +12,6 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/oci/empty"
 	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
@@ -20,6 +19,8 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
+
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 // Signer holds a key used to sign the images.
@@ -75,7 +76,7 @@ func (s *Signer) GetPublicKeyPEM() []byte {
 }
 
 // SignImage signs the image in the OCI repository.
-func (s *Signer) SignImage(ctx context.Context, imageRef name.Digest, pusher *remote.Pusher) error {
+func (s *Signer) SignImage(ctx context.Context, imageRef name.Digest, pusher remotewrap.Pusher) error {
 	payload, signature, err := signature.SignImage(s.sv, imageRef, nil)
 	if err != nil {
 		return fmt.Errorf("error generating signature: %w", err)

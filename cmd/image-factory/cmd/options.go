@@ -18,6 +18,9 @@ type Options struct { //nolint:govet
 	// Allow insecure connection to the image registry
 	InsecureImageRegistry bool
 
+	// RegistryRefreshInterval is the interval for refreshing the image registry connections.
+	RegistryRefreshInterval time.Duration
+
 	// Options to verify container signatures for imager, extensions, etc.
 	ContainerSignatureSubjectRegExp     string
 	ContainerSignatureIssuerRegExp      string
@@ -91,6 +94,8 @@ var DefaultOptions = Options{
 
 	MinTalosVersion: "1.2.0",
 	ImageRegistry:   "ghcr.io",
+
+	RegistryRefreshInterval: 5 * time.Minute,
 
 	ContainerSignatureSubjectRegExp:     `@siderolabs\.com$`,
 	ContainerSignatureIssuerRegExp:      "",

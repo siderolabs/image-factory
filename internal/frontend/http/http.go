@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -30,6 +31,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/profile"
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/internal/secureboot"
@@ -44,8 +46,8 @@ type Frontend struct {
 	artifactsManager  *artifacts.Manager
 	secureBootService *secureboot.Service
 	logger            *zap.Logger
-	puller            *remote.Puller
-	pusher            *remote.Pusher
+	puller            remotewrap.Puller
+	pusher            remotewrap.Pusher
 	imageSigner       *signer.Signer
 	sf                singleflight.Group
 	options           Options
@@ -61,7 +63,8 @@ type Options struct {
 
 	CacheSigningKey crypto.PrivateKey
 
-	RemoteOptions []remote.Option
+	RemoteOptions           []remote.Option
+	RegistryRefreshInterval time.Duration
 }
 
 // NewFrontend creates a new HTTP frontend.
@@ -85,12 +88,12 @@ func NewFrontend(
 
 	var err error
 
-	frontend.puller, err = remote.NewPuller(opts.RemoteOptions...)
+	frontend.puller, err = remotewrap.NewPuller(opts.RegistryRefreshInterval, opts.RemoteOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create puller: %w", err)
 	}
 
-	frontend.pusher, err = remote.NewPusher(opts.RemoteOptions...)
+	frontend.pusher, err = remotewrap.NewPusher(opts.RegistryRefreshInterval, opts.RemoteOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pusher: %w", err)
 	}

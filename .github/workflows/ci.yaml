@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-04-30T10:10:43Z by kres fd5cab0-dirty.
+# Generated on 2025-06-05T06:08:49Z by kres fc6afbe.
 
 name: default
 concurrency:
@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: gather-system-info
         id: system-info
-        uses: kenchan0130/actions-system-info@v1.3.0
+        uses: kenchan0130/actions-system-info@v1.3.1
         continue-on-error: true
       - name: print-system-info
         run: |
@@ -118,7 +118,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           REGISTRY: registry.dev.siderolabs.io
-          TEST_FLAGS: -test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache
+          TEST_FLAGS: -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache
         run: |
           make integration
       - name: Retrieve PR labels
@@ -165,7 +165,7 @@ jobs:
     steps:
       - name: gather-system-info
         id: system-info
-        uses: kenchan0130/actions-system-info@v1.3.0
+        uses: kenchan0130/actions-system-info@v1.3.1
         continue-on-error: true
       - name: print-system-info
         run: |
