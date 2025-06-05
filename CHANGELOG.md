@@ -1,3 +1,30 @@
+## [image-factory 0.7.2](https://github.com/siderolabs/image-factory/releases/tag/v0.7.2) (2025-06-05)
+
+Welcome to the v0.7.2 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`d9ebc5a`](https://github.com/siderolabs/image-factory/commit/d9ebc5a257a135423dbf3adabca56a44ff3e54e0) fix: refresh remote pullers and pushers on interval
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/hashicorp/go-cleanhttp**  v0.5.2 **_new_**
+
+Previous release can be found at [v0.7.1](https://github.com/siderolabs/image-factory/releases/tag/v0.7.1)
+
 ## [image-factory 0.7.1](https://github.com/siderolabs/image-factory/releases/tag/v0.7.1) (2025-05-28)
 
 Welcome to the v0.7.1 release of image-factory!
