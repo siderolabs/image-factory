@@ -12,13 +12,15 @@ import (
 )
 
 func initFlags() cmd.Options {
-	var opts cmd.Options
+	opts := cmd.DefaultOptions
 
 	flag.StringVar(&opts.HTTPListenAddr, "http-port", cmd.DefaultOptions.HTTPListenAddr, "HTTP listen address")
 
 	flag.StringVar(&opts.MinTalosVersion, "min-talos-version", cmd.DefaultOptions.MinTalosVersion, "minimum Talos version")
 	flag.StringVar(&opts.ImageRegistry, "image-registry", cmd.DefaultOptions.ImageRegistry, "image registry for imager, extensions, etc.")
 	flag.BoolVar(&opts.InsecureImageRegistry, "insecure-image-registry", cmd.DefaultOptions.InsecureImageRegistry, "allow an insecure connection to the image registry")
+
+	flag.DurationVar(&opts.RegistryRefreshInterval, "registry-refresh-interval", cmd.DefaultOptions.RegistryRefreshInterval, "image registry refresh interval")
 
 	flag.StringVar(&opts.ContainerSignatureSubjectRegExp, "container-signature-subject-regexp", cmd.DefaultOptions.ContainerSignatureSubjectRegExp, "container signature subject regexp")
 	flag.StringVar(&opts.ContainerSignatureIssuerRegExp, "container-signature-issuer-regexp", cmd.DefaultOptions.ContainerSignatureIssuerRegExp, "container signature issuer regexp")
