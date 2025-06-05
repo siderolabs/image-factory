@@ -1,3 +1,30 @@
+## [image-factory 0.7.3](https://github.com/siderolabs/image-factory/releases/tag/v0.7.3) (2025-06-05)
+
+Welcome to the v0.7.3 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`50f8148`](https://github.com/siderolabs/image-factory/commit/50f81480ab714cca3003030dbdb84735eebb79ee) fix: default options on startup
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.7.2](https://github.com/siderolabs/image-factory/releases/tag/v0.7.2)
+
 ## [image-factory 0.7.2](https://github.com/siderolabs/image-factory/releases/tag/v0.7.2) (2025-06-05)
 
 Welcome to the v0.7.2 release of image-factory!
