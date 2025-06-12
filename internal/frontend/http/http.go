@@ -164,23 +164,45 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		ctx := r.Context()
 
+		start := time.Now()
+
 		err := h(ctx, w, r, p)
 
-		f.logger.Info("request", zap.String("method", r.Method), zap.String("path", r.URL.Path), zap.Error(err))
+		duration := time.Since(start)
+		status := http.StatusOK
+		level := zap.InfoLevel
 
 		switch {
 		case err == nil:
 			// happy case
 		case xerrors.TagIs[storage.ErrNotFoundTag](err):
+			level = zap.WarnLevel
+			status = http.StatusNotFound
+
 			http.Error(w, err.Error(), http.StatusNotFound)
 		case xerrors.TagIs[profile.InvalidErrorTag](err),
 			xerrors.TagIs[schematicpkg.InvalidErrorTag](err):
+			level = zap.WarnLevel
+			status = http.StatusBadRequest
+
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case errors.Is(err, context.Canceled):
+			status = 499
 			// client closed connection
 		default:
+			status = http.StatusInternalServerError
+			level = zap.ErrorLevel
+
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 		}
+
+		f.logger.Log(level, "request",
+			zap.String("method", r.Method),
+			zap.String("path", r.URL.Path),
+			zap.Int("status", status),
+			zap.Duration("duration", duration),
+			zap.Error(err),
+		)
 	}
 }
 
