@@ -59,6 +59,8 @@ spec:
       toplevel: true
     - name: integration
       toplevel: true
+      dependants:
+        - coverage
     - name: update-to-talos-main
       toplevel: true
     - name: integration-talos-main
@@ -358,8 +360,10 @@ spec:
     script:
       - "@$(MAKE) image-image-factory PUSH=true"
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
-      - docker run -d -p 5100:5000 --name=local registry:3
-      - docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
+      - docker rm -f local-if || true
+      - docker run -d -p 5100:5000 --name=local-if registry:3
+      - docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration.txt -test.run $(RUN_TESTS)
+      - docker rm -f local-if
   ghaction:
     enabled: true
     condition: on-pull-request
@@ -404,7 +408,9 @@ spec:
 ---
 kind: service.CodeCov
 spec:
-  targetThreshold: 9 # the actual coverage is much higher and reported from the integration test
+  targetThreshold: 50
+  inputPaths:
+    - coverage-integration.txt
 ---
 kind: custom.Step
 name: tailwind

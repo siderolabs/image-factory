@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-06-05T06:08:49Z by kres fc6afbe.
+# Generated on 2025-06-12T16:12:36Z by kres 5128bc1.
 
 name: default
 concurrency:
@@ -78,10 +78,17 @@ jobs:
       - name: unit-tests-race
         run: |
           make unit-tests-race
+      - name: integration
+        if: github.event_name == 'pull_request'
+        env:
+          REGISTRY: registry.dev.siderolabs.io
+          TEST_FLAGS: -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache
+        run: |
+          make integration
       - name: coverage
         uses: codecov/codecov-action@v5
         with:
-          files: _out/coverage-unit-tests.txt
+          files: _out/coverage-unit-tests.txt,_out/coverage-integration.txt
           token: ${{ secrets.CODECOV_TOKEN }}
         timeout-minutes: 3
       - name: image-factory
@@ -114,13 +121,6 @@ jobs:
           PUSH: "true"
         run: |
           make image-image-factory IMAGE_TAG=latest
-      - name: integration
-        if: github.event_name == 'pull_request'
-        env:
-          REGISTRY: registry.dev.siderolabs.io
-          TEST_FLAGS: -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache
-        run: |
-          make integration
       - name: Retrieve PR labels
         id: retrieve-pr-labels
         uses: actions/github-script@v7

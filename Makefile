@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-06-12T14:41:46Z by kres 5128bc1.
+# Generated on 2025-06-12T16:22:24Z by kres 5128bc1.
 
 # common variables
 
@@ -204,6 +204,15 @@ unit-tests:  ## Performs unit tests
 unit-tests-race:  ## Performs unit tests with race detection enabled.
 	@$(MAKE) target-$@
 
+.PHONY: integration
+integration: integration.test
+	@$(MAKE) image-image-factory PUSH=true
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker rm -f local-if || true
+	docker run -d -p 5100:5000 --name=local-if registry:3
+	docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration.txt -test.run $(RUN_TESTS)
+	docker rm -f local-if
+
 .PHONY: $(ARTIFACTS)/image-factory-linux-amd64
 $(ARTIFACTS)/image-factory-linux-amd64:
 	@$(MAKE) local-image-factory-linux-amd64 DEST=$(ARTIFACTS)
@@ -241,13 +250,6 @@ imager-tools:
 .PHONY: integration.test
 integration.test:
 	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
-
-.PHONY: integration
-integration: integration.test
-	@$(MAKE) image-image-factory PUSH=true
-	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
-	docker run -d -p 5100:5000 --name=local registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.run $(RUN_TESTS)
 
 .PHONY: update-to-talos-main
 update-to-talos-main:
