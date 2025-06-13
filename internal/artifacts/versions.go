@@ -50,7 +50,12 @@ func (m *Manager) fetchTalosVersions() (any, error) {
 	maxVersion := slices.MaxFunc(versions, semver.Version.Compare)
 
 	// allow non-prerelease versions, and allow pre-release for the "latest" release (maxVersion)
+	// skip this filter completely if the respective flag is set
 	versions = xslices.Filter(versions, func(version semver.Version) bool {
+		if m.options.SkipVersionFilter {
+			return true
+		}
+
 		if version.LT(m.options.MinVersion) {
 			return false // ignore versions below minimum
 		}
