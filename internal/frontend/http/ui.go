@@ -73,6 +73,19 @@ func init() {
 
 			return template.HTML(out.String()), nil
 		},
+		"version_less": func(a, b string) (bool, error) {
+			av, err := semver.ParseTolerant(a)
+			if err != nil {
+				return false, fmt.Errorf("error parsing version %q: %w", a, err)
+			}
+
+			bv, err := semver.ParseTolerant(b)
+			if err != nil {
+				return false, fmt.Errorf("error parsing version %q: %w", b, err)
+			}
+
+			return av.LT(bv), nil
+		},
 		"t": func(localizer *i18n.Localizer, key string) string {
 			translated, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: key})
 			if err != nil {

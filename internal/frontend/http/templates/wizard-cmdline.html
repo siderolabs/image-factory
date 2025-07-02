@@ -22,7 +22,7 @@
         </p>
         {{ if eq .SecureBoot "true" }}
         <p>{{ t .Localizer "customization.cmdline.secure_boot" }}</p>
-        {{ else }}
+        {{ else if version_less .Version "v1.10.0" }}
         <p>
             {{ t .Localizer "customization.cmdline.note" }}<code>installer</code>{{ t .Localizer "customization.cmdline.upgrade" }}<code>machine.install.extraKernelArgs</code>{{ t .Localizer "customization.cmdline.configuration" }}
         </p>
