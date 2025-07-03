@@ -1,3 +1,32 @@
+## [image-factory 0.7.4](https://github.com/siderolabs/image-factory/releases/tag/v0.7.4) (2025-07-03)
+
+Welcome to the v0.7.4 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>3 commits</summary>
+<p>
+
+* [`c035602`](https://github.com/siderolabs/image-factory/commit/c0356022b9491d8341cfb4b86098bdf69224b8b5) fix: hide kernel args warning for Talos >= 1.10
+* [`a68433c`](https://github.com/siderolabs/image-factory/commit/a68433cbec6aaca9c1c4851d4701b4938a5023d9) test: capture test coverage for integration tests
+* [`28d9a30`](https://github.com/siderolabs/image-factory/commit/28d9a3039aba613dc3efb478673c2fdce1b0b4b7) fix: improve HTTP access log
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.7.3](https://github.com/siderolabs/image-factory/releases/tag/v0.7.3)
+
 ## [image-factory 0.7.3](https://github.com/siderolabs/image-factory/releases/tag/v0.7.3) (2025-06-05)
 
 Welcome to the v0.7.3 release of image-factory!
