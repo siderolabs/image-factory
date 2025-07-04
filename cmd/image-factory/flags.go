@@ -70,6 +70,11 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.SecureBoot.SigningCertPath, "secureboot-signing-cert-path", cmd.DefaultOptions.SecureBoot.SigningCertPath, "Secure Boot signing certificate path (use local PKI)")
 	flag.StringVar(&opts.SecureBoot.PCRKeyPath, "secureboot-pcr-key-path", cmd.DefaultOptions.SecureBoot.PCRKeyPath, "Secure Boot PCR key path (use local PKI)")
 
+	flag.StringVar(&opts.SecureBoot.AwsKMSKeyID, "secureboot-aws-kms-id-key-id", cmd.DefaultOptions.SecureBoot.AwsKMSKeyID, "Secure Boot signing key AWS KMS ID")
+	flag.StringVar(&opts.SecureBoot.AwsRegion, "secureboot-aws-region", cmd.DefaultOptions.SecureBoot.AwsRegion, "Secure Boot AWS region for KMS access")
+	flag.StringVar(&opts.SecureBoot.AwsCertPath, "secureboot-aws-cert-path", cmd.DefaultOptions.SecureBoot.AwsCertPath, "Secure Boot signing certificate path")
+	flag.StringVar(&opts.SecureBoot.AwsKMSPCRKeyID, "secureboot-aws-pcr-kms-key-id", cmd.DefaultOptions.SecureBoot.PCRKeyPath, "Secure Boot PCR key AWS KMS ID")
+
 	flag.StringVar(&opts.SecureBoot.AzureKeyVaultURL, "secureboot-azure-key-vault-url", cmd.DefaultOptions.SecureBoot.AzureKeyVaultURL, "Secure Boot Azure Key Vault URL (use Azure PKI)")
 	flag.StringVar(&opts.SecureBoot.AzureCertificateName, "secureboot-azure-certificate-name", cmd.DefaultOptions.SecureBoot.AzureCertificateName, "Secure Boot Azure Key Vault certificate name (use Azure PKI)") //nolint:lll
 	flag.StringVar(&opts.SecureBoot.AzureKeyName, "secureboot-azure-key-name", cmd.DefaultOptions.SecureBoot.AzureKeyName, "Secure Boot Azure Key Vault PCR key name (use Azure PKI)")

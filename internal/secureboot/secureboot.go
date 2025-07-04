@@ -36,6 +36,15 @@ type Options struct { //nolint:govet
 	AzureKeyVaultURL     string
 	AzureCertificateName string
 	AzureKeyName         string
+
+	// AWS KMS approach.
+	//
+	// AWS KMS Key ID and region.
+	// AWS doesn't have a good way to store a certificate, so it's expected to be a file.
+	AwsKMSKeyID    string
+	AwsKMSPCRKeyID string
+	AwsCertPath    string
+	AwsRegion      string
 }
 
 // ErrDisabled is returned when SecureBoot is disabled.
@@ -70,6 +79,20 @@ func NewService(opts Options) (*Service, error) {
 				PCRSigner: profile.SigningKey{
 					AzureVaultURL: opts.AzureKeyVaultURL,
 					AzureKeyID:    opts.AzureKeyName,
+				},
+			},
+		}, nil
+	case opts.AwsKMSKeyID != "" && opts.AwsKMSPCRKeyID != "" && opts.AwsCertPath != "" && opts.AwsRegion != "":
+		return &Service{
+			in: &profile.SecureBootAssets{
+				SecureBootSigner: profile.SigningKeyAndCertificate{
+					AwsRegion:   opts.AwsRegion,
+					AwsKMSKeyID: opts.AwsKMSKeyID,
+					AwsCertPath: opts.AwsCertPath,
+				},
+				PCRSigner: profile.SigningKey{
+					AwsRegion:   opts.AwsRegion,
+					AwsKMSKeyID: opts.AwsKMSPCRKeyID,
 				},
 			},
 		}, nil

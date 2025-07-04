@@ -86,6 +86,15 @@ type SecureBootOptions struct { //nolint:govet
 	AzureKeyVaultURL     string
 	AzureCertificateName string
 	AzureKeyName         string
+
+	// AWS KMS approach.
+	//
+	// AWS KMS Key ID and region.
+	// AWS doesn't have a good way to store a certificate, so it's expected to be a file.
+	AwsKMSKeyID    string
+	AwsKMSPCRKeyID string
+	AwsCertPath    string
+	AwsRegion      string
 }
 
 // DefaultOptions are the default options.
