@@ -6,7 +6,9 @@ package artifacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -17,6 +19,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
@@ -40,6 +43,9 @@ type Manager struct { //nolint:govet
 
 	officialOverlaysMu sync.Mutex
 	officialOverlays   map[string][]OverlayRef
+
+	talosctlTuplesMu sync.Mutex
+	talosctlTuples   map[string][]TalosctlTuple
 
 	talosVersionsMu        sync.Mutex
 	talosVersions          []semver.Version
@@ -370,6 +376,82 @@ func (m *Manager) GetOverlayArtifact(ctx context.Context, arch Arch, ref Overlay
 	}
 
 	return path, nil
+}
+
+// GetTalosctlImage pulls and stores in OCI layout talosctl-all image.
+func (m *Manager) GetTalosctlImage(ctx context.Context, versionString string) (string, error) {
+	version, err := semver.ParseTolerant(versionString)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse version: %w", err)
+	}
+
+	if err = m.validateTalosVersion(ctx, version); err != nil {
+		return "", err
+	}
+
+	tag := "v" + version.String()
+
+	ociPath := filepath.Join(m.storagePath, "talosctl-all-"+tag)
+
+	// check if already fetched
+	if _, err := os.Stat(ociPath); err != nil {
+		resultCh := m.sf.DoChan(ociPath, func() (any, error) { //nolint:contextcheck
+			return nil, m.fetchTalosctlImage(tag, ociPath)
+		})
+
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case result := <-resultCh:
+			if result.Err != nil {
+				var terr *transport.Error
+				if errors.As(result.Err, &terr) && terr.StatusCode == http.StatusNotFound {
+					return "", xerrors.NewTaggedf[ErrNotFoundTag]("version %s is not available", version)
+				}
+
+				return "", result.Err
+			}
+		}
+	}
+
+	return ociPath, nil
+}
+
+// GetTalosctlTuples returns a list of Talosctl tuples for the given version.
+//
+//nolint:dupl
+func (m *Manager) GetTalosctlTuples(ctx context.Context, versionString string) ([]TalosctlTuple, error) {
+	tag, err := m.parseTag(ctx, versionString)
+	if err != nil {
+		return nil, err
+	}
+
+	m.talosctlTuplesMu.Lock()
+	tuples, ok := m.talosctlTuples[tag]
+	m.talosctlTuplesMu.Unlock()
+
+	if ok {
+		return tuples, nil
+	}
+
+	resultCh := m.sf.DoChan("tuples-"+tag, func() (any, error) { //nolint:contextcheck
+		return nil, m.fetchTalosctlTuples(tag)
+	})
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-resultCh:
+		if result.Err != nil {
+			return nil, result.Err
+		}
+	}
+
+	m.talosctlTuplesMu.Lock()
+	tuples = m.talosctlTuples[tag]
+	m.talosctlTuplesMu.Unlock()
+
+	return tuples, nil
 }
 
 func (m *Manager) parseTag(ctx context.Context, versionString string) (string, error) {

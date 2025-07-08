@@ -253,6 +253,9 @@
 - id: final.extra.initramfs
   translation: "Initramfs Image"
 
+- id: final.extra.talosctl
+  translation: "Talosctl CLI"
+
 - id: final.disk_image.secure_boot
   translation: "SecureBoot Disk Image"
 

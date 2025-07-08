@@ -277,8 +277,9 @@ type ArtifactProducer interface {
 	GetOfficialOverlays(context.Context, string) ([]artifacts.OverlayRef, error)
 	GetExtensionImage(context.Context, artifacts.Arch, artifacts.ExtensionRef) (string, error)
 	GetOverlayImage(context.Context, artifacts.Arch, artifacts.OverlayRef) (string, error)
-	GetOverlayArtifact(ctx context.Context, arch artifacts.Arch, ref artifacts.OverlayRef, kind artifacts.OverlayKind) (string, error)
+	GetOverlayArtifact(context.Context, artifacts.Arch, artifacts.OverlayRef, artifacts.OverlayKind) (string, error)
 	GetInstallerImage(context.Context, artifacts.Arch, string) (string, error)
+	GetTalosctlImage(context.Context, string) (string, error)
 }
 
 func findExtension(availableExtensions []artifacts.ExtensionRef, extensionName string) artifacts.ExtensionRef {

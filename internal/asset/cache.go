@@ -40,7 +40,6 @@ func (r *registryCache) Get(ctx context.Context, profileID string) (BootAsset, e
 	r.logger.Debug("heading cached image", zap.Stringer("ref", taggedRef))
 
 	desc, err := r.puller.Head(ctx, taggedRef)
-
 	if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
 		// ignore 404/403, it means the image hasn't been pushed yet
 		return nil, errCacheNotFound

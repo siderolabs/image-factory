@@ -141,14 +141,18 @@ func NewFrontend(
 	// secureboot
 	registerRoute(frontend.router.GET, "/secureboot/signing-cert.pem", frontend.handleSecureBootSigningCert)
 
+	// talosctl
+	registerRoute(frontend.router.HEAD, "/talosctl/:version/:path", frontend.handleTalosctl)
+	registerRoute(frontend.router.GET, "/talosctl/:version/:path", frontend.handleTalosctl)
+
 	// UI
 	registerRoute(frontend.router.GET, "/", frontend.handleUI)
 	registerRoute(frontend.router.HEAD, "/", frontend.handleUI)
 	registerRoute(frontend.router.POST, "/ui/wizard", frontend.handleUIWizard)
 	registerRoute(frontend.router.GET, "/ui/version-doc", frontend.handleUIVersionDoc)
 	registerRoute(frontend.router.POST, "/ui/extensions-list", frontend.handleUIExtensionsList)
-	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
 
+	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
 	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 

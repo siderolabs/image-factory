@@ -203,6 +203,19 @@ func (m *Manager) fetchInstallerImage(arch Arch, versionTag string, destPath str
 	return os.Rename(destPath+tmpSuffix, destPath)
 }
 
+// fetchTalosctlImage fetches a Talosctl image and exports it to the storage.
+func (m *Manager) fetchTalosctlImage(versionTag string, destPath string) error {
+	talosctlImage := TalosctlImage
+
+	if err := m.fetchImageByTag(talosctlImage, versionTag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
+		return untarWithPrefix(logger, r, "", destPath+tmpSuffix)
+	})); err != nil {
+		return err
+	}
+
+	return os.Rename(destPath+tmpSuffix, destPath)
+}
+
 const (
 	usrInstallPrefix = "usr/install/"
 	overlaysPrefix   = ""

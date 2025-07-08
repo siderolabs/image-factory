@@ -15,6 +15,7 @@ import (
 func IsStatusCodeError(err error, statusCodes ...int) bool {
 	var transportError *transport.Error
 
+	//nolint:wsl_v5
 	if !errors.As(err, &transportError) {
 		return false
 	}

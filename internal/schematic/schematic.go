@@ -72,7 +72,6 @@ func (s *Factory) Put(ctx context.Context, cfg *schematic.Schematic) (string, er
 	}
 
 	err = s.storage.Put(ctx, id, data)
-
 	if err == nil {
 		s.metricCreate.Inc()
 

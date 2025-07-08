@@ -102,6 +102,13 @@ type OverlayRef struct {
 	Digest          string
 }
 
+// TalosctlTuple represents a OS/Arch/Ext tuple for talosctl binaries.
+type TalosctlTuple struct {
+	OS   string
+	Arch string
+	Ext  string
+}
+
 type extensionsDescriptions map[string]struct {
 	Author      string `yaml:"author"`
 	Description string `yaml:"description"`
@@ -173,6 +180,36 @@ func (m *Manager) fetchOfficialOverlays(tag string) error {
 	m.officialOverlays[tag] = overlays
 
 	m.officialOverlaysMu.Unlock()
+
+	return nil
+}
+
+func (m *Manager) fetchTalosctlTuples(tag string) error {
+	var talosctlTuples []TalosctlTuple
+
+	if err := m.fetchImageByTag(TalosctlImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+		var extractErr error
+
+		talosctlTuples, extractErr = extractTalosctlTuples(r)
+
+		if extractErr == nil {
+			m.logger.Info("extracted the talosctl tuples", zap.Int("count", len(talosctlTuples)))
+		}
+
+		return extractErr
+	})); err != nil {
+		return err
+	}
+
+	m.talosctlTuplesMu.Lock()
+
+	if m.talosctlTuples == nil {
+		m.talosctlTuples = make(map[string][]TalosctlTuple)
+	}
+
+	m.talosctlTuples[tag] = talosctlTuples
+
+	m.talosctlTuplesMu.Unlock()
 
 	return nil
 }
@@ -296,4 +333,51 @@ func extractOverlayList(r io.Reader) ([]OverlayRef, error) {
 	}
 
 	return nil, errors.New("failed to find overlays.yaml file")
+}
+
+func extractTalosctlTuples(r io.Reader) ([]TalosctlTuple, error) {
+	var tuples []TalosctlTuple
+
+	tr := tar.NewReader(r)
+
+	for {
+		hdr, err := tr.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+
+			return nil, fmt.Errorf("error reading tar header: %w", err)
+		}
+
+		if strings.HasPrefix(hdr.Name, "talosctl-") {
+			rest, _ := strings.CutPrefix(hdr.Name, "talosctl-")
+			rest, hasExt := strings.CutSuffix(rest, ".exe")
+
+			ext := ""
+			if hasExt {
+				ext = ".exe"
+			}
+
+			restParts := strings.Split(rest, "-")
+			if len(restParts) != 2 {
+				return nil, fmt.Errorf("invalid talosctl file name %s", hdr.Name)
+			}
+
+			os := restParts[0]
+			arch := restParts[1]
+
+			tuples = append(tuples, TalosctlTuple{
+				OS:   os,
+				Arch: arch,
+				Ext:  ext,
+			})
+		}
+	}
+
+	if tuples != nil {
+		return tuples, nil
+	}
+
+	return nil, errors.New("failed to find talosctl binaries")
 }

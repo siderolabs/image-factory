@@ -414,6 +414,10 @@ func (mockArtifactProducer) GetOverlayArtifact(_ context.Context, _ artifacts.Ar
 	return "./testdata/" + string(kind), nil
 }
 
+func (mockArtifactProducer) GetTalosctlImage(_ context.Context, tag string) (string, error) {
+	return fmt.Sprintf("talosctl-all-%s.oci", tag), nil
+}
+
 //nolint:maintidx
 func TestEnhanceFromSchematic(t *testing.T) {
 	t.Parallel()

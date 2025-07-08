@@ -65,6 +65,7 @@ const (
 	ImagerImage            = "siderolabs/imager"
 	ExtensionManifestImage = "siderolabs/extensions"
 	OverlayManifestImage   = "siderolabs/overlays"
+	TalosctlImage          = "siderolabs/talosctl-all"
 )
 
 const tmpSuffix = "-tmp"

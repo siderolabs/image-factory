@@ -198,9 +198,27 @@ type WizardParams struct { //nolint:govet
 	// Dynamically set fields.
 	PlatformMeta platforms.Platform
 	BoardMeta    platforms.SBC
+	TalosctlMeta Talosctl
 
 	// Localizer
 	Localizer *i18n.Localizer
+}
+
+// Talosctl provides methods to generate paths for talosctl binaries.
+type Talosctl struct{}
+
+// TalosctlPaths generates paths for talosctl binaries based on the provided tuples.
+func (Talosctl) TalosctlPaths(tuples []artifacts.TalosctlTuple) []string {
+	paths := make([]string, 0, len(tuples))
+
+	for _, tuple := range tuples {
+		path := fmt.Sprintf("talosctl-%s-%s%s", tuple.OS, tuple.Arch, tuple.Ext)
+		paths = append(paths, path)
+	}
+
+	slices.Sort(paths)
+
+	return paths
 }
 
 func getCurrentLang(r *http.Request) string {
@@ -533,6 +551,14 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 		secureBootInstallerImage = fmt.Sprintf("%s/%s-installer-secureboot/%s:%s", f.options.ExternalURL.Host, params.Platform, schematicID, version)
 	}
 
+	var talosctlTuples []artifacts.TalosctlTuple
+	if talosVersion.GTE(semver.MustParse("1.11.0-alpha.3")) {
+		talosctlTuples, err = f.getTalosctlTuples(ctx, params.Version)
+		if err != nil {
+			return "", nil, nil, err
+		}
+	}
+
 	return "wizard-final",
 		struct {
 			WizardParams
@@ -542,25 +568,33 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 
 			ImageBaseURL             *url.URL
 			PXEBaseURL               *url.URL
+			TalosctlBaseURL          *url.URL
 			InstallerImage           string
 			SecureBootInstallerImage string
 
+			TalosctlTuples []artifacts.TalosctlTuple
+
 			TroubleshootingGuideAvailable bool
 			ProductionGuideAvailable      bool
+			TalosctlAvailable             bool
 		}{
 			WizardParams: params,
 
 			Schematic: schematicID,
 			Marshaled: string(marshaled),
 
-			ImageBaseURL: f.options.ExternalURL.JoinPath("image", schematicID, version),
-			PXEBaseURL:   f.options.ExternalPXEURL.JoinPath("pxe", schematicID, version),
+			ImageBaseURL:    f.options.ExternalURL.JoinPath("image", schematicID, version),
+			PXEBaseURL:      f.options.ExternalPXEURL.JoinPath("pxe", schematicID, version),
+			TalosctlBaseURL: f.options.ExternalURL.JoinPath("talosctl", version),
 
 			InstallerImage:           installerImage,
 			SecureBootInstallerImage: secureBootInstallerImage,
 
+			TalosctlTuples: talosctlTuples,
+
 			TroubleshootingGuideAvailable: talosVersion.GTE(semver.MustParse("1.6.0")),
 			ProductionGuideAvailable:      talosVersion.GTE(semver.MustParse("1.5.0")),
+			TalosctlAvailable:             talosVersion.GTE(semver.MustParse("1.11.0-alpha.3")),
 		},
 		params.URLValues(),
 		nil
@@ -741,6 +775,15 @@ func (f *Frontend) getOfficialExtensions(ctx context.Context, version string) ([
 	return xslices.Filter(extensions, func(ext artifacts.ExtensionRef) bool {
 		return ext.TaggedReference.Context().RepositoryStr() != "siderolabs/metal-agent" // hide the internal metal-agent extension on the UI
 	}), nil
+}
+
+func (f *Frontend) getTalosctlTuples(ctx context.Context, version string) ([]artifacts.TalosctlTuple, error) {
+	talosctlTuples, err := f.artifactsManager.GetTalosctlTuples(ctx, version)
+	if err != nil {
+		return nil, err
+	}
+
+	return talosctlTuples, nil
 }
 
 // extractParams extracts the WizardParams from the provided data.

@@ -99,7 +99,7 @@ func (s *Signer) SignImage(ctx context.Context, imageRef name.Digest, pusher rem
 		return fmt.Errorf("error appending signatures: %w", err)
 	}
 
-	if err = pusher.Push(ctx, signatureTag, signatures); err != nil {
+	if err := pusher.Push(ctx, signatureTag, signatures); err != nil {
 		return fmt.Errorf("error pushing signature: %w", err)
 	}
 

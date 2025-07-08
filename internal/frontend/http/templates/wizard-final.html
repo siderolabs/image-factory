@@ -187,6 +187,15 @@
 <dd><a href="{{ .PlatformMeta.UKIPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.UKIPath .Arch |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
+
+{{ if .TalosctlAvailable }}
+<dt>{{ t .Localizer "final.extra.talosctl" }}</dt>
+{{ range $index, $path := .TalosctlMeta.TalosctlPaths .TalosctlTuples }}
+<dd><a href="{{ $path | $.TalosctlBaseURL.JoinPath }}">{{ $path |
+        $.TalosctlBaseURL.JoinPath }}</a>
+</dd>
+{{ end }}
+{{ end }}
 {{ end }}
 
 {{ define "secureboot-extra-assets" }}

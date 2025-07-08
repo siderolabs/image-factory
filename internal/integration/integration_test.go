@@ -150,6 +150,12 @@ func TestIntegration(t *testing.T) {
 		testPXEFrontend(ctx, t, baseURL)
 	})
 
+	t.Run("TestTalosctlFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testTalosctlFrontend(ctx, t, baseURL)
+	})
+
 	t.Run("TestRegistryFrontend", func(t *testing.T) {
 		t.Parallel()
 
