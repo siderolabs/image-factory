@@ -242,7 +242,7 @@ crane cp ghcr.io/siderolabs/imager:$sig my.registry/siderolabs/imager:$sig
 Run integration tests in local mode, with registry mirrors:
 
 ```bash
-make integration TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5005/image-factory/schematic -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test -test.cache-repository=127.0.0.1:5005/cache" REGISTRY=127.0.0.1:5005
+make integration TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/test -test.installer-internal-repository=127.0.0.1:5100/test -test.cache-repository=127.0.0.1:5100/cache" REGISTRY=127.0.0.1:5005
 ```
 
 In order to run the Image Factory, generate a ECDSA key pair:

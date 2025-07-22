@@ -1,8 +1,7 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-04-30T10:10:43Z by kres fd5cab0-dirty.
+# Generated on 2025-07-22T11:53:08Z by kres b869533.
 
-name: slack-notify
 "on":
   workflow_run:
     workflows:
@@ -10,6 +9,7 @@ name: slack-notify
       - integration-talos-main-cron
     types:
       - completed
+name: slack-notify
 jobs:
   slack-notify:
     runs-on:

@@ -1,14 +1,14 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-06-03T16:05:20Z by kres fc6afbe.
+# Generated on 2025-07-22T11:53:08Z by kres b869533.
 
-name: integration-talos-main-cron
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 "on":
   schedule:
     - cron: 30 7 * * *
+name: integration-talos-main-cron
 jobs:
   default:
     runs-on:
