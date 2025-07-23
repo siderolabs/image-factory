@@ -72,11 +72,14 @@ func parseArch(s string, prof *profile.Profile) error {
 	switch artifacts.Arch(s) {
 	case artifacts.ArchAmd64, artifacts.ArchArm64:
 		prof.Arch = s
-
-		return nil
+	case "x86_64", "i386":
+		// handle iPXE-specific arch names (https://ipxe.org/cfg/buildarch)
+		prof.Arch = string(artifacts.ArchAmd64)
 	default:
 		return xerrors.NewTaggedf[InvalidErrorTag]("invalid architecture: %q", s)
 	}
+
+	return nil
 }
 
 // ParseFromPath parses imager profile from the file path.

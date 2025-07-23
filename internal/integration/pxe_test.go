@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,10 +37,27 @@ func downloadPXE(ctx context.Context, t *testing.T, baseURL string, schematicID,
 	return string(body)
 }
 
+func fixupCmdline(cmdline string, talosVersion string) string {
+	if quirks.New(talosVersion).SupportsSELinux() {
+		cmdline = strings.ReplaceAll(cmdline, "sha512\n", "sha512 selinux=1\n")
+		cmdline = strings.ReplaceAll(cmdline, " lockdown=confidentiality\n", " selinux=1 lockdown=confidentiality\n")
+	}
+
+	if !quirks.New(talosVersion).SupportsMetalPlatformConsoleTTYS0() {
+		cmdline = strings.ReplaceAll(cmdline, " console=ttyS0", "")
+	}
+
+	if !quirks.New(talosVersion).SupportsIMA() {
+		cmdline = strings.ReplaceAll(cmdline, " ima_template=ima-ng ima_appraise=fix ima_hash=sha512", "")
+	}
+
+	return cmdline
+}
+
 func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	talosVersions := []string{
 		"v1.5.0",
-		"v1.5.1",
+		"v1.11.0-beta.0",
 	}
 
 	const (
@@ -58,12 +76,27 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(metalInsecureExpected, "ENDPOINT", baseURL),
+							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", baseURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
 					),
 					downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64"),
+				)
+			})
+
+			t.Run("metal-x86_64", func(t *testing.T) {
+				t.Parallel()
+
+				assert.Equal(t,
+					strings.ReplaceAll(
+						strings.ReplaceAll(
+							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", baseURL),
+							"CONFIG", emptySchematicID,
+						),
+						"VERSION", talosVersion,
+					),
+					downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-x86_64"),
 				)
 			})
 
@@ -73,7 +106,7 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(equinixInsecureExpected, "ENDPOINT", baseURL),
+							strings.ReplaceAll(fixupCmdline(equinixInsecureExpected, talosVersion), "ENDPOINT", baseURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
@@ -88,7 +121,7 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(securebootExpected, "ENDPOINT", baseURL),
+							strings.ReplaceAll(fixupCmdline(securebootExpected, talosVersion), "ENDPOINT", baseURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
