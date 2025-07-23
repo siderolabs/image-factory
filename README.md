@@ -144,7 +144,11 @@ The bare metal machine should be configured to boot from the URL provided by thi
 
 ```text
 #!ipxe
-chain --replace --autofree https://pxe.talos.dev/pxe/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.5.0/metal-${buildarch}
+
+# architecture naming hack
+iseq ${buildarch} x86_64 && set arch amd64 || iseq ${buildarch} i386 && set arch amd64 || set arch ${buildarch}
+
+chain --replace --autofree https://pxe.factory.talos.dev/pxe/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.5.0/metal-${arch}
 ```
 
 ### `GET /pxe/:schematic/:version/:path`
