@@ -1,0 +1,284 @@
+- id: lang.name
+  translation: Język
+
+- id: lang.en
+  translation: English
+
+- id: lang.pl
+  translation: Polski
+
+- id: lang.ru
+  translation: Русский
+
+- id: app.name
+  translation: "Image Factory"
+
+- id: distro.name
+  translation: "Talos Linux"
+
+- id: page.header
+  translation: "Image Factory Talos Linux"
+
+- id: info.developed_by
+  translation: "Image Factory Talos Linux, opracowane przez "
+
+- id: info.offers
+  translation: ", oferuje możliwość pobrania różnych zasobów rozruchowych dla "
+
+- id: info.more
+  translation: "Aby uzyskać więcej informacji o API Image Factory i dostępnych formatach obrazów, odwiedź "
+
+- id: info.github
+  translation: "repozytorium GitHub"
+
+- id: info.version
+  translation: "Wersja"
+
+- id: interface.loading
+  translation: "Ładowanie..."
+
+- id: button.next
+  translation: "Dalej"
+
+- id: button.search
+  translation: "Szukaj"
+
+- id: button.back
+  translation: "Wstecz"
+
+- id: hardware.title
+  translation: "Typ Sprzętu"
+
+- id: hardware.bmm.name
+  translation: "Serwer Fizyczny"
+
+- id: hardware.cs.name
+  translation: "Serwer Chmurowy"
+
+- id: hardware.sbc.name
+  translation: "Komputer Jednopłytkowy"
+
+- id: hardware.bmm.description
+  translation: "Odpowiednie dla maszyn fizycznych o architekturze x86-64 i arm64 oraz podstawowych maszyn wirtualnych. Jeśli nie masz pewności - wybierz tę opcję."
+
+- id: hardware.cs.description
+  translation: "Zgodne z AWS, GCP, Azure, VMWare, Equinix Metal i innymi platformami, w tym środowiskami domowymi jak Proxmox."
+
+- id: hardware.sbc.description
+  translation: "Obsługuje Raspberry Pi, Pine64, Jetson Nano i podobne urządzenia."
+
+- id: versions.title
+  translation: "Wybierz wersję Talos Linux"
+
+- id: versions.recommendation
+  translation: "Zalecamy korzystanie z najnowszej stabilnej wersji Talos Linux"
+
+- id: versions.recommendation.pre_release
+  translation: "Wersje przedpremierowe nadają się do testów, ale nie są zalecane dla środowisk produkcyjnych."
+
+- id: docs.title
+  translation: "Dokumentacja Talos Linux"
+
+- id: docs.new
+  translation: "Co nowego"
+
+- id: docs.matrix
+  translation: "Tabela zgodności"
+
+- id: architecture.title
+  translation: "Architektura maszyny"
+
+- id: architecture.amd64
+  translation: "Zgodne z procesorami Intel i AMD, znane również jako x86_64. Jeśli nie masz pewności - wybierz tę opcję."
+
+- id: architecture.arm64
+  translation: "Odpowiednie dla Ampere Computing i innych procesorów arm64. Dla komputerów jednopłytkowych wybierz opcję 'SBC' na pierwszym ekranie. Dla maszyn wirtualnych arm64 na AWS i GCP, użyj obrazów chmurowych."
+
+- id: architecture.other
+  translation: "Zgodne z różnymi producentami ARM64, znane również jako aarch64."
+
+- id: architecture.secure_boot.name
+  translation: "SecureBoot"
+
+- id: architecture.secure_boot.create
+  translation: "Utwórz obraz "
+
+- id: architecture.secure_boot.description
+  translation: " sygnowany oficjalnym kluczem podpisującym Sidero Labs. Wymaga rozruchu UEFI i wstępnie skonfigurowanego sprzętu."
+
+- id: cloud.title
+  translation: "Chmura"
+
+- id: singleboard.title
+  translation: "Komputer jednopłytkowy"
+
+- id: common.runs_on
+  translation: "Działa na"
+
+- id: common.documentation
+  translation: "dokumentacja"
+
+- id: extensions.title
+  translation: "Rozszerzenia systemu"
+
+- id: extensions.description
+  translation: " wzbogacają bazowy obraz Talos Linux o dodatkowe funkcje, takie jak dodatkowe sterowniki, oprogramowanie sprzętowe, środowiska uruchomieniowe kontenerów, agenty systemu gościa i inne."
+
+- id: extensions.select
+  translation: "Wybierz rozszerzenia potrzebne w Twoim środowisku. Jeśli nie masz pewności - możesz pominąć ten krok."
+
+- id: customization.title
+  translation: "Dostosowanie"
+
+- id: customization.cmdline
+  translation: "Dodatkowe argumenty linii poleceń jądra:"
+
+- id: customization.cmdline.description
+  translation: "Ten krok pozwala dostosować domyślne "
+
+- id: customization.cmdline.arguments
+  translation: "argumenty linii poleceń jądra"
+
+- id: customization.cmdline.example
+  translation: "Składnia jest taka sama jak składnia linii poleceń jądra, np. "
+
+- id: customization.cmdline.prefix
+  translation: ". Poprzedzenie argumentu przez "
+
+- id: customization.cmdline.removes
+  translation: " usuwa go z domyślnej linii poleceń (np. "
+
+- id: customization.cmdline.secure_boot
+  translation: "Przy SecureBoot, linia poleceń jądra jest podpisana i nie może być modyfikowana, więc to jedyna okazja na dostosowanie jej."
+
+- id: customization.cmdline.note
+  translation: "Uwaga: dostosowanie linii poleceń jądra jest akceptowane tylko dla obrazów początkowego rozruchu (ISO, PXE, obraz dysku) i jest ignorowane dla "
+
+- id: customization.cmdline.upgrade
+  translation: " obrazów. W celu dostosowania linii poleceń dla aktualizacji/instalacji, użyj pola "
+
+- id: customization.cmdline.configuration
+  translation: " konfiguracji maszyny."
+
+- id: customization.cmdline.skip
+  translation: "Pomiń ten krok, jeśli nie masz pewności."
+
+- id: customization.overlay
+  translation: "Dodatkowe opcje nakładki (zaawansowane):"
+
+- id: customization.overlay.description
+  translation: "Ten krok pozwala dostosować opcje nakładki dla "
+
+- id: customization.overlay.name
+  translation: "nakładki"
+
+- id: customization.overlay.syntax
+  translation: "Akceptowana składnia to pary klucz-wartość w formacie YAML (JSON). Dostępne opcje są specyficzne dla obrazu nakładki i można je znaleźć w jego dokumentacji."
+
+- id: customization.overlay.skip
+  translation: "Jeśli nie masz pewności - możesz pominąć ten krok."
+
+- id: final.title
+  translation: "Schemat gotowy"
+
+- id: final.image
+  translation: "ID Twojego schematu obrazu to: "
+
+- id: final.first_boot
+  translation: "Pierwszy rozruch"
+
+- id: final.first_boot.metal
+  translation: "Oto opcje początkowego rozruchu Talos Linux na maszynie fizycznej lub podstawowej maszynie wirtualnej:"
+
+- id: final.first_boot.cloud
+  translation: "Oto opcje początkowego rozruchu Talos Linux na"
+
+- id: final.first_boot.sbc
+  translation: "Użyj poniższego obrazu dysku dla"
+
+- id: final.initial_installation
+  translation: "Początkowa instalacja"
+
+- id: final.initial_installation.description
+  translation: "Do początkowej instalacji Talos Linux (nie dotyczy rozruchu z obrazu dysku), dodaj następujący obraz instalatora do konfiguracji maszyny:"
+
+- id: final.upgrading
+  translation: "Aktualizacja Talos Linux"
+
+- id: final.upgrading.name
+  translation: "aktualizacja"
+
+- id: final.upgrading.to
+  translation: "Do "
+
+- id: final.upgrading.description
+  translation: " aktualizacji Talos Linux na maszynie, użyj następującego obrazu:"
+
+- id: final.documentation
+  translation: "Dokumentacja"
+
+- id: final.documentation.new
+  translation: "Co nowego w Talos "
+
+- id: final.documentation.matrix
+  translation: "Tabela zgodności dla "
+
+- id: final.documentation.getting_started
+  translation: "Przewodnik początkowy"
+
+- id: final.documentation.metal
+  translation: "Konfiguracja sieci fizycznej"
+
+- id: final.documentation.cloud
+  translation: "Przewodnik"
+
+- id: final.documentation.sbc
+  translation: "Przewodnik"
+
+- id: final.documentation.secure_boot
+  translation: "Przewodnik SecureBoot"
+
+- id: final.documentation.production
+  translation: "Przewodnik klastra produkcyjnego"
+
+- id: final.documentation.troubleshooting
+  translation: "Przewodnik rozwiązywania problemów"
+
+- id: final.extra
+  translation: "Dodatkowe zasoby"
+
+- id: final.extra.kernel_image
+  translation: "Obraz jądra"
+
+- id: final.extra.cmdline
+  translation: "Linia poleceń jądra"
+
+- id: final.extra.initramfs
+  translation: "Obraz initramfs"
+
+- id: final.extra.talosctl
+  translation: "CLI talosctl"
+
+- id: final.disk_image.secure_boot
+  translation: "Obraz dysku SecureBoot"
+
+- id: final.disk_image.secure_boot_docs
+  translation: "Dokumentacja SecureBoot"
+
+- id: final.disk_image.iso_docs
+  translation: "Dokumentacja ISO"
+
+- id: final.disk_image.all
+  translation: "Obraz dysku"
+
+- id: final.pxe.secure_boot
+  translation: "PXE SecureBoot"
+
+- id: final.pxe.boot
+  translation: "Rozruch PXE"
+
+- id: final.pxe.docs
+  translation: "Dokumentacja PXE"
+
+- id: final.board_image
+  translation: "Obraz dysku"

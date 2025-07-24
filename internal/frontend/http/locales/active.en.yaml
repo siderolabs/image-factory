@@ -4,6 +4,9 @@
 - id: lang.en
   translation: English
 
+- id: lang.pl
+  translation: Polski
+
 - id: lang.ru
   translation: Русский
 
