@@ -142,13 +142,6 @@ func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.
 		return err
 	}
 
-	params, err := extractParams(data)
-	if err != nil {
-		return err
-	}
-
-	params.Localizer = f.getLocalizer(r)
-
 	var buf bytes.Buffer
 
 	if err = getTemplates().ExecuteTemplate(&buf, templateName+".html", data); err != nil {
@@ -164,7 +157,7 @@ func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.
 	}{
 		Version:    version.Tag,
 		WizardHTML: template.HTML(buf.String()),
-		Localizer:  params.Localizer,
+		Localizer:  f.getLocalizer(r),
 		Bundle:     getLocalizerBundle(),
 		Lang:       getCurrentLang(r),
 	})
@@ -784,57 +777,4 @@ func (f *Frontend) getTalosctlTuples(ctx context.Context, version string) ([]art
 	}
 
 	return talosctlTuples, nil
-}
-
-// extractParams extracts the WizardParams from the provided data.
-func extractParams(data any) (WizardParams, error) {
-	switch v := data.(type) {
-	case WizardParams:
-		return v, nil
-	case struct {
-		WizardParams
-		Versions any
-	}:
-		return v.WizardParams, nil
-	case struct {
-		WizardParams
-		Platforms []platforms.Platform
-	}:
-		return v.WizardParams, nil
-	case struct {
-		WizardParams
-		SBCs []platforms.SBC
-	}:
-		return v.WizardParams, nil
-	case struct {
-		WizardParams
-		SecureBootSupported bool
-	}:
-		return v.WizardParams, nil
-	case struct {
-		WizardParams
-		AvailableExtensions []artifacts.ExtensionRef
-	}:
-		return v.WizardParams, nil
-	case struct {
-		WizardParams
-		OverlayOptionsEnabled bool
-	}:
-		return v.WizardParams, nil
-	case struct {
-		WizardParams
-
-		Schematic                     string
-		Marshaled                     string
-		ImageBaseURL                  *url.URL
-		PXEBaseURL                    *url.URL
-		InstallerImage                string
-		SecureBootInstallerImage      string
-		TroubleshootingGuideAvailable bool
-		ProductionGuideAvailable      bool
-	}:
-		return v.WizardParams, nil
-	default:
-		return WizardParams{}, fmt.Errorf("unknown wizard data type: %T", data)
-	}
 }
