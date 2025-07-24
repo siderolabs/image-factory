@@ -1,3 +1,30 @@
+## [image-factory 0.7.6](https://github.com/siderolabs/image-factory/releases/tag/v0.7.6) (2025-07-24)
+
+Welcome to the v0.7.6 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`6f409ec`](https://github.com/siderolabs/image-factory/commit/6f409ecd914094afe9293a23883806798a0cc5dd) fix: drop extractParams function
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.7.5](https://github.com/siderolabs/image-factory/releases/tag/v0.7.5)
+
 ## [image-factory 0.7.5](https://github.com/siderolabs/image-factory/releases/tag/v0.7.5) (2025-07-23)
 
 Welcome to the v0.7.5 release of image-factory!
