@@ -52,6 +52,8 @@ func initFlags() cmd.Options {
 
 	flag.DurationVar(&opts.TalosVersionRecheckInterval, "talos-versions-recheck-interval", cmd.DefaultOptions.TalosVersionRecheckInterval, "interval to recheck Talos versions")
 
+	flag.StringVar(&opts.CacheMode, "cache-mode", cmd.DefaultOptions.CacheMode, "cache mode (e.g. 's3', 'registry')")
+
 	flag.StringVar(&opts.CacheSigningKeyPath, "cache-signing-key-path", cmd.DefaultOptions.CacheSigningKeyPath, "path to the default cache signing key (PEM-encoded, ECDSA private key)")
 
 	flag.StringVar(&opts.CacheRepository, "cache-repository", cmd.DefaultOptions.CacheRepository, "cache repository for boot assets")
@@ -61,6 +63,10 @@ func initFlags() cmd.Options {
 		cmd.DefaultOptions.InsecureCacheRepository,
 		"allow an insecure connection to the cache repository",
 	)
+
+	flag.StringVar(&opts.CacheS3Bucket, "cache-s3-bucket", cmd.DefaultOptions.CacheS3Bucket, "S3 bucket for the cache")
+	flag.StringVar(&opts.CacheS3Endpoint, "cache-s3-endpoint", cmd.DefaultOptions.CacheS3Endpoint, "S3 endpoint for the cache")
+	flag.BoolVar(&opts.InsecureCacheS3, "insecure-cache-s3", cmd.DefaultOptions.InsecureCacheS3, "use insecure S3 connection for the cache")
 
 	flag.StringVar(&opts.MetricsListenAddr, "metrics-listen-addr", cmd.DefaultOptions.MetricsListenAddr, "metrics listen address (set empty to disable)")
 
