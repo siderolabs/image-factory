@@ -16,7 +16,9 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
+	"go.uber.org/zap"
 
+	"github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/profile"
 )
 
@@ -58,6 +60,15 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 	asset, err := f.assetBuilder.Build(ctx, prof, version.String())
 	if err != nil {
 		return err
+	}
+
+	if asset, ok := asset.(cache.RedirectableAsset); ok && r.Method != http.MethodHead {
+		url, err := asset.Redirect()
+		if err == nil {
+			http.Redirect(w, r, url, http.StatusFound)
+			return nil
+		}
+		f.logger.Warn("asset does not support redirection, serving directly", zap.Error(err))
 	}
 
 	w.Header().Set("Content-Length", strconv.FormatInt(asset.Size(), 10))

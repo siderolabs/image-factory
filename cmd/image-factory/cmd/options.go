@@ -53,6 +53,9 @@ type Options struct { //nolint:govet
 	// TalosVersionRecheckInterval is the interval for rechecking Talos versions.
 	TalosVersionRecheckInterval time.Duration
 
+	// CacheMode is the mode for the cache.
+	CacheMode string
+
 	// CacheSigningKeyPath is the path to the signing key for the cache.
 	//
 	// Best choice is to use ECDSA key.
@@ -63,6 +66,14 @@ type Options struct { //nolint:govet
 	CacheRepository string
 	// Allow insecure connection to the cache repository.
 	InsecureCacheRepository bool
+
+	// CacheS3Bucket is the bucket name for the cache.
+	CacheS3Bucket string
+	// CacheS3Endpoint is the S3 endpoint for the cache.
+	// It should not include the scheme or trailing slash.
+	CacheS3Endpoint string
+	// InsecureCacheS3 allows insecure connection to the S3 storage.
+	InsecureCacheS3 bool
 
 	// Bind address for Prometheus metrics.
 	//
@@ -122,7 +133,15 @@ var DefaultOptions = Options{
 
 	TalosVersionRecheckInterval: 15 * time.Minute,
 
+	CacheMode:       CacheModeRegistry,
 	CacheRepository: "ghcr.io/siderolabs/image-factory/cache",
+	CacheS3Bucket:   "image-factory",
 
 	MetricsListenAddr: ":2122",
 }
+
+const (
+	// CacheMode types.
+	CacheModeRegistry = "registry"
+	CacheModeS3       = "s3"
+)

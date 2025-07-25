@@ -141,15 +141,15 @@ ENV GOEXPERIMENT=${GOEXPERIMENT}
 ENV GOPATH=/go
 ARG DEEPCOPY_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/siderolabs/deep-copy@${DEEPCOPY_VERSION} \
-	&& mv /go/bin/deep-copy /bin/deep-copy
+    && mv /go/bin/deep-copy /bin/deep-copy
 ARG GOLANGCILINT_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCILINT_VERSION} \
-	&& mv /go/bin/golangci-lint /bin/golangci-lint
+    && mv /go/bin/golangci-lint /bin/golangci-lint
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install golang.org/x/vuln/cmd/govulncheck@latest \
-	&& mv /go/bin/govulncheck /bin/govulncheck
+    && mv /go/bin/govulncheck /bin/govulncheck
 ARG GOFUMPT_VERSION
 RUN go install mvdan.cc/gofumpt@${GOFUMPT_VERSION} \
-	&& mv /go/bin/gofumpt /bin/gofumpt
+    && mv /go/bin/gofumpt /bin/gofumpt
 
 # Copies assets
 FROM scratch AS tailwind-copy
@@ -277,4 +277,3 @@ COPY --from=image-factory image-factory-linux-${TARGETARCH} /usr/bin/image-facto
 COPY --from=imager-tools / /
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/image-factory
 ENTRYPOINT ["/usr/bin/image-factory"]
-
