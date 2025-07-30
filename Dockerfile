@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-07-23T12:09:55Z by kres 4c6b4c0.
+# Generated on 2025-07-29T12:16:54Z by kres dd1ed6f.
 
 ARG TOOLCHAIN
 ARG PKGS_PREFIX
@@ -87,7 +87,7 @@ RUN --mount=type=cache,target=/src/node_modules,id=image-factory/src/node_module
 
 # base toolchain image
 FROM --platform=${BUILDPLATFORM} ${TOOLCHAIN} AS toolchain
-RUN apk --update --no-cache add bash curl build-base protoc protobuf-dev
+RUN apk --update --no-cache add bash curl build-base jq protoc protobuf-dev
 
 # copies the imager tools
 FROM scratch AS imager-tools
@@ -141,15 +141,15 @@ ENV GOEXPERIMENT=${GOEXPERIMENT}
 ENV GOPATH=/go
 ARG DEEPCOPY_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/siderolabs/deep-copy@${DEEPCOPY_VERSION} \
-	&& mv /go/bin/deep-copy /bin/deep-copy
+    && mv /go/bin/deep-copy /bin/deep-copy
 ARG GOLANGCILINT_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCILINT_VERSION} \
-	&& mv /go/bin/golangci-lint /bin/golangci-lint
+    && mv /go/bin/golangci-lint /bin/golangci-lint
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install golang.org/x/vuln/cmd/govulncheck@latest \
-	&& mv /go/bin/govulncheck /bin/govulncheck
+    && mv /go/bin/govulncheck /bin/govulncheck
 ARG GOFUMPT_VERSION
 RUN go install mvdan.cc/gofumpt@${GOFUMPT_VERSION} \
-	&& mv /go/bin/gofumpt /bin/gofumpt
+    && mv /go/bin/gofumpt /bin/gofumpt
 
 # Copies assets
 FROM scratch AS tailwind-copy
@@ -194,7 +194,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 # runs govulncheck
 FROM base AS lint-govulncheck
 WORKDIR /src
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg govulncheck ./...
+COPY ./hack/govulncheck.sh ./hack/govulncheck.sh
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh ./...
 
 # runs unit-tests with race detector
 FROM base AS unit-tests-race
@@ -277,4 +278,3 @@ COPY --from=image-factory image-factory-linux-${TARGETARCH} /usr/bin/image-facto
 COPY --from=imager-tools / /
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/image-factory
 ENTRYPOINT ["/usr/bin/image-factory"]
-

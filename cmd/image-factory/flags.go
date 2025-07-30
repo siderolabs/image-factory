@@ -62,6 +62,15 @@ func initFlags() cmd.Options {
 		"allow an insecure connection to the cache repository",
 	)
 
+	flag.BoolVar(&opts.CacheS3Enabled, "cache-s3-enabled", cmd.DefaultOptions.CacheS3Enabled, "enable S3 cache for boot assets")
+	flag.StringVar(&opts.CacheS3Bucket, "cache-s3-bucket", cmd.DefaultOptions.CacheS3Bucket, "S3 bucket for the cache")
+	flag.StringVar(&opts.CacheS3Endpoint, "cache-s3-endpoint", cmd.DefaultOptions.CacheS3Endpoint, "S3 endpoint for the cache")
+	flag.BoolVar(&opts.InsecureCacheS3, "insecure-cache-s3", cmd.DefaultOptions.InsecureCacheS3, "use insecure S3 connection for the cache")
+
+	flag.BoolVar(&opts.CacheCDNEnabled, "cache-cdn-enabled", cmd.DefaultOptions.CacheCDNEnabled, "enable CDN for boot assets")
+	flag.StringVar(&opts.CacheCDNHost, "cache-cdn-host", cmd.DefaultOptions.CacheCDNHost, "CDN host for the cache")
+	flag.StringVar(&opts.CacheCDNTrimPrefix, "cache-cdn-trim-prefix", cmd.DefaultOptions.CacheCDNTrimPrefix, "CDN trim path for the cache")
+
 	flag.StringVar(&opts.MetricsListenAddr, "metrics-listen-addr", cmd.DefaultOptions.MetricsListenAddr, "metrics listen address (set empty to disable)")
 
 	flag.BoolVar(&opts.SecureBoot.Enabled, "secureboot", cmd.DefaultOptions.SecureBoot.Enabled, "enable Secure Boot asset generation")

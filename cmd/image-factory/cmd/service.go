@@ -34,11 +34,15 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
+	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
+	"github.com/siderolabs/image-factory/internal/asset/cache/cdn"
+	assetcachereg "github.com/siderolabs/image-factory/internal/asset/cache/registry"
+	assetcaches3 "github.com/siderolabs/image-factory/internal/asset/cache/s3"
 	frontendhttp "github.com/siderolabs/image-factory/internal/frontend/http"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic"
-	"github.com/siderolabs/image-factory/internal/schematic/storage/cache"
-	"github.com/siderolabs/image-factory/internal/schematic/storage/registry"
+	schematiccache "github.com/siderolabs/image-factory/internal/schematic/storage/cache"
+	schematicreg "github.com/siderolabs/image-factory/internal/schematic/storage/registry"
 	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/internal/version"
 )
@@ -271,13 +275,16 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 }
 
 func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, cacheSigningKey crypto.PrivateKey, opts Options) (*asset.Builder, error) {
-	builderOptions := asset.Options{
-		AllowedConcurrency:      opts.AssetBuildMaxConcurrency,
+	var (
+		cache assetcache.Cache
+		err   error
+	)
+
+	regOptions := assetcachereg.Options{
 		CacheSigningKey:         cacheSigningKey,
 		RegistryRefreshInterval: opts.RegistryRefreshInterval,
 	}
-
-	builderOptions.RemoteOptions = append(builderOptions.RemoteOptions, remoteOptions()...)
+	regOptions.RemoteOptions = append(regOptions.RemoteOptions, remoteOptions()...)
 
 	var repoOpts []name.Option
 
@@ -285,14 +292,46 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 		repoOpts = append(repoOpts, name.Insecure)
 	}
 
-	var err error
-
-	builderOptions.CacheRepository, err = name.NewRepository(opts.CacheRepository, repoOpts...)
+	regOptions.CacheRepository, err = name.NewRepository(opts.CacheRepository, repoOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cache repository: %w", err)
 	}
 
-	builder, err := asset.NewBuilder(logger, artifactsManager, builderOptions)
+	cache, err = assetcachereg.New(logger, regOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize repository cache: %w", err)
+	}
+
+	if opts.CacheS3Enabled {
+		s3Options := assetcaches3.Options{
+			Bucket:   opts.CacheS3Bucket,
+			Endpoint: opts.CacheS3Endpoint,
+			Insecure: opts.InsecureCacheS3,
+		}
+
+		cache, err = assetcaches3.New(logger, cache, s3Options)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize s3 cache: %w", err)
+		}
+	}
+
+	if opts.CacheCDNEnabled {
+		cdnOptions := cdn.Options{
+			Host:       opts.CacheCDNHost,
+			TrimPrefix: opts.CacheCDNTrimPrefix,
+		}
+
+		cache, err = cdn.New(logger, cache, cdnOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize CDN cache: %w", err)
+		}
+	}
+
+	builderOptions := asset.Options{
+		AllowedConcurrency: opts.AssetBuildMaxConcurrency,
+	}
+
+	builder, err := asset.NewBuilder(logger, artifactsManager, cache, builderOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -314,12 +353,12 @@ func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory
 		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
 
-	storage, err := registry.NewStorage(repo, opts.RegistryRefreshInterval, remoteOptions())
+	storage, err := schematicreg.NewStorage(repo, opts.RegistryRefreshInterval, remoteOptions())
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize storage: %w", err)
+		return nil, fmt.Errorf("failed to initialize registry storage: %w", err)
 	}
 
-	factory := schematic.NewFactory(logger, cache.NewCache(storage), schematic.Options{})
+	factory := schematic.NewFactory(logger, schematiccache.NewCache(storage), schematic.Options{})
 
 	prometheus.MustRegister(factory)
 

@@ -7,15 +7,12 @@ package asset
 
 import (
 	"context"
-	"crypto"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/talos/pkg/imager"
 	"github.com/siderolabs/talos/pkg/imager/profile"
@@ -25,9 +22,8 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/internal/image/signer"
+	"github.com/siderolabs/image-factory/internal/asset/cache"
 	factoryprofile "github.com/siderolabs/image-factory/internal/profile"
-	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 // BootAsset is an interface to access a boot asset.
@@ -42,7 +38,7 @@ type BootAsset interface {
 // Builder is the asset builder.
 type Builder struct {
 	logger           *zap.Logger
-	cache            *registryCache
+	cache            cache.Cache
 	artifactsManager *artifacts.Manager
 	sf               singleflight.Group
 	semaphore        chan struct{}
@@ -54,38 +50,11 @@ type Builder struct {
 
 // Options configures the asset builder.
 type Options struct {
-	CacheRepository         name.Repository
-	CacheSigningKey         crypto.PrivateKey
-	RemoteOptions           []remote.Option
-	RegistryRefreshInterval time.Duration
-
 	AllowedConcurrency int
 }
 
 // NewBuilder creates a new asset builder.
-func NewBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, options Options) (*Builder, error) {
-	cache := &registryCache{
-		cacheRepository: options.CacheRepository,
-		logger:          logger.With(zap.String("component", "asset-cache")),
-	}
-
-	var err error
-
-	cache.puller, err = remotewrap.NewPuller(options.RegistryRefreshInterval, options.RemoteOptions...)
-	if err != nil {
-		return nil, fmt.Errorf("error creating puller: %w", err)
-	}
-
-	cache.pusher, err = remotewrap.NewPusher(options.RegistryRefreshInterval, options.RemoteOptions...)
-	if err != nil {
-		return nil, fmt.Errorf("error creating pusher: %w", err)
-	}
-
-	cache.imageSigner, err = signer.NewSigner(options.CacheSigningKey)
-	if err != nil {
-		return nil, fmt.Errorf("error creating signer: %w", err)
-	}
-
+func NewBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, cache cache.Cache, options Options) (*Builder, error) {
 	return &Builder{
 		logger:           logger.With(zap.String("component", "asset-builder")),
 		cache:            cache,
@@ -163,7 +132,7 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 		return asset, nil
 	}
 
-	if !errors.Is(err, errCacheNotFound) {
+	if !errors.Is(err, cache.ErrCacheNotFound) {
 		return nil, fmt.Errorf("error getting asset from cache: %w", err)
 	}
 
@@ -312,4 +281,4 @@ func (b *Builder) Collect(ch chan<- prometheus.Metric) {
 	b.metricConcurrencyLatency.Collect(ch)
 }
 
-var _ prometheus.Collector = &Builder{}
+var _ prometheus.Collector = (*Builder)(nil)

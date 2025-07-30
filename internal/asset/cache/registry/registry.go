@@ -2,28 +2,40 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package asset
+// Package registry implements a cache using an OCI registry.
+package registry
 
 import (
 	"context"
-	"errors"
+	"crypto"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
 
+	"github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/regtransport"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
-// registryCache is using OCI registry to cache assets.
-type registryCache struct {
+// Options contains options for the registry cache.
+type Options struct {
+	CacheRepository         name.Repository
+	CacheSigningKey         crypto.PrivateKey
+	RemoteOptions           []remote.Option
+	RegistryRefreshInterval time.Duration
+}
+
+// Cache is using OCI registry to cache assets.
+type Cache struct {
 	puller          remotewrap.Puller
 	pusher          remotewrap.Pusher
 	imageSigner     *signer.Signer
@@ -31,18 +43,46 @@ type registryCache struct {
 	cacheRepository name.Repository
 }
 
-var errCacheNotFound = errors.New("not found in cache")
+// Check interface.
+var _ cache.Cache = (*Cache)(nil)
+
+// New creates a new registry cache.
+func New(logger *zap.Logger, options Options) (*Cache, error) {
+	c := &Cache{
+		cacheRepository: options.CacheRepository,
+		logger:          logger.With(zap.String("component", "asset-cache-registry")),
+	}
+
+	var err error
+
+	c.puller, err = remotewrap.NewPuller(options.RegistryRefreshInterval, options.RemoteOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating puller: %w", err)
+	}
+
+	c.pusher, err = remotewrap.NewPusher(options.RegistryRefreshInterval, options.RemoteOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating pusher: %w", err)
+	}
+
+	c.imageSigner, err = signer.NewSigner(options.CacheSigningKey)
+	if err != nil {
+		return nil, fmt.Errorf("error creating signer: %w", err)
+	}
+
+	return c, nil
+}
 
 // Get returns the boot asset from the cache.
-func (r *registryCache) Get(ctx context.Context, profileID string) (BootAsset, error) {
-	taggedRef := r.cacheRepository.Tag(profileID)
+func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, error) {
+	taggedRef := c.cacheRepository.Tag(profileID)
 
-	r.logger.Debug("heading cached image", zap.Stringer("ref", taggedRef))
+	c.logger.Debug("heading cached image", zap.Stringer("ref", taggedRef))
 
-	desc, err := r.puller.Head(ctx, taggedRef)
+	desc, err := c.puller.Head(ctx, taggedRef)
 	if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
 		// ignore 404/403, it means the image hasn't been pushed yet
-		return nil, errCacheNotFound
+		return nil, cache.ErrCacheNotFound
 	}
 
 	if err != nil {
@@ -50,23 +90,23 @@ func (r *registryCache) Get(ctx context.Context, profileID string) (BootAsset, e
 		return nil, fmt.Errorf("failed to head cache image: %w", err)
 	}
 
-	digestRef := r.cacheRepository.Digest(desc.Digest.String())
+	digestRef := c.cacheRepository.Digest(desc.Digest.String())
 
 	_, _, err = cosign.VerifyImageSignatures(
 		ctx,
 		digestRef,
-		r.imageSigner.GetCheckOpts(),
+		c.imageSigner.GetCheckOpts(),
 	)
 	if err != nil {
 		// signature doesn't validate, skip the cache, but keep building
-		r.logger.Info("cache image signature doesn't validate", zap.Error(err), zap.Stringer("ref", taggedRef))
+		c.logger.Info("cache image signature doesn't validate", zap.Error(err), zap.Stringer("ref", taggedRef))
 
-		return nil, errCacheNotFound
+		return nil, cache.ErrCacheNotFound
 	}
 
-	r.logger.Info("using cached image", zap.Stringer("ref", taggedRef))
+	c.logger.Info("using cached image", zap.Stringer("ref", taggedRef))
 
-	imgDesc, err := r.puller.Get(ctx, digestRef)
+	imgDesc, err := c.puller.Get(ctx, digestRef)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pull cache image: %w", err)
 	}
@@ -99,10 +139,10 @@ func (r *registryCache) Get(ctx context.Context, profileID string) (BootAsset, e
 }
 
 // Put uploads the boot asset to the registry.
-func (r *registryCache) Put(ctx context.Context, profileID string, asset BootAsset) error {
-	taggedRef := r.cacheRepository.Tag(profileID)
+func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset) error {
+	taggedRef := c.cacheRepository.Tag(profileID)
 
-	r.logger.Info("pushing cached image", zap.Stringer("ref", taggedRef))
+	c.logger.Info("pushing cached image", zap.Stringer("ref", taggedRef))
 
 	layer, err := partial.CompressedToLayer(&layerWrapper{
 		src: asset,
@@ -118,7 +158,7 @@ func (r *registryCache) Put(ctx context.Context, profileID string, asset BootAss
 		return err
 	}
 
-	if err = r.pusher.Push(ctx, taggedRef, img); err != nil {
+	if err = c.pusher.Push(ctx, taggedRef, img); err != nil {
 		return fmt.Errorf("failed to push cache image: %w", err)
 	}
 
@@ -127,14 +167,14 @@ func (r *registryCache) Put(ctx context.Context, profileID string, asset BootAss
 		return fmt.Errorf("failed to get cache image digest: %w", err)
 	}
 
-	digestRef := r.cacheRepository.Digest(digest.String())
+	digestRef := c.cacheRepository.Digest(digest.String())
 
-	r.logger.Info("signing cache image", zap.Stringer("ref", digestRef))
+	c.logger.Info("signing cache image", zap.Stringer("ref", digestRef))
 
-	if err := r.imageSigner.SignImage(
+	if err := c.imageSigner.SignImage(
 		ctx,
 		digestRef,
-		r.pusher,
+		c.pusher,
 	); err != nil {
 		return fmt.Errorf("error signing cached image: %w", err)
 	}

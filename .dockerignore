@@ -6,6 +6,7 @@
 !cmd
 !internal
 !pkg
+!hack
 !go.mod
 !go.sum
 !.golangci.yml

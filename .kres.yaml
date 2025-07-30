@@ -342,7 +342,7 @@ spec:
     enabled: true
     phony: true
     script:
-      - "@$(MAKE) local-copy-out-go-mod DEST=. TARGET_ARGS=\"--no-cache-filter=update-to-talos-main\""
+      - '@$(MAKE) local-copy-out-go-mod DEST=. TARGET_ARGS="--no-cache-filter=update-to-talos-main"'
 ---
 kind: custom.Step
 name: integration
@@ -362,7 +362,7 @@ spec:
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host --privileged -v /dev:/dev -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration.txt -test.run $(RUN_TESTS)
       - docker rm -f local-if
   ghaction:
     enabled: true
@@ -385,7 +385,7 @@ spec:
       - name: TEST_FLAGS
         defaultValue: ""
     script:
-        - "@$(MAKE) integration"
+      - "@$(MAKE) integration"
   ghaction:
     enabled: true
     cronOnly: true
@@ -397,9 +397,9 @@ spec:
         runnerLabels:
           - generic
         triggerLabels:
-        - integration/talos-main
+          - integration/talos-main
         crons:
-          - '30 7 * * *'
+          - "30 7 * * *"
 ---
 kind: common.Build
 spec:

@@ -64,6 +64,27 @@ type Options struct { //nolint:govet
 	// Allow insecure connection to the cache repository.
 	InsecureCacheRepository bool
 
+	// CacheS3Enabled enables S3 cache for the image factory.
+	CacheS3Enabled bool
+	// CacheS3Bucket is the bucket name for the cache.
+	CacheS3Bucket string
+	// CacheS3Endpoint is the S3 endpoint for the cache.
+	// It should not include the scheme or trailing slash.
+	CacheS3Endpoint string
+	// InsecureCacheS3 allows insecure connection to the S3 storage.
+	InsecureCacheS3 bool
+
+	// CacheCDNEnabled enables CDN cache for the image factory.
+	CacheCDNEnabled bool
+	// CacheCDNHost is the URL of the CDN.
+	CacheCDNHost string
+	// CacheCDNTrimPrefix is the path to trim from the underlying redirect URL, including the leading slash.
+	// For example, if asset URL is https://example.com/image-factory/cache/asset.tar.gz,
+	// and CacheCDNTrimPrefix is /image-factory, then the redirect URL will be
+	// https://cdn.example.com/cache/asset.tar.gz.
+	// If empty, the path will not be trimmed.
+	CacheCDNTrimPrefix string
+
 	// Bind address for Prometheus metrics.
 	//
 	// Leave empty to disable.
@@ -123,6 +144,7 @@ var DefaultOptions = Options{
 	TalosVersionRecheckInterval: 15 * time.Minute,
 
 	CacheRepository: "ghcr.io/siderolabs/image-factory/cache",
+	CacheS3Bucket:   "image-factory",
 
 	MetricsListenAddr: ":2122",
 }

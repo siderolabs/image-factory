@@ -11,6 +11,7 @@ import (
 	"crypto/elliptic"
 	_ "embed"
 	"flag"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -18,7 +19,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/ory/dockertest"
+	dc "github.com/ory/dockertest/docker"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"golang.org/x/sync/errgroup"
@@ -27,14 +33,13 @@ import (
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
-func setupFactory(t *testing.T) (context.Context, string) {
+func setupFactory(t *testing.T, options cmd.Options) (context.Context, string) {
 	t.Helper()
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	logger := zaptest.NewLogger(t)
 
-	options := cmd.DefaultOptions
 	options.HTTPListenAddr = findListenAddr(t)
 	options.ImageRegistry = imageRegistryFlag
 	options.ExternalURL = "http://" + options.HTTPListenAddr + "/"
@@ -88,6 +93,121 @@ func setupCacheSigningKey(t *testing.T, options *cmd.Options) {
 	options.CacheSigningKeyPath = optionsDir + "/cache-signing-key.pem"
 }
 
+func docker(t *testing.T) *dockertest.Pool {
+	pool, err := dockertest.NewPool("")
+	require.NoError(t, err)
+
+	err = pool.Client.Ping()
+	require.NoError(t, err)
+
+	return pool
+}
+
+func healthcheck(url string) func() error {
+	return func() error {
+		resp, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("status code not OK")
+		}
+
+		return nil
+	}
+}
+
+const (
+	bucket       = "image-factory"
+	bucketPrefix = "/" + bucket
+
+	s3Access = "AKIA6Z4C7N3S2JD3JH9A"
+	s3Secret = "y1rE4xZnqO6xvM7L0jFD3EXAMPLEnG4K2vOfLp8Iv9"
+)
+
+func setupS3(t *testing.T, pool *dockertest.Pool) string {
+	t.Helper()
+
+	_, port, err := net.SplitHostPort(findListenAddr(t))
+	require.NoError(t, err)
+
+	res, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "minio/minio",
+		Tag:        "latest",
+		Cmd:        []string{"server", "/data"},
+		PortBindings: map[dc.Port][]dc.PortBinding{
+			"9000": {{HostPort: port}},
+		},
+		Env: []string{
+			fmt.Sprintf("MINIO_ROOT_USER=%s", s3Access),
+			fmt.Sprintf("MINIO_ROOT_PASSWORD=%s", s3Secret),
+		},
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err := pool.Purge(res)
+		assert.NoError(t, err)
+	})
+
+	endpoint := net.JoinHostPort("127.0.0.1", res.GetPort("9000/tcp"))
+	t.Logf("running MinIO on %q", endpoint)
+
+	s3cli, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(s3Access, s3Secret, ""),
+		Secure: false,
+	})
+	require.NoError(t, err)
+
+	err = pool.Retry(func() error {
+		return s3cli.MakeBucket(t.Context(), bucket, minio.MakeBucketOptions{ForceCreate: true})
+	})
+	require.NoError(t, err)
+
+	t.Setenv("AWS_ACCESS_KEY_ID", s3Access)
+	t.Setenv("AWS_SECRET_ACCESS_KEY", s3Secret)
+
+	return endpoint
+}
+
+//go:embed testdata/templates/nginx.sh
+var nginxConfigTemplate string
+
+func setupMockCDN(t *testing.T, pool *dockertest.Pool, s3 string) string {
+	t.Helper()
+
+	_, port, err := net.SplitHostPort(findListenAddr(t))
+	require.NoError(t, err)
+
+	inlineEntrypoint := fmt.Appendf([]byte{}, nginxConfigTemplate, s3, bucket)
+
+	res, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "nginx",
+		Tag:        "1",
+		Cmd:        []string{"sh", "-c", string(inlineEntrypoint)},
+		PortBindings: map[dc.Port][]dc.PortBinding{
+			"80": {{HostPort: port}},
+		},
+	})
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err := pool.Purge(res)
+		assert.NoError(t, err)
+	})
+
+	endpoint := net.JoinHostPort("127.0.0.1", res.GetPort("80/tcp"))
+	t.Logf("running Nginx on %q", endpoint)
+
+	err = pool.Retry(healthcheck(fmt.Sprintf("http://%s/health", endpoint)))
+	require.NoError(t, err)
+
+	return endpoint
+}
+
 var (
 	//go:embed "testdata/secureboot/uki-signing-key.pem"
 	secureBootSigningKey []byte
@@ -130,7 +250,19 @@ func findListenAddr(t *testing.T) string {
 }
 
 func TestIntegration(t *testing.T) {
-	ctx, listenAddr := setupFactory(t)
+	pool := docker(t)
+	options := cmd.DefaultOptions
+
+	options.CacheS3Enabled = true
+	options.CacheS3Bucket = bucket
+	options.InsecureCacheS3 = true
+	options.CacheS3Endpoint = setupS3(t, pool)
+
+	options.CacheCDNEnabled = true
+	options.CacheCDNTrimPrefix = bucketPrefix
+	options.CacheCDNHost = setupMockCDN(t, pool, options.CacheS3Endpoint)
+
+	ctx, listenAddr := setupFactory(t, options)
 	baseURL := "http://" + listenAddr
 
 	t.Run("TestSchematic", func(t *testing.T) {

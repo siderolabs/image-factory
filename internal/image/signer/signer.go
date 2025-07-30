@@ -60,6 +60,11 @@ func (s *Signer) GetVerifier() signature.Verifier {
 	return s.sv
 }
 
+// GetVerifier returns the signer for the signature.
+func (s *Signer) GetSigner() signature.Signer {
+	return s.sv
+}
+
 // GetCheckOpts returns cosign compatible image signature verification options.
 func (s *Signer) GetCheckOpts() *cosign.CheckOpts {
 	return &cosign.CheckOpts{

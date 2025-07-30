@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package asset
+package registry
 
 import (
 	"io"
@@ -10,6 +10,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/opencontainers/go-digest"
+
+	"github.com/siderolabs/image-factory/internal/asset/cache"
 )
 
 // remoteAsset holds a cached image layer which contains the asset.
@@ -19,7 +21,7 @@ type remoteAsset struct {
 }
 
 // Check interface.
-var _ BootAsset = (*remoteAsset)(nil)
+var _ cache.BootAsset = (*remoteAsset)(nil)
 
 // Size returns the size of the boot asset.
 func (r *remoteAsset) Size() int64 {
@@ -33,7 +35,7 @@ func (r *remoteAsset) Reader() (io.ReadCloser, error) {
 
 // layerWrapper adapts to the expected v1.Layer interface.
 type layerWrapper struct {
-	src    BootAsset
+	src    cache.BootAsset
 	digest v1.Hash
 }
 
