@@ -46,12 +46,17 @@ func run() error {
 }
 
 func runWithContext(ctx context.Context) error {
-	logger, err := zap.NewProduction()
+	opts := initFlags()
+
+	cfg := zap.NewProductionConfig()
+	cfg.Level = zap.NewAtomicLevelAt(*opts.LogLevel)
+
+	logger, err := cfg.Build()
 	if err != nil {
 		return fmt.Errorf("failed to initialize production logger: %w", err)
 	}
 
-	opts := initFlags()
+	logger.Debug("starting factory", zap.Any("level", *opts.LogLevel))
 
 	return cmd.RunFactory(ctx, logger, opts)
 }

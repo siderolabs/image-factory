@@ -8,6 +8,8 @@ package main
 import (
 	"flag"
 
+	"go.uber.org/zap"
+
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 )
 
@@ -88,6 +90,8 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.SecureBoot.AzureKeyVaultURL, "secureboot-azure-key-vault-url", cmd.DefaultOptions.SecureBoot.AzureKeyVaultURL, "Secure Boot Azure Key Vault URL (use Azure PKI)")
 	flag.StringVar(&opts.SecureBoot.AzureCertificateName, "secureboot-azure-certificate-name", cmd.DefaultOptions.SecureBoot.AzureCertificateName, "Secure Boot Azure Key Vault certificate name (use Azure PKI)") //nolint:lll
 	flag.StringVar(&opts.SecureBoot.AzureKeyName, "secureboot-azure-key-name", cmd.DefaultOptions.SecureBoot.AzureKeyName, "Secure Boot Azure Key Vault PCR key name (use Azure PKI)")
+
+	opts.LogLevel = zap.LevelFlag("log-level", zap.InfoLevel, "set the logging level")
 
 	flag.Parse()
 

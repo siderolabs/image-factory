@@ -56,7 +56,12 @@ func New(logger *zap.Logger, signingCache cache.Cache, options Options) (*Cache,
 	}
 
 	c := &Cache{
-		logger:       logger.With(zap.String("component", "asset-cache-s3")),
+		logger: logger.With(
+			zap.String("component", "asset-cache-s3"),
+			zap.String("s3.endpoint", options.Endpoint),
+			zap.String("s3.region", options.Region),
+			zap.String("s3.bucket", options.Bucket),
+		),
 		bucketName:   options.Bucket,
 		signingCache: signingCache,
 	}
@@ -86,12 +91,12 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 
 	asset, err := c.signingCache.Get(ctx, profileID)
 	if err != nil {
-		return nil, fmt.Errorf("error getting asset reference from registry: %w", err)
+		return nil, fmt.Errorf("error getting asset reference from registry for profile %q: %w", profileID, err)
 	}
 
 	ref, err := newObjectReference(asset)
 	if err != nil {
-		return nil, fmt.Errorf("error creating object reference: %w", err)
+		return nil, fmt.Errorf("error creating object reference for profile %q: %w", profileID, err)
 	}
 
 	opts := minio.GetObjectOptions{}
@@ -107,7 +112,7 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 			return nil, cache.ErrCacheNotFound
 		}
 
-		return nil, fmt.Errorf("error getting object stat: %w", err)
+		return nil, fmt.Errorf("error getting object stat for object %q: %w", key, err)
 	}
 
 	redirect, err := c.s3cli.PresignedGetObject(ctx, c.bucketName, key, expires, nil)
@@ -118,7 +123,18 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 		}
 
 		// ignore the error, as we can still return the object without a presigned URL
-		c.logger.Warn("error generating presigned URL for object", zap.Error(err))
+		c.logger.Warn("error generating presigned URL for object", zap.Error(err), zap.String("object.key", key),
+			zap.Int("minio.error.statusCode", minioErr.StatusCode),
+			zap.String("minio.error.code", minioErr.Code),
+			zap.String("minio.error.message", minioErr.Message),
+			zap.String("minio.error.bucketName", minioErr.BucketName),
+			zap.String("minio.error.key", minioErr.Key),
+			zap.String("minio.error.resource", minioErr.Resource),
+			zap.String("minio.error.requestID", minioErr.RequestID),
+			zap.String("minio.error.hostID", minioErr.HostID),
+			zap.String("minio.error.region", minioErr.Region),
+			zap.String("minio.error.server", minioErr.Server),
+		)
 	}
 
 	return &objectAsset{
@@ -137,26 +153,39 @@ func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset
 
 	data, err := asset.Reader()
 	if err != nil {
-		return fmt.Errorf("error getting reader for asset: %w", err)
+		return fmt.Errorf("error getting reader for asset from profile %q: %w", profileID, err)
 	}
 
-	stat, err := c.s3cli.PutObject(ctx, c.bucketName, key, data, asset.Size(), minio.PutObjectOptions{
-		AutoChecksum: minio.ChecksumSHA256,
-		Checksum:     minio.ChecksumSHA256,
-	})
+	stat, err := c.s3cli.PutObject(ctx, c.bucketName, key, data, asset.Size(), minio.PutObjectOptions{})
 	if err != nil {
-		return fmt.Errorf("error uploading object to s3: %w", err)
+		var minioErr minio.ErrorResponse
+		if errors.As(err, &minioErr) {
+			c.logger.Debug("PUT failed", zap.String("object.key", key),
+				zap.Int("minio.error.statusCode", minioErr.StatusCode),
+				zap.String("minio.error.code", minioErr.Code),
+				zap.String("minio.error.message", minioErr.Message),
+				zap.String("minio.error.bucketName", minioErr.BucketName),
+				zap.String("minio.error.key", minioErr.Key),
+				zap.String("minio.error.resource", minioErr.Resource),
+				zap.String("minio.error.requestID", minioErr.RequestID),
+				zap.String("minio.error.hostID", minioErr.HostID),
+				zap.String("minio.error.region", minioErr.Region),
+				zap.String("minio.error.server", minioErr.Server),
+			)
+		}
+
+		return fmt.Errorf("error uploading object %q to s3: %w", key, err)
 	}
 
 	ref, err := newReferenceAsset(&objectReference{
 		ETag: stat.ETag,
 	})
 	if err != nil {
-		return fmt.Errorf("error creating reference asset: %w", err)
+		return fmt.Errorf("error creating reference asset for profile %q: %w", profileID, err)
 	}
 
 	if err := c.signingCache.Put(ctx, profileID, ref); err != nil {
-		return fmt.Errorf("error putting asset reference to registry: %w", err)
+		return fmt.Errorf("error putting asset reference for profile %q to registry: %w", profileID, err)
 	}
 
 	return nil

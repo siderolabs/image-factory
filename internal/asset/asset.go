@@ -179,7 +179,15 @@ func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versio
 		b.logger.Error("error putting asset to cache", zap.Error(err), zap.String("profile_hash", profileHash))
 	}
 
-	return asset, nil
+	cachedAsset, err := b.cache.Get(ctx, profileHash)
+	if err == nil {
+		b.metricAssetsCached.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
+		b.metricAssetBytesCached.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Add(float64(asset.Size()))
+
+		return cachedAsset, nil
+	}
+
+	return nil, fmt.Errorf("error getting asset from cache: %w", err)
 }
 
 // build the asset using Talos imager.

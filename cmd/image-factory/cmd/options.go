@@ -4,10 +4,17 @@
 
 package cmd
 
-import "time"
+import (
+	"time"
+
+	"go.uber.org/zap/zapcore"
+)
 
 // Options configures image factory.
 type Options struct { //nolint:govet
+	// LogLevel sets the logging level for the image factory.
+	LogLevel *zapcore.Level
+
 	// Listen address for the HTTP frontend.
 	HTTPListenAddr string
 
