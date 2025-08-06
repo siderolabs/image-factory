@@ -64,6 +64,7 @@ func initFlags() cmd.Options {
 
 	flag.BoolVar(&opts.CacheS3Enabled, "cache-s3-enabled", cmd.DefaultOptions.CacheS3Enabled, "enable S3 cache for boot assets")
 	flag.StringVar(&opts.CacheS3Bucket, "cache-s3-bucket", cmd.DefaultOptions.CacheS3Bucket, "S3 bucket for the cache")
+	flag.StringVar(&opts.CacheS3Region, "cache-s3-region", cmd.DefaultOptions.CacheS3Region, "S3 region for the cache")
 	flag.StringVar(&opts.CacheS3Endpoint, "cache-s3-endpoint", cmd.DefaultOptions.CacheS3Endpoint, "S3 endpoint for the cache")
 	flag.BoolVar(&opts.InsecureCacheS3, "insecure-cache-s3", cmd.DefaultOptions.InsecureCacheS3, "use insecure S3 connection for the cache")
 

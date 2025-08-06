@@ -31,6 +31,7 @@ const (
 type Options struct {
 	Bucket   string
 	Endpoint string
+	Region   string
 	Insecure bool
 }
 
@@ -69,6 +70,7 @@ func New(logger *zap.Logger, signingCache cache.Cache, options Options) (*Cache,
 			&credentials.FileAWSCredentials{},
 			&credentials.IAM{},
 		}),
+		Region:          options.Region,
 		TrailingHeaders: true,
 	})
 	if err != nil {

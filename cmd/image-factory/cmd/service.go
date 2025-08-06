@@ -306,6 +306,7 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 		s3Options := assetcaches3.Options{
 			Bucket:   opts.CacheS3Bucket,
 			Endpoint: opts.CacheS3Endpoint,
+			Region:   opts.CacheS3Region,
 			Insecure: opts.InsecureCacheS3,
 		}
 

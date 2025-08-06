@@ -71,6 +71,8 @@ type Options struct { //nolint:govet
 	// CacheS3Endpoint is the S3 endpoint for the cache.
 	// It should not include the scheme or trailing slash.
 	CacheS3Endpoint string
+	// CacheS3Region is the S3 region for the cache.
+	CacheS3Region string
 	// InsecureCacheS3 allows insecure connection to the S3 storage.
 	InsecureCacheS3 bool
 
