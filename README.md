@@ -277,3 +277,91 @@ Run the Image Factory passing the flags:
 -cache-repository 127.0.0.1:5005/cache # private registry for cached assets
 -cache-signing-key-path ./cache-signing-key.key # path to the ECDSA private key (to sign cached assets)
 ```
+
+## S3 Cache
+
+> [!NOTE]
+> The S3 cache **does not replace** the other required cache flags.
+> You must still configure options like `-cache-repository` and `-cache-signing-key-path`.
+
+### MinIO Setup (Local S3 Emulation)
+
+Example `docker-compose.yaml` snippet:
+
+```yaml
+services:
+  minio:
+    image: minio/minio
+    container_name: minio_local
+    network_mode: host
+    volumes:
+      - ${PWD}/data:/mnt/data
+    environment:
+      MINIO_ROOT_USER: AKIA6Z4C7N3S2JD3JH9A
+      MINIO_ROOT_PASSWORD: y1rE4xZnqO6xvM7L0jFD3EXAMPLEnG4K2vOfLp8Iv9
+    command: server --console-address ":9001" /mnt/data
+    restart: unless-stopped
+```
+
+### Environment Variables
+
+```env
+AWS_ACCESS_KEY_ID=AKIA6Z4C7N3S2JD3JH9A
+AWS_SECRET_ACCESS_KEY=y1rE4xZnqO6xvM7L0jFD3EXAMPLEnG4K2vOfLp8Iv9
+```
+
+### S3 Cache Flags
+
+```text
+-cache-s3-enabled # Enable S3 cache for boot assets
+-cache-s3-bucket=image-factory # S3 bucket name, it must exist before starting Image Factory
+-cache-s3-endpoint=localhost:9000 # S3 endpoint
+-cache-s3-region=eu-central-1 # (optional) S3 region
+```
+
+---
+
+## CDN Cache
+
+> [!NOTE]
+> The CDN cache is an **overlay** - it requires the S3 cache to be enabled.
+
+### Emulating a CDN with Nginx
+
+Example `docker-compose.yaml` snippet:
+
+```yaml
+services:
+  nginx:
+    image: nginx
+    container_name: nginx_redirect
+    ports:
+      - "3000:80"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+```
+
+### Example Nginx Configuration
+
+```nginx
+server {
+    listen 80;
+
+    location /health {
+        return 200 'OK';
+        add_header Content-Type text/plain;
+    }
+
+    location / {
+        return 307 http://localhost:9000/image-factory$request_uri;
+    }
+}
+```
+
+### CDN Flags
+
+```text
+-cache-cdn-enabled # Enable CDN for boot assets
+-cache-cdn-host=localhost:3000 # CDN host to replace from presigned S3 URL
+-cache-cdn-trim-prefix=/image-factory # Path prefix to strip from S3 presigned URL, when redirecting CDN
+```
