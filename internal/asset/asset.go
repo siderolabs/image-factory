@@ -118,7 +118,7 @@ func (b *Builder) getBuildAsset(ctx context.Context, versionString, arch string,
 //
 // First, check if the asset has already been built and cached then use the cached version.
 // If the asset hasn't been built yet, build it and cache it honoring the concurrency limit, and push it to the cache.
-func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString string) (BootAsset, error) {
+func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString, filename string) (BootAsset, error) {
 	profileHash, err := factoryprofile.Hash(prof)
 	if err != nil {
 		return nil, err
@@ -138,7 +138,7 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 
 	// nothing in cache, so build the asset, but make sure we do it only once
 	ch := b.sf.DoChan(profileHash, func() (any, error) { //nolint:contextcheck
-		return b.buildAndCache(profileHash, prof, versionString)
+		return b.buildAndCache(profileHash, prof, versionString, filename)
 	})
 
 	select {
@@ -162,7 +162,7 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 }
 
 // buildAndCache builds the asset and pushes it to the cache.
-func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versionString string) (BootAsset, error) {
+func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versionString, filename string) (BootAsset, error) {
 	// detach the context to make sure the asset is built no matter if the request is canceled
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
@@ -175,7 +175,7 @@ func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versio
 	b.metricAssetsBuilt.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
 	b.metricAssetBytesBuilt.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Add(float64(asset.Size()))
 
-	if err = b.cache.Put(ctx, profileHash, asset); err != nil {
+	if err = b.cache.Put(ctx, profileHash, asset, filename); err != nil {
 		b.logger.Error("error putting asset to cache", zap.Error(err), zap.String("profile_hash", profileHash))
 	}
 

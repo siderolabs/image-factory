@@ -40,5 +40,5 @@ type RedirectableAsset interface {
 // Cache is an interface for a cache that stores boot assets.
 type Cache interface {
 	Get(ctx context.Context, profileID string) (BootAsset, error)
-	Put(ctx context.Context, profileID string, asset BootAsset) error
+	Put(ctx context.Context, profileID string, asset BootAsset, filename string) error
 }

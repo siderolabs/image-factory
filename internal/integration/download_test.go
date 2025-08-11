@@ -104,6 +104,7 @@ func downloadAssetAndMatchSize(ctx context.Context, t *testing.T, baseURL string
 	body := resp.Body
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Contains(t, resp.Header, "Content-Disposition")
 
 	size := matchSizeAndType(t, body, fileType, expectedSize)
 
@@ -128,6 +129,7 @@ func downloadDiskImageMatchSizeAndPartitions(ctx context.Context, t *testing.T, 
 	body := io.TeeReader(resp.Body, out)
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Contains(t, resp.Header, "Content-Disposition")
 
 	size := matchSizeAndType(t, body, fileType, expectedSize)
 
@@ -188,6 +190,7 @@ func downloadAssetAndValidateInitramfs(ctx context.Context, t *testing.T, baseUR
 	body := resp.Body
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Contains(t, resp.Header, "Content-Disposition")
 
 	d := t.TempDir()
 	initramfsPath := filepath.Join(d, "initramfs.xz")
@@ -212,6 +215,7 @@ func downloadAssetAndValidateUKI(ctx context.Context, t *testing.T, baseURL stri
 	body := resp.Body
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Contains(t, resp.Header, "Content-Disposition")
 
 	d := t.TempDir()
 	ukiPath := filepath.Join(d, "uki.efi")
@@ -236,6 +240,7 @@ func downloadInstallerAndValidateUKI(ctx context.Context, t *testing.T, baseURL 
 	body := resp.Body
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Contains(t, resp.Header, "Content-Disposition")
 
 	d := t.TempDir()
 	installerPath := filepath.Join(d, "installer.tar")
@@ -260,6 +265,7 @@ func downloadCmdlineAndMatch(ctx context.Context, t *testing.T, baseURL string, 
 	body := resp.Body
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Contains(t, resp.Header, "Content-Disposition")
 
 	cmdlineBytes, err := io.ReadAll(body)
 	require.NoError(t, err)

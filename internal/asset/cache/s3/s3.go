@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"path"
 	"time"
 
@@ -115,6 +116,11 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 		return nil, fmt.Errorf("error getting object stat for object %q: %w", key, err)
 	}
 
+	// we need to fix metadata if it's not present
+	if !hasRequiredMetadata(stat.Metadata) {
+		return nil, cache.ErrCacheNotFound
+	}
+
 	redirect, err := c.s3cli.PresignedGetObject(ctx, c.bucketName, key, expires, nil)
 	if err != nil {
 		var minioErr minio.ErrorResponse
@@ -148,7 +154,7 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 }
 
 // Put uploads the boot asset to the registry.
-func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset) error {
+func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset, filename string) error {
 	key := path.Join(prefix, profileID)
 
 	data, err := asset.Reader()
@@ -156,7 +162,9 @@ func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset
 		return fmt.Errorf("error getting reader for asset from profile %q: %w", profileID, err)
 	}
 
-	stat, err := c.s3cli.PutObject(ctx, c.bucketName, key, data, asset.Size(), minio.PutObjectOptions{})
+	stat, err := c.s3cli.PutObject(ctx, c.bucketName, key, data, asset.Size(), minio.PutObjectOptions{
+		ContentDisposition: fmt.Sprintf(`attachment; filename="%s"`, filename),
+	})
 	if err != nil {
 		var minioErr minio.ErrorResponse
 		if errors.As(err, &minioErr) {
@@ -184,9 +192,21 @@ func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset
 		return fmt.Errorf("error creating reference asset for profile %q: %w", profileID, err)
 	}
 
-	if err := c.signingCache.Put(ctx, profileID, ref); err != nil {
+	if err := c.signingCache.Put(ctx, profileID, ref, filename); err != nil {
 		return fmt.Errorf("error putting asset reference for profile %q to registry: %w", profileID, err)
 	}
 
 	return nil
+}
+
+func hasRequiredMetadata(metadata http.Header) bool {
+	for _, key := range []string{
+		"Content-Disposition",
+	} {
+		if metadata.Get(key) == "" {
+			return false
+		}
+	}
+
+	return true
 }

@@ -139,7 +139,7 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 }
 
 // Put uploads the boot asset to the registry.
-func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset) error {
+func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset, _ string) error {
 	taggedRef := c.cacheRepository.Tag(profileID)
 
 	c.logger.Info("pushing cached image", zap.Stringer("ref", taggedRef))

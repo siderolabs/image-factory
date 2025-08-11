@@ -254,7 +254,7 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 
 		var asset asset.BootAsset
 
-		asset, err = f.assetBuilder.Build(ctx, prof, version.String())
+		asset, err = f.assetBuilder.Build(ctx, prof, version.String(), img.Name())
 		if err != nil {
 			return v1.Hash{}, err
 		}

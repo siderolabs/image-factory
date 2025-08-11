@@ -68,6 +68,6 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 }
 
 // Put uploads the boot asset to the registry.
-func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset) error {
-	return c.underlying.Put(ctx, profileID, asset)
+func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset, filename string) error {
+	return c.underlying.Put(ctx, profileID, asset, filename)
 }
