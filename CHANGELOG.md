@@ -1,3 +1,38 @@
+## [image-factory 0.8.0](https://github.com/siderolabs/image-factory/releases/tag/v0.8.0) (2025-08-12)
+
+Welcome to the v0.8.0 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Mateusz Urbanek
+* Andrey Smirnov
+
+### Changes
+<details><summary>7 commits</summary>
+<p>
+
+* [`7c6d261`](https://github.com/siderolabs/image-factory/commit/7c6d26184cd3a6f903385230fcbddc92cf67d065) fix: set content-disposition on S3
+* [`f3e97df`](https://github.com/siderolabs/image-factory/commit/f3e97df4e609aa1b6ffc39d6b4cb8c76e891669e) docs(image-factory): add info about S3 cache and CDN
+* [`d25e7ac`](https://github.com/siderolabs/image-factory/commit/d25e7acdc3b9e0a1fb96a0013133fc8e89097d1b) fix: add extra context to logs from s3 cache
+* [`a3a0dff`](https://github.com/siderolabs/image-factory/commit/a3a0dff1f8846a2373a63d428ea86717bbdc452f) fix: add optional region to S3 client
+* [`a9e2d08`](https://github.com/siderolabs/image-factory/commit/a9e2d08b1162c0e470b87da8e6ad448b34426d7a) feat: add support for Object Storage and CDN cache
+* [`b8bfc19`](https://github.com/siderolabs/image-factory/commit/b8bfc1985c4c93cd1aa12a251deaa1ecb6239d20) docs: add air-gapped documentation
+* [`f8b4ef0`](https://github.com/siderolabs/image-factory/commit/f8b4ef0ea538b56238b9ea0a51daadf5d5999ae6) docs: add new translation
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/minio/minio-go/v7**  v7.0.95 **_new_**
+* **github.com/ory/dockertest**     v3.3.5 **_new_**
+
+Previous release can be found at [v0.7.6](https://github.com/siderolabs/image-factory/releases/tag/v0.7.6)
+
 ## [image-factory 0.7.6](https://github.com/siderolabs/image-factory/releases/tag/v0.7.6) (2025-07-24)
 
 Welcome to the v0.7.6 release of image-factory!
