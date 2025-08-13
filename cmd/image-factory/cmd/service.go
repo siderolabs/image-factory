@@ -123,6 +123,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	frontendOptions.RemoteOptions = append(frontendOptions.RemoteOptions, remoteOptions()...)
 	frontendOptions.RegistryRefreshInterval = opts.RegistryRefreshInterval
+	frontendOptions.MetricsNamespace = opts.MetricsNamespace
 
 	frontendHTTP, err := frontendhttp.NewFrontend(logger, configFactory, assetBuilder, artifactsManager, secureBootService, frontendOptions)
 	if err != nil {
@@ -329,7 +330,9 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 	}
 
 	builderOptions := asset.Options{
+		MetricsNamespace:   opts.MetricsNamespace,
 		AllowedConcurrency: opts.AssetBuildMaxConcurrency,
+		GetAfterPut:        opts.CacheS3Enabled,
 	}
 
 	builder, err := asset.NewBuilder(logger, artifactsManager, cache, builderOptions)
@@ -359,7 +362,9 @@ func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory
 		return nil, fmt.Errorf("failed to initialize registry storage: %w", err)
 	}
 
-	factory := schematic.NewFactory(logger, schematiccache.NewCache(storage), schematic.Options{})
+	c := schematiccache.NewCache(storage, schematiccache.Options{MetricsNamespace: opts.MetricsNamespace})
+
+	factory := schematic.NewFactory(logger, c, schematic.Options{MetricsNamespace: opts.MetricsNamespace})
 
 	prometheus.MustRegister(factory)
 

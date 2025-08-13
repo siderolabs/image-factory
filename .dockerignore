@@ -1,18 +1,18 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2024-03-15T10:45:09Z by kres latest.
+# Generated on 2025-08-14T09:17:28Z by kres 9f63e23-dirty.
 
 *
 !cmd
 !internal
 !pkg
-!hack
 !go.mod
 !go.sum
 !.golangci.yml
 !CHANGELOG.md
 !README.md
 !.markdownlint.json
+!hack/govulncheck.sh
 !tailwind.config.js
 !package.json
 !package-lock.json

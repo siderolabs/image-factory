@@ -99,6 +99,10 @@ type Options struct { //nolint:govet
 	// Leave empty to disable.
 	MetricsListenAddr string
 
+	// MetricsNamespace is the namespace for Prometheus metrics.
+	// It's not user-configurable, but set by the image factory tests.
+	MetricsNamespace string
+
 	// SecureBoot settings.
 	SecureBoot SecureBootOptions
 }

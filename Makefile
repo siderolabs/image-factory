@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-07-29T12:16:54Z by kres dd1ed6f.
+# Generated on 2025-08-14T09:04:59Z by kres 9f63e23-dirty.
 
 # common variables
 
@@ -80,7 +80,7 @@ TOOLCHAIN ?= docker.io/golang:1.24-alpine
 
 PKGS_PREFIX ?= ghcr.io/siderolabs
 PKGS ?= v1.11.0
-RUN_TESTS ?= TestIntegration
+RUN_TESTS ?= TestIntegrationCDN
 TEST_FLAGS ?=
 
 # help menu
@@ -178,6 +178,9 @@ generate:  ## Generate .proto definitions.
 lint-golangci-lint:  ## Runs golangci-lint linter.
 	@$(MAKE) target-$@
 
+lint-golangci-lint-fmt:  ## Runs golangci-lint formatter and tries to fix issues automatically.
+	@$(MAKE) local-$@ DEST=.
+
 lint-gofumpt:  ## Runs gofumpt linter.
 	@$(MAKE) target-$@
 
@@ -204,13 +207,31 @@ unit-tests:  ## Performs unit tests
 unit-tests-race:  ## Performs unit tests with race detection enabled.
 	@$(MAKE) target-$@
 
-.PHONY: integration
-integration: integration.test
+.PHONY: integration-direct
+integration-direct: integration-direct.test
 	@$(MAKE) image-image-factory PUSH=true
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-direct.test:/bin/integration-direct.test:ro --entrypoint /bin/integration-direct.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+	docker rm -f local-if
+
+.PHONY: integration-s3
+integration-s3: integration-s3.test
+	@$(MAKE) image-image-factory PUSH=true
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker rm -f local-if || true
+	docker run -d -p 5100:5000 --name=local-if registry:3
+	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-s3.test:/bin/integration-s3.test:ro --entrypoint /bin/integration-s3.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS)
+	docker rm -f local-if
+
+.PHONY: integration-cdn
+integration-cdn: integration-cdn.test
+	@$(MAKE) image-image-factory PUSH=true
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker rm -f local-if || true
+	docker run -d -p 5100:5000 --name=local-if registry:3
+	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-cdn.test:/bin/integration-cdn.test:ro --entrypoint /bin/integration-cdn.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: $(ARTIFACTS)/image-factory-linux-amd64
@@ -247,17 +268,33 @@ imager-base:
 .PHONY: imager-tools
 imager-tools:
 
-.PHONY: integration.test
-integration.test:
+.PHONY: integration-cdn.test
+integration-cdn.test:
+	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
+
+.PHONY: integration-direct.test
+integration-direct.test:
+	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
+
+.PHONY: integration-s3.test
+integration-s3.test:
 	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
 
 .PHONY: update-to-talos-main
 update-to-talos-main:
 	@$(MAKE) local-copy-out-go-mod DEST=. TARGET_ARGS="--no-cache-filter=update-to-talos-main"
 
-.PHONY: integration-talos-main
-integration-talos-main: update-to-talos-main
-	@$(MAKE) integration
+.PHONY: integration-cdn-talos-main
+integration-cdn-talos-main: update-to-talos-main
+	@$(MAKE) integration-cdn
+
+.PHONY: integration-direct-talos-main
+integration-direct-talos-main: update-to-talos-main
+	@$(MAKE) integration-direct
+
+.PHONY: integration-s3-talos-main
+integration-s3-talos-main: update-to-talos-main
+	@$(MAKE) integration-s3
 
 .PHONY: tailwind
 tailwind:

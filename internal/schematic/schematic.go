@@ -17,15 +17,18 @@ import (
 
 // Factory is the schematic factory.
 type Factory struct {
-	options Options
-	logger  *zap.Logger
-	storage storage.Storage
-
-	metricGet, metricCreate, metricDuplicate prometheus.Counter
+	storage         storage.Storage
+	metricGet       prometheus.Counter
+	metricCreate    prometheus.Counter
+	metricDuplicate prometheus.Counter
+	logger          *zap.Logger
+	options         Options
 }
 
 // Options for the schematic factory.
-type Options struct{}
+type Options struct {
+	MetricsNamespace string
+}
 
 // NewFactory creates a new schematic factory.
 func NewFactory(logger *zap.Logger, storage storage.Storage, options Options) *Factory {
@@ -35,16 +38,19 @@ func NewFactory(logger *zap.Logger, storage storage.Storage, options Options) *F
 		logger:  logger.With(zap.String("factory", "schematic")),
 
 		metricGet: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "image_factory_schematic_get_total",
-			Help: "Number of times schematics were retrieved.",
+			Name:      "image_factory_schematic_get_total",
+			Help:      "Number of times schematics were retrieved.",
+			Namespace: options.MetricsNamespace,
 		}),
 		metricCreate: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "image_factory_schematic_create_total",
-			Help: "Number of new schematics created.",
+			Name:      "image_factory_schematic_create_total",
+			Help:      "Number of new schematics created.",
+			Namespace: options.MetricsNamespace,
 		}),
 		metricDuplicate: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "image_factory_schematic_duplicate_create_total",
-			Help: "Number of new schematics which were created as duplicate.",
+			Name:      "image_factory_schematic_duplicate_create_total",
+			Help:      "Number of new schematics which were created as duplicate.",
+			Namespace: options.MetricsNamespace,
 		}),
 	}
 }

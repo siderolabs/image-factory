@@ -55,16 +55,14 @@ type Frontend struct {
 
 // Options configures the HTTP frontend.
 type Options struct {
-	ExternalURL    *url.URL
-	ExternalPXEURL *url.URL
-
+	CacheSigningKey             crypto.PrivateKey
+	ExternalURL                 *url.URL
+	ExternalPXEURL              *url.URL
 	InstallerInternalRepository name.Repository
 	InstallerExternalRepository name.Repository
-
-	CacheSigningKey crypto.PrivateKey
-
-	RemoteOptions           []remote.Option
-	RegistryRefreshInterval time.Duration
+	MetricsNamespace            string
+	RemoteOptions               []remote.Option
+	RegistryRefreshInterval     time.Duration
 }
 
 // NewFrontend creates a new HTTP frontend.
@@ -105,7 +103,9 @@ func NewFrontend(
 
 	// monitoring middleware
 	mdlw := middleware.New(middleware.Config{
-		Recorder: metrics.NewRecorder(metrics.Config{}),
+		Recorder: metrics.NewRecorder(metrics.Config{
+			Prefix: opts.MetricsNamespace,
+		}),
 	})
 
 	registerRoute := func(registrator func(string, httprouter.Handle), path string, handler func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error) {

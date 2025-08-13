@@ -2,6 +2,11 @@ kind: golang.Generate
 spec:
   versionPackagePath: internal/version
 ---
+kind: golang.GoVulnCheck
+spec:
+  ignore:
+    - GO-2025-3770
+---
 kind: golang.Build
 spec:
   outputs:
@@ -55,15 +60,31 @@ spec:
       toplevel: true
     - name: imager-tools
       toplevel: true
-    - name: integration.test
+    - name: integration-cdn.test
       toplevel: true
-    - name: integration
+    - name: integration-direct.test
+      toplevel: true
+    - name: integration-s3.test
+      toplevel: true
+    - name: integration-direct
+      toplevel: true
+      dependants:
+        - coverage
+    - name: integration-s3
+      toplevel: true
+      dependants:
+        - coverage
+    - name: integration-cdn
       toplevel: true
       dependants:
         - coverage
     - name: update-to-talos-main
       toplevel: true
-    - name: integration-talos-main
+    - name: integration-cdn-talos-main
+      toplevel: true
+    - name: integration-direct-talos-main
+      toplevel: true
+    - name: integration-s3-talos-main
       toplevel: true
     - name: tailwind
       toplevel: true
@@ -280,27 +301,83 @@ spec:
               dst: /
 ---
 kind: custom.Step
-name: integration.test
+name: integration-direct.test
 spec:
   docker:
     enabled: true
     stages:
-      - name: integration-build
+      - name: integration-direct-build
         description: builds the integration test binary
         from: base
         steps:
           - script:
-              command: go test -c -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
+              command: go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_direct ./internal/integration
               cache:
                 - /root/.cache/go-build
                 - /go/pkg
-      - name: integration.test
+      - name: integration-direct.test
         description: copies out the integration test binary
         steps:
           - copy:
-              from: integration-build
+              from: integration-direct-build
               src: /src/integration.test
-              dst: /integration.test
+              dst: /integration-direct.test
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - "@$(MAKE) local-$@ DEST=$(ARTIFACTS)"
+---
+kind: custom.Step
+name: integration-s3.test
+spec:
+  docker:
+    enabled: true
+    stages:
+      - name: integration-s3-build
+        description: builds the integration test binary
+        from: base
+        steps:
+          - script:
+              command: go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_s3 ./internal/integration
+              cache:
+                - /root/.cache/go-build
+                - /go/pkg
+      - name: integration-s3.test
+        description: copies out the integration test binary
+        steps:
+          - copy:
+              from: integration-s3-build
+              src: /src/integration.test
+              dst: /integration-s3.test
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - "@$(MAKE) local-$@ DEST=$(ARTIFACTS)"
+---
+kind: custom.Step
+name: integration-cdn.test
+spec:
+  docker:
+    enabled: true
+    stages:
+      - name: integration-cdn-build
+        description: builds the integration test binary
+        from: base
+        steps:
+          - script:
+              command: go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_cdn ./internal/integration
+              cache:
+                - /root/.cache/go-build
+                - /go/pkg
+      - name: integration-cdn.test
+        description: copies out the integration test binary
+        steps:
+          - copy:
+              from: integration-cdn-build
+              src: /src/integration.test
+              dst: /integration-cdn.test
   makefile:
     enabled: true
     phony: true
@@ -345,16 +422,62 @@ spec:
       - '@$(MAKE) local-copy-out-go-mod DEST=. TARGET_ARGS="--no-cache-filter=update-to-talos-main"'
 ---
 kind: custom.Step
-name: integration
+name: integration-direct
 spec:
   makefile:
     enabled: true
     phony: true
     depends:
-      - integration.test
+      - integration-direct.test
+    script:
+      - "@$(MAKE) image-image-factory PUSH=true"
+      - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+      - docker rm -f local-if || true
+      - docker run -d -p 5100:5000 --name=local-if registry:3
+      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-direct.test:/bin/integration-direct.test:ro --entrypoint /bin/integration-direct.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+      - docker rm -f local-if
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+    environment:
+      REGISTRY: registry.dev.siderolabs.io
+      RUN_TESTS: TestIntegrationDirect
+      TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
+---
+kind: custom.Step
+name: integration-s3
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - integration-s3.test
+    script:
+      - "@$(MAKE) image-image-factory PUSH=true"
+      - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+      - docker rm -f local-if || true
+      - docker run -d -p 5100:5000 --name=local-if registry:3
+      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-s3.test:/bin/integration-s3.test:ro --entrypoint /bin/integration-s3.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS)
+      - docker rm -f local-if
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+    environment:
+      REGISTRY: registry.dev.siderolabs.io
+      RUN_TESTS: TestIntegrationS3
+      TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
+---
+kind: custom.Step
+name: integration-cdn
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - integration-cdn.test
     variables:
       - name: RUN_TESTS
-        defaultValue: TestIntegration
+        defaultValue: TestIntegrationCDN
       - name: TEST_FLAGS
         defaultValue: ""
     script:
@@ -362,38 +485,87 @@ spec:
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-cdn.test:/bin/integration-cdn.test:ro --entrypoint /bin/integration-cdn.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS)
       - docker rm -f local-if
   ghaction:
     enabled: true
     condition: on-pull-request
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache"
+      RUN_TESTS: TestIntegrationCDN
+      TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
 ---
 kind: custom.Step
-name: integration-talos-main
+name: integration-direct-talos-main
 spec:
   makefile:
     enabled: true
     phony: true
     depends:
       - update-to-talos-main
-    variables:
-      - name: RUN_TESTS
-        defaultValue: TestIntegration
-      - name: TEST_FLAGS
-        defaultValue: ""
     script:
-      - "@$(MAKE) integration"
+      - "@$(MAKE) integration-direct"
   ghaction:
     enabled: true
     cronOnly: true
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache"
+      RUN_TESTS: TestIntegrationDirect
+      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
     jobs:
-      - name: integration-talos-main
+      - name: integration-direct-talos-main
+        runnerLabels:
+          - generic
+        triggerLabels:
+          - integration/talos-main
+        crons:
+          - "30 7 * * *"
+---
+kind: custom.Step
+name: integration-s3-talos-main
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - update-to-talos-main
+    script:
+      - "@$(MAKE) integration-s3"
+  ghaction:
+    enabled: true
+    cronOnly: true
+    environment:
+      REGISTRY: registry.dev.siderolabs.io
+      RUN_TESTS: TestIntegrationS3
+      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
+    jobs:
+      - name: integration-s3-talos-main
+        runnerLabels:
+          - generic
+        triggerLabels:
+          - integration/talos-main
+        crons:
+          - "30 7 * * *"
+---
+kind: custom.Step
+name: integration-cdn-talos-main
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - update-to-talos-main
+    script:
+      - "@$(MAKE) integration-cdn"
+  ghaction:
+    enabled: true
+    cronOnly: true
+    environment:
+      REGISTRY: registry.dev.siderolabs.io
+      RUN_TESTS: TestIntegrationCDN
+      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
+    jobs:
+      - name: integration-cdn-talos-main
         runnerLabels:
           - generic
         triggerLabels:
@@ -410,7 +582,9 @@ kind: service.CodeCov
 spec:
   targetThreshold: 50
   inputPaths:
-    - coverage-integration.txt
+    - coverage-integration-direct.txt
+    - coverage-integration-s3.txt
+    - coverage-integration-cdn.txt
 ---
 kind: custom.Step
 name: tailwind
@@ -434,8 +608,6 @@ spec:
               src: package.json package-lock.json
               dst: .
           - script:
-              cache:
-                - /src/node_modules
               command: bun install
       - name: tailwind-update
         description: "tailwind update"
@@ -448,8 +620,6 @@ spec:
               src: internal/frontend/http
               dst: internal/frontend/http
           - script:
-              cache:
-                - /src/node_modules
               command: node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
       - name: tailwind-copy
         description: "Copies assets"

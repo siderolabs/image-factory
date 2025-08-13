@@ -1,28 +1,48 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Source: https://github.com/tianon/gosu/blob/e157efb/govulncheck-with-excludes.sh
 # Licensed under the Apache License, Version 2.0
 # Copyright Tianon Gravi
 set -Eeuo pipefail
 
-# a wrapper / replacement for "govulncheck" which allows for excluding vulnerabilities
+exclude_arg=""
+pass_args=()
 
-excludeVulns="$(jq -nc '[
-	"GO-2025-3770",
-	empty # trailing comma hack (makes diffs smaller)
-]')"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -exclude)
+            exclude_arg="$2"
+            shift 2
+            ;;
+        *)
+            pass_args+=("$1")
+            shift
+            ;;
+    esac
+done
+
+if [[ -n "$exclude_arg" ]]; then
+    excludeVulns="$(jq -nc --arg list "$exclude_arg" '$list | split(",")')"
+else
+    excludeVulns="[]"
+fi
+
 export excludeVulns
+
+# Debug print
+echo "excludeVulns = $excludeVulns"
+echo "Passing args: ${pass_args[*]}"
 
 if ! command -v govulncheck > /dev/null; then
     printf "govulncheck not installed"
     exit 1
 fi
 
-if out="$(govulncheck "$@")"; then
+if out="$(govulncheck "${pass_args[@]}")"; then
 	printf '%s\n' "$out"
 	exit 0
 fi
 
-json="$(govulncheck -json "$@")"
+json="$(govulncheck -json "${pass_args[@]}")"
 
 vulns="$(jq <<<"$json" -cs '
 	(

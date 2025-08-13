@@ -37,20 +37,26 @@ type BootAsset interface {
 
 // Builder is the asset builder.
 type Builder struct {
-	logger           *zap.Logger
-	cache            cache.Cache
-	artifactsManager *artifacts.Manager
-	sf               singleflight.Group
-	semaphore        chan struct{}
-
-	metricAssetsCached, metricAssetsBuilt         *prometheus.CounterVec
-	metricAssetBytesCached, metricAssetBytesBuilt *prometheus.CounterVec
-	metricConcurrencyLatency, metricBuildLatency  prometheus.Histogram
+	metricConcurrencyLatency prometheus.Histogram
+	cache                    cache.Cache
+	metricBuildLatency       prometheus.Histogram
+	sf                       singleflight.Group
+	metricAssetsCached       *prometheus.CounterVec
+	logger                   *zap.Logger
+	metricAssetsBuilt        *prometheus.CounterVec
+	metricAssetBytesCached   *prometheus.CounterVec
+	metricAssetBytesBuilt    *prometheus.CounterVec
+	metricAssetCachedErrors  *prometheus.CounterVec
+	semaphore                chan struct{}
+	artifactsManager         *artifacts.Manager
+	getAfterPut              bool
 }
 
 // Options configures the asset builder.
 type Options struct {
+	MetricsNamespace   string
 	AllowedConcurrency int
+	GetAfterPut        bool
 }
 
 // NewBuilder creates a new asset builder.
@@ -60,47 +66,62 @@ func NewBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, cache c
 		cache:            cache,
 		artifactsManager: artifactsManager,
 		semaphore:        make(chan struct{}, options.AllowedConcurrency),
+		getAfterPut:      options.GetAfterPut,
 
 		metricAssetsCached: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "image_factory_assets_delivered_cached_total",
-				Help: "Number of assets retrieved from cache.",
+				Name:      "image_factory_assets_delivered_cached_total",
+				Help:      "Number of assets retrieved from cache.",
+				Namespace: options.MetricsNamespace,
 			},
 			[]string{"talos_version", "output_kind", "arch"},
 		),
 		metricAssetsBuilt: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "image_factory_assets_built_total",
-				Help: "Number of assets built (missing in the cache).",
+				Name:      "image_factory_assets_built_total",
+				Help:      "Number of assets built (missing in the cache).",
+				Namespace: options.MetricsNamespace,
 			},
 			[]string{"talos_version", "output_kind", "arch"},
 		),
 		metricAssetBytesCached: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "image_factory_assets_cached_bytes_total",
-				Help: "Number of bytes delivered with cached assets.",
+				Name:      "image_factory_assets_cached_bytes_total",
+				Help:      "Number of bytes delivered with cached assets.",
+				Namespace: options.MetricsNamespace,
 			},
 			[]string{"talos_version", "output_kind", "arch"},
 		),
 		metricAssetBytesBuilt: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "image_factory_assets_built_bytes_total",
-				Help: "Number of bytes delivered with assets built (missing in the cache).",
+				Name:      "image_factory_assets_built_bytes_total",
+				Help:      "Number of bytes delivered with assets built (missing in the cache).",
+				Namespace: options.MetricsNamespace,
+			},
+			[]string{"talos_version", "output_kind", "arch"},
+		),
+		metricAssetCachedErrors: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name:      "image_factory_assets_cached_errors_total",
+				Help:      "Number of errors retrieving assets from cache.",
+				Namespace: options.MetricsNamespace,
 			},
 			[]string{"talos_version", "output_kind", "arch"},
 		),
 		metricConcurrencyLatency: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
-				Name:    "image_factory_assets_concurrency_latency_seconds",
-				Help:    "Latency of asset build related to the concurrency limit (waiting for available workers).",
-				Buckets: []float64{1, 10, 60, 180, 600},
+				Name:      "image_factory_assets_concurrency_latency_seconds",
+				Help:      "Latency of asset build related to the concurrency limit (waiting for available workers).",
+				Buckets:   []float64{1, 10, 60, 180, 600},
+				Namespace: options.MetricsNamespace,
 			},
 		),
 		metricBuildLatency: prometheus.NewHistogram(
 			prometheus.HistogramOpts{
-				Name:    "image_factory_assets_build_latency_seconds",
-				Help:    "Latency of asset build for the build itself (excluding waiting for available workers).",
-				Buckets: []float64{1, 10, 60, 180, 600},
+				Name:      "image_factory_assets_build_latency_seconds",
+				Help:      "Latency of asset build for the build itself (excluding waiting for available workers).",
+				Buckets:   []float64{1, 10, 60, 180, 600},
+				Namespace: options.MetricsNamespace,
 			},
 		),
 	}, nil
@@ -179,15 +200,24 @@ func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versio
 		b.logger.Error("error putting asset to cache", zap.Error(err), zap.String("profile_hash", profileHash))
 	}
 
-	cachedAsset, err := b.cache.Get(ctx, profileHash)
-	if err == nil {
-		b.metricAssetsCached.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
-		b.metricAssetBytesCached.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Add(float64(asset.Size()))
+	// if the asset delivery requires a redirect to the cache, we need to return the cached asset
+	// so that the client can download it directly from the cache.
+	if b.getAfterPut {
+		cachedAsset, err := b.cache.Get(ctx, profileHash)
+		if err == nil {
+			b.metricAssetsCached.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
+			b.metricAssetBytesCached.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Add(float64(asset.Size()))
 
-		return cachedAsset, nil
+			return cachedAsset, nil
+		}
+
+		// if we failed to get the asset from cache, return the built asset anyway
+		b.logger.Warn("failed to get object from cache, falling back to direct delivery", zap.Error(err))
+
+		b.metricAssetCachedErrors.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
 	}
 
-	return nil, fmt.Errorf("error getting asset from cache: %w", err)
+	return asset, nil
 }
 
 // build the asset using Talos imager.
@@ -284,6 +314,8 @@ func (b *Builder) Collect(ch chan<- prometheus.Metric) {
 
 	b.metricAssetBytesBuilt.Collect(ch)
 	b.metricAssetBytesCached.Collect(ch)
+
+	b.metricAssetCachedErrors.Collect(ch)
 
 	b.metricBuildLatency.Collect(ch)
 	b.metricConcurrencyLatency.Collect(ch)

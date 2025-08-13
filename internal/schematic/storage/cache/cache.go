@@ -17,6 +17,11 @@ import (
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 )
 
+// Options configures the storage.
+type Options struct {
+	MetricsNamespace string
+}
+
 // Storage is a schematic storage in-memory cache.
 type Storage struct {
 	underlying storage.Storage
@@ -29,13 +34,14 @@ type Storage struct {
 }
 
 // NewCache returns a new cache storage.
-func NewCache(underlying storage.Storage) *Storage {
+func NewCache(underlying storage.Storage, options Options) *Storage {
 	return &Storage{
 		underlying: underlying,
 		m:          map[string]optional.Optional[[]byte]{},
 		metricCacheSize: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "image_factory_schematic_cache_size",
-			Help: "Number of schematics in in-memory cache.",
+			Name:      "image_factory_schematic_cache_size",
+			Help:      "Number of schematics in in-memory cache.",
+			Namespace: options.MetricsNamespace,
 		}),
 	}
 }

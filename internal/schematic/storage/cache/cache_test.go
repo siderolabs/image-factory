@@ -55,7 +55,7 @@ func TestStorage(t *testing.T) {
 	defer cancel()
 
 	underlying := &mockStorage{}
-	strg := cache.NewCache(underlying)
+	strg := cache.NewCache(underlying, cache.Options{})
 
 	v, err := strg.Get(ctx, "foo")
 	require.NoError(t, err)

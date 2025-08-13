@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-07-29T12:16:54Z by kres dd1ed6f.
+# Generated on 2025-08-14T09:35:32Z by kres df7e867-dirty.
 
 ARG TOOLCHAIN
 ARG PKGS_PREFIX
@@ -83,11 +83,11 @@ FROM ${PKGS_PREFIX}/zstd:${PKGS} AS pkg-zstd
 FROM --platform=${BUILDPLATFORM} docker.io/oven/bun:1.2.4-alpine AS tailwind-base
 WORKDIR /src
 COPY package.json package-lock.json .
-RUN --mount=type=cache,target=/src/node_modules,id=image-factory/src/node_modules bun install
+RUN bun install
 
 # base toolchain image
 FROM --platform=${BUILDPLATFORM} ${TOOLCHAIN} AS toolchain
-RUN apk --update --no-cache add bash curl build-base jq protoc protobuf-dev
+RUN apk --update --no-cache add bash build-base curl jq protoc protobuf-dev
 
 # copies the imager tools
 FROM scratch AS imager-tools
@@ -127,7 +127,7 @@ COPY --from=pkg-zstd / /
 FROM tailwind-base AS tailwind-update
 COPY tailwind.config.js .
 COPY internal/frontend/http internal/frontend/http
-RUN --mount=type=cache,target=/src/node_modules,id=image-factory/src/node_modules node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
+RUN node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
 
 # build tools
 FROM --platform=${BUILDPLATFORM} toolchain AS tools
@@ -141,15 +141,15 @@ ENV GOEXPERIMENT=${GOEXPERIMENT}
 ENV GOPATH=/go
 ARG DEEPCOPY_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/siderolabs/deep-copy@${DEEPCOPY_VERSION} \
-    && mv /go/bin/deep-copy /bin/deep-copy
+	&& mv /go/bin/deep-copy /bin/deep-copy
 ARG GOLANGCILINT_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCILINT_VERSION} \
-    && mv /go/bin/golangci-lint /bin/golangci-lint
+	&& mv /go/bin/golangci-lint /bin/golangci-lint
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install golang.org/x/vuln/cmd/govulncheck@latest \
-    && mv /go/bin/govulncheck /bin/govulncheck
+	&& mv /go/bin/govulncheck /bin/govulncheck
 ARG GOFUMPT_VERSION
 RUN go install mvdan.cc/gofumpt@${GOFUMPT_VERSION} \
-    && mv /go/bin/gofumpt /bin/gofumpt
+	&& mv /go/bin/gofumpt /bin/gofumpt
 
 # Copies assets
 FROM scratch AS tailwind-copy
@@ -177,8 +177,16 @@ RUN mkdir -p internal/version/data && \
     echo -n ${TAG} > internal/version/data/tag
 
 # builds the integration test binary
-FROM base AS integration-build
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
+FROM base AS integration-cdn-build
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_cdn ./internal/integration
+
+# builds the integration test binary
+FROM base AS integration-direct-build
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_direct ./internal/integration
+
+# builds the integration test binary
+FROM base AS integration-s3-build
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_s3 ./internal/integration
 
 # runs gofumpt
 FROM base AS lint-gofumpt
@@ -191,11 +199,19 @@ COPY .golangci.yml .
 ENV GOGC=50
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/root/.cache/golangci-lint,id=image-factory/root/.cache/golangci-lint,sharing=locked --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg golangci-lint run --config .golangci.yml
 
+# runs golangci-lint fmt
+FROM base AS lint-golangci-lint-fmt-run
+WORKDIR /src
+COPY .golangci.yml .
+ENV GOGC=50
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/root/.cache/golangci-lint,id=image-factory/root/.cache/golangci-lint,sharing=locked --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg golangci-lint fmt --config .golangci.yml
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/root/.cache/golangci-lint,id=image-factory/root/.cache/golangci-lint,sharing=locked --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg golangci-lint run --fix --issues-exit-code 0 --config .golangci.yml
+
 # runs govulncheck
 FROM base AS lint-govulncheck
+COPY --chmod=0755 hack/govulncheck.sh ./hack/govulncheck.sh
 WORKDIR /src
-COPY ./hack/govulncheck.sh ./hack/govulncheck.sh
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh ./...
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh -exclude 'GO-2025-3770' ./...
 
 # runs unit-tests with race detector
 FROM base AS unit-tests-race
@@ -221,8 +237,20 @@ RUN echo -n 'undefined' > internal/version/data/sha && \
     echo -n ${ABBREV_TAG} > internal/version/data/tag
 
 # copies out the integration test binary
-FROM scratch AS integration.test
-COPY --from=integration-build /src/integration.test /integration.test
+FROM scratch AS integration-cdn.test
+COPY --from=integration-cdn-build /src/integration.test /integration-cdn.test
+
+# copies out the integration test binary
+FROM scratch AS integration-direct.test
+COPY --from=integration-direct-build /src/integration.test /integration-direct.test
+
+# copies out the integration test binary
+FROM scratch AS integration-s3.test
+COPY --from=integration-s3-build /src/integration.test /integration-s3.test
+
+# clean golangci-lint fmt output
+FROM scratch AS lint-golangci-lint-fmt
+COPY --from=lint-golangci-lint-fmt-run /src .
 
 FROM scratch AS unit-tests
 COPY --from=unit-tests-run /src/coverage.txt /coverage-unit-tests.txt
@@ -278,3 +306,4 @@ COPY --from=image-factory image-factory-linux-${TARGETARCH} /usr/bin/image-facto
 COPY --from=imager-tools / /
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/image-factory
 ENTRYPOINT ["/usr/bin/image-factory"]
+

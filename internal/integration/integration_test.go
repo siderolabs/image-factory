@@ -46,7 +46,6 @@ func setupFactory(t *testing.T, options cmd.Options) (context.Context, string) {
 	options.SchematicServiceRepository = schematicFactoryRepositoryFlag
 	options.InstallerExternalRepository = installerExternalRepository
 	options.InstallerInternalRepository = installerInternalRepository
-	options.CacheRepository = cacheRepository
 	options.RegistryRefreshInterval = time.Minute // use a short interval for the tests
 
 	setupSecureBoot(t, &options)
@@ -121,14 +120,11 @@ func healthcheck(url string) func() error {
 }
 
 const (
-	bucket       = "image-factory"
-	bucketPrefix = "/" + bucket
-
 	s3Access = "AKIA6Z4C7N3S2JD3JH9A"
 	s3Secret = "y1rE4xZnqO6xvM7L0jFD3EXAMPLEnG4K2vOfLp8Iv9"
 )
 
-func setupS3(t *testing.T, pool *dockertest.Pool) string {
+func setupS3(t *testing.T, pool *dockertest.Pool, bucket string) string {
 	t.Helper()
 
 	_, port, err := net.SplitHostPort(findListenAddr(t))
@@ -167,16 +163,13 @@ func setupS3(t *testing.T, pool *dockertest.Pool) string {
 	})
 	require.NoError(t, err)
 
-	t.Setenv("AWS_ACCESS_KEY_ID", s3Access)
-	t.Setenv("AWS_SECRET_ACCESS_KEY", s3Secret)
-
 	return endpoint
 }
 
 //go:embed testdata/templates/nginx.sh
 var nginxConfigTemplate string
 
-func setupMockCDN(t *testing.T, pool *dockertest.Pool, s3 string) string {
+func setupMockCDN(t *testing.T, pool *dockertest.Pool, s3, bucket string) string {
 	t.Helper()
 
 	_, port, err := net.SplitHostPort(findListenAddr(t))
@@ -249,19 +242,7 @@ func findListenAddr(t *testing.T) string {
 	return addr
 }
 
-func TestIntegration(t *testing.T) {
-	pool := docker(t)
-	options := cmd.DefaultOptions
-
-	options.CacheS3Enabled = true
-	options.CacheS3Bucket = bucket
-	options.InsecureCacheS3 = true
-	options.CacheS3Endpoint = setupS3(t, pool)
-
-	options.CacheCDNEnabled = true
-	options.CacheCDNTrimPrefix = bucketPrefix
-	options.CacheCDNHost = setupMockCDN(t, pool, options.CacheS3Endpoint)
-
+func commonTest(t *testing.T, options cmd.Options) {
 	ctx, listenAddr := setupFactory(t, options)
 	baseURL := "http://" + listenAddr
 
@@ -313,6 +294,7 @@ var (
 	installerExternalRepository    string
 	installerInternalRepository    string
 	cacheRepository                string
+	signingCacheRepository         string
 )
 
 func init() {
@@ -321,4 +303,5 @@ func init() {
 	flag.StringVar(&installerExternalRepository, "test.installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
 	flag.StringVar(&installerInternalRepository, "test.installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
 	flag.StringVar(&cacheRepository, "test.cache-repository", cmd.DefaultOptions.CacheRepository, "image repository for cached boot assets")
+	flag.StringVar(&signingCacheRepository, "test.signing-cache-repository", cmd.DefaultOptions.CacheRepository+"sign", "image repository for signatures of cached boot assets (used for S3+CDN tests)")
 }
