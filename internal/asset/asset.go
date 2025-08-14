@@ -49,7 +49,7 @@ type Builder struct {
 	metricAssetCachedErrors  *prometheus.CounterVec
 	semaphore                chan struct{}
 	artifactsManager         *artifacts.Manager
-	getAfterPut              bool
+	cacheMightFail           bool
 }
 
 // Options configures the asset builder.
@@ -66,7 +66,7 @@ func NewBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, cache c
 		cache:            cache,
 		artifactsManager: artifactsManager,
 		semaphore:        make(chan struct{}, options.AllowedConcurrency),
-		getAfterPut:      options.GetAfterPut,
+		cacheMightFail:   options.GetAfterPut,
 
 		metricAssetsCached: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -153,7 +153,11 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 		return asset, nil
 	}
 
-	if !errors.Is(err, cache.ErrCacheNotFound) {
+	b.metricAssetCachedErrors.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
+
+	if b.cacheMightFail {
+		b.logger.Warn("unable to reach cache, falling back to direct delivery", zap.Error(err))
+	} else if !errors.Is(err, cache.ErrCacheNotFound) {
 		return nil, fmt.Errorf("error getting asset from cache: %w", err)
 	}
 
@@ -202,7 +206,7 @@ func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versio
 
 	// if the asset delivery requires a redirect to the cache, we need to return the cached asset
 	// so that the client can download it directly from the cache.
-	if b.getAfterPut {
+	if b.cacheMightFail {
 		cachedAsset, err := b.cache.Get(ctx, profileHash)
 		if err == nil {
 			b.metricAssetsCached.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
