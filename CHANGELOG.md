@@ -1,3 +1,31 @@
+## [image-factory 0.8.1](https://github.com/siderolabs/image-factory/releases/tag/v0.8.1) (2025-08-14)
+
+Welcome to the v0.8.1 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Mateusz Urbanek
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`6392086`](https://github.com/siderolabs/image-factory/commit/63920865fa4bd1f4537880e5b491e685a88fd965) fix: prevent failure on cache.Get
+* [`a1e3707`](https://github.com/siderolabs/image-factory/commit/a1e37078e10bae58d8ee3f117cdbc405de35e65c) feat: add fallback if S3 is missbehaving
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.8.0](https://github.com/siderolabs/image-factory/releases/tag/v0.8.0)
+
 ## [image-factory 0.8.0](https://github.com/siderolabs/image-factory/releases/tag/v0.8.0) (2025-08-12)
 
 Welcome to the v0.8.0 release of image-factory!
