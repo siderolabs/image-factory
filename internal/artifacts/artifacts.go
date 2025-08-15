@@ -23,6 +23,8 @@ type Options struct { //nolint:govet
 	InsecureImageRegistry bool
 	// MinVersion is the minimum version of Talos to use.
 	MinVersion semver.Version
+	// SkipVersionFilter indicated whether obtained Talos versions should be filtered
+	SkipVersionFilter bool
 	// ImageVerifyOptions are the options for verifying the image signature.
 	ImageVerifyOptions []cosign.CheckOpts
 	// TalosVersionRecheckInterval is the interval for rechecking Talos versions.
