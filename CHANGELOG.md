@@ -1,3 +1,30 @@
+## [image-factory 0.8.2](https://github.com/siderolabs/image-factory/releases/tag/v0.8.2) (2025-08-19)
+
+Welcome to the v0.8.2 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`418eebb`](https://github.com/siderolabs/image-factory/commit/418eebb19ff7a6948a8125db2461f257612fcd23) fix: don't filter out `rc` versions
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.8.1](https://github.com/siderolabs/image-factory/releases/tag/v0.8.1)
+
 ## [image-factory 0.8.1](https://github.com/siderolabs/image-factory/releases/tag/v0.8.1) (2025-08-14)
 
 Welcome to the v0.8.1 release of image-factory!
