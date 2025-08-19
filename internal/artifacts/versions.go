@@ -64,8 +64,11 @@ func (m *Manager) fetchTalosVersions() (any, error) {
 				return false
 			}
 
-			if version.Pre[0].VersionStr != "alpha" && version.Pre[0].VersionStr != "beta" {
-				return false
+			switch version.Pre[0].VersionStr {
+			case "alpha", "beta", "rc":
+				// allow
+			default:
+				return false // ignore other pre-release versions
 			}
 
 			if !version.Pre[1].IsNumeric() {
