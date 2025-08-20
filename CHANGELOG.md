@@ -1,3 +1,31 @@
+## [image-factory 0.8.3](https://github.com/siderolabs/image-factory/releases/tag/v0.8.3) (2025-08-20)
+
+Welcome to the v0.8.3 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Mateusz Urbanek
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`7254abf`](https://github.com/siderolabs/image-factory/commit/7254abf251c3a1140a220969ac9bd684c55f8774) fix: disable redirects to PXE
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v0.8.2](https://github.com/siderolabs/image-factory/releases/tag/v0.8.2)
+
+
 ## [image-factory 0.8.2](https://github.com/siderolabs/image-factory/releases/tag/v0.8.2) (2025-08-19)
 
 Welcome to the v0.8.2 release of image-factory!
