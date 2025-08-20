@@ -26,6 +26,9 @@ import (
 func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 	schematicID := p.ByName("schematic")
 
+	// If the request is coming from the external PXE URL we disable redirects.
+	disableRedirect := r.Host == f.options.ExternalPXEURL.Host
+
 	schematic, err := f.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
 		return err
@@ -62,7 +65,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return err
 	}
 
-	if asset, ok := asset.(cache.RedirectableAsset); ok && r.Method != http.MethodHead {
+	if asset, ok := asset.(cache.RedirectableAsset); ok && !disableRedirect && r.Method != http.MethodHead {
 		var url string
 
 		url, err = asset.Redirect()

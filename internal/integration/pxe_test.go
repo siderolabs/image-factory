@@ -7,6 +7,7 @@
 package integration_test
 
 import (
+	"bufio"
 	"context"
 	"io"
 	"net/http"
@@ -37,6 +38,33 @@ func downloadPXE(ctx context.Context, t *testing.T, baseURL string, schematicID,
 	return string(body)
 }
 
+func checkPXENoRedirect(ctx context.Context, t *testing.T, pxe string, files ...string) {
+	t.Helper()
+
+	scanner := bufio.NewScanner(strings.NewReader(pxe))
+
+	var urls []string
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		for _, file := range files {
+			if strings.HasPrefix(line, file+" ") {
+				fields := strings.Fields(line)
+				if len(fields) > 1 {
+					urls = append(urls, fields[1])
+				}
+			}
+		}
+	}
+
+	require.NoError(t, scanner.Err())
+
+	for _, testURL := range urls {
+		downloadNoRedirect(ctx, t, testURL)
+	}
+}
+
 func fixupCmdline(cmdline string, talosVersion string) string {
 	if quirks.New(talosVersion).SupportsSELinux() {
 		cmdline = strings.ReplaceAll(cmdline, "sha512\n", "sha512 selinux=1\n")
@@ -54,7 +82,7 @@ func fixupCmdline(cmdline string, talosVersion string) string {
 	return cmdline
 }
 
-func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
+func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) {
 	talosVersions := []string{
 		"v1.5.0",
 		"v1.11.0-beta.0",
@@ -73,61 +101,77 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL string) {
 			t.Run("metal-amd64", func(t *testing.T) {
 				t.Parallel()
 
+				pxe := downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64")
+
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", baseURL),
+							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", pxeURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
 					),
-					downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64"),
+					pxe,
 				)
+
+				checkPXENoRedirect(ctx, t, pxe, "kernel", "initrd")
 			})
 
 			t.Run("metal-x86_64", func(t *testing.T) {
 				t.Parallel()
 
+				pxe := downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-x86_64")
+
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", baseURL),
+							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", pxeURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
 					),
-					downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-x86_64"),
+					pxe,
 				)
+
+				checkPXENoRedirect(ctx, t, pxe, "kernel", "initrd")
 			})
 
 			t.Run("equinix-arm64", func(t *testing.T) {
 				t.Parallel()
 
+				pxe := downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "equinixMetal-amd64")
+
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(fixupCmdline(equinixInsecureExpected, talosVersion), "ENDPOINT", baseURL),
+							strings.ReplaceAll(fixupCmdline(equinixInsecureExpected, talosVersion), "ENDPOINT", pxeURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
 					),
-					downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "equinixMetal-amd64"),
+					pxe,
 				)
+
+				checkPXENoRedirect(ctx, t, pxe, "kernel", "initrd")
 			})
 
 			t.Run("secureboot-amd64", func(t *testing.T) {
 				t.Parallel()
 
+				pxe := downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot")
+
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(fixupCmdline(securebootExpected, talosVersion), "ENDPOINT", baseURL),
+							strings.ReplaceAll(fixupCmdline(securebootExpected, talosVersion), "ENDPOINT", pxeURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
 					),
-					downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot"),
+					pxe,
 				)
+
+				checkPXENoRedirect(ctx, t, pxe, "kernel")
 			})
 		})
 	}

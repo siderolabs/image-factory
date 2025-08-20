@@ -33,16 +33,22 @@ import (
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
-func setupFactory(t *testing.T, options cmd.Options) (context.Context, string) {
+func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, string) {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(t.Context())
 
 	logger := zaptest.NewLogger(t)
 
-	options.HTTPListenAddr = findListenAddr(t)
+	host, port := findListenAddr(t, "127.0.0.1")
+
+	defaultAddr := net.JoinHostPort(host, port)
+	pxeAddr := net.JoinHostPort("localhost", port)
+
+	options.HTTPListenAddr = net.JoinHostPort(host, port)
 	options.ImageRegistry = imageRegistryFlag
-	options.ExternalURL = "http://" + options.HTTPListenAddr + "/"
+	options.ExternalURL = "http://" + defaultAddr + "/"
+	options.ExternalPXEURL = "http://" + pxeAddr + "/"
 	options.SchematicServiceRepository = schematicFactoryRepositoryFlag
 	options.InstallerExternalRepository = installerExternalRepository
 	options.InstallerInternalRepository = installerInternalRepository
@@ -75,7 +81,7 @@ func setupFactory(t *testing.T, options cmd.Options) (context.Context, string) {
 		return err == nil
 	}, 10*time.Second, 10*time.Millisecond)
 
-	return ctx, options.HTTPListenAddr
+	return ctx, defaultAddr, pxeAddr
 }
 
 func setupCacheSigningKey(t *testing.T, options *cmd.Options) {
@@ -127,8 +133,7 @@ const (
 func setupS3(t *testing.T, pool *dockertest.Pool, bucket string) string {
 	t.Helper()
 
-	_, port, err := net.SplitHostPort(findListenAddr(t))
-	require.NoError(t, err)
+	_, port := findListenAddr(t, "127.0.0.1")
 
 	res, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "minio/minio",
@@ -172,8 +177,7 @@ var nginxConfigTemplate string
 func setupMockCDN(t *testing.T, pool *dockertest.Pool, s3, bucket string) string {
 	t.Helper()
 
-	_, port, err := net.SplitHostPort(findListenAddr(t))
-	require.NoError(t, err)
+	_, port := findListenAddr(t, "127.0.0.1")
 
 	inlineEntrypoint := fmt.Appendf([]byte{}, nginxConfigTemplate, s3, bucket)
 
@@ -229,22 +233,26 @@ func setupSecureBoot(t *testing.T, options *cmd.Options) {
 	}
 }
 
-func findListenAddr(t *testing.T) string {
+func findListenAddr(t *testing.T, host string) (string, string) {
 	t.Helper()
 
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := net.Listen("tcp", net.JoinHostPort(host, "0"))
 	require.NoError(t, err)
 
 	addr := l.Addr().String()
 
 	require.NoError(t, l.Close())
 
-	return addr
+	host, port, err := net.SplitHostPort(addr)
+	require.NoError(t, err)
+
+	return host, port
 }
 
 func commonTest(t *testing.T, options cmd.Options) {
-	ctx, listenAddr := setupFactory(t, options)
+	ctx, listenAddr, pxeAddr := setupFactory(t, options)
 	baseURL := "http://" + listenAddr
+	pxeURL := "http://" + pxeAddr
 
 	t.Run("TestSchematic", func(t *testing.T) {
 		// schematic should be created first, thus no t.Parallel
@@ -260,7 +268,7 @@ func commonTest(t *testing.T, options cmd.Options) {
 	t.Run("TestPXEFrontend", func(t *testing.T) {
 		t.Parallel()
 
-		testPXEFrontend(ctx, t, baseURL)
+		testPXEFrontend(ctx, t, baseURL, pxeURL)
 	})
 
 	t.Run("TestTalosctlFrontend", func(t *testing.T) {

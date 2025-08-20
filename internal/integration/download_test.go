@@ -46,6 +46,35 @@ func downloadAsset(ctx context.Context, t *testing.T, baseURL string, schematicI
 	return resp
 }
 
+func downloadNoRedirect(ctx context.Context, t *testing.T, url string) *http.Response {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	require.NoError(t, err, url)
+
+	noRedirectClient := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// If this is called, it means a redirect was attempted
+			assert.Failf(t,
+				"unexpected redirect",
+				"attempted to redirect to %s (via: %v)",
+				req.URL.String(), via)
+
+			// Prevent following the redirect
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := noRedirectClient.Do(req)
+	require.NoError(t, err, url)
+
+	t.Cleanup(func() {
+		resp.Body.Close()
+	})
+
+	return resp
+}
+
 func downloadAssetAssertCached(ctx context.Context, t *testing.T, baseURL, schematicID, talosVersion, path string, expectedSize int64) {
 	t.Helper()
 
