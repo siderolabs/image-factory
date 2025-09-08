@@ -216,7 +216,7 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 		"v1.5.0",
 		"v1.5.1",
 		"v1.10.2",
-		"v1.11.0-beta.0",
+		"v1.11.0",
 	}
 
 	registry, err := name.NewRegistry(registryAddr)

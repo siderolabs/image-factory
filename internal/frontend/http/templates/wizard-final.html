@@ -55,7 +55,7 @@
         {{ if eq .Target "metal" }}
         <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/network-config/">{{ t .Localizer "final.documentation.metal" }}</a></li>
         {{ else if eq .Target "cloud" }}
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}{{ .PlatformMeta.Documentation }}">{{ .PlatformMeta.Label }} {{ t .Localizer "final.docuentation.cloud" }}</a></li>
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}{{ .PlatformMeta.Documentation }}">{{ .PlatformMeta.Label }} {{ t .Localizer "final.documentation.cloud" }}</a></li>
         {{ else if eq .Target "sbc" }}
         <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}{{ .BoardMeta.Documentation }}">{{ .BoardMeta.Label }} {{ t .Localizer "final.documentation.sbc" }}</a></li>
         {{ end }}

@@ -44,7 +44,7 @@ func downloadTalosctl(ctx context.Context, t *testing.T, baseURL string, talosVe
 
 func testTalosctlFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	talosVersions := map[string][]string{
-		"v1.11.0-beta.0": {
+		"v1.11.0": {
 			"talosctl-linux-amd64", "talosctl-linux-arm64", "talosctl-linux-armv7",
 			"talosctl-darwin-amd64", "talosctl-darwin-arm64",
 			"talosctl-freebsd-amd64", "talosctl-freebsd-arm64",

@@ -85,7 +85,7 @@ func fixupCmdline(cmdline string, talosVersion string) string {
 func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) {
 	talosVersions := []string{
 		"v1.5.0",
-		"v1.11.0-beta.0",
+		"v1.11.0",
 	}
 
 	const (
