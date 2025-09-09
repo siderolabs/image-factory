@@ -78,6 +78,12 @@ func Hash(p profile.Profile) (string, error) {
 		hasher.Write([]byte("overlay profile fix #11093"))
 	}
 
+	// 9. VMWare arm64 images have incorrect kernel args
+	// - https://github.com/siderolabs/talos/pull/11735
+	if p.Platform == "vmware" && p.Arch == "arm64" {
+		hasher.Write([]byte("vmware arm64 kernel args fix #11735"))
+	}
+
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 

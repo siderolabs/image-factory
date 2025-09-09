@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-08-14T09:04:59Z by kres 9f63e23-dirty.
+# Generated on 2025-09-09T17:08:11Z by kres ba56673.
 
 # common variables
 
@@ -17,21 +17,21 @@ WITH_RACE ?= false
 REGISTRY ?= ghcr.io
 USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
-PROTOBUF_GO_VERSION ?= 1.36.6
+PROTOBUF_GO_VERSION ?= 1.36.7
 GRPC_GO_VERSION ?= 1.5.1
 GRPC_GATEWAY_VERSION ?= 2.27.1
 VTPROTOBUF_VERSION ?= 0.6.0
-GOIMPORTS_VERSION ?= 0.34.0
-GOMOCK_VERSION ?= 0.5.2
-DEEPCOPY_VERSION ?= v0.5.6
-GOLANGCILINT_VERSION ?= v2.2.2
+GOIMPORTS_VERSION ?= 0.36.0
+GOMOCK_VERSION ?= 0.6.0
+DEEPCOPY_VERSION ?= v0.5.8
+GOLANGCILINT_VERSION ?= v2.4.0
 GOFUMPT_VERSION ?= v0.8.0
-GO_VERSION ?= 1.24.5
+GO_VERSION ?= 1.25.0
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
 GOTOOLCHAIN ?= local
-GOEXPERIMENT ?= synctest
+GOEXPERIMENT ?=
 TESTPKGS ?= ./...
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 CONFORMANCE_IMAGE ?= ghcr.io/siderolabs/conform:latest
@@ -74,12 +74,12 @@ COMMON_ARGS += --build-arg=GOFUMPT_VERSION="$(GOFUMPT_VERSION)"
 COMMON_ARGS += --build-arg=TESTPKGS="$(TESTPKGS)"
 COMMON_ARGS += --build-arg=PKGS_PREFIX="$(PKGS_PREFIX)"
 COMMON_ARGS += --build-arg=PKGS="$(PKGS)"
-TOOLCHAIN ?= docker.io/golang:1.24-alpine
+TOOLCHAIN ?= docker.io/golang:1.25-alpine
 
 # extra variables
 
 PKGS_PREFIX ?= ghcr.io/siderolabs
-PKGS ?= v1.11.0
+PKGS ?= v1.11.0-18-g1a25681
 RUN_TESTS ?= TestIntegrationCDN
 TEST_FLAGS ?=
 
@@ -257,6 +257,9 @@ lint-markdown:  ## Runs markdownlint.
 
 .PHONY: lint
 lint: lint-golangci-lint lint-gofumpt lint-govulncheck lint-markdown  ## Run all linters for the project.
+
+.PHONY: lint-fmt
+lint-fmt: lint-golangci-lint-fmt  ## Run all linter formatters and fix up the source tree.
 
 .PHONY: image-image-factory
 image-image-factory: tailwind  ## Builds image for image-factory.

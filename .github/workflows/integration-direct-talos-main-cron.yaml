@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-08-13T15:31:47Z by kres 9f63e23.
+# Generated on 2025-09-09T16:57:43Z by kres ba56673.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -41,7 +41,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Unshallow
         run: |
           git fetch --prune --unshallow

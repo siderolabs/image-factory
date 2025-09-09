@@ -2,14 +2,14 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-08-14T09:35:32Z by kres df7e867-dirty.
+# Generated on 2025-09-09T16:57:43Z by kres ba56673.
 
 ARG TOOLCHAIN
 ARG PKGS_PREFIX
 ARG PKGS
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.2.18-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.2.20-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.45.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
@@ -209,8 +209,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 
 # runs govulncheck
 FROM base AS lint-govulncheck
-COPY --chmod=0755 hack/govulncheck.sh ./hack/govulncheck.sh
 WORKDIR /src
+COPY --chmod=0755 hack/govulncheck.sh ./hack/govulncheck.sh
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh -exclude 'GO-2025-3770' ./...
 
 # runs unit-tests with race detector
