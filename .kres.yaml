@@ -439,6 +439,12 @@ spec:
   ghaction:
     enabled: true
     condition: on-pull-request
+    parallelJob:
+      name: integration-direct
+      runnerGroup: generic
+    coverage:
+      inputPaths:
+        - coverage-integration-direct.txt
     environment:
       REGISTRY: registry.dev.siderolabs.io
       RUN_TESTS: TestIntegrationDirect
@@ -462,6 +468,12 @@ spec:
   ghaction:
     enabled: true
     condition: on-pull-request
+    parallelJob:
+      name: integration-s3
+      runnerGroup: generic
+    coverage:
+      inputPaths:
+        - coverage-integration-s3.txt
     environment:
       REGISTRY: registry.dev.siderolabs.io
       RUN_TESTS: TestIntegrationS3
@@ -490,6 +502,12 @@ spec:
   ghaction:
     enabled: true
     condition: on-pull-request
+    parallelJob:
+      name: integration-cdn
+      runnerGroup: generic
+    coverage:
+      inputPaths:
+       - coverage-integration-cdn.txt
     environment:
       REGISTRY: registry.dev.siderolabs.io
       RUN_TESTS: TestIntegrationCDN
@@ -578,10 +596,6 @@ spec:
 kind: service.CodeCov
 spec:
   targetThreshold: 50
-  inputPaths:
-    - coverage-integration-direct.txt
-    - coverage-integration-s3.txt
-    - coverage-integration-cdn.txt
 ---
 kind: custom.Step
 name: tailwind
