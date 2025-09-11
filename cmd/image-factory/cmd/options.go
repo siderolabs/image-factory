@@ -29,6 +29,7 @@ type Options struct { //nolint:govet
 	RegistryRefreshInterval time.Duration
 
 	// Options to verify container signatures for imager, extensions, etc.
+	ContainerSignatureDisabled          bool
 	ContainerSignatureSubjectRegExp     string
 	ContainerSignatureIssuerRegExp      string
 	ContainerSignatureIssuer            string

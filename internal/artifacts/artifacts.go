@@ -24,13 +24,23 @@ type Options struct { //nolint:govet
 	// MinVersion is the minimum version of Talos to use.
 	MinVersion semver.Version
 	// ImageVerifyOptions are the options for verifying the image signature.
-	ImageVerifyOptions []cosign.CheckOpts
+	ImageVerifyOptions ImageVerifyOptions
 	// TalosVersionRecheckInterval is the interval for rechecking Talos versions.
 	TalosVersionRecheckInterval time.Duration
 	// RemoteOptions is the list of remote options for the puller.
 	RemoteOptions []remote.Option
 	// RegistryRefreshInterval is the interval for refreshing the image registry connections.
 	RegistryRefreshInterval time.Duration
+}
+
+// ImageVerifyOptions are the options for verifying the image signature.
+type ImageVerifyOptions struct {
+	// CheckOpts are the options for verifying the image signature.
+	//
+	// If Disabled is true, this field is ignored.
+	CheckOpts []cosign.CheckOpts
+	// Disabled disables image signature verification.
+	Disabled bool
 }
 
 // Kind is the artifact kind.

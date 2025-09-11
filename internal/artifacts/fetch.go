@@ -275,14 +275,18 @@ func untarWithPrefix(logger *zap.Logger, r io.Reader, prefix, destination string
 
 // Try to verify the image signature with the given verification options. Return the first option
 // that worked, if any. Only the last encountered error will be returned.
-func verifyImageSignatures(ctx context.Context, digestRef name.Reference, imageVerifyOptions []cosign.CheckOpts) (*cosign.CheckOpts, bool, string, error) {
+func verifyImageSignatures(ctx context.Context, digestRef name.Reference, imageVerifyOptions ImageVerifyOptions) (*cosign.CheckOpts, bool, string, error) {
 	var multiErr error
 
-	if len(imageVerifyOptions) == 0 {
+	if imageVerifyOptions.Disabled {
+		return &cosign.CheckOpts{}, false, "verification disabled", nil
+	}
+
+	if len(imageVerifyOptions.CheckOpts) == 0 {
 		return nil, false, "", errors.New("no verification options provided")
 	}
 
-	for _, ivo := range imageVerifyOptions {
+	for _, ivo := range imageVerifyOptions.CheckOpts {
 		_, bundleVerified, err := cosign.VerifyImageSignatures(ctx, digestRef, &ivo)
 		if err == nil {
 			// determine verification method
