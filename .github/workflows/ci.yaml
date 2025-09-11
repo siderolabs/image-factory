@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-09-09T16:57:43Z by kres ba56673.
+# Generated on 2025-09-11T11:15:04Z by kres 953994c.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -26,8 +26,7 @@ jobs:
       packages: write
       pull-requests: read
     runs-on:
-      - self-hosted
-      - generic
+      group: generic
     if: (!startsWith(github.head_ref, 'renovate/') && !startsWith(github.head_ref, 'dependabot/'))
     outputs:
       labels: ${{ steps.retrieve-pr-labels.outputs.result }}
@@ -174,8 +173,7 @@ jobs:
             _out/sha*.txt
   integration-cdn-talos-main:
     runs-on:
-      - self-hosted
-      - generic
+      group: generic
     if: contains(fromJSON(needs.default.outputs.labels), 'integration/talos-main')
     needs:
       - default
@@ -226,8 +224,7 @@ jobs:
           make integration-cdn-talos-main
   integration-direct-talos-main:
     runs-on:
-      - self-hosted
-      - generic
+      group: generic
     if: contains(fromJSON(needs.default.outputs.labels), 'integration/talos-main')
     needs:
       - default
@@ -278,8 +275,7 @@ jobs:
           make integration-direct-talos-main
   integration-s3-talos-main:
     runs-on:
-      - self-hosted
-      - generic
+      group: generic
     if: contains(fromJSON(needs.default.outputs.labels), 'integration/talos-main')
     needs:
       - default
