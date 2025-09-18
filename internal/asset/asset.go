@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -289,6 +290,9 @@ func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString
 
 	tmpDir.assetPath, err = imgr.Execute(ctx, tmpDir.directoryPath, reporter.New())
 	if err != nil {
+		if strings.Contains(err.Error(), "error mounting partitions") {
+			b.logger.Error("failed to mount, talos kernel may include features that are not present", zap.String("talos_version", prof.Version))
+		}
 		return nil, fmt.Errorf("error generating asset: %w", err)
 	}
 
