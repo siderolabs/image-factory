@@ -8,6 +8,7 @@ package cmd
 import (
 	"context"
 	"crypto"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -24,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	cryptotls "github.com/siderolabs/crypto/tls"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/sigstore/cosign/v2/pkg/signature"
@@ -137,10 +139,35 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	httpServer.Handler = frontendHTTP.Handler()
 
+	insecure := opts.HTTPCertFile == "" && opts.HTTPKeyFile == ""
+
 	eg, ctx := errgroup.WithContext(ctx)
 
+	if !insecure {
+		certLoader := cryptotls.NewDynamicCertificate(opts.HTTPCertFile, opts.HTTPKeyFile)
+		if err = certLoader.Load(); err != nil {
+			return fmt.Errorf("failed to load certificate: %w", err)
+		}
+
+		eg.Go(func() error {
+			return certLoader.WatchWithRestarts(ctx, logger)
+		})
+
+		httpServer.TLSConfig = &tls.Config{
+			MinVersion:     tls.VersionTLS12,
+			GetCertificate: certLoader.GetCertificate,
+		}
+	}
+
 	eg.Go(func() error {
-		err := httpServer.ListenAndServe()
+		var err error
+
+		if insecure {
+			err = httpServer.ListenAndServe()
+		} else {
+			err = httpServer.ListenAndServeTLS("", "")
+		}
+
 		if errors.Is(err, http.ErrServerClosed) {
 			err = nil
 		}

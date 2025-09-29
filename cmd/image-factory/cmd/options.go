@@ -18,6 +18,10 @@ type Options struct { //nolint:govet
 	// Listen address for the HTTP frontend.
 	HTTPListenAddr string
 
+	// HTTP frontend TLS certificate and key files (optional).
+	HTTPCertFile string
+	HTTPKeyFile  string
+
 	// Asset builder options: minimum supported Talos version.
 	MinTalosVersion string
 	// Image registry for source images: imager, extensions, etc..

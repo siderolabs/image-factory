@@ -14,6 +14,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/prometheus/client_golang v1.23.2
+	github.com/siderolabs/crypto v0.6.4
 	github.com/siderolabs/gen v0.8.5
 	github.com/siderolabs/go-blockdevice/v2 v2.0.19
 	github.com/siderolabs/go-debug v0.6.0
@@ -249,7 +250,6 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
-	github.com/siderolabs/crypto v0.6.3 // indirect
 	github.com/siderolabs/go-api-signature v0.3.7 // indirect
 	github.com/siderolabs/go-blockdevice v0.4.8 // indirect
 	github.com/siderolabs/go-cmd v0.1.3 // indirect

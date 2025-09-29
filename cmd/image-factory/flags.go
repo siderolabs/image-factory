@@ -17,6 +17,8 @@ func initFlags() cmd.Options {
 	opts := cmd.DefaultOptions
 
 	flag.StringVar(&opts.HTTPListenAddr, "http-port", cmd.DefaultOptions.HTTPListenAddr, "HTTP listen address")
+	flag.StringVar(&opts.HTTPCertFile, "http-cert-file", cmd.DefaultOptions.HTTPCertFile, "path to the TLS certificate file (optional, for HTTPS)")
+	flag.StringVar(&opts.HTTPKeyFile, "http-key-file", cmd.DefaultOptions.HTTPKeyFile, "path to the HTTPS key file (optional, for HTTPS)")
 
 	flag.StringVar(&opts.MinTalosVersion, "min-talos-version", cmd.DefaultOptions.MinTalosVersion, "minimum Talos version")
 	flag.StringVar(&opts.ImageRegistry, "image-registry", cmd.DefaultOptions.ImageRegistry, "image registry for imager, extensions, etc.")
