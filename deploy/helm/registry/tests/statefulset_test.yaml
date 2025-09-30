@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: StatefulSet
+
+templates:
+  - statefulset.yaml
+
+tests:
+  - it: Should use the default values
+    set:
+      image.tag: test
+    asserts:
+      - isKind:
+          of: StatefulSet
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0]
+          value:
+            name: registry
+            image: ghcr.io/olareg/olareg:test
+            imagePullPolicy: IfNotPresent
+            resources: {}
+            securityContext: {}
+            ports:
+              - name: api
+                containerPort: 5050
+                protocol: TCP
+            volumeMounts:
+              - name: RELEASE-NAME-registry-data
+                mountPath: /etc/olareg/data
+            args:
+              - serve
+              - --port=5050
+              - --store-type=dir
+              - --dir=/etc/olareg/data
+              - --verbosity=info
+
+  - it: Should use emptyDir if persistence is disabled
+    set:
+      persistence:
+        enabled: false
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            emptyDir: {}
+
+  - it: Should use existing PVC if specified
+    set:
+      persistence:
+        enabled: true
+        existingClaim: test-claim
+    asserts:
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: data
+            persistentVolumeClaim:
+              claimName: test-claim
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: data
+            mountPath: /etc/olareg/data
+      - notExists:
+          path: spec.volumeClaimTemplates
+
+  - it: Should create volumeClaimTemplates if enabled and no existing claim is set
+    set:
+      persistence:
+        enabled: true
+        existingClaim: ""
+        size: 1Gi
+        accessMode: ReadWriteOnce
+        storageClass: standard
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].metadata.name
+          value: RELEASE-NAME-registry-data
+      - isSubset:
+          path: spec.volumeClaimTemplates[0].spec
+          content:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+            storageClassName: standard
+
+  - it: Should not render volumeClaimTemplates when persistence is disabled
+    set:
+      persistence.enabled: false
+    asserts:
+      - notExists:
+          path: spec.volumeClaimTemplates

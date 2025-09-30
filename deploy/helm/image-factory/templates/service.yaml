@@ -1,0 +1,21 @@
+{{- $svcPort := .Values.service.port | default 80 -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "imageFactory.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "imageFactory.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ $svcPort }}
+      targetPort: api
+      protocol: TCP
+      name: api
+  selector:
+    {{- include "imageFactory.selectorLabels" . | nindent 4 }}

@@ -1,0 +1,45 @@
+{{- if .Values.ingress.pxe.enabled -}}
+{{- $svcPort := .Values.service.port -}}
+{{- $fullName := include "imageFactory.fullname" . -}}
+{{- if not (semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion) -}}
+  {{- fail "Ingress requires Kubernetes v1.19 or later" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "imageFactory.ingressPxe" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "imageFactory.labels" . | nindent 4 }}
+  {{- with .Values.ingress.pxe.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.pxe.className }}
+  {{- if .Values.ingress.pxe.tls }}
+  tls:
+    {{- range .Values.ingress.pxe.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      {{ with .secretName }}
+      secretName: {{ . }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.pxe.host | quote }}
+      http:
+        paths:
+          {{- range .Values.ingress.pxe.paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: {{ $svcPort }}
+          {{- end }}
+{{- end }}

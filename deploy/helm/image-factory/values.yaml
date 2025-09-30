@@ -1,0 +1,274 @@
+# -- Number of replicas for the deployment.
+replicaCount: 1
+
+config:
+  # -- Maximum concurrency for asset builder
+  assetBuilderMaxConcurrency: 6
+
+  # -- Enable CDN for boot assets
+  cacheCdnEnabled: false
+
+  # -- CDN host for the cache
+  cacheCdnHost: ""
+
+  # -- CDN trim path for the cache
+  cacheCdnTrimPrefix: ""
+
+  # -- Cache repository for boot assets
+  cacheRepository: ""
+
+  # -- Enable S3 cache for boot assets
+  cacheS3Enabled: false
+
+  # -- S3 bucket for the cache
+  cacheS3Bucket: ""
+
+  # -- S3 endpoint for the cache
+  cacheS3Endpoint: ""
+
+  # -- S3 region for the cache
+  cacheS3Region: ""
+
+  # -- Disable container signature verification (not recommended)
+  containerSignatureDisabled: false
+
+  # -- Container signature issuer
+  containerSignatureIssuer: "https://accounts.google.com"
+
+  # -- Container signature issuer regexp
+  containerSignatureIssuerRegexp: ""
+
+  # -- Container signature public key (optional)
+  containerSignaturePubkey: ""
+
+  # -- Hash algo of the container signature public key (optional)
+  containerSignaturePubkeyHashalgo: "sha256"
+
+  # -- Container signature subject regexp
+  containerSignatureSubjectRegexp: "@siderolabs\\.com$"
+
+  # -- Factory external PXE endpoint URL, if not set defaults to --external-url
+  externalPxeUrl: ""
+
+  # -- Factory external endpoint URL
+  externalUrl: ""
+
+  # -- Image registry for imager, extensions, etc.
+  imageRegistry: "ghcr.io"
+
+  # -- Allow an insecure connection to the cache repository
+  insecureCacheRepository: false
+
+  # -- Use insecure S3 connection for the cache
+  insecureCacheS3: false
+
+  # -- Allow an insecure connection to the image registry
+  insecureImageRegistry: false
+
+  # -- Allow an insecure connection to the image repository for the installer (internal)
+  insecureInstallerInternalRepository: false
+
+  # -- Allow an insecure connection to the schematics repository
+  insecureSchematicServiceRepository: false
+
+  # -- Image repository for the installer (external)
+  installerExternalRepository: "ghcr.io/siderolabs"
+
+  # -- Image repository for the installer (internal)
+  installerInternalRepository: "ghcr.io/siderolabs"
+
+  # -- Set the logging level
+  logLevel: "info"
+
+  # -- Minimum Talos version
+  minTalosVersion: "1.2.0"
+
+  # -- Image registry refresh interval
+  registryRefreshInterval: "5m0s"
+
+  # -- Image repository for the schematic service
+  schematicServiceRepository: ""
+
+  # -- Enable Secure Boot asset generation
+  secureboot: false
+
+  # -- Secure Boot signing certificate path
+  securebootAwsCertPath: ""
+
+  # -- Secure Boot signing key AWS KMS ID
+  securebootAwsKmsIdKeyId: ""
+
+  # -- Secure Boot PCR key AWS KMS ID
+  securebootAwsPcrKmsKeyId: ""
+
+  # -- Secure Boot AWS region for KMS access
+  securebootAwsRegion: ""
+
+  # -- Secure Boot Azure Key Vault certificate name (use Azure PKI)
+  securebootAzureCertificateName: ""
+
+  # -- Secure Boot Azure Key Vault PCR key name (use Azure PKI)
+  securebootAzureKeyName: ""
+
+  # -- Secure Boot Azure Key Vault URL (use Azure PKI)
+  securebootAzureKeyVaultUrl: ""
+
+  # -- Secure Boot PCR key path (use local PKI)
+  securebootPcrKeyPath: ""
+
+  # -- Secure Boot signing certificate path (use local PKI)
+  securebootSigningCertPath: ""
+
+  # -- Secure Boot signing key path (use local PKI)
+  securebootSigningKeyPath: ""
+
+  # -- Interval to recheck Talos versions
+  talosVersionsRecheckInterval: "15m0s"
+
+secret:
+  # -- Specifies whether a secret should be created.
+  create: true
+  # -- Specifies name of a secret used to configure the image-factory.
+  # If not filled, uses full name.
+  name: ""
+
+  # -- Specifies the cache signing key to use. If not set, a new key is generated.
+  # The key must be an EC private key in PEM format, for example generated with:
+  #   openssl ecparam -name prime256v1 -genkey -noout
+  cacheSigningKey: ""
+
+tls:
+  # -- Specifies whether TLS should be used. If false, HTTP is used.
+  enabled: false
+  # -- Specifies whether a TLS secret should be created.
+  create: false
+  # -- Specifies name of a TLS secret used to configure the image-factory.
+  # If not filled, uses full name.
+  name: ""
+
+  # -- Specified TLS CA certificate for the image-factory.
+  ca: ""
+  # -- Specified TLS certificate for the image-factory.
+  cert: ""
+  # -- Specified TLS key for the image-factory.
+  key: ""
+
+image:
+  # -- Registry and repository for the image-factory image.
+  repository: ghcr.io/siderolabs/image-factory
+  # -- Tag for the image.
+  tag: "v0.8.4"
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+securityContext:
+  privileged: true
+
+# -- Secrets for pulling images.
+imagePullSecrets: []
+# -- Override for the name.
+nameOverride: ""
+# -- Override for the full name.
+fullnameOverride: ""
+
+service:
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port.
+  port: 80
+  # -- Annotations to add to the service.
+  annotations: {}
+
+serviceAccount:
+  # -- Specifies whether a service account should be created.
+  create: true
+  # -- Automatically mount a ServiceAccount's API credentials.
+  automount: true
+  # -- Annotations to add to the service account.
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+ingress:
+  default:
+    # -- Specifies whether ingress should be enabled.
+    enabled: false
+    # -- Ingress class name.
+    className: ""
+    # -- Annotations to add to the ingress.
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    # -- Ingress host configuration.
+    host: image-factory.example.local
+    paths:
+      - path: /
+        pathType: ImplementationSpecific
+    # -- List of TLS configurations for the ingress.
+    tls: []
+    #  - secretName: image-factory-tls
+    #    hosts:
+    #      - image-factory.example.local
+
+  pxe:
+    # -- Specifies whether ingress for PXE should be enabled.
+    enabled: false
+    # -- Ingress class name.
+    className: ""
+    # -- Annotations to add to the ingress.
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+      # kubernetes.io/tls-acme: "true"
+    # -- Ingress host configuration.
+    host: pxe.image-factory.example.local
+    paths:
+      - path: /
+        pathType: ImplementationSpecific
+    # -- List of TLS configurations for the ingress.
+    tls: []
+    #  - secretName: image-factory-tls
+    #    hosts:
+    #      - image-factory.example.local
+
+# -- Annotations to be added to the pods.
+podAnnotations: {}
+# -- Labels to be added to the pods.
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+# -- Node selector for the pods.
+nodeSelector: {}
+
+# -- Tolerations for the pods.
+tolerations: []
+
+# -- Affinity settings for the pods.
+affinity: {}
+  # nodeAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #     nodeSelectorTerms:
+  #       - matchExpressions:
+  #         - key: kubernetes.io/arch
+  #           operator: In
+  #           values:
+  #             - amd64
+  #             - arm64
+  #         - key: kubernetes.io/os
+  #           operator: In
+  #           values:
+  #             - linux

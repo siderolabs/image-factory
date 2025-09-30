@@ -1,0 +1,10 @@
+apiVersion: v2
+type: application
+name: image-factory
+description: |
+  A service to generate Talos boot assets.
+home: https://github.com/siderolabs/image-factory
+version: 0.0.0-alpha.1
+appVersion: "v0.8.4"
+sources:
+  - https://github.com/siderolabs/image-factory

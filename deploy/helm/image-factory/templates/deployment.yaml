@@ -1,0 +1,250 @@
+{{- $replicaCount := int (.Values.replicaCount | default 1) }}
+{{- $cacheRepository := .Values.config.cacheRepository | required ".Values.config.cacheRepository is required." }}
+{{- $schematicServiceRepository := .Values.config.schematicServiceRepository | required ".Values.config.schematicServiceRepository is required." }}
+
+{{- $cacheS3Bucket := "" }}
+{{- $cacheS3Endpoint := "" }}
+{{- $cacheS3Region := "" }}
+{{- if .Values.config.cacheS3Enabled }}
+  {{- $cacheS3Bucket = .Values.config.cacheS3Bucket | required ".Values.config.cacheS3Bucket is required." }}
+  {{- $cacheS3Endpoint = .Values.config.cacheS3Endpoint | required ".Values.config.cacheS3Endpoint is required." }}
+  {{- $cacheS3Region = .Values.config.cacheS3Region | required ".Values.config.cacheS3Region is required." }}
+{{- end }}
+
+{{- $cacheCdnHost := "" }}
+{{- if .Values.config.cacheCdnEnabled }}
+  {{- $cacheCdnHost := .Values.config.cacheCdnHost | required ".Values.config.cacheCdnHost is required." }}
+{{- end }}
+
+{{- $externalUrl := "" }}
+{{- if not .Values.ingress.default.enabled }}
+  {{- $externalUrl = .Values.config.externalUrl | required ".Values.config.externalUrl is required." }}
+{{- else }}
+  {{- $externalUrl = default .Values.ingress.default.host .Values.config.externalUrl | required ".Values.config.externalUrl is required." }}
+{{- end }}
+{{- if not (hasPrefix "http" $externalUrl) }}
+  {{- if or .Values.tls.enabled .Values.ingress.default.tls }}
+    {{- $externalUrl = printf "https://%s" $externalUrl }}
+  {{- else }}
+    {{- $externalUrl = printf "http://%s" $externalUrl }}
+  {{- end }}
+{{- end }}
+
+{{- $externalPxeUrl := "" }}
+{{- if not .Values.ingress.pxe.enabled }}
+  {{- $externalPxeUrl = .Values.config.externalPxeUrl }}
+{{- else }}
+  {{- $externalPxeUrl = default .Values.ingress.pxe.host .Values.config.externalPxeUrl }}
+{{- end }}
+{{- if and (not (hasPrefix "http" $externalPxeUrl)) $externalPxeUrl }}
+  {{- if or .Values.tls.enabled .Values.ingress.pxe.tls }}
+    {{- $externalPxeUrl = printf "https://%s" $externalPxeUrl }}
+  {{- else }}
+    {{- $externalPxeUrl = printf "http://%s" $externalPxeUrl }}
+  {{- end }}
+{{- end }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "imageFactory.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "imageFactory.labels" . | nindent 4 }}
+spec:
+  replicas: {{ $replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "imageFactory.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "imageFactory.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "imageFactory.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: secret
+          secret:
+            secretName: {{ include "imageFactory.secret" . }}
+        - name: scratch
+          emptyDir: {}
+        - name: host-dev
+          hostPath:
+            path: /dev
+        {{- if (default .Values.tls.enabled .Values.tls.create) }}
+        - name: tls
+          secret:
+            secretName: {{ include "imageFactory.secretTls" . }}
+        {{- end }}
+      containers:
+        - name: image-factory
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          args:
+            - -cache-repository={{ $cacheRepository }}
+            - -cache-signing-key-path=/etc/image-factory/signatures/cache-signing-key.pem
+            - -external-url={{ $externalUrl }}
+            {{- if $externalPxeUrl }}
+            - -external-pxe-url={{ $externalPxeUrl }}
+            {{- end }}
+            - -http-port=:8080
+            - -metrics-listen-addr=:2122
+            - -schematic-service-repository={{ $schematicServiceRepository }}
+            {{- with .Values.config }}
+            {{- if .assetBuilderMaxConcurrency }}
+            - -asset-builder-max-concurrency={{ .assetBuilderMaxConcurrency }}
+            {{- end }}
+            {{- if .cacheS3Enabled }}
+            - -cache-s3-enabled
+            - -cache-s3-bucket={{ $cacheS3Bucket }}
+            - -cache-s3-endpoint={{ $cacheS3Endpoint }}
+            - -cache-s3-region={{ $cacheS3Region }}
+            {{- end }}
+            {{- if .cacheCdnEnabled }}
+            - -cache-cdn-enabled
+            - -cache-cdn-host={{ $cacheCdnHost }}
+            {{- if .cacheCdnTrimPrefix }}
+            - -cache-cdn-trim-prefix={{ .cacheCdnTrimPrefix }}
+            {{- end }}
+            {{- end }}
+            {{- if .containerSignatureDisabled }}
+            - -container-signature-disabled
+            {{- end }}
+            {{- if .containerSignatureIssuer }}
+            - -container-signature-issuer={{ .containerSignatureIssuer }}
+            {{- end }}
+            {{- if .containerSignatureIssuerRegexp }}
+            - -container-signature-issuer-regexp={{ .containerSignatureIssuerRegexp }}
+            {{- end }}
+            {{- if .containerSignaturePubkey }}
+            - -container-signature-pubkey={{ .containerSignaturePubkey }}
+            {{- end }}
+            {{- if .containerSignaturePubkeyHashalgo }}
+            - -container-signature-pubkey-hashalgo={{ .containerSignaturePubkeyHashalgo }}
+            {{- end }}
+            {{- if .containerSignatureSubjectRegexp }}
+            - -container-signature-subject-regexp={{ .containerSignatureSubjectRegexp }}
+            {{- end }}
+            {{- if .imageRegistry }}
+            - -image-registry={{ .imageRegistry }}
+            {{- end }}
+            {{- if .insecureCacheRepository }}
+            - -insecure-cache-repository
+            {{- end }}
+            {{- if .insecureCacheS3 }}
+            - -insecure-cache-s3
+            {{- end }}
+            {{- if .insecureImageRegistry }}
+            - -insecure-image-registry
+            {{- end }}
+            {{- if .insecureInstallerInternalRepository }}
+            - -insecure-installer-internal-repository
+            {{- end }}
+            {{- if .insecureSchematicServiceRepository }}
+            - -insecure-schematic-service-repository
+            {{- end }}
+            {{- if .installerExternalRepository }}
+            - -installer-external-repository={{ .installerExternalRepository }}
+            {{- end }}
+            {{- if .installerInternalRepository }}
+            - -installer-internal-repository={{ .installerInternalRepository }}
+            {{- end }}
+            {{- if .logLevel }}
+            - -log-level={{ .logLevel }}
+            {{- end }}
+            {{- if .minTalosVersion }}
+            - -min-talos-version={{ .minTalosVersion }}
+            {{- end }}
+            {{- if .registryRefreshInterval }}
+            - -registry-refresh-interval={{ .registryRefreshInterval }}
+            {{- end }}
+            {{- if .secureboot }}
+            - -secureboot
+            {{- end }}
+            {{- if .securebootAwsCertPath }}
+            - -secureboot-aws-cert-path={{ .securebootAwsCertPath }}
+            {{- end }}
+            {{- if .securebootAwsKmsIdKeyId }}
+            - -secureboot-aws-kms-id-key-id={{ .securebootAwsKmsIdKeyId }}
+            {{- end }}
+            {{- if .securebootAwsPcrKmsKeyId }}
+            - -secureboot-aws-pcr-kms-key-id={{ .securebootAwsPcrKmsKeyId }}
+            {{- end }}
+            {{- if .securebootAwsRegion }}
+            - -secureboot-aws-region={{ .securebootAwsRegion }}
+            {{- end }}
+            {{- if .securebootAzureCertificateName }}
+            - -secureboot-azure-certificate-name={{ .securebootAzureCertificateName }}
+            {{- end }}
+            {{- if .securebootAzureKeyName }}
+            - -secureboot-azure-key-name={{ .securebootAzureKeyName }}
+            {{- end }}
+            {{- if .securebootAzureKeyVaultUrl }}
+            - -secureboot-azure-key-vault-url={{ .securebootAzureKeyVaultUrl }}
+            {{- end }}
+            {{- if .securebootPcrKeyPath }}
+            - -secureboot-pcr-key-path={{ .securebootPcrKeyPath }}
+            {{- end }}
+            {{- if .securebootSigningCertPath }}
+            - -secureboot-signing-cert-path={{ .securebootSigningCertPath }}
+            {{- end }}
+            {{- if .securebootSigningKeyPath }}
+            - -secureboot-signing-key-path={{ .securebootSigningKeyPath }}
+            {{- end }}
+            {{- if .talosVersionsRecheckInterval }}
+            - -talos-versions-recheck-interval={{ .talosVersionsRecheckInterval }}
+            {{- end }}
+            {{- end }}
+            {{- if (default .Values.tls.enabled .Values.tls.create) }}
+            - -http-cert-file=/etc/image-factory/ssl/tls.crt
+            - -http-key-file=/etc/image-factory/ssl/tls.key
+            {{- end }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: api
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 2122
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: secret
+              mountPath: /etc/image-factory/signatures
+              readOnly: true
+            - name: scratch
+              mountPath: /tmp
+            - name: host-dev
+              mountPath: /dev
+            {{- if (default .Values.tls.enabled .Values.tls.create) }}
+            - name: tls
+              mountPath: /etc/image-factory/ssl
+              readOnly: true
+            {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

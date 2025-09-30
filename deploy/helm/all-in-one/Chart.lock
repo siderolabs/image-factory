@@ -1,0 +1,9 @@
+dependencies:
+- name: image-factory
+  repository: file://../image-factory
+  version: 0.0.0-alpha.1
+- name: registry
+  repository: file://../registry
+  version: 0.0.0-alpha.1
+digest: sha256:d595d523b7dc2afce4c43120d0f8de439e9333a9206ab5f69f2e51ac024672d2
+generated: "2025-09-30T15:57:15.646371+02:00"

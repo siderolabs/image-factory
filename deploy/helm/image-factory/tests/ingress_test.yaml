@@ -1,0 +1,118 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: Ingress
+
+templates:
+  - ingress.yaml
+
+tests:
+  - it: Should not create Ingress
+    set:
+      ingress.default.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Should not create Ingress
+    set:
+      ingress.default.enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Should render Ingress with non-default settings for Kubernetes >=1.19
+    capabilities:
+      majorVersion: 1
+      minorVersion: 19
+    set:
+      ingress:
+        default:
+          enabled: true
+          host: imageFactory
+          paths:
+            - path: /
+              pathType: Prefix
+          tls:
+            - hosts:
+                - imageFactory
+              secretName: test
+      service.port: 8080
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: apiVersion
+          value: networking.k8s.io/v1
+      - equal:
+          path: spec.rules[0].host
+          value: "imageFactory"
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: "/"
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 8080
+      - equal:
+          path: spec.tls[0].secretName
+          value: test
+
+  - it: Should render Ingress with default settings for Kubernetes >=1.19
+    capabilities:
+      majorVersion: 1
+      minorVersion: 19
+    set:
+      ingress.default:
+        enabled: true
+        host: imageFactory.example.local
+        paths:
+          - path: /
+            pathType: Prefix
+      service.port: 8080
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: apiVersion
+          value: networking.k8s.io/v1
+      - equal:
+          path: spec.rules[0].host
+          value: "imageFactory.example.local"
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: "/"
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 8080
+      - notExists:
+          path: spec.tls[0].secretName
+
+  - it: Should render TLS section if defined
+    capabilities:
+      majorVersion: 1
+      minorVersion: 19
+    set:
+      ingress.default:
+        enabled: true
+        host: tls.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+        tls:
+          - secretName: tls-secret
+            hosts:
+              - tls.example.com
+      service.port: 443
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: spec.tls[0].hosts[0]
+          value: tls.example.com
+      - equal:
+          path: spec.tls[0].secretName
+          value: tls-secret
