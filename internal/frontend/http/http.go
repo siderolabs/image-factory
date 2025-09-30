@@ -55,14 +55,15 @@ type Frontend struct {
 
 // Options configures the HTTP frontend.
 type Options struct {
-	CacheSigningKey             crypto.PrivateKey
-	ExternalURL                 *url.URL
-	ExternalPXEURL              *url.URL
-	InstallerInternalRepository name.Repository
-	InstallerExternalRepository name.Repository
-	MetricsNamespace            string
-	RemoteOptions               []remote.Option
-	RegistryRefreshInterval     time.Duration
+	CacheSigningKey                  crypto.PrivateKey
+	ExternalURL                      *url.URL
+	ExternalPXEURL                   *url.URL
+	InstallerInternalRepository      name.Repository
+	InstallerExternalRepository      name.Repository
+	MetricsNamespace                 string
+	RemoteOptions                    []remote.Option
+	RegistryRefreshInterval          time.Duration
+	ProxyInstallerInternalRepository bool
 }
 
 // NewFrontend creates a new HTTP frontend.
@@ -121,7 +122,9 @@ func NewFrontend(
 
 	// registry
 	registerRoute(frontend.router.GET, "/v2", frontend.handleHealth)
+	registerRoute(frontend.router.GET, "/v2/", frontend.handleHealth)
 	registerRoute(frontend.router.HEAD, "/v2", frontend.handleHealth)
+	registerRoute(frontend.router.HEAD, "/v2/", frontend.handleHealth)
 	registerRoute(frontend.router.GET, "/healthz", frontend.handleHealth)
 	registerRoute(frontend.router.HEAD, "/healthz", frontend.handleHealth)
 	registerRoute(frontend.router.GET, "/v2/:image/:schematic/blobs/:digest", frontend.handleBlob)

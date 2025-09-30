@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/regtransport"
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -79,7 +81,7 @@ func (img requestedImage) Name() string {
 // handleBlob handles image blob download.
 //
 // We always redirect to the external registry, as we assume the image has already been pushed.
-func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, _ *http.Request, p httprouter.Params) error {
+func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, req *http.Request, p httprouter.Params) error {
 	// verify that schematic exists
 	schematicID := p.ByName("schematic")
 
@@ -95,32 +97,47 @@ func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, _ *htt
 
 	digest := p.ByName("digest")
 
-	var redirectURL url.URL
-
-	redirectURL.Scheme = f.options.InstallerExternalRepository.Scheme()
-	redirectURL.Host = f.options.InstallerExternalRepository.Registry.Name()
-
-	location := redirectURL.JoinPath("v2", f.options.InstallerExternalRepository.RepositoryStr(), img.Name(), schematicID, "blobs", digest).String()
-
-	f.logger.Info("redirecting blob", zap.String("location", location))
-
-	w.Header().Add("Location", location)
-	w.WriteHeader(http.StatusTemporaryRedirect)
-
-	return nil
+	return f.handleExternalRegistry(w, req, img.Name(), schematicID, "blobs", digest)
 }
 
-func (f *Frontend) redirectToExternalRegistry(w http.ResponseWriter, imageName, schematicID, tagOrDigest string) error {
+func (f *Frontend) handleExternalRegistry(w http.ResponseWriter, req *http.Request, imageName, schematicID, manifestsOrBlobs, tagOrDigest string) error {
 	var redirectURL url.URL
 
-	redirectURL.Scheme = f.options.InstallerExternalRepository.Scheme()
-	redirectURL.Host = f.options.InstallerExternalRepository.Registry.Name()
+	repo := f.options.InstallerExternalRepository
+	if f.options.ProxyInstallerInternalRepository {
+		repo = f.options.InstallerInternalRepository
+	}
 
-	location := redirectURL.JoinPath("v2", f.options.InstallerExternalRepository.RepositoryStr(), imageName, schematicID, "manifests", tagOrDigest).String()
+	redirectURL.Scheme = repo.Scheme()
+	redirectURL.Host = repo.Registry.Name()
+	redirectURL.Path = "/"
 
-	f.logger.Info("redirecting manifest", zap.String("location", location))
+	location := redirectURL.JoinPath("v2", repo.RepositoryStr(), imageName, schematicID, manifestsOrBlobs, tagOrDigest)
 
-	w.Header().Add("Location", location)
+	if f.options.ProxyInstallerInternalRepository {
+		f.logger.Info("proxying manifest/blob", zap.Stringer("location", location))
+
+		proxy := &httputil.ReverseProxy{
+			Director: func(out *http.Request) {
+				out.URL.Scheme = location.Scheme
+				out.URL.Host = location.Host
+				out.URL.Path = location.Path
+				out.URL.RawPath = ""
+				out.URL.RawQuery = location.RawQuery
+				// we don't forward the host header to avoid TLS issues with some registries
+				out.Host = ""
+			},
+			Transport: remotewrap.GetTransport(),
+		}
+
+		proxy.ServeHTTP(w, req)
+
+		return nil
+	}
+
+	f.logger.Info("redirecting manifest/blob", zap.Stringer("location", location))
+
+	w.Header().Add("Location", location.String())
 	w.WriteHeader(http.StatusTemporaryRedirect)
 
 	return nil
@@ -129,7 +146,7 @@ func (f *Frontend) redirectToExternalRegistry(w http.ResponseWriter, imageName, 
 // handleManifest handles image manifest download.
 //
 // If the manifest is for the tag, we check if the image already exists, and either redirect, or build, push and redirect.
-func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ *http.Request, p httprouter.Params) error {
+func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, req *http.Request, p httprouter.Params) error {
 	schematicID := p.ByName("schematic")
 
 	schematic, err := f.schematicFactory.Get(ctx, schematicID)
@@ -146,7 +163,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 
 	// if the tag is the digest, or it doesn't look like the version, we just redirect to the external registry
 	if strings.HasPrefix(versionTag, "sha256:") || !strings.HasPrefix(versionTag, "v") {
-		return f.redirectToExternalRegistry(w, img.Name(), schematicID, versionTag)
+		return f.handleExternalRegistry(w, req, img.Name(), schematicID, "manifests", versionTag)
 	}
 
 	imageRepository := f.options.InstallerInternalRepository.Repo(
@@ -183,7 +200,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 		)
 		if signatureErr == nil {
 			// redirect to the external registry, but use the digest directly to avoid tag changes
-			return f.redirectToExternalRegistry(w, img.Name(), schematicID, extDesc.Digest.String())
+			return f.handleExternalRegistry(w, req, img.Name(), schematicID, "manifests", extDesc.Digest.String())
 		}
 
 		// log the signature verification error, but continue to build the image
@@ -232,7 +249,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, _ 
 	}
 
 	// now we can redirect to the external registry
-	return f.redirectToExternalRegistry(w, img.Name(), schematicID, manifestHash.String())
+	return f.handleExternalRegistry(w, req, img.Name(), schematicID, "manifests", manifestHash.String())
 }
 
 func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, schematic *schematic.Schematic, version semver.Version, schematicID, versionTag string) (v1.Hash, error) {

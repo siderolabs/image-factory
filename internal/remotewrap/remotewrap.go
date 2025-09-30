@@ -27,6 +27,11 @@ var transport = sync.OnceValue(func() *http.Transport {
 	return t
 })
 
+// GetTransport returns the transport used by the remote package.
+func GetTransport() *http.Transport {
+	return transport()
+}
+
 // ShutdownTransport shuts down the transport used by the remote package.
 func ShutdownTransport() {
 	transport().CloseIdleConnections()

@@ -157,7 +157,7 @@ var DefaultOptions = Options{
 	SchematicServiceRepository: "ghcr.io/siderolabs/image-factory/schematics",
 
 	InstallerInternalRepository: "ghcr.io/siderolabs",
-	InstallerExternalRepository: "ghcr.io/siderolabs",
+	InstallerExternalRepository: "", // default to proxying the internal repository
 
 	TalosVersionRecheckInterval: 15 * time.Minute,
 

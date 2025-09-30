@@ -46,7 +46,10 @@ func initFlags() cmd.Options {
 		"allow an insecure connection to the schematics repository",
 	)
 
-	flag.StringVar(&opts.InstallerExternalRepository, "installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
+	flag.StringVar(
+		&opts.InstallerExternalRepository, "installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository,
+		"image repository for the installer (external), if empty proxies the internal repository",
+	)
 	flag.StringVar(&opts.InstallerInternalRepository, "installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
 	flag.BoolVar(
 		&opts.InsecureInstallerInternalRepository,

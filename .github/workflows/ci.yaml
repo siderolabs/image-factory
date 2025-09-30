@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-09-29T15:35:06Z by kres 301c24d.
+# Generated on 2025-09-30T18:09:31Z by kres bc281a9.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -352,6 +352,65 @@ jobs:
           TEST_FLAGS: -test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache
         run: |
           make integration-direct-talos-main
+  integration-proxy-installer:
+    runs-on:
+      group: generic
+    if: github.event_name == 'pull_request'
+    needs:
+      - default
+    steps:
+      - name: gather-system-info
+        id: system-info
+        uses: kenchan0130/actions-system-info@v1.4.0
+        continue-on-error: true
+      - name: print-system-info
+        run: |
+          MEMORY_GB=$((${{ steps.system-info.outputs.totalmem }}/1024/1024/1024))
+
+          OUTPUTS=(
+            "CPU Core: ${{ steps.system-info.outputs.cpu-core }}"
+            "CPU Model: ${{ steps.system-info.outputs.cpu-model }}"
+            "Hostname: ${{ steps.system-info.outputs.hostname }}"
+            "NodeName: ${NODE_NAME}"
+            "Kernel release: ${{ steps.system-info.outputs.kernel-release }}"
+            "Kernel version: ${{ steps.system-info.outputs.kernel-version }}"
+            "Name: ${{ steps.system-info.outputs.name }}"
+            "Platform: ${{ steps.system-info.outputs.platform }}"
+            "Release: ${{ steps.system-info.outputs.release }}"
+            "Total memory: ${MEMORY_GB} GB"
+          )
+
+          for OUTPUT in "${OUTPUTS[@]}";do
+            echo "${OUTPUT}"
+          done
+        continue-on-error: true
+      - name: checkout
+        uses: actions/checkout@v5
+      - name: Unshallow
+        run: |
+          git fetch --prune --unshallow
+      - name: Set up Docker Buildx
+        id: setup-buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: remote
+          endpoint: tcp://buildkit-amd64.ci.svc.cluster.local:1234
+        timeout-minutes: 10
+      - name: integration-proxy-installer
+        if: github.event_name == 'pull_request'
+        env:
+          REGISTRY: registry.dev.siderolabs.io
+          RUN_TESTS: TestIntegrationDirect
+          TEST_FLAGS: -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache
+        run: |
+          make integration-proxy-installer
+      - name: coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: _out/coverage-integration-proxy-installer.txt
+          flags: integration-proxy-installer
+          token: ${{ secrets.CODECOV_TOKEN }}
+        timeout-minutes: 3
   integration-s3:
     runs-on:
       group: generic

@@ -50,6 +50,8 @@ import (
 )
 
 // RunFactory runs the image factory with specified options.
+//
+//nolint:gocyclo,cyclop
 func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	logger.Info("starting", zap.String("name", version.Name), zap.String("version", version.Tag), zap.String("sha", version.SHA))
 	defer logger.Info("shutting down", zap.String("name", version.Name))
@@ -118,9 +120,13 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("failed to parse internal installer repository: %w", err)
 	}
 
-	frontendOptions.InstallerExternalRepository, err = name.NewRepository(opts.InstallerExternalRepository)
-	if err != nil {
-		return fmt.Errorf("failed to parse external installer repository: %w", err)
+	if opts.InstallerExternalRepository == "" {
+		frontendOptions.ProxyInstallerInternalRepository = true
+	} else {
+		frontendOptions.InstallerExternalRepository, err = name.NewRepository(opts.InstallerExternalRepository)
+		if err != nil {
+			return fmt.Errorf("failed to parse external installer repository: %w", err)
+		}
 	}
 
 	frontendOptions.RemoteOptions = append(frontendOptions.RemoteOptions, remoteOptions()...)
