@@ -1,0 +1,45 @@
+{{- if .Values.ingress.default.enabled -}}
+{{- $svcPort := .Values.service.port -}}
+{{- $fullName := include "imageFactory.fullname" . -}}
+{{- if not (semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion) -}}
+  {{- fail "Ingress requires Kubernetes v1.19 or later" }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "imageFactory.labels" . | nindent 4 }}
+  {{- with .Values.ingress.default.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.default.className }}
+  {{- if .Values.ingress.default.tls }}
+  tls:
+    {{- range .Values.ingress.default.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      {{ with .secretName }}
+      secretName: {{ . }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.default.host | quote }}
+      http:
+        paths:
+          {{- range .Values.ingress.default.paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $fullName }}
+                port:
+                  number: {{ $svcPort }}
+          {{- end }}
+{{- end }}

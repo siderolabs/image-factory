@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/steptemplate-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: validate-core-installation
+  labels:
+    chart: image-factory
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: (join('-', [$namespace, 'aio-image-factory']))
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: (join('-', [$namespace, 'aio-image-factory']))
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: (join('-', [$namespace, 'aio-image-factory']))
+    - assert:
+        timeout: 120s
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: (join('-', [$namespace, 'aio-image-factory']))
+          status:
+            (readyReplicas == replicas): true
+            (availableReplicas == replicas): true
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: (join('-', [$namespace, 'aio-registry']))
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            # this resource is special, as we pre-set it's name in aio values
+            name: registry
+    - assert:
+        timeout: 120s
+        resource:
+          apiVersion: apps/v1
+          kind: StatefulSet
+          metadata:
+            name: (join('-', [$namespace, 'aio-registry']))
+          status:
+            (readyReplicas == replicas): true
+            (availableReplicas == replicas): true
+  catch:
+    - describe:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: (join('-', [$namespace, 'aio-image-factory']))
+    - describe:
+        apiVersion: apps/v1
+        kind: StatefulSet
+        name: (join('-', [$namespace, 'aio-registry']))
+    - podLogs:
+        namespace: ($namespace)
+        selector: app.kubernetes.io/name=image-factory
+        tail: -1
+    - podLogs:
+        namespace: ($namespace)
+        selector: app.kubernetes.io/name=registry
+        tail: -1

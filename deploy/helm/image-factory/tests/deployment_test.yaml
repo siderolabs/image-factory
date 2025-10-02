@@ -1,0 +1,210 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/schema/helm-testsuite.json
+suite: Deployment
+
+templates:
+  - deployment.yaml
+
+tests:
+  - it: Should fail to create Deployment (missing cacheRepository)
+    asserts:
+      - failedTemplate:
+          errorMessage: ".Values.config.cacheRepository is required."
+
+  - it: Should fail to create Deployment (missing schematicServiceRepository)
+    set:
+      config.cacheRepository: "registry:5000/image-factory-cache"
+    asserts:
+      - failedTemplate:
+          errorMessage: ".Values.config.schematicServiceRepository is required."
+
+  - it: Should fail to create Deployment (missing externalUrl)
+    set:
+      config:
+        cacheRepository: "registry:5000/image-factory-cache"
+        schematicServiceRepository: "registry:5000/image-factory-schematics"
+    asserts:
+      - failedTemplate:
+          errorMessage: ".Values.config.externalUrl is required."
+
+  - it: Should set replicaCount correctly
+    set:
+      replicaCount: 3
+      config:
+        cacheRepository: "registry:5000/image-factory-cache"
+        schematicServiceRepository: "registry:5000/image-factory-schematics"
+        externalUrl: "http://image-factory:8080"
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.replicas
+          value: 3
+
+  - it: Should use the default values for args
+    set:
+      image.tag: test
+      config:
+        cacheRepository: "registry:5000/image-factory-cache"
+        schematicServiceRepository: "registry:5000/image-factory-schematics"
+        externalUrl: "http://image-factory:8080"
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: spec.replicas
+          value: 1
+      - equal:
+          path: spec.template.spec.containers[0]
+          value:
+            name: image-factory
+            image: ghcr.io/siderolabs/image-factory:test
+            imagePullPolicy: IfNotPresent
+            resources: {}
+            securityContext:
+              privileged: true
+            ports:
+              - name: api
+                containerPort: 8080
+                protocol: TCP
+              - name: metrics
+                containerPort: 2122
+                protocol: TCP
+            volumeMounts:
+              - name: secret
+                mountPath: /etc/image-factory/signatures
+                readOnly: true
+              - name: scratch
+                mountPath: /tmp
+              - name: host-dev
+                mountPath: /dev
+            args:
+              - -cache-repository=registry:5000/image-factory-cache
+              - -cache-signing-key-path=/etc/image-factory/signatures/cache-signing-key.pem
+              - -external-url=http://image-factory:8080
+              - -http-port=:8080
+              - -metrics-listen-addr=:2122
+              - -schematic-service-repository=registry:5000/image-factory-schematics
+              - -asset-builder-max-concurrency=6
+              - -container-signature-issuer=https://accounts.google.com
+              - -container-signature-pubkey-hashalgo=sha256
+              - -container-signature-subject-regexp=@siderolabs\.com$
+              - -image-registry=ghcr.io
+              - -installer-external-repository=ghcr.io/siderolabs
+              - -installer-internal-repository=ghcr.io/siderolabs
+              - -log-level=info
+              - -min-talos-version=1.2.0
+              - -registry-refresh-interval=5m0s
+              - -talos-versions-recheck-interval=15m0s
+
+  - it: Should pass external URL on enabled ingress
+    set:
+      image.tag: test
+      config:
+        cacheRepository: "registry:5000/image-factory-cache"
+        schematicServiceRepository: "registry:5000/image-factory-schematics"
+      ingress.default.enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -external-url=http://image-factory.example.local
+
+  - it: Should override exetrnal URL with config value on enabled ingress
+    set:
+      image.tag: test
+      config:
+        cacheRepository: "registry:5000/image-factory-cache"
+        schematicServiceRepository: "registry:5000/image-factory-schematics"
+        externalUrl: "https://image-factory:8080"
+      ingress.default.enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -external-url=https://image-factory:8080
+
+  - it: Should pass external URL on enabled PXE ingress
+    set:
+      image.tag: test
+      config:
+        cacheRepository: "registry:5000/image-factory-cache"
+        schematicServiceRepository: "registry:5000/image-factory-schematics"
+      ingress.default.enabled: true
+      ingress.pxe.enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -external-pxe-url=http://pxe.image-factory.example.local
+
+  - it: Should override exetrnal URL with config value on enabled PXE ingress
+    set:
+      image.tag: test
+      config:
+        cacheRepository: "registry:5000/image-factory-cache"
+        schematicServiceRepository: "registry:5000/image-factory-schematics"
+        externalUrl: "image-factory:8080"
+        externalPxeUrl: "https://pxe.test.external"
+      ingress.pxe.enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -external-pxe-url=https://pxe.test.external
+
+  - it: Should pass TLS config when tls is enabled.
+    set:
+      image.tag: test
+      config:
+        cacheRepository: "registry:5000/image-factory-cache"
+        schematicServiceRepository: "registry:5000/image-factory-schematics"
+      ingress.default.enabled: true
+      ingress.pxe.enabled: true
+      tls:
+        enabled: true
+    asserts:
+      - isKind:
+          of: Deployment
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -http-cert-file=/etc/image-factory/ssl/tls.crt
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -http-key-file=/etc/image-factory/ssl/tls.key
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -external-url=https://image-factory.example.local
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -external-pxe-url=https://pxe.image-factory.example.local
+
+
+  - it: Should skip TLS config when tls is enabled.
+    set:
+      image.tag: test
+      config:
+        cacheRepository: "registry:5000/image-factory-cache"
+        schematicServiceRepository: "registry:5000/image-factory-schematics"
+      ingress.default.enabled: true
+      ingress.pxe.enabled: true
+      tls:
+        enabled: false
+    asserts:
+      - isKind:
+          of: Deployment
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: -http-cert-file=/etc/image-factory/ssl/tls.crt
+      - notContains:
+          path: spec.template.spec.containers[0].args
+          content: -http-key-file=/etc/image-factory/ssl/tls.key
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -external-url=http://image-factory.example.local
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: -external-pxe-url=http://pxe.image-factory.example.local
