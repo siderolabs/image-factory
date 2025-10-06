@@ -18,6 +18,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/julienschmidt/httprouter"
+	"github.com/siderolabs/gen/xerrors"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
@@ -29,6 +30,9 @@ import (
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
+
+// InvalidImageTag is an error tag for invalid image names.
+type InvalidImageTag struct{}
 
 // handleHealth handles registry health and auth.
 func (f *Frontend) handleHealth(_ context.Context, _ http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
@@ -70,7 +74,7 @@ func getRequestedImage(p httprouter.Params) (requestedImage, error) {
 			return requestedImage{imageName: image, platform: platform, secureboot: false}, nil
 		}
 
-		return requestedImage{}, fmt.Errorf("invalid image: %s", image)
+		return requestedImage{}, xerrors.NewTaggedf[InvalidImageTag]("invalid image: %s", image)
 	}
 }
 

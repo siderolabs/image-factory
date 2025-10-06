@@ -188,7 +188,8 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 
 			http.Error(w, err.Error(), http.StatusNotFound)
 		case xerrors.TagIs[profile.InvalidErrorTag](err),
-			xerrors.TagIs[schematicpkg.InvalidErrorTag](err):
+			xerrors.TagIs[schematicpkg.InvalidErrorTag](err),
+			xerrors.TagIs[InvalidImageTag](err):
 			level = zap.WarnLevel
 			status = http.StatusBadRequest
 
