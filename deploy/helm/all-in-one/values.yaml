@@ -1,0 +1,22 @@
+image-factory:
+  config:
+    externalUrl: https://localhost:8080
+
+    cacheRepository: registry:5000/cache
+    insecureCacheRepository: true
+
+    schematicServiceRepository: registry:5000/schematic
+    insecureSchematicServiceRepository: true
+
+    installerInternalRepository: registry:5000/siderolabs
+    insecureInstallerInternalRepository: true
+
+    installerExternalRepository: registry:5000/siderolabs
+
+    imageRegistry: registry:5000
+    insecureImageRegistry: true
+
+registry:
+  service:
+    name: registry
+    port: 5000

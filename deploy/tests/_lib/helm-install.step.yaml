@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/steptemplate-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: helm-install
+  labels:
+    chart: all-in-one
+spec:
+  bindings:
+    - name: chart
+      value: ../../helm/all-in-one
+  try:
+    - script:
+        env:
+          - name: CHART
+            value: ($chart)
+          - name: NAME
+            value: ($namespace)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ARGV
+            value: ($arguments)
+        content: |
+          export REGISTRY="${NAMESPACE}-registry.${NAMESPACE}.svc.cluster.local:5000"
+
+          helm install "${NAME}-aio" "${CHART}" \
+            --namespace "${NAMESPACE}" \
+            --create-namespace \
+            --set=config.cacheRepository="${REGISTRY}/cache" \
+            --set=config.schematicServiceRepository="${REGISTRY}/schematic" \
+            --set=config.externalUrl=http://localhost:5000 \
+            ${ARGV}
