@@ -78,7 +78,7 @@ func (w *layerWrapper) Size() (int64, error) {
 	return w.src.Size(), nil
 }
 
-// Returns the mediaType for the compressed Layer.
+// MediaType returns the mediaType for the compressed Layer.
 func (w *layerWrapper) MediaType() (types.MediaType, error) {
 	return "application/data", nil
 }

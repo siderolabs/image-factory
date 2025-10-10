@@ -142,7 +142,7 @@ func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, i
 func (m *Manager) fetchImager(tag string) error {
 	destinationPath := filepath.Join(m.storagePath, tag)
 
-	if err := m.fetchImageByTag(ImagerImage, tag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
+	if err := m.fetchImageByTag(m.options.ImagerImage, tag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
 		return untarWithPrefix(logger, r, usrInstallPrefix, destinationPath+tmpSuffix)
 	})); err != nil {
 		return err
@@ -188,15 +188,18 @@ func (m *Manager) fetchOverlayImage(arch Arch, ref OverlayRef, destPath string) 
 	return os.Rename(destPath+tmpSuffix, destPath)
 }
 
-// fetchInstallerImage fetches a Talos installer image and exports it to the storage.
-func (m *Manager) fetchInstallerImage(arch Arch, versionTag string, destPath string) error {
-	installerImage := InstallerImage
-
+// InstallerImageName returns an installer image name based on Talos version.
+func (m *Manager) InstallerImageName(versionTag string) string {
 	if quirks.New(versionTag).SupportsUnifiedInstaller() {
-		installerImage = InstallerBaseImage
+		return m.options.InstallerBaseImage
 	}
 
-	if err := m.fetchImageByTag(installerImage, versionTag, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
+	return m.options.InstallerImage
+}
+
+// fetchInstallerImage fetches a Talos installer image and exports it to the storage.
+func (m *Manager) fetchInstallerImage(arch Arch, versionTag string, destPath string) error {
+	if err := m.fetchImageByTag(m.InstallerImageName(versionTag), versionTag, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
 		return err
 	}
 
@@ -205,9 +208,7 @@ func (m *Manager) fetchInstallerImage(arch Arch, versionTag string, destPath str
 
 // fetchTalosctlImage fetches a Talosctl image and exports it to the storage.
 func (m *Manager) fetchTalosctlImage(versionTag string, destPath string) error {
-	talosctlImage := TalosctlImage
-
-	if err := m.fetchImageByTag(talosctlImage, versionTag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
+	if err := m.fetchImageByTag(m.options.TalosctlImage, versionTag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
 		return untarWithPrefix(logger, r, "", destPath+tmpSuffix)
 	})); err != nil {
 		return err

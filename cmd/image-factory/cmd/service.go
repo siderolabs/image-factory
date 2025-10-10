@@ -309,6 +309,13 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 		TalosVersionRecheckInterval: opts.TalosVersionRecheckInterval,
 		RemoteOptions:               remoteOptions(),
 		RegistryRefreshInterval:     opts.RegistryRefreshInterval,
+
+		InstallerBaseImage:     opts.Images.InstallerBaseImage,
+		InstallerImage:         opts.Images.InstallerImage,
+		ImagerImage:            opts.Images.ImagerImage,
+		ExtensionManifestImage: opts.Images.ExtensionManifestImage,
+		OverlayManifestImage:   opts.Images.OverlayManifestImage,
+		TalosctlImage:          opts.Images.TalosctlImage,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize artifacts manager: %w", err)

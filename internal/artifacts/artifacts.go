@@ -31,6 +31,14 @@ type Options struct { //nolint:govet
 	RemoteOptions []remote.Option
 	// RegistryRefreshInterval is the interval for refreshing the image registry connections.
 	RegistryRefreshInterval time.Duration
+
+	// Images used by the artifacts manager.
+	InstallerBaseImage     string
+	InstallerImage         string
+	ImagerImage            string
+	ExtensionManifestImage string
+	OverlayManifestImage   string
+	TalosctlImage          string
 }
 
 // ImageVerifyOptions are the options for verifying the image signature.
@@ -67,16 +75,6 @@ const (
 
 // FetchTimeout controls overall timeout for fetching artifacts for a release.
 const FetchTimeout = 20 * time.Minute
-
-// Various images.
-const (
-	InstallerBaseImage     = "siderolabs/installer-base"
-	InstallerImage         = "siderolabs/installer"
-	ImagerImage            = "siderolabs/imager"
-	ExtensionManifestImage = "siderolabs/extensions"
-	OverlayManifestImage   = "siderolabs/overlays"
-	TalosctlImage          = "siderolabs/talosctl-all"
-)
 
 const tmpSuffix = "-tmp"
 

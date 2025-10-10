@@ -152,7 +152,7 @@ func (w *layerWrapper) Size() (int64, error) {
 	return int64(len(w.data)), nil
 }
 
-// Returns the mediaType for the compressed Layer.
+// MediaType returns the mediaType for the compressed Layer.
 func (w *layerWrapper) MediaType() (types.MediaType, error) {
 	return SchematicMediaType, nil
 }

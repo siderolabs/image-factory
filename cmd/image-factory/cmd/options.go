@@ -110,6 +110,8 @@ type Options struct { //nolint:govet
 
 	// SecureBoot settings.
 	SecureBoot SecureBootOptions
+
+	Images ImageOptions
 }
 
 // SecureBootOptions configures SecureBoot.
@@ -134,6 +136,16 @@ type SecureBootOptions struct { //nolint:govet
 	AwsKMSPCRKeyID string
 	AwsCertPath    string
 	AwsRegion      string
+}
+
+// ImageOptions holds names of images used by the image factory.
+type ImageOptions struct {
+	InstallerBaseImage     string
+	InstallerImage         string
+	ImagerImage            string
+	ExtensionManifestImage string
+	OverlayManifestImage   string
+	TalosctlImage          string
 }
 
 // DefaultOptions are the default options.
@@ -165,4 +177,13 @@ var DefaultOptions = Options{
 	CacheS3Bucket:   "image-factory",
 
 	MetricsListenAddr: ":2122",
+
+	Images: ImageOptions{
+		InstallerBaseImage:     "siderolabs/installer-base",
+		InstallerImage:         "siderolabs/installer",
+		ImagerImage:            "siderolabs/imager",
+		ExtensionManifestImage: "siderolabs/extensions",
+		OverlayManifestImage:   "siderolabs/overlays",
+		TalosctlImage:          "siderolabs/talosctl-all",
+	},
 }

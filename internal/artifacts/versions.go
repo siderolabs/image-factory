@@ -28,7 +28,7 @@ func (m *Manager) fetchTalosVersions() (any, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
 	defer cancel()
 
-	repository := m.imageRegistry.Repo(ImagerImage)
+	repository := m.imageRegistry.Repo(m.options.ImagerImage)
 
 	candidates, err := m.pullers[ArchAmd64].List(ctx, repository)
 	if err != nil {
@@ -130,7 +130,7 @@ type overlaysDescription struct {
 func (m *Manager) fetchOfficialExtensions(tag string) error {
 	var extensions []ExtensionRef
 
-	if err := m.fetchImageByTag(ExtensionManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	if err := m.fetchImageByTag(m.options.ExtensionManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		extensions, extractErr = extractExtensionList(r)
@@ -160,7 +160,7 @@ func (m *Manager) fetchOfficialExtensions(tag string) error {
 func (m *Manager) fetchOfficialOverlays(tag string) error {
 	var overlays []OverlayRef
 
-	if err := m.fetchImageByTag(OverlayManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	if err := m.fetchImageByTag(m.options.OverlayManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		overlays, extractErr = extractOverlayList(r)
@@ -190,7 +190,7 @@ func (m *Manager) fetchOfficialOverlays(tag string) error {
 func (m *Manager) fetchTalosctlTuples(tag string) error {
 	var talosctlTuples []TalosctlTuple
 
-	if err := m.fetchImageByTag(TalosctlImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	if err := m.fetchImageByTag(m.options.TalosctlImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		talosctlTuples, extractErr = extractTalosctlTuples(r)

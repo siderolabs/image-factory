@@ -283,6 +283,7 @@ type ArtifactProducer interface {
 	GetOverlayArtifact(context.Context, artifacts.Arch, artifacts.OverlayRef, artifacts.OverlayKind) (string, error)
 	GetInstallerImage(context.Context, artifacts.Arch, string) (string, error)
 	GetTalosctlImage(context.Context, string) (string, error)
+	InstallerImageName(string) string
 }
 
 func findExtension(availableExtensions []artifacts.ExtensionRef, extensionName string) artifacts.ExtensionRef {
@@ -362,13 +363,7 @@ func EnhanceFromSchematic(
 
 	if prof.Output.Kind == profile.OutKindInstaller {
 		if installerImagePath, err := artifactProducer.GetInstallerImage(ctx, artifacts.Arch(prof.Arch), versionTag); err == nil {
-			installerImage := artifacts.InstallerImage
-
-			if quirks.New(versionTag).SupportsUnifiedInstaller() {
-				installerImage = artifacts.InstallerBaseImage
-			}
-
-			prof.Input.BaseInstaller.ImageRef = installerImage + ":" + versionTag // fake reference
+			prof.Input.BaseInstaller.ImageRef = artifactProducer.InstallerImageName(versionTag) + ":" + versionTag // fake reference
 			prof.Input.BaseInstaller.OCIPath = installerImagePath
 		} else {
 			return prof, fmt.Errorf("failed to get base installer: %w", err)

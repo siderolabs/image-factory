@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package main is the entrypoint of the image factory.
 package main
 
 import (
@@ -96,6 +95,13 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.SecureBoot.AzureKeyVaultURL, "secureboot-azure-key-vault-url", cmd.DefaultOptions.SecureBoot.AzureKeyVaultURL, "Secure Boot Azure Key Vault URL (use Azure PKI)")
 	flag.StringVar(&opts.SecureBoot.AzureCertificateName, "secureboot-azure-certificate-name", cmd.DefaultOptions.SecureBoot.AzureCertificateName, "Secure Boot Azure Key Vault certificate name (use Azure PKI)") //nolint:lll
 	flag.StringVar(&opts.SecureBoot.AzureKeyName, "secureboot-azure-key-name", cmd.DefaultOptions.SecureBoot.AzureKeyName, "Secure Boot Azure Key Vault PCR key name (use Azure PKI)")
+
+	flag.StringVar(&opts.Images.InstallerBaseImage, "installer-base-image", cmd.DefaultOptions.Images.InstallerBaseImage, "Name of image InstallerBaseImage")
+	flag.StringVar(&opts.Images.InstallerImage, "installer-image", cmd.DefaultOptions.Images.InstallerImage, "Name of image InstallerImage")
+	flag.StringVar(&opts.Images.ImagerImage, "imager-image", cmd.DefaultOptions.Images.ImagerImage, "Name of image ImagerImage")
+	flag.StringVar(&opts.Images.ExtensionManifestImage, "extension-manifest-image", cmd.DefaultOptions.Images.ExtensionManifestImage, "Name of image ExtensionManifestImage")
+	flag.StringVar(&opts.Images.OverlayManifestImage, "overlay-manifest-image", cmd.DefaultOptions.Images.OverlayManifestImage, "Name of image OverlayManifestImage")
+	flag.StringVar(&opts.Images.TalosctlImage, "talosctl-image", cmd.DefaultOptions.Images.TalosctlImage, "Name of image TalosctlImage")
 
 	opts.LogLevel = zap.LevelFlag("log-level", zap.InfoLevel, "set the logging level")
 

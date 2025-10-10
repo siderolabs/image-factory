@@ -60,7 +60,7 @@ func (s *Signer) GetVerifier() signature.Verifier {
 	return s.sv
 }
 
-// GetVerifier returns the signer for the signature.
+// GetSigner returns the signer for the signature.
 func (s *Signer) GetSigner() signature.Signer {
 	return s.sv
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 
@@ -416,6 +417,14 @@ func (mockArtifactProducer) GetOverlayArtifact(_ context.Context, _ artifacts.Ar
 
 func (mockArtifactProducer) GetTalosctlImage(_ context.Context, tag string) (string, error) {
 	return fmt.Sprintf("talosctl-all-%s.oci", tag), nil
+}
+
+func (mockArtifactProducer) InstallerImageName(versionTag string) string {
+	if quirks.New(versionTag).SupportsUnifiedInstaller() {
+		return "siderolabs/installer-base"
+	}
+
+	return "siderolabs/installer"
 }
 
 //nolint:maintidx
