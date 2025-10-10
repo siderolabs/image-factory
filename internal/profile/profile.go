@@ -20,6 +20,7 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/go-pointer"
+	"github.com/siderolabs/image-factory/internal/config"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/config/merge"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
@@ -393,7 +394,15 @@ func EnhanceFromSchematic(
 				}
 
 				if value.IsZero(extensionRef) {
-					return prof, xerrors.NewTaggedf[InvalidErrorTag]("official extension %q is not available for Talos version %s", extensionName, versionTag)
+					// try YAML-based aliases
+					if aliasedName, ok := config.GetAlias(extensionName); ok {
+						extensionRef = findExtension(availableExtensions, aliasedName)
+					} else {
+						// fallback to default aliases if no YAML config was loaded
+						if aliasedName, ok := extensionNameAlias(extensionName); ok {
+							extensionRef = findExtension(availableExtensions, aliasedName)
+						}
+					}
 				}
 
 				imagePath, err := artifactProducer.GetExtensionImage(ctx, artifacts.Arch(prof.Arch), extensionRef)
