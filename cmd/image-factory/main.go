@@ -16,6 +16,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
+	"github.com/siderolabs/image-factory/internal/config"
 )
 
 func main() {
@@ -47,6 +48,12 @@ func run() error {
 
 func runWithContext(ctx context.Context) error {
 	opts := initFlags()
+
+	if opts.ExtensionNameAlias != "" {
+		if err := config.LoadAliases(opts.ExtensionNameAlias); err != nil {
+			log.Fatalf("failed to load extension aliases: %v", err)
+		}
+	}
 
 	cfg := zap.NewProductionConfig()
 	cfg.Level = zap.NewAtomicLevelAt(*opts.LogLevel)

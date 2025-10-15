@@ -97,6 +97,8 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.SecureBoot.AzureCertificateName, "secureboot-azure-certificate-name", cmd.DefaultOptions.SecureBoot.AzureCertificateName, "Secure Boot Azure Key Vault certificate name (use Azure PKI)") //nolint:lll
 	flag.StringVar(&opts.SecureBoot.AzureKeyName, "secureboot-azure-key-name", cmd.DefaultOptions.SecureBoot.AzureKeyName, "Secure Boot Azure Key Vault PCR key name (use Azure PKI)")
 
+	flag.StringVar(&opts.ExtensionNameAlias, "extension-name-alias", cmd.DefaultOptions.ExtensionNameAlias, "Path to YAML file with extension name aliases")
+
 	opts.LogLevel = zap.LevelFlag("log-level", zap.InfoLevel, "set the logging level")
 
 	flag.Parse()

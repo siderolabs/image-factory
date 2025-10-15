@@ -110,6 +110,9 @@ type Options struct { //nolint:govet
 
 	// SecureBoot settings.
 	SecureBoot SecureBootOptions
+
+	// Path to YAML file with extension name aliases.
+	ExtensionNameAlias string
 }
 
 // SecureBootOptions configures SecureBoot.
@@ -165,4 +168,6 @@ var DefaultOptions = Options{
 	CacheS3Bucket:   "image-factory",
 
 	MetricsListenAddr: ":2122",
+
+	ExtensionNameAlias: "/etc/image-factory/aliases.yaml",
 }
