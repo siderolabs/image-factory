@@ -282,3 +282,9 @@
 
 - id: final.board_image
   translation: "Дисковый образ"
+
+- id: final.local_test_cluster
+  translation: "Локальный тестовый кластер"
+
+- id: final.local_test_cluster.prompt
+  translation: "Чтобы создать локальный тестовый кластер Talos Linux из этой идентификатора на macOS (Apple Silicon) или Linux, выполните:"

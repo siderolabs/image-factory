@@ -282,3 +282,9 @@
 
 - id: final.board_image
   translation: "Disk Image"
+
+- id: final.local_test_cluster
+  translation: "Local Test Cluster"
+
+- id: final.local_test_cluster.prompt
+  translation: "To create a local Talos Linux test cluster from this schematic on macOS (Apple Silicon) or Linux, run:"

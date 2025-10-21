@@ -46,6 +46,14 @@
         {{ template "installer-image" . }}
     </p>
 
+    {{ if not (version_less .Version "1.12.0-alpha.2") }}
+    <h2>{{ t .Localizer "final.local_test_cluster" }}</h2>
+    <p>
+        {{ t .Localizer "final.local_test_cluster.prompt" }}<br>
+        {{ template "talosctl-cluster-create" . }}
+    </p>
+    {{ end }}
+
     <h2>{{ t .Localizer "final.documentation" }}</h2>
     <ul>
         <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/what-is-new/">{{ t .Localizer "final.documentation.new" }}{{ short_version .Version }}</a></li>
@@ -167,6 +175,12 @@
     {{ else }}
         {{ .InstallerImage }}
     {{ end }}
+</span>
+{{ end }}
+
+{{ define "talosctl-cluster-create" }}
+<span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">
+    talosctl cluster create qemu --schematic-id={{ .Schematic }} --talos-version=v{{ .Version }} {{ if eq .SecureBoot "true"}}--presets=secureboot{{ end }}
 </span>
 {{ end }}
 
