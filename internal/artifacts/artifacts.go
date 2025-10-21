@@ -10,7 +10,7 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 )
 
 // Options are the options for the artifacts manager.

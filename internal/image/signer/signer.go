@@ -12,11 +12,11 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
-	"github.com/sigstore/cosign/v2/pkg/oci/empty"
-	"github.com/sigstore/cosign/v2/pkg/oci/mutate"
-	cosignremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
-	"github.com/sigstore/cosign/v2/pkg/oci/static"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/oci/empty"
+	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
+	cosignremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 

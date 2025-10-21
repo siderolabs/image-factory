@@ -26,7 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"

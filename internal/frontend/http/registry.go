@@ -19,7 +19,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xerrors"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
