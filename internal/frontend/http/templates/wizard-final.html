@@ -180,7 +180,7 @@
 
 {{ define "talosctl-cluster-create" }}
 <span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">
-    talosctl cluster create qemu --schematic-id={{ .Schematic }} --talos-version=v{{ .Version }} {{ if eq .SecureBoot "true"}}--presets=secureboot{{ end }}
+    talosctl cluster create qemu --schematic-id={{ .Schematic }} --talos-version=v{{ .Version }}
 </span>
 {{ end }}
 
