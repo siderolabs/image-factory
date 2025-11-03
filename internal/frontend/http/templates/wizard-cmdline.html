@@ -8,23 +8,28 @@
         </label>
         <input id="extra-args" name="cmdline" value="{{ .SelectedCmdline }}"
             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            placeholder="-console console=tty0"
-            >
+            placeholder="-console console=tty0">
         <input name="cmdline-set" type="hidden" value="1">
     </div>
 
     <div class="ms-2 prose dark:prose-invert prose-sm">
         <p>
-            {{ t .Localizer "customization.cmdline.description" }}<a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/reference/kernel/">{{ t .Localizer "customization.cmdline.arguments" }}</a>.
+            {{ t .Localizer "customization.cmdline.description" }}<a target="_blank"
+                href="https://www.talos.dev/{{ short_version .Version }}/reference/kernel/">{{ t .Localizer
+                "customization.cmdline.arguments" }}</a>.
         </p>
         <p>
-            {{ t .Localizer "customization.cmdline.example" }}<code>console=ttyS0,115200</code>{{ t .Localizer "customization.cmdline.prefix" }}<code>-</code>{{ t .Localizer "customization.cmdline.removes" }}<code>-console</code>).
+            {{ t .Localizer "customization.cmdline.example" }}<code>console=ttyS0,115200</code>{{ t .Localizer
+            "customization.cmdline.prefix" }}<code>-</code>{{ t .Localizer "customization.cmdline.removes"
+            }}<code>-console</code>).
         </p>
         {{ if eq .SecureBoot "true" }}
         <p>{{ t .Localizer "customization.cmdline.secure_boot" }}</p>
         {{ else if version_less .Version "v1.10.0" }}
         <p>
-            {{ t .Localizer "customization.cmdline.note" }}<code>installer</code>{{ t .Localizer "customization.cmdline.upgrade" }}<code>machine.install.extraKernelArgs</code>{{ t .Localizer "customization.cmdline.configuration" }}
+            {{ t .Localizer "customization.cmdline.note" }}<code>installer</code>{{ t .Localizer
+            "customization.cmdline.upgrade" }}<code>machine.install.extraKernelArgs</code>{{ t .Localizer
+            "customization.cmdline.configuration" }}
         </p>
         {{ end }}
         <p>
@@ -39,13 +44,14 @@
         </label>
         <textarea id="extra-overlay-options" name="overlay-options"
             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full h-16 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            placeholder="configTxtAppend: 'dtoverlay=vc4-fkms-v3d'"
-        >{{ .SelectedOverlayOptions }}</textarea>
+            placeholder="configTxtAppend: 'dtoverlay=vc4-fkms-v3d'">{{ .SelectedOverlayOptions }}</textarea>
     </div>
 
     <div class="ms-2 prose dark:prose-invert prose-sm">
         <p>
-            {{ t .Localizer "customization.overlay.description" }}<a target="_blank" href="https://github.com/{{ .BoardMeta.OverlayImage }}">{{ .BoardMeta.OverlayImage }} {{ t .Localizer "customization.overlay.name" }}</a>.
+            {{ t .Localizer "customization.overlay.description" }}<a target="_blank"
+                href="https://github.com/{{ .BoardMeta.OverlayImage }}">{{ .BoardMeta.OverlayImage }} {{ t .Localizer
+                "customization.overlay.name" }}</a>.
         </p>
         <p>
             {{ t .Localizer "customization.overlay.syntax" }}
@@ -56,8 +62,46 @@
     </div>
     {{ end }}
 
+    {{ if .SupportsBootloaderSelection }}
+    <div class="mb-6 mt-6">
+        <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            {{ t .Localizer "customization.bootloader.title" }}
+        </label>
+        <div class="flex mt-4">
+            <div class="flex items-center h-5">
+                <input id="bootloader-auto" aria-describedby="bootloader-auto-text" type="radio" name="bootloader"
+                    value="auto" {{ if or (not .SelectedBootloader) (eq .SelectedBootloader "auto" ) }}checked{{ end }}
+                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            <div class="ps-2 text-sm">
+                <label for="bootloader-auto" class="font-medium text-gray-900 dark:text-gray-300">{{ t .Localizer
+                    "customization.bootloader.auto.name" }}</label>
+                <p id="bootloader-auto-text" class="text-xs font-normal text-gray-500 dark:text-gray-300">{{ t
+                    .Localizer "customization.bootloader.auto.description" }}</p>
+            </div>
+        </div>
+        {{ template "radio-with-description" dict "name" "bootloader" "value" "sd-boot" "current"
+        .SelectedBootloader "label" (t .Localizer
+        "customization.bootloader.sd_boot.name") "description" (t
+        .Localizer "customization.bootloader.sd_boot.description") }}
+        {{ if ne .SecureBoot "true" }}
+        {{ template "radio-with-description" dict "name" "bootloader" "value" "grub" "current"
+        .SelectedBootloader "label" (t .Localizer "customization.bootloader.grub.name")
+        "description" (t
+        .Localizer "customization.bootloader.grub.description") }}
+        {{ end }}
+        {{ template "radio-with-description" dict "name" "bootloader" "value" "dual-boot" "current"
+        .SelectedBootloader "label" (t .Localizer
+        "customization.bootloader.dual_boot.name") "description" (t
+        .Localizer "customization.bootloader.dual_boot.description") }}
+    </div>
+    {{ end }}
+
     <div class="flex gap-4">
-        {{ template "back-button" (dict "Params" "target,version,platform,board,arch,secureboot,selected-extensions" "Localizer" .Localizer) }}
+        {{ template "back-button" (dict "Params"
+        "target,version,platform,board,arch,secureboot,bootloader,cmdline,cmdline-set,overlay-options,selected-extensions"
+        "Localizer" .Localizer)
+        }}
         {{ template "next-button" . }}
     </div>
 </div>

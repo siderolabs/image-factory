@@ -178,6 +178,33 @@
 - id: customization.overlay.skip
   translation: "Jeśli nie masz pewności - możesz pominąć ten krok."
 
+- id: customization.bootloader.title
+  translation: "Program rozruchowy"
+
+- id: customization.bootloader.auto.name
+  translation: "auto"
+
+- id: customization.bootloader.auto.description
+  translation: "Automatyczny wybór programu rozruchowego."
+
+- id: customization.bootloader.sd_boot.name
+  translation: "sd-boot"
+
+- id: customization.bootloader.sd_boot.description
+  translation: "Użyj systemd-boot jako programu rozruchowego, jeśli jest obsługiwany."
+
+- id: customization.bootloader.grub.name
+  translation: "grub"
+
+- id: customization.bootloader.grub.description
+  translation: "Użyj GRUB jako programu rozruchowego (nie obsługiwane z SecureBoot)."
+
+- id: customization.bootloader.dual_boot.name
+  translation: "dual-boot"
+
+- id: customization.bootloader.dual_boot.description
+  translation: "Użyj GRUB dla BIOS i systemd-boot dla systemów UEFI."
+
 - id: final.title
   translation: "Schemat gotowy"
 

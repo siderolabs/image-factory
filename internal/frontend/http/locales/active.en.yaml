@@ -178,6 +178,33 @@
 - id: customization.overlay.skip
   translation: "If unsure, you can skip this step."
 
+- id: customization.bootloader.title
+  translation: "Bootloader"
+
+- id: customization.bootloader.auto.name
+  translation: "auto"
+
+- id: customization.bootloader.auto.description
+  translation: "Automatic bootloader selection."
+
+- id: customization.bootloader.sd_boot.name
+  translation: "sd-boot"
+
+- id: customization.bootloader.sd_boot.description
+  translation: "Use systemd-boot as bootloader if supported."
+
+- id: customization.bootloader.grub.name
+  translation: "grub"
+
+- id: customization.bootloader.grub.description
+  translation: "Use GRUB as a bootloader (not supported with SecureBoot)."
+
+- id: customization.bootloader.dual_boot.name
+  translation: "dual-boot"
+
+- id: customization.bootloader.dual_boot.description
+  translation: "Use GRUB for BIOS and systemd-boot for UEFI systems."
+
 - id: final.title
   translation: "Schematic Ready"
 

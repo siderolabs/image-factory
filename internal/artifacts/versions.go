@@ -19,7 +19,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/siderolabs/gen/xslices"
 	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 func (m *Manager) fetchTalosVersions() (any, error) {

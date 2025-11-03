@@ -11,7 +11,8 @@ import (
 	"encoding/hex"
 
 	"github.com/siderolabs/gen/xerrors"
-	"gopkg.in/yaml.v3"
+	"github.com/siderolabs/talos/pkg/imager/profile"
+	"go.yaml.in/yaml/v4"
 )
 
 // Schematic represents the requested image customization.
@@ -30,6 +31,8 @@ type Customization struct {
 	Meta []MetaValue `yaml:"meta,omitempty"`
 	// SystemExtensions represents the Talos system extensions to be installed.
 	SystemExtensions SystemExtensions `yaml:"systemExtensions,omitempty"`
+	// Bootloader specifies the bootloader to be used in the image.
+	Bootloader profile.BootloaderKind `yaml:"bootloader,omitempty"`
 	// SecureBoot represents the secure boot options for the image.
 	SecureBoot SecureBootCustomization `yaml:"secureboot,omitempty"`
 }

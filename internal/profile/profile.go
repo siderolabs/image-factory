@@ -25,7 +25,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/meta"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/secureboot"
@@ -467,25 +467,51 @@ func EnhanceFromSchematic(
 		if prof.Overlay == nil && (prof.SecureBootEnabled() || quirks.New(versionTag).SupportsUnifiedInstaller()) {
 			prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
 		}
+	case profile.OutKindISO:
+		// ISO images support cmdline & META
+		setKernelArgsAndMeta(&prof, schematic)
+
+		if schematic.Customization.Bootloader != profile.BootLoaderKindNone {
+			if prof.Output.ISOOptions == nil {
+				prof.Output.ISOOptions = &profile.ISOOptions{}
+			}
+
+			prof.Output.ISOOptions.Bootloader = schematic.Customization.Bootloader
+		}
+	case profile.OutKindImage:
+		// disk images support cmdline & META
+		setKernelArgsAndMeta(&prof, schematic)
+
+		if schematic.Customization.Bootloader != profile.BootLoaderKindNone {
+			if prof.Output.ImageOptions == nil {
+				prof.Output.ImageOptions = &profile.ImageOptions{}
+			}
+
+			prof.Output.ImageOptions.Bootloader = schematic.Customization.Bootloader
+		}
 	// all other output supports cmdline & META
 	default:
-		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
-
-		prof.Customization.MetaContents = append(prof.Customization.MetaContents,
-			xslices.Map(schematic.Customization.Meta,
-				func(mv schematicpkg.MetaValue) meta.Value {
-					return meta.Value{
-						Key:   mv.Key,
-						Value: mv.Value,
-					}
-				},
-			)...,
-		)
+		setKernelArgsAndMeta(&prof, schematic)
 	}
 
 	prof.Version = versionTag
 
 	return prof, nil
+}
+
+func setKernelArgsAndMeta(prof *profile.Profile, schematic *schematicpkg.Schematic) {
+	prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
+
+	prof.Customization.MetaContents = append(prof.Customization.MetaContents,
+		xslices.Map(schematic.Customization.Meta,
+			func(mv schematicpkg.MetaValue) meta.Value {
+				return meta.Value{
+					Key:   mv.Key,
+					Value: mv.Value,
+				}
+			},
+		)...,
+	)
 }
 
 // MergeOverlayProfile merges the overlay profile into the main profile.

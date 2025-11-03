@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/u-root/u-root/pkg/cpio"
 	"github.com/ulikunitz/xz"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 type initramfsSpec struct {

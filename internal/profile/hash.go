@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/siderolabs/talos/pkg/imager/profile"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // Hash generates a hash describing Talos imager Profile.

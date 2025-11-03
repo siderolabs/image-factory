@@ -5,6 +5,7 @@
 package profile_test
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"testing"
@@ -17,7 +18,6 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/meta"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	imageprofile "github.com/siderolabs/image-factory/internal/profile"

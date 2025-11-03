@@ -15,7 +15,7 @@ import (
 
 	"github.com/siderolabs/talos/pkg/machinery/extensions"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 
 	"github.com/siderolabs/image-factory/pkg/constants"
 	"github.com/siderolabs/image-factory/pkg/schematic"

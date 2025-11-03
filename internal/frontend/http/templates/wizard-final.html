@@ -10,39 +10,41 @@
 <div class="mb-6 prose prose-sm dark:prose-invert max-w-none">
     <h2>{{ t .Localizer "final.first_boot" }}</h2>
     {{ if eq .Target "metal" }}
-        <p>{{ t .Localizer "final.first_boot.metal" }}</p>
+    <p>{{ t .Localizer "final.first_boot.metal" }}</p>
     {{ else if eq .Target "cloud" }}
-        <p>{{ t .Localizer "final.first_boot.cloud" }} {{ .PlatformMeta.Label }}:</p>
+    <p>{{ t .Localizer "final.first_boot.cloud" }} {{ .PlatformMeta.Label }}:</p>
     {{ else if eq .Target "sbc" }}
-        <p>{{ t .Localizer "final.first_boot.sbc" }} {{ .BoardMeta.Label }}:</p>
+    <p>{{ t .Localizer "final.first_boot.sbc" }} {{ .BoardMeta.Label }}:</p>
     {{ end }}
     <dl>
         {{ if or (eq .Target "metal") (eq .Target "cloud") }}
-            {{ range .PlatformMeta.BootMethods }}
-                {{ if eq . "disk-image" }}
-                    {{ template "disk-image" $ }}
-                {{ else if eq . "iso" }}
-                    {{ template "iso" $ }}
-                {{ else if eq . "pxe" }}
-                    {{ template "pxe-boot" $ }}
-                {{ end }}
-            {{ end }}
+        {{ range .PlatformMeta.BootMethods }}
+        {{ if eq . "disk-image" }}
+        {{ template "disk-image" $ }}
+        {{ else if eq . "iso" }}
+        {{ template "iso" $ }}
+        {{ else if eq . "pxe" }}
+        {{ template "pxe-boot" $ }}
+        {{ end }}
+        {{ end }}
         {{ else if eq .Target "sbc" }}
-            {{ template "board-image" . }}
+        {{ template "board-image" . }}
         {{ end }}
     </dl>
 
     {{ if or (eq .Target "metal") (and (eq .Target "cloud") .PlatformMeta.NotOnlyDiskImage) }}
-        <h2>{{ t .Localizer "final.initial_installation" }}</h2>
-        <p>
-            {{ t .Localizer "final.initial_installation.description" }}<br>
-            {{ template "installer-image" . }}
-        </p>
+    <h2>{{ t .Localizer "final.initial_installation" }}</h2>
+    <p>
+        {{ t .Localizer "final.initial_installation.description" }}<br>
+        {{ template "installer-image" . }}
+    </p>
     {{ end }}
 
     <h2>{{ t .Localizer "final.upgrading" }}</h2>
     <p>
-        {{ t .Localizer "final.upgrading.to" }}<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/upgrading-talos/" target="_blank">{{ t .Localizer "final.upgrading.name" }}</a>{{ t .Localizer "final.upgrading.description" }}<br>
+        {{ t .Localizer "final.upgrading.to" }}<a
+            href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/upgrading-talos/" target="_blank">{{ t
+            .Localizer "final.upgrading.name" }}</a>{{ t .Localizer "final.upgrading.description" }}<br>
         {{ template "installer-image" . }}
     </p>
 
@@ -56,28 +58,43 @@
 
     <h2>{{ t .Localizer "final.documentation" }}</h2>
     <ul>
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/what-is-new/">{{ t .Localizer "final.documentation.new" }}{{ short_version .Version }}</a></li>
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/support-matrix/">{{ t .Localizer "final.documentation.matrix" }}{{ short_version .Version }}</a></li>
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/getting-started/">{{ t .Localizer "final.documentation.getting_started" }}</a></li>
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/what-is-new/">{{ t
+                .Localizer "final.documentation.new" }}{{ short_version .Version }}</a></li>
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/support-matrix/">{{
+                t .Localizer "final.documentation.matrix" }}{{ short_version .Version }}</a></li>
+        <li><a target="_blank"
+                href="https://www.talos.dev/{{ short_version .Version }}/introduction/getting-started/">{{ t .Localizer
+                "final.documentation.getting_started" }}</a></li>
 
         {{ if eq .Target "metal" }}
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/network-config/">{{ t .Localizer "final.documentation.metal" }}</a></li>
+        <li><a target="_blank"
+                href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/network-config/">{{
+                t .Localizer "final.documentation.metal" }}</a></li>
         {{ else if eq .Target "cloud" }}
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}{{ .PlatformMeta.Documentation }}">{{ .PlatformMeta.Label }} {{ t .Localizer "final.documentation.cloud" }}</a></li>
+        <li><a target="_blank"
+                href="https://www.talos.dev/{{ short_version .Version }}{{ .PlatformMeta.Documentation }}">{{
+                .PlatformMeta.Label }} {{ t .Localizer "final.documentation.cloud" }}</a></li>
         {{ else if eq .Target "sbc" }}
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}{{ .BoardMeta.Documentation }}">{{ .BoardMeta.Label }} {{ t .Localizer "final.documentation.sbc" }}</a></li>
+        <li><a target="_blank"
+                href="https://www.talos.dev/{{ short_version .Version }}{{ .BoardMeta.Documentation }}">{{
+                .BoardMeta.Label }} {{ t .Localizer "final.documentation.sbc" }}</a></li>
         {{ end }}
 
         {{ if eq .SecureBoot "true" }}
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/">{{ t .Localizer "final.documentation.secure_boot" }}</a></li>
+        <li><a target="_blank"
+                href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/">{{
+                t .Localizer "final.documentation.secure_boot" }}</a></li>
         {{ end }}
 
         {{ if .ProductionGuideAvailable }}
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/prodnotes/">{{ t .Localizer "final.documentation.production" }}</a></li>
+        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/prodnotes/">{{ t
+                .Localizer "final.documentation.production" }}</a></li>
         {{ end }}
 
         {{ if .TroubleshootingGuideAvailable }}
-        <li><a target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/introduction/troubleshooting/">{{ t .Localizer "final.documentation.troubleshooting" }}</a></li>
+        <li><a target="_blank"
+                href="https://www.talos.dev/{{ short_version .Version }}/introduction/troubleshooting/">{{ t .Localizer
+                "final.documentation.troubleshooting" }}</a></li>
         {{ end }}
     </ul>
 
@@ -94,71 +111,84 @@
 </div>
 
 <div class="flex gap-4">
-    {{ template "back-button" (dict "Params" "target,version,platform,board,arch,secureboot,extensions,selected-cmdline,selected-overlay-options" "Localizer" .Localizer) }}
+    {{ template "back-button" (dict "Params"
+    "target,version,platform,board,arch,secureboot,extensions,selected-bootloader,selected-cmdline,selected-overlay-options"
+    "Localizer" .Localizer) }}
 </div>
 {{ end }}
 
 {{ define "iso" }}
-    {{ if eq .SecureBoot "true" }}
-    <dt>SecureBoot ISO</dt>
-    <dd><a href="{{ .PlatformMeta.SecureBootISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootISOPath .Arch | $.ImageBaseURL.JoinPath }}</a>
-            (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/" target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
-    </dd>
-    {{ else}}
-    <dt>ISO</dt>
-    <dd><a href="{{ .PlatformMeta.ISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.ISOPath .Arch | $.ImageBaseURL.JoinPath }}</a>
+{{ if eq .SecureBoot "true" }}
+<dt>SecureBoot ISO</dt>
+<dd><a href="{{ .PlatformMeta.SecureBootISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootISOPath
+        .Arch | $.ImageBaseURL.JoinPath }}</a>
+    (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/"
+        target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
+</dd>
+{{ else}}
+<dt>ISO</dt>
+<dd><a href="{{ .PlatformMeta.ISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.ISOPath .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
 
-        {{ if eq .Target "metal" }}
-            (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/iso/" target="_blank">{{ t .Localizer "final.disk_image.iso_docs" }}</a>)
-        {{ end }}
-    </dd>
+    {{ if eq .Target "metal" }}
+    (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/iso/"
+        target="_blank">{{ t .Localizer "final.disk_image.iso_docs" }}</a>)
     {{ end }}
+</dd>
+{{ end }}
 {{ end }}
 
 {{ define "disk-image" }}
-    {{ if eq .SecureBoot "true" }}
-        <dt>{{ t .Localizer "final.disk_image.secure_boot" }}</dt>
-        <dd><a href="{{ .PlatformMeta.SecureBootDiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootDiskImageDefaultPath .Arch |
-                $.ImageBaseURL.JoinPath }}</a>
-            {{ if eq .Target "metal" }}
-                (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/" target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
-            {{ end }}
-        </dd>
-    {{ else }}
-        {{ if eq .Target "metal" }}
-        <dt>{{ t .Localizer "final.disk_image.all" }} (raw)</dt>
-        <dd><a href="{{ .PlatformMeta.DiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.DiskImageDefaultPath .Arch |
-                $.ImageBaseURL.JoinPath }}</a>
-        </dd>
-        <dt>{{ t .Localizer "final.disk_image.all" }} (qcow2)</dt>
-        <dd><a href="{{ .PlatformMeta.DiskImagePath .Arch "qcow2" | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.DiskImagePath .Arch "qcow2" |
-                $.ImageBaseURL.JoinPath }}</a>
-        </dd>
-        {{ else }}
-        <dt>{{ t .Localizer "final.disk_image.all" }}</dt>
-        <dd><a href="{{ .PlatformMeta.DiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.DiskImageDefaultPath .Arch |
-                $.ImageBaseURL.JoinPath }}</a>
-        </dd>
-        {{ end }}
-    {{ end}}
+{{ if eq .SecureBoot "true" }}
+<dt>{{ t .Localizer "final.disk_image.secure_boot" }}</dt>
+<dd><a href="{{ .PlatformMeta.SecureBootDiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{
+        .PlatformMeta.SecureBootDiskImageDefaultPath .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+    {{ if eq .Target "metal" }}
+    (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/"
+        target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
+    {{ end }}
+</dd>
+{{ else }}
+{{ if eq .Target "metal" }}
+<dt>{{ t .Localizer "final.disk_image.all" }} (raw)</dt>
+<dd><a href="{{ .PlatformMeta.DiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{
+        .PlatformMeta.DiskImageDefaultPath .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+<dt>{{ t .Localizer "final.disk_image.all" }} (qcow2)</dt>
+<dd><a href="{{ .PlatformMeta.DiskImagePath .Arch "qcow2" | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.DiskImagePath
+        .Arch "qcow2" |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+{{ else }}
+<dt>{{ t .Localizer "final.disk_image.all" }}</dt>
+<dd><a href="{{ .PlatformMeta.DiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{
+        .PlatformMeta.DiskImageDefaultPath .Arch |
+        $.ImageBaseURL.JoinPath }}</a>
+</dd>
+{{ end }}
+{{ end}}
 {{ end }}
 
 {{ define "pxe-boot" }}
-    {{ if eq .SecureBoot "true" }}
-        <dt>{{ t .Localizer "final.pxe.secure_boot" }} (iPXE script)</dt>
-        <dd>{{ .PlatformMeta.SecureBootPXEScriptPath .Arch | $.PXEBaseURL.JoinPath }}</dd>
+{{ if eq .SecureBoot "true" }}
+<dt>{{ t .Localizer "final.pxe.secure_boot" }} (iPXE script)</dt>
+<dd>{{ .PlatformMeta.SecureBootPXEScriptPath .Arch | $.PXEBaseURL.JoinPath }}</dd>
 
-        {{ if eq .Target "metal" }}
-            (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/" target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
-        {{ end }}
-    {{ else }}
-        <dt>{{ t .Localizer "final.pxe.boot" }} (iPXE script)</dt>
-        <dd>{{ .PlatformMeta.PXEScriptPath .Arch | $.PXEBaseURL.JoinPath }}</dd>
+{{ if eq .Target "metal" }}
+(<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/"
+    target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
+{{ end }}
+{{ else }}
+<dt>{{ t .Localizer "final.pxe.boot" }} (iPXE script)</dt>
+<dd>{{ .PlatformMeta.PXEScriptPath .Arch | $.PXEBaseURL.JoinPath }}</dd>
 
-        {{ if eq .Target "metal" }}
-            (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/" target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
-        {{ end }}
-    {{ end }}
+{{ if eq .Target "metal" }}
+(<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/"
+    target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
+{{ end }}
+{{ end }}
 {{ end }}
 
 {{ define "board-image" }}
@@ -171,9 +201,9 @@
 {{ define "installer-image" }}
 <span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">
     {{ if eq .SecureBoot "true"}}
-        {{ .SecureBootInstallerImage }}
+    {{ .SecureBootInstallerImage }}
     {{ else }}
-        {{ .InstallerImage }}
+    {{ .InstallerImage }}
     {{ end }}
 </span>
 {{ end }}
@@ -214,7 +244,8 @@
 
 {{ define "secureboot-extra-assets" }}
 <dt>SecureBoot UKI</dt>
-<dd><a href="{{ .PlatformMeta.SecureBootUKIPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootUKIPath .Arch |
+<dd><a href="{{ .PlatformMeta.SecureBootUKIPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootUKIPath
+        .Arch |
         $.ImageBaseURL.JoinPath }}</a>
 </dd>
 {{ end }}

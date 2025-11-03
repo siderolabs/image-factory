@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-11-07T15:27:26Z by kres 911d166.
+# Generated on 2025-11-15T14:33:01Z by kres e1d6dac.
 
 # common variables
 
@@ -79,7 +79,7 @@ TOOLCHAIN ?= docker.io/golang:1.25-alpine
 # extra variables
 
 PKGS_PREFIX ?= ghcr.io/siderolabs
-PKGS ?= v1.12.0-alpha.0-45-gda97c36
+PKGS ?= v1.12.0
 RUN_TESTS ?= TestIntegrationCDN
 TEST_FLAGS ?=
 

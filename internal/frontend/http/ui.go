@@ -21,10 +21,11 @@ import (
 	"github.com/siderolabs/gen/maps"
 	"github.com/siderolabs/gen/value"
 	"github.com/siderolabs/gen/xslices"
+	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/platforms"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/version"
@@ -173,6 +174,7 @@ type WizardParams struct { //nolint:govet
 	Platform       string
 	Board          string
 	SecureBoot     string
+	Bootloader     string
 	Extensions     []string
 	Cmdline        string
 	CmdlineSet     bool
@@ -184,6 +186,7 @@ type WizardParams struct { //nolint:govet
 	SelectedPlatform       string
 	SelectedBoard          string
 	SelectedSecureBoot     string
+	SelectedBootloader     string
 	SelectedExtensions     []string
 	SelectedCmdline        string
 	SelectedOverlayOptions string
@@ -239,6 +242,7 @@ func WizardParamsFromRequest(r *http.Request) WizardParams {
 		Platform:       r.FormValue("platform"),
 		Board:          r.FormValue("board"),
 		SecureBoot:     r.FormValue("secureboot"),
+		Bootloader:     r.FormValue("bootloader"),
 		Extensions:     r.Form["extensions"],
 		Cmdline:        strings.TrimSpace(r.FormValue("cmdline")),
 		CmdlineSet:     r.FormValue("cmdline-set") != "",
@@ -250,6 +254,7 @@ func WizardParamsFromRequest(r *http.Request) WizardParams {
 		SelectedPlatform:       r.FormValue("selected-platform"),
 		SelectedBoard:          r.FormValue("selected-board"),
 		SelectedSecureBoot:     r.FormValue("selected-secureboot"),
+		SelectedBootloader:     r.FormValue("selected-bootloader"),
 		SelectedExtensions:     r.Form["selected-extensions"],
 		SelectedCmdline:        r.FormValue("selected-cmdline"),
 		SelectedOverlayOptions: r.FormValue("selected-overlay-options"),
@@ -323,6 +328,10 @@ func (p WizardParams) URLValues() url.Values {
 
 	if p.SecureBoot != "" {
 		values.Set("secureboot", p.SecureBoot)
+	}
+
+	if p.Bootloader != "" {
+		values.Set("bootloader", p.Bootloader)
 	}
 
 	if len(p.Extensions) > 0 {
@@ -468,15 +477,19 @@ func (f *Frontend) wizardExtensions(ctx context.Context, params WizardParams) (s
 
 // wizardCmdline handles the 'pick cmdline & overlay options' step.
 func (f *Frontend) wizardCmdline(_ context.Context, params WizardParams) (string, any, url.Values, error) {
+	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
+
 	return "wizard-cmdline",
 		struct {
 			WizardParams
 
-			OverlayOptionsEnabled bool
+			OverlayOptionsEnabled       bool
+			SupportsBootloaderSelection bool
 		}{
 			WizardParams: params,
 
-			OverlayOptionsEnabled: params.Target == TargetSBC && quirks.New(params.Version).SupportsOverlay(),
+			OverlayOptionsEnabled:       params.Target == TargetSBC && quirks.New(params.Version).SupportsOverlay(),
+			SupportsBootloaderSelection: talosVersion.GTE(semver.MustParse("1.12.0-alpha.2")),
 		},
 		params.URLValues(),
 		nil
@@ -522,6 +535,15 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 				OfficialExtensions: extensions,
 			},
 		},
+	}
+
+	if params.Bootloader != "" && params.Bootloader != "auto" {
+		bootloader, err := profile.BootloaderKindString(params.Bootloader)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("invalid bootloader %q: %w", params.Bootloader, err)
+		}
+
+		requestedSchematic.Customization.Bootloader = bootloader
 	}
 
 	schematicID, err := f.schematicFactory.Put(ctx, &requestedSchematic)

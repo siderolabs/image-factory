@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"go.yaml.in/yaml/v4"
 	"golang.org/x/text/language"
-	"gopkg.in/yaml.v3"
 )
 
 func loadLocalizerBundle() (*i18n.Bundle, error) {

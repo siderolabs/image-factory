@@ -1069,6 +1069,22 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		}
 	})
 
+	t.Run("bootloader_override", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("grub", func(t *testing.T) {
+			t.Parallel()
+
+			downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, grubBootloaderOverrideSchematicID, "v1.12.0-alpha.2", "metal-amd64.raw.zst", "application/zstd", 95*MiB, grubPartitions("v1.12.0-alpha.2"))
+		})
+
+		t.Run("sd-boot", func(t *testing.T) {
+			t.Parallel()
+
+			downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, sdBootBootloaderOverrideSchematicID, "v1.12.0-alpha.2", "metal-amd64.raw.zst", "application/zstd", 93*MiB, sdBootPartitions("v1.12.0-alpha.2"))
+		})
+	})
+
 	t.Run("invalid", func(t *testing.T) {
 		t.Parallel()
 

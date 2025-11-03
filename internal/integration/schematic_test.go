@@ -20,17 +20,20 @@ import (
 
 	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/schematic"
+	"github.com/siderolabs/talos/pkg/imager/profile"
 )
 
 // well known schematic IDs, they will be created with the test run
 const (
-	emptySchematicID               = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
-	nonexistentSchematicID         = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	extraArgsSchematicID           = "e0fb1129bbbdfb5d002e94af4cdce712a8370e850950a33a242d4c3f178c532d"
-	systemExtensionsSchematicID    = "51ff3e49313773332729a5c04e57af0dbe2e6d3f65ff638e6d4c3a05065fefff"
-	metaSchematicID                = "fe866116408a5a13dab7d5003eb57a00954ea81ebeec3fbbcd1a6d4462a00036"
-	rpiGenericOverlaySchematicID   = "ee21ef4a5ef808a9b7484cc0dda0f25075021691c8c09a276591eedb638ea1f9"
-	securebootWellKnownSchematicID = "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6"
+	emptySchematicID                    = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
+	nonexistentSchematicID              = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	extraArgsSchematicID                = "e0fb1129bbbdfb5d002e94af4cdce712a8370e850950a33a242d4c3f178c532d"
+	systemExtensionsSchematicID         = "51ff3e49313773332729a5c04e57af0dbe2e6d3f65ff638e6d4c3a05065fefff"
+	metaSchematicID                     = "fe866116408a5a13dab7d5003eb57a00954ea81ebeec3fbbcd1a6d4462a00036"
+	rpiGenericOverlaySchematicID        = "ee21ef4a5ef808a9b7484cc0dda0f25075021691c8c09a276591eedb638ea1f9"
+	securebootWellKnownSchematicID      = "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6"
+	grubBootloaderOverrideSchematicID   = "39d496b2cbdb6265d3b714514c5334bf010f1b4d31b23b9e38c80fb2f3ad7ecb"
+	sdBootBootloaderOverrideSchematicID = "9ed5fecdacb36b5c5427b87d409f1065cfb2df69b0f71c58b868d9d466d8dab3"
 )
 
 var testSchematics = map[string]*schematic.Schematic{
@@ -72,6 +75,16 @@ var testSchematics = map[string]*schematic.Schematic{
 			SecureBoot: schematic.SecureBootCustomization{
 				IncludeWellKnownCertificates: true,
 			},
+		},
+	},
+	grubBootloaderOverrideSchematicID: {
+		Customization: schematic.Customization{
+			Bootloader: profile.BootLoaderKindGrub,
+		},
+	},
+	sdBootBootloaderOverrideSchematicID: {
+		Customization: schematic.Customization{
+			Bootloader: profile.BootLoaderKindSDBoot,
 		},
 	},
 }
@@ -128,6 +141,14 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 
 	t.Run("meta", func(t *testing.T) {
 		assert.Equal(t, metaSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[metaSchematicID]))
+	})
+
+	t.Run("bootloader_override_grub", func(t *testing.T) {
+		assert.Equal(t, grubBootloaderOverrideSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[grubBootloaderOverrideSchematicID]))
+	})
+
+	t.Run("bootloader_override_sd-boot", func(t *testing.T) {
+		assert.Equal(t, sdBootBootloaderOverrideSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[sdBootBootloaderOverrideSchematicID]))
 	})
 
 	t.Run("secureboot well-known certs", func(t *testing.T) {
