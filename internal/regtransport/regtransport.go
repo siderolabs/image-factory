@@ -7,6 +7,7 @@ package regtransport
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
@@ -20,11 +21,5 @@ func IsStatusCodeError(err error, statusCodes ...int) bool {
 		return false
 	}
 
-	for _, statusCode := range statusCodes {
-		if transportError.StatusCode == statusCode {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(statusCodes, transportError.StatusCode)
 }

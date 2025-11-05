@@ -15,6 +15,7 @@ import (
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
+	"github.com/siderolabs/talos/pkg/machinery/meta"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 
@@ -343,15 +344,15 @@ func (mockArtifactProducer) GetOfficialExtensions(context.Context, string) ([]ar
 	return []artifacts.ExtensionRef{
 		{
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/amd-ucode:2023048")),
-			Digest:          "sha256:1234567890",
+			Digest:          "sha256:amd-ucode",
 		},
 		{
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/intel-ucode:20210608")),
-			Digest:          "sha256:0987654321",
+			Digest:          "sha256:intel-ucode",
 		},
 		{
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/gasket-driver:20240101")),
-			Digest:          "sha256:abcdef123456",
+			Digest:          "sha256:gasket-driver",
 		},
 		{
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-container-toolkit-lts:v535.0.0-v1.15.0")),
@@ -385,12 +386,12 @@ func (mockArtifactProducer) GetOfficialOverlays(context.Context, string) ([]arti
 		{
 			Name:            "rpi_generic",
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0")),
-			Digest:          "sha256:abcdef123456",
+			Digest:          "sha256:sbc-raspberrypi",
 		},
 		{
 			Name:            "rockpi",
 			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/sbc-rockpi:v0.2.0")),
-			Digest:          "sha256:654321fedcba",
+			Digest:          "sha256:sbc-rockpi",
 		},
 	}, nil
 }
@@ -427,30 +428,12 @@ func (mockArtifactProducer) InstallerImageName(versionTag string) string {
 	return "siderolabs/installer"
 }
 
-//nolint:maintidx
+//nolint:maintidx,gocyclo,gocognit,cyclop
 func TestEnhanceFromSchematic(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
-
-	baseProfile := profile.Default[constants.PlatformMetal].DeepCopy()
-	baseProfile.Arch = "amd64"
-
-	baseProfileArm := baseProfile.DeepCopy()
-	baseProfileArm.Arch = "arm64"
-
-	installerProfile := profile.Default["installer"].DeepCopy()
-	installerProfile.Arch = "amd64"
-
-	installerProfileArm := installerProfile.DeepCopy()
-	installerProfileArm.Arch = "arm64"
-
-	secureBootInstallerProfile := installerProfile.DeepCopy()
-	secureBootInstallerProfile.SecureBoot = pointer.To(true)
-
-	securebootISOProfile := profile.Default["secureboot-iso"].DeepCopy()
-	securebootISOProfile.Arch = installerProfile.Arch
 
 	secureBootService, err := secureboot.NewService(secureboot.Options{
 		Enabled:         true,
@@ -460,549 +443,416 @@ func TestEnhanceFromSchematic(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	for _, test := range []struct {
-		name          string
-		versionString string
-		baseProfile   profile.Profile
-
+	type testCase struct {
+		baseProfile     profile.Profile
 		expectedProfile profile.Profile
+		version         string
+		arch            string
+		extraSuffix     string
 		schematic       schematic.Schematic
-	}{
-		{
-			name:          "no customization",
-			baseProfile:   baseProfile,
-			schematic:     schematic.Schematic{},
-			versionString: "v1.5.0",
+		outputKind      profile.OutputKind
+		secureBoot      bool
+	}
 
-			expectedProfile: profile.Profile{
-				Platform:   constants.PlatformMetal,
-				SecureBoot: pointer.To(false),
-				Arch:       "amd64",
-				Version:    "v1.5.0",
-				Input: profile.Input{
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							TarballPath: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatZSTD,
-					ImageOptions: &profile.ImageOptions{
-						DiskSize:   profile.MinRAWDiskSize,
-						DiskFormat: profile.DiskFormatRaw,
-					},
-				},
-			},
-		},
-		{
-			name:        "extra kernel args",
-			baseProfile: baseProfile,
-			schematic: schematic.Schematic{
-				Customization: schematic.Customization{
-					ExtraKernelArgs: []string{"noapic", "nolapic"},
-				},
-			},
-			versionString: "v1.5.1",
+	// Helper to create base profiles
+	getBaseProfile := func(outputKind profile.OutputKind, arch string, secureBoot bool) profile.Profile {
+		profileName := outputKind.String()
 
-			expectedProfile: profile.Profile{
-				Platform:   constants.PlatformMetal,
-				SecureBoot: pointer.To(false),
-				Arch:       "amd64",
-				Version:    "v1.5.1",
-				Customization: profile.CustomizationProfile{
-					ExtraKernelArgs: []string{"noapic", "nolapic"},
-				},
-				Input: profile.Input{
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							TarballPath: "9cba8e32753f91a16c1837ab8abf356af021706ef284aef07380780177d9a06c.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatZSTD,
-					ImageOptions: &profile.ImageOptions{
-						DiskSize:   profile.MinRAWDiskSize,
-						DiskFormat: profile.DiskFormatRaw,
-					},
-				},
-			},
-		},
-		{
-			name:        "extensions",
-			baseProfile: baseProfile,
-			schematic: schematic.Schematic{
-				Customization: schematic.Customization{
-					SystemExtensions: schematic.SystemExtensions{
-						OfficialExtensions: []string{
-							"siderolabs/amd-ucode",
-							"siderolabs/intel-ucode",
-						},
-					},
-				},
-			},
-			versionString: "v1.5.1",
+		if outputKind == profile.OutKindImage {
+			profileName = constants.PlatformMetal
+		}
 
-			expectedProfile: profile.Profile{
-				Platform:      constants.PlatformMetal,
-				SecureBoot:    pointer.To(false),
-				Arch:          "amd64",
-				Version:       "v1.5.1",
-				Customization: profile.CustomizationProfile{},
-				Input: profile.Input{
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							OCIPath: "amd64-sha256:1234567890.oci",
-						},
-						{
-							OCIPath: "amd64-sha256:0987654321.oci",
-						},
-						{
-							TarballPath: "9f14d3d939d420f57d8ee3e64c4c2cd29ecb6fa10da4e1c8ac99da4b04d5e463.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatZSTD,
-					ImageOptions: &profile.ImageOptions{
-						DiskSize:   profile.MinRAWDiskSize,
-						DiskFormat: profile.DiskFormatRaw,
-					},
-				},
-			},
-		},
-		{
-			name:        "aliased nvidia extensions",
-			baseProfile: baseProfile,
-			schematic: schematic.Schematic{
-				Customization: schematic.Customization{
-					SystemExtensions: schematic.SystemExtensions{
-						OfficialExtensions: []string{
-							"siderolabs/nvidia-container-toolkit",
-							"siderolabs/nvidia-open-gpu-kernel-modules",
-							"siderolabs/nonfree-kmod-nvidia",
-							"siderolabs/nvidia-fabricmanager",
-						},
-					},
-				},
-			},
-			versionString: "v1.7.0",
+		if secureBoot {
+			profileName = "secureboot-" + profileName
+		}
 
-			expectedProfile: profile.Profile{
-				Platform:      constants.PlatformMetal,
-				SecureBoot:    pointer.To(false),
-				Arch:          "amd64",
-				Version:       "v1.7.0",
-				Customization: profile.CustomizationProfile{},
-				Input: profile.Input{
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							OCIPath: "amd64-sha256:nvidia-toolkit.oci",
-						},
-						{
-							OCIPath: "amd64-sha256:nvidia-open.oci",
-						},
-						{
-							OCIPath: "amd64-sha256:nvidia-nonfree.oci",
-						},
-						{
-							OCIPath: "amd64-sha256:nvidia-fabric.oci",
-						},
-						{
-							TarballPath: "2335edfd1451ebc3e268956e4b12f2afc5a0799a082e8ffdbbd5dc55af123a27.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatZSTD,
-					ImageOptions: &profile.ImageOptions{
-						DiskSize:   profile.MinRAWDiskSize,
-						DiskFormat: profile.DiskFormatRaw,
-					},
-				},
-			},
-		},
-		{
-			name:        "aliased i915 and amdgpu extensions",
-			baseProfile: baseProfile,
-			schematic: schematic.Schematic{
-				Customization: schematic.Customization{
-					SystemExtensions: schematic.SystemExtensions{
-						OfficialExtensions: []string{
-							"siderolabs/i915-ucode",
-							"siderolabs/amdgpu-firmware",
-						},
-					},
-				},
-			},
-			versionString: "v1.9.0",
-			expectedProfile: profile.Profile{
-				Platform:      constants.PlatformMetal,
-				SecureBoot:    pointer.To(false),
-				Arch:          "amd64",
-				Version:       "v1.9.0",
-				Customization: profile.CustomizationProfile{},
-				Input: profile.Input{
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							OCIPath: "amd64-sha256:i915-ucode.oci",
-						},
-						{
-							OCIPath: "amd64-sha256:amdgpu-firmware.oci",
-						},
-						{
-							TarballPath: "838b9b4504a5600db14dbbb2abc128c32b3fc3c145781adf8ce23b2d79e4246e.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatZSTD,
-					ImageOptions: &profile.ImageOptions{
-						DiskSize:   profile.MinRAWDiskSize,
-						DiskFormat: profile.DiskFormatRaw,
-					},
-				},
-			},
-		},
-		{
-			name:        "aliased extensions",
-			baseProfile: baseProfile,
-			schematic: schematic.Schematic{
-				Customization: schematic.Customization{
-					SystemExtensions: schematic.SystemExtensions{
-						OfficialExtensions: []string{
-							"siderolabs/amd-ucode",
-							"siderolabs/gasket",
-						},
-					},
-				},
-			},
-			versionString: "v1.5.1",
+		p := profile.Default[profileName]
 
-			expectedProfile: profile.Profile{
-				Platform:      constants.PlatformMetal,
-				SecureBoot:    pointer.To(false),
-				Arch:          "amd64",
-				Version:       "v1.5.1",
-				Customization: profile.CustomizationProfile{},
-				Input: profile.Input{
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							OCIPath: "amd64-sha256:1234567890.oci",
-						},
-						{
-							OCIPath: "amd64-sha256:abcdef123456.oci",
-						},
-						{
-							TarballPath: "dcf69eb36d2c699ce3050ef2f59fd6f70a6f2d0bf9d34585971aae4991360c89.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatZSTD,
-					ImageOptions: &profile.ImageOptions{
-						DiskSize:   profile.MinRAWDiskSize,
-						DiskFormat: profile.DiskFormatRaw,
-					},
-				},
-			},
-		},
-		{
-			name:        "installer with extensions",
-			baseProfile: installerProfile,
-			schematic: schematic.Schematic{
-				Customization: schematic.Customization{
-					SystemExtensions: schematic.SystemExtensions{
-						OfficialExtensions: []string{
-							"siderolabs/amd-ucode",
-						},
-					},
-					ExtraKernelArgs: []string{"noapic", "nolapic"}, // will be ignored (installer)
-					Meta: []schematic.MetaValue{ // will be ignored (installer)
-						{
-							Key:   0xa,
-							Value: "foo",
-						},
-					},
-				},
-			},
-			versionString: "v1.5.3",
+		p.Arch = arch
 
-			expectedProfile: profile.Profile{
-				Platform:      constants.PlatformMetal,
-				SecureBoot:    pointer.To(false),
-				Arch:          "amd64",
-				Version:       "v1.5.3",
-				Customization: profile.CustomizationProfile{},
-				Input: profile.Input{
-					BaseInstaller: profile.ContainerAsset{
-						ImageRef: "siderolabs/installer:v1.5.3",
-						OCIPath:  "installer-amd64-v1.5.3.oci",
-					},
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							OCIPath: "amd64-sha256:1234567890.oci",
-						},
-						{
-							TarballPath: "c36dec8c835049f60b10b8e02c689c47f775a07e9a9d909786e3aacb30af9675.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindInstaller,
-					OutFormat: profile.OutFormatRaw,
-				},
-			},
-		},
-		{
-			name:        "secureboot installer",
-			baseProfile: secureBootInstallerProfile,
-			schematic: schematic.Schematic{
-				Customization: schematic.Customization{
-					ExtraKernelArgs: []string{"noapic", "nolapic"},
-				},
-			},
-			versionString: "v1.5.3",
+		return p.DeepCopy()
+	}
 
-			expectedProfile: profile.Profile{
-				Platform:   constants.PlatformMetal,
-				Arch:       "amd64",
-				Version:    "v1.5.3",
-				SecureBoot: pointer.To(true),
-				Customization: profile.CustomizationProfile{
-					ExtraKernelArgs: []string{"noapic", "nolapic"},
-				},
-				Input: profile.Input{
-					SecureBoot: &profile.SecureBootAssets{
-						SecureBootSigner: profile.SigningKeyAndCertificate{
-							KeyPath:  "sign-key.pem",
-							CertPath: "sign-cert.pem",
-						},
-						PCRSigner: profile.SigningKey{
-							KeyPath: "pcr-key.pem",
-						},
-					},
-					BaseInstaller: profile.ContainerAsset{
-						ImageRef: "siderolabs/installer:v1.5.3",
-						OCIPath:  "installer-amd64-v1.5.3.oci",
-					},
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							TarballPath: "9cba8e32753f91a16c1837ab8abf356af021706ef284aef07380780177d9a06c.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindInstaller,
-					OutFormat: profile.OutFormatRaw,
-				},
-			},
-		},
-		{
-			name:          "installer 1.10",
-			baseProfile:   installerProfile,
-			versionString: "v1.10.0",
+	tests := []testCase{}
 
-			expectedProfile: profile.Profile{
-				Platform:      constants.PlatformMetal,
-				SecureBoot:    pointer.To(false),
-				Arch:          "amd64",
-				Version:       "v1.10.0",
-				Customization: profile.CustomizationProfile{},
-				Input: profile.Input{
-					BaseInstaller: profile.ContainerAsset{
-						ImageRef: "siderolabs/installer-base:v1.10.0",
-						OCIPath:  "installer-amd64-v1.10.0.oci",
-					},
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							TarballPath: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindInstaller,
-					OutFormat: profile.OutFormatRaw,
-				},
-			},
-		},
-		{
-			name:        "secureboot ISO",
-			baseProfile: securebootISOProfile,
-			schematic: schematic.Schematic{
-				Customization: schematic.Customization{
-					SecureBoot: schematic.SecureBootCustomization{
-						IncludeWellKnownCertificates: true,
-					},
-				},
-			},
-			versionString: "v1.7.1",
+	// Generate systematic test cases
+	versions := []string{"v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.9.0", "v1.10.0", "v1.11.0"}
+	archs := []string{"amd64", "arm64"}
+	secureBootStates := []bool{false, true}
+	outputKinds := []profile.OutputKind{profile.OutKindISO, profile.OutKindImage, profile.OutKindInstaller}
 
-			expectedProfile: profile.Profile{
-				Platform:      constants.PlatformMetal,
-				Arch:          "amd64",
-				Version:       "v1.7.1",
-				SecureBoot:    pointer.To(true),
-				Customization: profile.CustomizationProfile{},
-				Input: profile.Input{
-					SecureBoot: &profile.SecureBootAssets{
-						SecureBootSigner: profile.SigningKeyAndCertificate{
-							KeyPath:  "sign-key.pem",
-							CertPath: "sign-cert.pem",
-						},
-						PCRSigner: profile.SigningKey{
-							KeyPath: "pcr-key.pem",
-						},
-						IncludeWellKnownCerts: true,
-					},
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							TarballPath: "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6.tar",
-						},
-					},
-				},
-				Output: profile.Output{
-					Kind: profile.OutKindISO,
-					ISOOptions: &profile.ISOOptions{
-						SDBootEnrollKeys: profile.SDBootEnrollKeysIfSafe,
-					},
-					OutFormat: profile.OutFormatRaw,
-				},
-			},
-		},
-		{
-			name:        "disk image with overlay",
-			baseProfile: baseProfileArm,
-			schematic: schematic.Schematic{
-				Overlay: schematic.Overlay{
-					Name:  "rpi_generic",
-					Image: "ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0",
-				},
-				Customization: schematic.Customization{
-					SystemExtensions: schematic.SystemExtensions{
-						OfficialExtensions: []string{
-							"siderolabs/amd-ucode",
-							"siderolabs/intel-ucode",
-						},
-					},
-				},
-			},
-			versionString: "v1.7.0",
+	// Base tests: no extensions, no overlay
+	for _, version := range versions {
+		for _, arch := range archs {
+			for _, secureBoot := range secureBootStates {
+				for _, outputKind := range outputKinds {
+					tc := testCase{
+						version:         version,
+						arch:            arch,
+						secureBoot:      secureBoot,
+						extraSuffix:     "default",
+						outputKind:      outputKind,
+						baseProfile:     getBaseProfile(outputKind, arch, secureBoot),
+						expectedProfile: defaultExpectedProfile(version, arch, outputKind, secureBoot),
+					}
 
-			expectedProfile: profile.Profile{
-				Platform:      constants.PlatformMetal,
-				SecureBoot:    pointer.To(false),
-				Arch:          "arm64",
-				Version:       "v1.7.0",
-				Customization: profile.CustomizationProfile{},
-				Input: profile.Input{
-					OverlayInstaller: profile.ContainerAsset{
-						OCIPath: "arm64-sha256:abcdef123456.oci",
-					},
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							OCIPath: "arm64-sha256:1234567890.oci",
-						},
-						{
-							OCIPath: "arm64-sha256:0987654321.oci",
-						},
-						{
-							TarballPath: "7a1dc25b1e08495a5ff4caff05c848fe166e5f5000ed3b717b5612a9ffb0fd4c.tar",
-						},
-					},
-				},
-				Overlay: &profile.OverlayOptions{
-					Name: "rpi_generic",
-					Image: profile.ContainerAsset{
-						OCIPath: runtime.GOARCH + "-sha256:abcdef123456.oci",
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatZSTD,
-					ImageOptions: &profile.ImageOptions{
-						DiskSize:   profile.MinRAWDiskSize,
-						DiskFormat: profile.DiskFormatRaw,
-						Bootloader: profile.DiskImageBootloaderGrub,
-					},
-				},
-			},
-		},
-		{
-			name:        "installer with overlay",
-			baseProfile: installerProfileArm,
-			schematic: schematic.Schematic{
-				Overlay: schematic.Overlay{
-					Name:  "rpi_generic",
-					Image: "ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0",
-				},
-				Customization: schematic.Customization{
-					SystemExtensions: schematic.SystemExtensions{
-						OfficialExtensions: []string{
-							"siderolabs/amd-ucode",
-						},
-					},
-					ExtraKernelArgs: []string{"noapic", "nolapic"},
-				},
-			},
-			versionString: "v1.10.0",
+					tests = append(tests, tc)
+				}
+			}
+		}
+	}
 
-			expectedProfile: profile.Profile{
-				Platform:   constants.PlatformMetal,
-				SecureBoot: pointer.To(false),
-				Arch:       "arm64",
-				Version:    "v1.10.0",
-				Customization: profile.CustomizationProfile{
-					ExtraKernelArgs: []string{"noapic", "nolapic"},
-				},
-				Input: profile.Input{
-					BaseInstaller: profile.ContainerAsset{
-						ImageRef: "siderolabs/installer-base:v1.10.0",
-						OCIPath:  "installer-arm64-v1.10.0.oci",
-					},
-					OverlayInstaller: profile.ContainerAsset{
-						OCIPath: "arm64-sha256:abcdef123456.oci",
-					},
-					SystemExtensions: []profile.ContainerAsset{
-						{
-							OCIPath: "arm64-sha256:1234567890.oci",
+	// Tests with standard extensions (amd-ucode, intel-ucode) + kernel args + meta
+	for _, version := range versions {
+		for _, arch := range archs {
+			for _, secureBoot := range secureBootStates {
+				for _, outputKind := range outputKinds {
+					tc := testCase{
+						version:     version,
+						arch:        arch,
+						secureBoot:  secureBoot,
+						extraSuffix: "extensions_kernel_args_and_meta",
+						outputKind:  outputKind,
+						baseProfile: getBaseProfile(outputKind, arch, secureBoot),
+						schematic: schematic.Schematic{
+							Customization: schematic.Customization{
+								SystemExtensions: schematic.SystemExtensions{
+									OfficialExtensions: []string{
+										"siderolabs/amd-ucode",
+										"siderolabs/intel-ucode",
+									},
+								},
+								ExtraKernelArgs: []string{"noapic", "nolapic"},
+								Meta: []schematic.MetaValue{ // will be ignored (installer)
+									{
+										Key:   0xa,
+										Value: "foo",
+									},
+								},
+							},
 						},
-						{
-							TarballPath: "3a7a22dbd031ad1618c04c293432bc52547fea4168884b34bc5993e12aa08562.tar",
+
+						expectedProfile: defaultExpectedProfileWithExtensionsKernelArgs(version, arch, outputKind, secureBoot),
+					}
+
+					tests = append(tests, tc)
+				}
+			}
+		}
+	}
+
+	// Tests with overlay (arm64 only, rpi_generic, extra kernel args, extensions)
+	// here we start with v1.7.0 as overlays were introduced from that version
+	for _, version := range []string{"v1.7.0", "v1.8.0", "v1.9.0", "v1.10.0", "v1.11.0"} {
+		// skip overlays for ISO since it does not make sense for SBC's
+		for _, outputKind := range []profile.OutputKind{profile.OutKindImage, profile.OutKindInstaller} {
+			tc := testCase{
+				version: version,
+				arch:    "arm64",
+				// overlays for SBC's are never securebooted
+				secureBoot:  false,
+				extraSuffix: "extensions_kernel_args_and_rpi_overlay",
+				outputKind:  outputKind,
+				baseProfile: getBaseProfile(outputKind, "arm64", false),
+				schematic: schematic.Schematic{
+					Customization: schematic.Customization{
+						ExtraKernelArgs: []string{"noapic", "nolapic"},
+						SystemExtensions: schematic.SystemExtensions{
+							OfficialExtensions: []string{
+								"siderolabs/amd-ucode",
+								"siderolabs/intel-ucode",
+							},
+						},
+					},
+					Overlay: schematic.Overlay{
+						Name:  "rpi_generic",
+						Image: "ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0",
+					},
+				},
+				expectedProfile: defaultExpectedProfileWithOverlayExtensionsKernelArgs(version, "arm64", outputKind, false),
+			}
+
+			tests = append(tests, tc)
+		}
+	}
+
+	// Special case: aliased extensions
+	for _, version := range versions {
+		for _, arch := range archs {
+			for _, secureBoot := range secureBootStates {
+				for _, outputKind := range outputKinds {
+					tc := testCase{
+						version:     version,
+						arch:        arch,
+						secureBoot:  secureBoot,
+						extraSuffix: "aliased_extensions",
+						outputKind:  outputKind,
+						baseProfile: getBaseProfile(outputKind, arch, secureBoot),
+						schematic: schematic.Schematic{
+							Customization: schematic.Customization{
+								SystemExtensions: schematic.SystemExtensions{
+									OfficialExtensions: []string{
+										"siderolabs/nvidia-container-toolkit",
+										"siderolabs/nvidia-open-gpu-kernel-modules",
+										"siderolabs/nonfree-kmod-nvidia",
+										"siderolabs/nvidia-fabricmanager",
+										"siderolabs/i915-ucode",
+										"siderolabs/amdgpu-firmware",
+									},
+								},
+							},
+						},
+
+						expectedProfile: defaultExpectedProfileAliasedExtensions(version, arch, outputKind, secureBoot),
+					}
+
+					tests = append(tests, tc)
+				}
+			}
+		}
+	}
+
+	// Special case: secureboot ISO with well-known certs
+	for _, version := range versions {
+		for _, arch := range archs {
+			tc := testCase{
+				version:     version,
+				arch:        arch,
+				secureBoot:  true,
+				extraSuffix: "include_wellknown_certs",
+				outputKind:  profile.OutKindISO,
+				baseProfile: getBaseProfile(profile.OutKindISO, arch, true),
+				schematic: schematic.Schematic{
+					Customization: schematic.Customization{
+						SecureBoot: schematic.SecureBootCustomization{
+							IncludeWellKnownCertificates: true,
 						},
 					},
 				},
-				Overlay: &profile.OverlayOptions{
-					Name: "rpi_generic",
-					Image: profile.ContainerAsset{
-						OCIPath: runtime.GOARCH + "-sha256:abcdef123456.oci",
-					},
-				},
-				Output: profile.Output{
-					Kind:      profile.OutKindInstaller,
-					OutFormat: profile.OutFormatRaw,
-					ImageOptions: &profile.ImageOptions{
-						Bootloader: profile.DiskImageBootloaderGrub,
-					},
-				},
-			},
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
+
+				expectedProfile: defaultExpectedProfileSecurebootWellKnownKeysIncluded(version, arch, profile.OutKindISO),
+			}
+
+			tests = append(tests, tc)
+		}
+	}
+
+	for _, tc := range tests {
+		if tc.extraSuffix == "" {
+			t.Fatalf("extraSuffix must be set to generate unique test names")
+		}
+
+		name := generateTestName(tc.version, tc.arch, tc.outputKind.String(), tc.extraSuffix, tc.secureBoot)
+
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			actualProfile, err := imageprofile.EnhanceFromSchematic(ctx, test.baseProfile, &test.schematic, mockArtifactProducer{}, secureBootService, test.versionString)
+			actualProfile, err := imageprofile.EnhanceFromSchematic(ctx, tc.baseProfile, &tc.schematic, mockArtifactProducer{}, secureBootService, tc.version)
 			require.NoError(t, err)
-			require.Equal(t, test.expectedProfile, actualProfile)
+			require.Equal(t, tc.expectedProfile, actualProfile)
 		})
 	}
+}
+
+func generateTestName(version, arch, outputKind, extraSuffix string, secureBoot bool) string {
+	name := fmt.Sprintf("%s-%s", version, arch)
+
+	if secureBoot {
+		name += "-secureboot"
+	}
+
+	name += fmt.Sprintf("-%s", outputKind)
+
+	if extraSuffix != "" {
+		name += fmt.Sprintf("-%s", extraSuffix)
+	}
+
+	return name
+}
+
+func defaultExpectedProfile(version, arch string, outKind profile.OutputKind, secureboot bool) profile.Profile {
+	prof := profile.Profile{
+		Platform:   constants.PlatformMetal,
+		SecureBoot: pointer.To(secureboot),
+		Arch:       arch,
+		Version:    version,
+		Input: profile.Input{
+			SystemExtensions: []profile.ContainerAsset{
+				{
+					TarballPath: "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba.tar",
+				},
+			},
+		},
+	}
+
+	switch outKind { //nolint:exhaustive
+	case profile.OutKindISO:
+		prof.Output = profile.Output{
+			Kind:      profile.OutKindISO,
+			OutFormat: profile.OutFormatRaw,
+		}
+
+		if secureboot {
+			prof.Output.ISOOptions = &profile.ISOOptions{}
+		}
+	case profile.OutKindImage:
+		prof.Output = profile.Output{
+			Kind:      profile.OutKindImage,
+			OutFormat: profile.OutFormatZSTD,
+			ImageOptions: &profile.ImageOptions{
+				DiskSize:   profile.MinRAWDiskSize,
+				DiskFormat: profile.DiskFormatRaw,
+				Bootloader: profile.DiskImageBootloaderDualBoot,
+			},
+		}
+	case profile.OutKindInstaller:
+		prof.Output = profile.Output{
+			Kind:      profile.OutKindInstaller,
+			OutFormat: profile.OutFormatRaw,
+		}
+
+		prof.Input.BaseInstaller.OCIPath = fmt.Sprintf("installer-%s-%s.oci", arch, version)
+		prof.Input.BaseInstaller.ImageRef = fmt.Sprintf("siderolabs/installer:%s", version)
+
+		if quirks.New(version).SupportsUnifiedInstaller() {
+			prof.Input.BaseInstaller.ImageRef = fmt.Sprintf("siderolabs/installer-base:%s", version)
+		}
+	}
+
+	if secureboot {
+		prof.Input.SecureBoot = &profile.SecureBootAssets{
+			SecureBootSigner: profile.SigningKeyAndCertificate{
+				KeyPath:  "sign-key.pem",
+				CertPath: "sign-cert.pem",
+			},
+			PCRSigner: profile.SigningKey{
+				KeyPath: "pcr-key.pem",
+			},
+		}
+	}
+
+	return prof
+}
+
+func defaultExpectedProfileWithExtensionsKernelArgs(version, arch string, outKind profile.OutputKind, secureboot bool) profile.Profile {
+	prof := defaultExpectedProfile(version, arch, outKind, secureboot)
+
+	prof.Input.SystemExtensions = []profile.ContainerAsset{
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:amd-ucode.oci", arch),
+		},
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:intel-ucode.oci", arch),
+		},
+		{
+			TarballPath: "6ba13d510dcc57f233b9b498d34a3c919c1abdd5675b46ad53cf4f2e66362f82.tar",
+		},
+	}
+
+	switch outKind { //nolint:exhaustive
+	case profile.OutKindISO, profile.OutKindImage:
+		prof.Customization.ExtraKernelArgs = []string{"noapic", "nolapic"}
+		prof.Customization.MetaContents = meta.Values{
+			{
+				Key:   10,
+				Value: "foo",
+			},
+		}
+	case profile.OutKindInstaller:
+		if secureboot || quirks.New(version).SupportsUnifiedInstaller() {
+			prof.Customization.ExtraKernelArgs = []string{"noapic", "nolapic"}
+		}
+	}
+
+	return prof
+}
+
+func defaultExpectedProfileWithOverlayExtensionsKernelArgs(version, arch string, outKind profile.OutputKind, secureboot bool) profile.Profile {
+	prof := defaultExpectedProfile(version, arch, outKind, secureboot)
+
+	prof.Input.OverlayInstaller = profile.ContainerAsset{
+		OCIPath: "arm64-sha256:sbc-raspberrypi.oci",
+	}
+
+	prof.Overlay = &profile.OverlayOptions{
+		Name: "rpi_generic",
+		Image: profile.ContainerAsset{
+			OCIPath: runtime.GOARCH + "-sha256:sbc-raspberrypi.oci",
+		},
+	}
+
+	prof.Input.SystemExtensions = []profile.ContainerAsset{
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:amd-ucode.oci", arch),
+		},
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:intel-ucode.oci", arch),
+		},
+		{
+			TarballPath: "1da25204d18e6db95cb65ce2e38424b2ad94b2519a53aef34e45f07cc73ca5e8.tar",
+		},
+	}
+
+	switch outKind { //nolint:exhaustive
+	case profile.OutKindImage:
+		prof.Customization.ExtraKernelArgs = []string{"noapic", "nolapic"}
+
+		prof.Output.ImageOptions = &profile.ImageOptions{
+			DiskSize:   profile.MinRAWDiskSize,
+			DiskFormat: profile.DiskFormatRaw,
+			Bootloader: profile.DiskImageBootloaderGrub,
+		}
+	case profile.OutKindInstaller:
+		prof.Output.ImageOptions = &profile.ImageOptions{
+			Bootloader: profile.DiskImageBootloaderGrub,
+		}
+	}
+
+	return prof
+}
+
+func defaultExpectedProfileAliasedExtensions(version, arch string, outKind profile.OutputKind, secureboot bool) profile.Profile {
+	prof := defaultExpectedProfile(version, arch, outKind, secureboot)
+
+	prof.Input.SystemExtensions = []profile.ContainerAsset{
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:nvidia-toolkit.oci", arch),
+		},
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:nvidia-open.oci", arch),
+		},
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:nvidia-nonfree.oci", arch),
+		},
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:nvidia-fabric.oci", arch),
+		},
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:i915-ucode.oci", arch),
+		},
+		{
+			OCIPath: fmt.Sprintf("%s-sha256:amdgpu-firmware.oci", arch),
+		},
+		{
+			TarballPath: "42c5a897579913a97ad7edc56c0d858bc4dd8639951e02b084edbb2e190a7898.tar",
+		},
+	}
+
+	return prof
+}
+
+func defaultExpectedProfileSecurebootWellKnownKeysIncluded(version, arch string, outKind profile.OutputKind) profile.Profile {
+	prof := defaultExpectedProfile(version, arch, outKind, true)
+
+	prof.Input.SystemExtensions = []profile.ContainerAsset{
+		{
+			TarballPath: "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6.tar",
+		},
+	}
+
+	prof.Input.SecureBoot.IncludeWellKnownCerts = true
+
+	return prof
 }
 
 func TestInstallerProfile(t *testing.T) {

@@ -462,8 +462,9 @@ func EnhanceFromSchematic(
 	// skip customizations for initramfs/kernel completely since it cannot support extra kernel args & META
 	case profile.OutKindInitramfs, profile.OutKindKernel:
 	// installer and UKI support extra kernel args if either secure boot is enabled or the version supports unified installer
+	// this is not supported for overlays since they don't use Unified Kernel Images.
 	case profile.OutKindInstaller, profile.OutKindUKI:
-		if prof.SecureBootEnabled() || quirks.New(versionTag).SupportsUnifiedInstaller() {
+		if prof.Overlay == nil && (prof.SecureBootEnabled() || quirks.New(versionTag).SupportsUnifiedInstaller()) {
 			prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
 		}
 	// all other output supports cmdline & META

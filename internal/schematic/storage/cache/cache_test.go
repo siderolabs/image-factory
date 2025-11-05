@@ -36,7 +36,7 @@ func (s *mockStorage) Get(_ context.Context, id string) ([]byte, error) {
 	case "failing":
 		return nil, fmt.Errorf("failing")
 	default:
-		return []byte(fmt.Sprintf("%s-%d", id, counter)), nil
+		return fmt.Appendf(nil, "%s-%d", id, counter), nil
 	}
 }
 

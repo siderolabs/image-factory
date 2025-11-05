@@ -2,11 +2,11 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-10-17T16:18:55Z by kres 46e133d.
+# Generated on 2025-11-05T13:37:53Z by kres cd5a938-dirty.
 
-ARG TOOLCHAIN
-ARG PKGS_PREFIX
-ARG PKGS
+ARG TOOLCHAIN=scratch
+ARG PKGS_PREFIX=scratch
+ARG PKGS=scratch
 
 # runs markdownlint
 FROM docker.io/oven/bun:1.3.0-alpine AS lint-markdown
