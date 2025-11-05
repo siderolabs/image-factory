@@ -56,10 +56,6 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error enhancing profile from schematic: %w", err)
 	}
 
-	if err = prof.Validate(); err != nil {
-		return fmt.Errorf("error validating profile: %w", err)
-	}
-
 	asset, err := f.assetBuilder.Build(ctx, prof, version.String(), path)
 	if err != nil {
 		return err

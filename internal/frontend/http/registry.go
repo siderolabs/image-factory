@@ -269,10 +269,6 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 			return v1.Hash{}, fmt.Errorf("error enhancing profile from schematic: %w", err)
 		}
 
-		if err = prof.Validate(); err != nil {
-			return v1.Hash{}, fmt.Errorf("error validating profile: %w", err)
-		}
-
 		var asset asset.BootAsset
 
 		asset, err = f.assetBuilder.Build(ctx, prof, version.String(), img.Name())

@@ -702,7 +702,7 @@ func defaultExpectedProfile(version, arch string, outKind profile.OutputKind, se
 			ImageOptions: &profile.ImageOptions{
 				DiskSize:   profile.MinRAWDiskSize,
 				DiskFormat: profile.DiskFormatRaw,
-				Bootloader: profile.DiskImageBootloaderDualBoot,
+				Bootloader: profile.BootLoaderKindNone,
 			},
 		}
 	case profile.OutKindInstaller:
@@ -800,11 +800,11 @@ func defaultExpectedProfileWithOverlayExtensionsKernelArgs(version, arch string,
 		prof.Output.ImageOptions = &profile.ImageOptions{
 			DiskSize:   profile.MinRAWDiskSize,
 			DiskFormat: profile.DiskFormatRaw,
-			Bootloader: profile.DiskImageBootloaderGrub,
+			Bootloader: profile.BootLoaderKindGrub,
 		}
 	case profile.OutKindInstaller:
 		prof.Output.ImageOptions = &profile.ImageOptions{
-			Bootloader: profile.DiskImageBootloaderGrub,
+			Bootloader: profile.BootLoaderKindGrub,
 		}
 	}
 

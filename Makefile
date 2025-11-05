@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-11-06T11:57:50Z by kres 4ba9b0c.
+# Generated on 2025-11-07T15:27:26Z by kres 911d166.
 
 # common variables
 
@@ -24,9 +24,9 @@ VTPROTOBUF_VERSION ?= 0.6.0
 GOIMPORTS_VERSION ?= 0.38.0
 GOMOCK_VERSION ?= 0.6.0
 DEEPCOPY_VERSION ?= v0.5.8
-GOLANGCILINT_VERSION ?= v2.5.0
-GOFUMPT_VERSION ?= v0.9.1
-GO_VERSION ?= 1.25.3
+GOLANGCILINT_VERSION ?= v2.6.1
+GOFUMPT_VERSION ?= v0.9.2
+GO_VERSION ?= 1.25.4
 GO_BUILDFLAGS ?=
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
@@ -79,7 +79,7 @@ TOOLCHAIN ?= docker.io/golang:1.25-alpine
 # extra variables
 
 PKGS_PREFIX ?= ghcr.io/siderolabs
-PKGS ?= v1.11.0-18-g1a25681
+PKGS ?= v1.12.0-alpha.0-45-gda97c36
 RUN_TESTS ?= TestIntegrationCDN
 TEST_FLAGS ?=
 

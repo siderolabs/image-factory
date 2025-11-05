@@ -2,14 +2,14 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-11-06T11:57:50Z by kres 4ba9b0c.
+# Generated on 2025-11-07T15:27:03Z by kres 911d166.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
 ARG PKGS=scratch
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.0-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.1-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.45.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .

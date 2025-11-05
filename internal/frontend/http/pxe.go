@@ -58,10 +58,6 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 		return fmt.Errorf("error enhancing profile from schematic: %w", err)
 	}
 
-	if err = prof.Validate(); err != nil {
-		return fmt.Errorf("error validating profile: %w", err)
-	}
-
 	// build the cmdline
 	asset, err := f.assetBuilder.Build(ctx, prof, version.String(), path)
 	if err != nil {
