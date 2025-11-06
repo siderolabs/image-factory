@@ -11,7 +11,9 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/siderolabs/gen/xerrors"
 
+	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -46,4 +48,31 @@ func (f *Frontend) handleSchematicCreate(ctx context.Context, w http.ResponseWri
 	}
 
 	return json.NewEncoder(w).Encode(resp)
+}
+
+// handleSchematicGet handles retrieval of the schematic.
+func (f *Frontend) handleSchematicGet(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+	schematicID := p.ByName("schematic")
+
+	schematic, err := f.schematicFactory.Get(ctx, schematicID)
+	if err != nil {
+		if xerrors.TagIs[storage.ErrNotFoundTag](err) {
+			http.Error(w, "schematic not found", http.StatusNotFound)
+
+			return nil
+		}
+
+		return err
+	}
+
+	marshaled, err := schematic.Marshal()
+	if err != nil {
+		return err
+	}
+
+	w.Header().Add("Content-Type", "application/yaml")
+
+	_, err = w.Write(marshaled)
+
+	return err
 }

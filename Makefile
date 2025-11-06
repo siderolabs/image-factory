@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-10-17T16:18:55Z by kres 46e133d.
+# Generated on 2025-11-06T11:57:50Z by kres 4ba9b0c.
 
 # common variables
 
@@ -208,39 +208,39 @@ unit-tests-race:  ## Performs unit tests with race detection enabled.
 	@$(MAKE) target-$@
 
 .PHONY: integration-direct
-integration-direct: integration-direct.test
+integration-direct: integration.test
 	@$(MAKE) image-image-factory PUSH=true
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-direct.test:/bin/integration-direct.test:ro --entrypoint /bin/integration-direct.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: integration-s3
-integration-s3: integration-s3.test
+integration-s3: integration.test
 	@$(MAKE) image-image-factory PUSH=true
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-s3.test:/bin/integration-s3.test:ro --entrypoint /bin/integration-s3.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: integration-cdn
-integration-cdn: integration-cdn.test
+integration-cdn: integration.test
 	@$(MAKE) image-image-factory PUSH=true
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-cdn.test:/bin/integration-cdn.test:ro --entrypoint /bin/integration-cdn.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: integration-proxy-installer
-integration-proxy-installer: integration-direct.test
+integration-proxy-installer: integration.test
 	@$(MAKE) image-image-factory PUSH=true
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-direct.test:/bin/integration-direct.test:ro --entrypoint /bin/integration-direct.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: $(ARTIFACTS)/image-factory-linux-amd64
@@ -280,16 +280,8 @@ imager-base:
 .PHONY: imager-tools
 imager-tools:
 
-.PHONY: integration-cdn.test
-integration-cdn.test:
-	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
-
-.PHONY: integration-direct.test
-integration-direct.test:
-	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
-
-.PHONY: integration-s3.test
-integration-s3.test:
+.PHONY: integration.test
+integration.test:
 	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
 
 .PHONY: update-to-talos-main

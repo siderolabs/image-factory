@@ -25,6 +25,7 @@ import (
 // well known schematic IDs, they will be created with the test run
 const (
 	emptySchematicID               = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
+	nonexistentSchematicID         = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	extraArgsSchematicID           = "e0fb1129bbbdfb5d002e94af4cdce712a8370e850950a33a242d4c3f178c532d"
 	systemExtensionsSchematicID    = "51ff3e49313773332729a5c04e57af0dbe2e6d3f65ff638e6d4c3a05065fefff"
 	metaSchematicID                = "fe866116408a5a13dab7d5003eb57a00954ea81ebeec3fbbcd1a6d4462a00036"
@@ -80,6 +81,11 @@ func createSchematicGetID(ctx context.Context, t *testing.T, c *client.Client, s
 
 	id, err := c.SchematicCreate(ctx, schematic)
 	require.NoError(t, err)
+
+	// get the shematic back and compare
+	retrieved, err := c.SchematicGet(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, &schematic, retrieved)
 
 	return id
 }
@@ -138,6 +144,12 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 
 	t.Run("invalid", func(t *testing.T) {
 		assert.Equal(t, "yaml: unmarshal errors:\n  line 1: field something not found in type schematic.Schematic\n", createSchematicInvalid(ctx, t, baseURL, []byte(`something:`)))
+	})
+
+	t.Run("nonexistent get", func(t *testing.T) {
+		_, err := c.SchematicGet(ctx, nonexistentSchematicID)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "schematic not found")
 	})
 
 	t.Run("new schematic", func(t *testing.T) {

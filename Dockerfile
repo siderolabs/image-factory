@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-11-05T13:37:53Z by kres cd5a938-dirty.
+# Generated on 2025-11-06T11:57:50Z by kres 4ba9b0c.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -177,16 +177,8 @@ RUN mkdir -p internal/version/data && \
     echo -n ${TAG} > internal/version/data/tag
 
 # builds the integration test binary
-FROM base AS integration-cdn-build
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_cdn ./internal/integration
-
-# builds the integration test binary
-FROM base AS integration-direct-build
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_direct ./internal/integration
-
-# builds the integration test binary
-FROM base AS integration-s3-build
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_s3 ./internal/integration
+FROM base AS integration-build
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
 
 # runs gofumpt
 FROM base AS lint-gofumpt
@@ -237,16 +229,8 @@ RUN echo -n 'undefined' > internal/version/data/sha && \
     echo -n ${ABBREV_TAG} > internal/version/data/tag
 
 # copies out the integration test binary
-FROM scratch AS integration-cdn.test
-COPY --from=integration-cdn-build /src/integration.test /integration-cdn.test
-
-# copies out the integration test binary
-FROM scratch AS integration-direct.test
-COPY --from=integration-direct-build /src/integration.test /integration-direct.test
-
-# copies out the integration test binary
-FROM scratch AS integration-s3.test
-COPY --from=integration-s3-build /src/integration.test /integration-s3.test
+FROM scratch AS integration.test
+COPY --from=integration-build /src/integration.test /integration.test
 
 # clean golangci-lint fmt output
 FROM scratch AS lint-golangci-lint-fmt

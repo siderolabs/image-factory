@@ -61,6 +61,13 @@ Well-known schematic IDs:
 
 * `376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba` - default schematic (without any customizations)
 
+### `GET /schematics/:schematic`
+
+Retrieve a specific schematic by its ID.
+
+If the schematic is found, the response body contains the YAML-encoded schematic representation.
+Otherwise a `404 Not Found` status code is returned.
+
 ### `GET /image/:schematic/:version/:path`
 
 Download a Talos Linux boot image with the specified schematic and Talos Linux version.

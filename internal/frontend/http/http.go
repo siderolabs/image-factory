@@ -135,6 +135,7 @@ func NewFrontend(
 
 	// schematic
 	registerRoute(frontend.router.POST, "/schematics", frontend.handleSchematicCreate)
+	registerRoute(frontend.router.GET, "/schematics/:schematic", frontend.handleSchematicGet)
 
 	// meta
 	registerRoute(frontend.router.GET, "/versions", frontend.handleVersions)

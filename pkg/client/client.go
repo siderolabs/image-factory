@@ -82,6 +82,16 @@ func (c *Client) SchematicCreate(ctx context.Context, schematic schematic.Schema
 	return response.ID, nil
 }
 
+func (c *Client) SchematicGet(ctx context.Context, schematicID string) (*schematic.Schematic, error) {
+	var response schematic.Schematic
+
+	if err := c.do(ctx, http.MethodGet, "/schematics/"+schematicID, nil, &response, nil); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
 // Versions gets the list of Talos versions available.
 func (c *Client) Versions(ctx context.Context) ([]string, error) {
 	var versions []string
@@ -143,9 +153,26 @@ func (c *Client) do(ctx context.Context, method, uri string, requestData []byte,
 	}
 
 	if responseData != nil {
-		decoder := json.NewDecoder(resp.Body)
+		switch v := responseData.(type) {
+		case *schematic.Schematic:
+			data, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return err
+			}
 
-		return decoder.Decode(responseData)
+			retrieved, err := schematic.Unmarshal(data)
+			if err != nil {
+				return err
+			}
+
+			*v = *retrieved
+
+			return nil
+		default:
+			decoder := json.NewDecoder(resp.Body)
+
+			return decoder.Decode(responseData)
+		}
 	}
 
 	return nil

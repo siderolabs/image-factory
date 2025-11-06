@@ -60,11 +60,7 @@ spec:
       toplevel: true
     - name: imager-tools
       toplevel: true
-    - name: integration-cdn.test
-      toplevel: true
-    - name: integration-direct.test
-      toplevel: true
-    - name: integration-s3.test
+    - name: integration.test
       toplevel: true
     - name: integration-direct
       toplevel: true
@@ -305,83 +301,27 @@ spec:
               dst: /
 ---
 kind: custom.Step
-name: integration-direct.test
+name: integration.test
 spec:
   docker:
     enabled: true
     stages:
-      - name: integration-direct-build
+      - name: integration-build
         description: builds the integration test binary
         from: base
         steps:
           - script:
-              command: go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_direct ./internal/integration
+              command: go test -c -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
               cache:
                 - /root/.cache/go-build
                 - /go/pkg
-      - name: integration-direct.test
+      - name: integration.test
         description: copies out the integration test binary
         steps:
           - copy:
-              from: integration-direct-build
+              from: integration-build
               src: /src/integration.test
-              dst: /integration-direct.test
-  makefile:
-    enabled: true
-    phony: true
-    script:
-      - "@$(MAKE) local-$@ DEST=$(ARTIFACTS)"
----
-kind: custom.Step
-name: integration-s3.test
-spec:
-  docker:
-    enabled: true
-    stages:
-      - name: integration-s3-build
-        description: builds the integration test binary
-        from: base
-        steps:
-          - script:
-              command: go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_s3 ./internal/integration
-              cache:
-                - /root/.cache/go-build
-                - /go/pkg
-      - name: integration-s3.test
-        description: copies out the integration test binary
-        steps:
-          - copy:
-              from: integration-s3-build
-              src: /src/integration.test
-              dst: /integration-s3.test
-  makefile:
-    enabled: true
-    phony: true
-    script:
-      - "@$(MAKE) local-$@ DEST=$(ARTIFACTS)"
----
-kind: custom.Step
-name: integration-cdn.test
-spec:
-  docker:
-    enabled: true
-    stages:
-      - name: integration-cdn-build
-        description: builds the integration test binary
-        from: base
-        steps:
-          - script:
-              command: go test -c -covermode=atomic -coverpkg=./... -tags integration,integration_cdn ./internal/integration
-              cache:
-                - /root/.cache/go-build
-                - /go/pkg
-      - name: integration-cdn.test
-        description: copies out the integration test binary
-        steps:
-          - copy:
-              from: integration-cdn-build
-              src: /src/integration.test
-              dst: /integration-cdn.test
+              dst: /integration.test
   makefile:
     enabled: true
     phony: true
@@ -432,13 +372,13 @@ spec:
     enabled: true
     phony: true
     depends:
-      - integration-direct.test
+      - integration.test
     script:
       - "@$(MAKE) image-image-factory PUSH=true"
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-direct.test:/bin/integration-direct.test:ro --entrypoint /bin/integration-direct.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
       - docker rm -f local-if
   ghaction:
     enabled: true
@@ -461,13 +401,13 @@ spec:
     enabled: true
     phony: true
     depends:
-      - integration-s3.test
+      - integration.test
     script:
       - "@$(MAKE) image-image-factory PUSH=true"
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-s3.test:/bin/integration-s3.test:ro --entrypoint /bin/integration-s3.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS)
       - docker rm -f local-if
   ghaction:
     enabled: true
@@ -490,7 +430,7 @@ spec:
     enabled: true
     phony: true
     depends:
-      - integration-cdn.test
+      - integration.test
     variables:
       - name: RUN_TESTS
         defaultValue: TestIntegrationCDN
@@ -501,7 +441,7 @@ spec:
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-cdn.test:/bin/integration-cdn.test:ro --entrypoint /bin/integration-cdn.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS)
       - docker rm -f local-if
   ghaction:
     enabled: true
@@ -524,7 +464,7 @@ spec:
     enabled: true
     phony: true
     depends:
-      - integration-direct.test
+      - integration.test
     variables:
       - name: RUN_TESTS
         defaultValue: TestIntegrationDirect
@@ -535,7 +475,7 @@ spec:
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration-direct.test:/bin/integration-direct.test:ro --entrypoint /bin/integration-direct.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
       - docker rm -f local-if
   ghaction:
     enabled: true
