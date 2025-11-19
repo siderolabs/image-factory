@@ -315,3 +315,15 @@
 
 - id: final.local_test_cluster.prompt
   translation: "To create a local Talos Linux test cluster from this schematic on macOS (Apple Silicon) or Linux, run:"
+
+- id: final.booter
+  translation: "PXE Boot with booter"
+
+- id: final.booter.name
+  translation: "booter"
+
+- id: final.booter.command_pre
+  translation: "To easily PXE boot bare-metal machines using "
+
+- id: final.booter.command_post
+  translation: " with this schematic, run the following command on a host in the same subnet:"

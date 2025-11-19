@@ -315,3 +315,15 @@
 
 - id: final.local_test_cluster.prompt
   translation: "Aby utworzyć lokalny klaster testowy Talos Linux z tego schematu na macOS (Apple Silicon) lub Linuxie, uruchom:"
+
+- id: final.booter
+  translation: "Rozruch PXE przy pomocy narzędzia booter"
+
+- id: final.booter.name
+  translation: "booter"
+
+- id: final.booter.command_pre
+  translation: "Aby łatwo uruchomić maszyny fizyczne przez PXE za pomocą narzędzia "
+
+- id: final.booter.command_post
+  translation: " z tym schematem, uruchom następujące polecenie na hoście w tej samej podsieci:"

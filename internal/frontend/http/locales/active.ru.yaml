@@ -315,3 +315,15 @@
 
 - id: final.local_test_cluster.prompt
   translation: "Чтобы создать локальный тестовый кластер Talos Linux из этой идентификатора на macOS (Apple Silicon) или Linux, выполните:"
+
+- id: final.booter
+  translation: "PXE-загрузка с booter"
+
+- id: final.booter.name
+  translation: "booter"
+
+- id: final.booter.command_pre
+  translation: "Для простой PXE-загрузки физических машин с помощью "
+
+- id: final.booter.command_post
+  translation: " с этой схемой, выполните следующую команду на хосте в той же подсети:"
