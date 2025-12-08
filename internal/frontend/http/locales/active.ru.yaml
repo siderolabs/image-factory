@@ -19,6 +19,9 @@
 - id: page.header
   translation: "Генератор образов Talos Linux"
 
+- id: page.header.enterprise
+  translation: "Enterprise генератор образов Talos Linux"
+
 - id: info.developed_by
   translation: "Генератор образов Talos Linux, разработанный "
 

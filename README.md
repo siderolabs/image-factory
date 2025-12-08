@@ -373,3 +373,10 @@ server {
 -cache-cdn-host=localhost:3000 # CDN host to replace from presigned S3 URL
 -cache-cdn-trim-prefix=/image-factory # Path prefix to strip from S3 presigned URL, when redirecting CDN
 ```
+
+## License
+
+The Image Factory is licensed under the [Mozilla Public License, version 2.0](LICENSE), except for the code in the `enterprise/` folder,
+which is licensed under the [Business Source License 1.1](enterprise/LICENSE).
+
+The enterprise code is not included in the open source version of Image Factory, and it is not built by default.

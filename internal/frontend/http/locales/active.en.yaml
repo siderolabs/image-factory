@@ -19,6 +19,9 @@
 - id: page.header
   translation: "Talos Linux Image Factory"
 
+- id: page.header.enterprise
+  translation: "Talos Linux Enterprise Image Factory"
+
 - id: info.developed_by
   translation: "The Talos Linux Image Factory, developed by "
 

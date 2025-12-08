@@ -29,6 +29,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/version"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -155,12 +156,14 @@ func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.
 		Localizer  *i18n.Localizer
 		Bundle     *i18n.Bundle
 		Lang       string
+		Enterprise bool
 	}{
 		Version:    version.Tag,
 		WizardHTML: template.HTML(buf.String()),
 		Localizer:  f.getLocalizer(r),
 		Bundle:     getLocalizerBundle(),
 		Lang:       getCurrentLang(r),
+		Enterprise: enterprise.Enabled(),
 	})
 }
 

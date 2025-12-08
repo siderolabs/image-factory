@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-11-15T14:33:01Z by kres e1d6dac.
+# Generated on 2025-12-08T13:14:36Z by kres 9fb16fe.
 
 policies:
   - type: commit
@@ -35,8 +35,7 @@ policies:
     spec:
       root: .
       skipPaths:
-        - .git/
-        - testdata/
+        - enterprise/
       includeSuffixes:
         - .go
       excludeSuffixes:
@@ -45,4 +44,20 @@ policies:
       header: |
         // This Source Code Form is subject to the terms of the Mozilla Public
         // License, v. 2.0. If a copy of the MPL was not distributed with this
-        // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+        // file, You can obtain one at http://mozilla.org/MPL/2.0/
+  - type: license
+    spec:
+      root: enterprise
+      skipPaths:
+        - .git/
+        - testdata/
+      includeSuffixes:
+        - .go
+      excludeSuffixes:
+        - .pb.go
+        - .pb.gw.go
+      header: |
+        // Copyright (c) 2025 Sidero Labs, Inc.
+        //
+        // Use of this software is governed by the Business Source License
+        // included in the LICENSE file.

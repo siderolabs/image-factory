@@ -47,13 +47,19 @@ import (
 	schematicreg "github.com/siderolabs/image-factory/internal/schematic/storage/registry"
 	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/internal/version"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 // RunFactory runs the image factory with specified options.
 //
 //nolint:gocyclo,cyclop
 func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
-	logger.Info("starting", zap.String("name", version.Name), zap.String("version", version.Tag), zap.String("sha", version.SHA))
+	logger.Info("starting",
+		zap.String("name", version.Name),
+		zap.String("version", version.Tag),
+		zap.String("sha", version.SHA),
+		zap.Bool("enterprise", enterprise.Enabled()),
+	)
 	defer logger.Info("shutting down", zap.String("name", version.Name))
 
 	// many image generation steps rely on SOURCE_DATE_EPOCH

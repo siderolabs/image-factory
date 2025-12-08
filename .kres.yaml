@@ -29,6 +29,8 @@ spec:
     extraArgs:
       - PKGS_PREFIX
       - PKGS
+  buildTags:
+    - enterprise
 ---
 kind: common.Docker
 spec:
@@ -62,6 +64,8 @@ spec:
       toplevel: true
     - name: integration.test
       toplevel: true
+    - name: integration.enterprise.test
+      toplevel: true
     - name: integration-direct
       toplevel: true
       dependants:
@@ -75,6 +79,10 @@ spec:
       dependants:
         - coverage
     - name: integration-proxy-installer
+      toplevel: true
+      dependants:
+        - coverage
+    - name: integration-enterprise
       toplevel: true
       dependants:
         - coverage
@@ -329,6 +337,34 @@ spec:
       - "@$(MAKE) local-$@ DEST=$(ARTIFACTS)"
 ---
 kind: custom.Step
+name: integration.enterprise.test
+spec:
+  docker:
+    enabled: true
+    stages:
+      - name: integration-enterprise-build
+        description: builds the integration test binary (Enterprise flavor)
+        from: base
+        steps:
+          - script:
+              command: go test -c -covermode=atomic -coverpkg=./... -tags integration,enterprise ./internal/integration
+              cache:
+                - /root/.cache/go-build
+                - /go/pkg
+      - name: integration.enterprise.test
+        description: copies out the integration test binary
+        steps:
+          - copy:
+              from: integration-enterprise-build
+              src: /src/integration.test
+              dst: /integration.enterprise.test
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - "@$(MAKE) local-$@ DEST=$(ARTIFACTS)"
+---
+kind: custom.Step
 name: update-to-talos-main
 spec:
   docker:
@@ -492,6 +528,41 @@ spec:
       TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
 ---
 kind: custom.Step
+name: integration-enterprise
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - integration.enterprise.test
+    variables:
+      - name: RUN_TESTS
+        defaultValue: TestIntegrationDirect
+      - name: TEST_FLAGS
+        defaultValue: ""
+    script:
+      - "@$(MAKE) image-image-factory PUSH=true"
+      - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+      - docker rm -f local-if || true
+      - docker run -d -p 5100:5000 --name=local-if registry:3
+      - docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS)
+      - docker rm -f local-if
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+    parallelJob:
+      name: integration-enterprise
+      runnerGroup: generic
+    coverage:
+      inputPaths:
+       - coverage-integration-enterprise.txt
+    environment:
+      REGISTRY: registry.dev.siderolabs.io
+      RUN_TESTS: TestIntegrationDirect
+      TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
+      TAG_SUFFIX: "-enterprise"
+---
+kind: custom.Step
 name: integration-direct-talos-main
 spec:
   makefile:
@@ -617,3 +688,52 @@ spec:
               from: tailwind-update
               src: /src/internal/frontend/http/css/output.css
               dst: internal/frontend/http/css/output.css
+---
+kind: common.Repository
+spec:
+  licenses:
+    - id: MPL-2.0
+      header: |
+        // This Source Code Form is subject to the terms of the Mozilla Public
+        // License, v. 2.0. If a copy of the MPL was not distributed with this
+        // file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+    - id: BSL-1.1
+      root: enterprise
+      params:
+        Licensor: Sidero Labs, Inc.
+        LicensedWork: Image Factory
+        Copyright: (c) 2025 Sidero Labs, Inc.
+        ChangeDate: "2029-12-08"
+        ChangeLicense: Mozilla Public License, version 2.0
+        EnterpriseLink: https://www.siderolabs.com/contact/
+      header: |
+        // Copyright (c) 2025 Sidero Labs, Inc.
+        //
+        // Use of this software is governed by the Business Source License
+        // included in the LICENSE file.
+  licenseChecks:
+    - root: "."
+      header: |
+        // This Source Code Form is subject to the terms of the Mozilla Public
+        // License, v. 2.0. If a copy of the MPL was not distributed with this
+        // file, You can obtain one at http://mozilla.org/MPL/2.0/
+      includeSuffixes:
+        - .go
+      excludeSuffixes:
+        - .pb.go
+        - .pb.gw.go
+      skipPaths:
+        - enterprise/
+
+    - root: enterprise
+      header: |
+        // Copyright (c) 2025 Sidero Labs, Inc.
+        //
+        // Use of this software is governed by the Business Source License
+        // included in the LICENSE file.
+      includeSuffixes:
+        - .go
+      excludeSuffixes:
+        - .pb.go
+        - .pb.gw.go

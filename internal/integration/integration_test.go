@@ -254,6 +254,12 @@ func commonTest(t *testing.T, options cmd.Options) {
 	baseURL := "http://" + listenAddr
 	pxeURL := "http://" + pxeAddr
 
+	t.Run("TestFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testFrontend(ctx, t, baseURL)
+	})
+
 	t.Run("TestSchematic", func(t *testing.T) {
 		// schematic should be created first, thus no t.Parallel
 		testSchematic(ctx, t, baseURL)

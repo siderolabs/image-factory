@@ -35,6 +35,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/schematic"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/internal/secureboot"
+	"github.com/siderolabs/image-factory/internal/version"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -173,6 +174,8 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 		ctx := r.Context()
 
 		start := time.Now()
+
+		w.Header().Set("Server", version.ServerString())
 
 		err := h(ctx, w, r, p)
 

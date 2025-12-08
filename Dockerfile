@@ -1,17 +1,17 @@
-# syntax = docker/dockerfile-upstream:1.19.0-labs
+# syntax = docker/dockerfile-upstream:1.20.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-11-07T15:27:03Z by kres 911d166.
+# Generated on 2025-12-08T17:38:09Z by kres 5e26a1d-dirty.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
 ARG PKGS=scratch
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.1-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.3-alpine AS lint-markdown
 WORKDIR /src
-RUN bun i markdownlint-cli@0.45.0 sentences-per-line@0.3.0
+RUN bun i markdownlint-cli@0.46.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
 COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
@@ -166,6 +166,7 @@ RUN --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go mod verify
 COPY ./cmd ./cmd
 COPY ./internal ./internal
 COPY ./pkg ./pkg
+COPY ./enterprise ./enterprise
 RUN --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go list -mod=readonly all >/dev/null
 
 FROM tools AS embed-generate
@@ -179,6 +180,10 @@ RUN mkdir -p internal/version/data && \
 # builds the integration test binary
 FROM base AS integration-build
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
+
+# builds the integration test binary (Enterprise flavor)
+FROM base AS integration-enterprise-build
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration,enterprise ./internal/integration
 
 # runs gofumpt
 FROM base AS lint-gofumpt
@@ -231,6 +236,10 @@ RUN echo -n 'undefined' > internal/version/data/sha && \
 # copies out the integration test binary
 FROM scratch AS integration.test
 COPY --from=integration-build /src/integration.test /integration.test
+
+# copies out the integration test binary
+FROM scratch AS integration.enterprise.test
+COPY --from=integration-enterprise-build /src/integration.test /integration.enterprise.test
 
 # clean golangci-lint fmt output
 FROM scratch AS lint-golangci-lint-fmt

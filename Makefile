@@ -1,15 +1,16 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-11-15T14:33:01Z by kres e1d6dac.
+# Generated on 2025-12-08T17:33:45Z by kres 5e26a1d-dirty.
 
 # common variables
 
 SHA := $(shell git describe --match=none --always --abbrev=8 --dirty)
 TAG := $(shell git describe --tag --always --dirty --match v[0-9]\*)
+TAG_SUFFIX ?=
 ABBREV_TAG := $(shell git describe --tags >/dev/null 2>/dev/null && git describe --tag --always --match v[0-9]\* --abbrev=0 || echo 'undefined')
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 ARTIFACTS := _out
-IMAGE_TAG ?= $(TAG)
+IMAGE_TAG ?= $(TAG)$(TAG_SUFFIX)
 OPERATING_SYSTEM := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 GOARCH := $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
 WITH_DEBUG ?= false
@@ -18,20 +19,22 @@ REGISTRY ?= ghcr.io
 USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
 PROTOBUF_GO_VERSION ?= 1.36.10
-GRPC_GO_VERSION ?= 1.5.1
+GRPC_GO_VERSION ?= 1.6.0
 GRPC_GATEWAY_VERSION ?= 2.27.3
 VTPROTOBUF_VERSION ?= 0.6.0
-GOIMPORTS_VERSION ?= 0.38.0
+GOIMPORTS_VERSION ?= 0.39.0
 GOMOCK_VERSION ?= 0.6.0
 DEEPCOPY_VERSION ?= v0.5.8
-GOLANGCILINT_VERSION ?= v2.6.1
+GOLANGCILINT_VERSION ?= v2.7.1
 GOFUMPT_VERSION ?= v0.9.2
-GO_VERSION ?= 1.25.4
+GO_VERSION ?= 1.25.5
 GO_BUILDFLAGS ?=
+GO_BUILDTAGS ?= ,
 GO_LDFLAGS ?=
 CGO_ENABLED ?= 0
 GOTOOLCHAIN ?= local
 GOEXPERIMENT ?=
+GO_BUILDFLAGS += -tags $(GO_BUILDTAGS)
 TESTPKGS ?= ./...
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 CONFORMANCE_IMAGE ?= ghcr.io/siderolabs/conform:latest
@@ -140,9 +143,13 @@ GO_LDFLAGS += -linkmode=external -extldflags '-static'
 endif
 
 ifneq (, $(filter $(WITH_DEBUG), t true TRUE y yes 1))
-GO_BUILDFLAGS += -tags sidero.debug
+GO_BUILDTAGS := $(GO_BUILDTAGS)sidero.debug,
 else
 GO_LDFLAGS += -s
+endif
+
+ifneq (, $(filter $(WITH_ENTERPRISE), t true TRUE y yes 1))
+GO_BUILDTAGS := $(GO_BUILDTAGS)enterprise,
 endif
 
 all: unit-tests image-factory image-image-factory lint
@@ -243,6 +250,15 @@ integration-proxy-installer: integration.test
 	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
+.PHONY: integration-enterprise
+integration-enterprise: integration.enterprise.test
+	@$(MAKE) image-image-factory PUSH=true
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker rm -f local-if || true
+	docker run -d -p 5100:5000 --name=local-if registry:3
+	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS)
+	docker rm -f local-if
+
 .PHONY: $(ARTIFACTS)/image-factory-linux-amd64
 $(ARTIFACTS)/image-factory-linux-amd64:
 	@$(MAKE) local-image-factory-linux-amd64 DEST=$(ARTIFACTS)
@@ -282,6 +298,10 @@ imager-tools:
 
 .PHONY: integration.test
 integration.test:
+	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
+
+.PHONY: integration.enterprise.test
+integration.enterprise.test:
 	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
 
 .PHONY: update-to-talos-main
