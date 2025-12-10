@@ -26,7 +26,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	cryptotls "github.com/siderolabs/crypto/tls"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -70,7 +69,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	defer remotewrap.ShutdownTransport()
 
-	artifactsManager, err := buildArtifactsManager(ctx, logger, opts)
+	artifactsManager, err := buildArtifactsManager(logger, opts)
 	if err != nil {
 		return err
 	}
@@ -234,30 +233,15 @@ func runMetricsServer(ctx context.Context, logger *zap.Logger, eg *errgroup.Grou
 	})
 }
 
-func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options) (*artifacts.Manager, error) {
+func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager, error) {
 	var checkOpts []cosign.CheckOpts
 
 	if opts.ContainerSignatureDisabled {
 		logger.Warn("container signature verification is disabled, this is not recommended")
 	} else {
-		rootCerts, err := fulcio.GetRoots()
+		trustedRoot, err := cosign.TrustedRoot()
 		if err != nil {
-			return nil, fmt.Errorf("getting Fulcio roots: %w", err)
-		}
-
-		intermediateCerts, err := fulcio.GetIntermediates()
-		if err != nil {
-			return nil, fmt.Errorf("getting Fulcio intermediates: %w", err)
-		}
-
-		rekorPubKeys, err := cosign.GetRekorPubs(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error getting rekor public keys: %w", err)
-		}
-
-		ctLogPubKeys, err := cosign.GetCTLogPubs(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error ctlog public keys: %w", err)
+			return nil, fmt.Errorf("failed to get cosign trusted root: %w", err)
 		}
 
 		if len(strings.TrimSpace(opts.ContainerSignaturePublicKeyFile)) > 0 {
@@ -289,11 +273,8 @@ func buildArtifactsManager(ctx context.Context, logger *zap.Logger, opts Options
 		}
 
 		checkOpts = append(checkOpts, cosign.CheckOpts{
-			RootCerts:         rootCerts,
-			IntermediateCerts: intermediateCerts,
-			RekorPubKeys:      rekorPubKeys,
-			CTLogPubKeys:      ctLogPubKeys,
-			Identities:        cosignIdentities,
+			TrustedMaterial: trustedRoot,
+			Identities:      cosignIdentities,
 		})
 	}
 

@@ -10,7 +10,8 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
+
+	"github.com/siderolabs/image-factory/internal/artifacts/internal/image"
 )
 
 // Options are the options for the artifacts manager.
@@ -42,14 +43,7 @@ type Options struct { //nolint:govet
 }
 
 // ImageVerifyOptions are the options for verifying the image signature.
-type ImageVerifyOptions struct {
-	// CheckOpts are the options for verifying the image signature.
-	//
-	// If Disabled is true, this field is ignored.
-	CheckOpts []cosign.CheckOpts
-	// Disabled disables image signature verification.
-	Disabled bool
-}
+type ImageVerifyOptions = image.VerifyOptions
 
 // Kind is the artifact kind.
 type Kind string
