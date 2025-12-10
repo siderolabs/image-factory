@@ -1,0 +1,126 @@
+# -- Number of replicas for the deployment.
+replicaCount: 1
+
+config:
+  # -- set the logging level
+  logLevel: "info"
+
+image:
+  # -- Registry and repository for the registry image.
+  repository: ghcr.io/olareg/olareg
+  # -- Tag for the image.
+  tag: "v0.1.2"
+  # -- Image pull policy.
+  pullPolicy: IfNotPresent
+
+persistence:
+  # -- Enable/disable PVC creation for data.
+  enabled: true
+  # -- Use an existing PVC if defined, otherwise create one.
+  existingClaim: ""
+  # -- Specify the StorageClass (if required).
+  storageClass: ""
+  # -- Access mode for the PVC.
+  accessMode: ReadWriteOnce
+  # -- Storage size for the PVC.
+  size: 10Gi
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+securityContext:
+  {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# -- Secrets for pulling images.
+imagePullSecrets: []
+# -- Override for the name.
+nameOverride: ""
+# -- Override for the full name.
+fullnameOverride: ""
+
+service:
+  # -- The name of the service.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+  # -- Service type.
+  type: ClusterIP
+  # -- Service port.
+  port: 80
+  # -- Annotations to add to the service.
+  annotations: {}
+
+serviceAccount:
+  # -- Specifies whether a service account should be created.
+  create: true
+  # -- Automatically mount a ServiceAccount's API credentials.
+  automount: true
+  # -- Annotations to add to the service account.
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+ingress:
+  # -- Specifies whether ingress should be enabled.
+  enabled: false
+  # -- Ingress class name.
+  className: ""
+  # -- Annotations to add to the ingress.
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  # -- Ingress host configuration.
+  host: registry.example.local
+  paths:
+    - path: /
+      pathType: ImplementationSpecific
+  # -- List of TLS configurations for the ingress.
+  tls: []
+  #  - secretName: registry-tls
+  #    hosts:
+  #      - registry.example.local
+
+# -- Annotations to be added to the pods.
+podAnnotations: {}
+# -- Labels to be added to the pods.
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+# -- Node selector for the pods.
+nodeSelector: {}
+
+# -- Tolerations for the pods.
+tolerations: []
+
+# -- Affinity settings for the pods.
+affinity: {}
+  # nodeAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #     nodeSelectorTerms:
+  #       - matchExpressions:
+  #         - key: kubernetes.io/arch
+  #           operator: In
+  #           values:
+  #             - amd64
+  #             - arm64
+  #         - key: kubernetes.io/os
+  #           operator: In
+  #           values:
+  #             - linux
