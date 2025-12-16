@@ -4,8 +4,7 @@ spec:
 ---
 kind: golang.GoVulnCheck
 spec:
-  ignore:
-    - GO-2025-3770
+  ignore: []
 ---
 kind: golang.Build
 spec:
@@ -95,6 +94,10 @@ spec:
     - name: integration-s3-talos-main
       toplevel: true
     - name: tailwind
+      toplevel: true
+    - name: docs
+      toplevel: true
+    - name: check-dirty
       toplevel: true
 ---
 kind: custom.Step
@@ -737,3 +740,47 @@ spec:
       excludeSuffixes:
         - .pb.go
         - .pb.gw.go
+---
+kind: custom.Step
+name: docs
+spec:
+  docker:
+    enabled: true
+    stages:
+      - name: docgen
+        description: run the docgen
+        from: base
+        steps:
+          - script:
+              command: go run ./tools/docgen ./cmd/image-factory/cmd/options.go docs/configuration.md
+              cache:
+                - /root/.cache/go-build
+                - /go/pkg
+      - name: docs
+        description: copies out the generated docs
+        steps:
+          - copy:
+              from: docgen
+              src: /src/docs/configuration.md
+              dst: /configuration.md
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - "@$(MAKE) local-$@ DEST=docs"
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+---
+kind: custom.Step
+name: check-dirty
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - |
+        @if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; git diff; exit 1 ; fi
+  ghaction:
+    enabled: true
+    condition: on-pull-request

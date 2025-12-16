@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"os/signal"
 
 	"github.com/siderolabs/go-debug"
@@ -46,17 +47,27 @@ func run() error {
 }
 
 func runWithContext(ctx context.Context) error {
-	opts := initFlags()
+	if err := initFlags(os.Args); err != nil {
+		return err
+	}
+
+	log.Print(logLevel.String())
+	log.Print(config)
+
+	opts, err := initConfig()
+	if err != nil {
+		return fmt.Errorf("failed to initialize config: %w", err)
+	}
 
 	cfg := zap.NewProductionConfig()
-	cfg.Level = zap.NewAtomicLevelAt(*opts.LogLevel)
+	cfg.Level = zap.NewAtomicLevelAt(logLevel.Value())
 
 	logger, err := cfg.Build()
 	if err != nil {
 		return fmt.Errorf("failed to initialize production logger: %w", err)
 	}
 
-	logger.Debug("starting factory", zap.Any("level", *opts.LogLevel))
+	logger.Debug("starting factory", zap.String("level", logLevel.String()))
 
 	return cmd.RunFactory(ctx, logger, opts)
 }

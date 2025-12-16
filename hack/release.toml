@@ -8,7 +8,17 @@ match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 previous = "v0.8.4"
 # pre_release = true
 
-# [notes]
+[notes]
+
+    [notes.configuration]
+    title = "Configuration moved to env and config files only"
+    description = """\
+All configuration is now provided exclusively via environment variables and/or configuration files.
+Command-line flags for configuration have been removed.
+
+Users must migrate any existing CLI-based configuration to env variables or supported config file formats.
+This change simplifies the runtime interface but is a breaking change and requires updates to existing workflows relying on CLI flags.
+"""
 
 [make_deps]
 

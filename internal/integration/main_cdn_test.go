@@ -23,17 +23,17 @@ func TestIntegrationCDN(t *testing.T) {
 	t.Run("S3+CDN", func(t *testing.T) {
 		options := cmd.DefaultOptions
 
-		options.CacheRepository = signingCacheRepository
-		options.MetricsNamespace = "test_s3_cdn"
+		options.Cache.OCI = signingCacheRepository.OCIRepositoryOptions
+		options.Metrics.Namespace = "test_s3_cdn"
 
-		options.CacheS3Enabled = true
-		options.CacheS3Bucket = "test-s3-cdn"
-		options.InsecureCacheS3 = true
-		options.CacheS3Endpoint = setupS3(t, pool, options.CacheS3Bucket)
+		options.Cache.S3.Enabled = true
+		options.Cache.S3.Bucket = "test-s3-cdn"
+		options.Cache.S3.Insecure = true
+		options.Cache.S3.Endpoint = setupS3(t, pool, options.Cache.S3.Bucket)
 
-		options.CacheCDNEnabled = true
-		options.CacheCDNTrimPrefix = fmt.Sprintf("/%s", options.CacheS3Bucket)
-		options.CacheCDNHost = setupMockCDN(t, pool, options.CacheS3Endpoint, options.CacheS3Bucket)
+		options.Cache.CDN.Enabled = true
+		options.Cache.CDN.TrimPrefix = fmt.Sprintf("/%s", options.Cache.S3.Bucket)
+		options.Cache.CDN.Host = setupMockCDN(t, pool, options.Cache.S3.Endpoint, options.Cache.S3.Bucket)
 
 		commonTest(t, options)
 	})

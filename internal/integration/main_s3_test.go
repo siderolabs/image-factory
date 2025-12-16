@@ -22,13 +22,13 @@ func TestIntegrationS3(t *testing.T) {
 	t.Run("S3", func(t *testing.T) {
 		options := cmd.DefaultOptions
 
-		options.CacheRepository = signingCacheRepository
-		options.MetricsNamespace = "test_s3"
+		options.Cache.OCI = signingCacheRepository.OCIRepositoryOptions
+		options.Metrics.Namespace = "test_s3"
 
-		options.CacheS3Enabled = true
-		options.CacheS3Bucket = "test-s3"
-		options.InsecureCacheS3 = true
-		options.CacheS3Endpoint = setupS3(t, pool, options.CacheS3Bucket)
+		options.Cache.S3.Enabled = true
+		options.Cache.S3.Bucket = "test-s3"
+		options.Cache.S3.Insecure = true
+		options.Cache.S3.Endpoint = setupS3(t, pool, options.Cache.S3.Bucket)
 
 		commonTest(t, options)
 	})

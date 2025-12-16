@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-12-08T17:33:45Z by kres 5e26a1d-dirty.
+# Generated on 2025-12-22T07:55:24Z by kres 26be706.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -113,6 +113,14 @@ jobs:
             })
 
             return resp.data.labels.map(label => label.name)
+      - name: docs
+        if: github.event_name == 'pull_request'
+        run: |
+          make docs
+      - name: check-dirty
+        if: github.event_name == 'pull_request'
+        run: |
+          make check-dirty
       - name: Generate Checksums
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -185,7 +193,7 @@ jobs:
         run: |
           make integration-cdn
       - name: coverage
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # version: v5.5.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # version: v5.5.2
         with:
           files: _out/coverage-integration-cdn.txt
           flags: integration-cdn
@@ -295,7 +303,7 @@ jobs:
         run: |
           make integration-direct
       - name: coverage
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # version: v5.5.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # version: v5.5.2
         with:
           files: _out/coverage-integration-direct.txt
           flags: integration-direct
@@ -406,7 +414,7 @@ jobs:
         run: |
           make integration-enterprise
       - name: coverage
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # version: v5.5.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # version: v5.5.2
         with:
           files: _out/coverage-integration-enterprise.txt
           flags: integration-enterprise
@@ -465,7 +473,7 @@ jobs:
         run: |
           make integration-proxy-installer
       - name: coverage
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # version: v5.5.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # version: v5.5.2
         with:
           files: _out/coverage-integration-proxy-installer.txt
           flags: integration-proxy-installer
@@ -524,7 +532,7 @@ jobs:
         run: |
           make integration-s3
       - name: coverage
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # version: v5.5.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # version: v5.5.2
         with:
           files: _out/coverage-integration-s3.txt
           flags: integration-s3
@@ -679,7 +687,7 @@ jobs:
         run: |
           make unit-tests-race
       - name: coverage
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # version: v5.5.1
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # version: v5.5.2
         with:
           files: _out/coverage-unit-tests.txt
           flags: unit-tests

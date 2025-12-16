@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-12-08T17:33:45Z by kres 5e26a1d-dirty.
+# Generated on 2025-12-22T11:58:31Z by kres 26be706.
 
 # common variables
 
@@ -18,14 +18,14 @@ WITH_RACE ?= false
 REGISTRY ?= ghcr.io
 USERNAME ?= siderolabs
 REGISTRY_AND_USERNAME ?= $(REGISTRY)/$(USERNAME)
-PROTOBUF_GO_VERSION ?= 1.36.10
+PROTOBUF_GO_VERSION ?= 1.36.11
 GRPC_GO_VERSION ?= 1.6.0
 GRPC_GATEWAY_VERSION ?= 2.27.3
 VTPROTOBUF_VERSION ?= 0.6.0
-GOIMPORTS_VERSION ?= 0.39.0
+GOIMPORTS_VERSION ?= 0.40.0
 GOMOCK_VERSION ?= 0.6.0
 DEEPCOPY_VERSION ?= v0.5.8
-GOLANGCILINT_VERSION ?= v2.7.1
+GOLANGCILINT_VERSION ?= v2.7.2
 GOFUMPT_VERSION ?= v0.9.2
 GO_VERSION ?= 1.25.5
 GO_BUILDFLAGS ?=
@@ -323,6 +323,14 @@ integration-s3-talos-main: update-to-talos-main
 .PHONY: tailwind
 tailwind:
 	@$(MAKE) local-tailwind-copy PUSH=false DEST=. PLATFORM=$(OPERATING_SYSTEM)/$(GOARCH)
+
+.PHONY: docs
+docs:
+	@$(MAKE) local-$@ DEST=docs
+
+.PHONY: check-dirty
+check-dirty:
+	@if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; git diff; exit 1 ; fi
 
 .PHONY: rekres
 rekres:

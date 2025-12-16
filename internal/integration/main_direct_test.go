@@ -15,8 +15,8 @@ import (
 func TestIntegrationDirect(t *testing.T) {
 	options := cmd.DefaultOptions
 
-	options.CacheRepository = cacheRepository
-	options.MetricsNamespace = ""
+	options.Cache.OCI = cacheRepository.OCIRepositoryOptions
+	options.Metrics.Namespace = ""
 
 	commonTest(t, options)
 }

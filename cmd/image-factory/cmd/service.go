@@ -81,7 +81,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	cacheSigningKey, err := loadPrivateKey(opts.CacheSigningKeyPath)
+	cacheSigningKey, err := loadPrivateKey(opts.Cache.SigningKeyPath)
 	if err != nil {
 		return fmt.Errorf("failed to load cache signing key: %w", err)
 	}
@@ -91,7 +91,19 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	secureBootService, err := secureboot.NewService(secureboot.Options(opts.SecureBoot))
+	secureBootService, err := secureboot.NewService(secureboot.Options{
+		Enabled:              opts.SecureBoot.Enabled,
+		SigningKeyPath:       opts.SecureBoot.File.SigningKeyPath,
+		SigningCertPath:      opts.SecureBoot.File.SigningCertPath,
+		PCRKeyPath:           opts.SecureBoot.File.PCRKeyPath,
+		AzureKeyVaultURL:     opts.SecureBoot.AzureKeyVault.URL,
+		AzureCertificateName: opts.SecureBoot.AzureKeyVault.CertificateName,
+		AzureKeyName:         opts.SecureBoot.AzureKeyVault.KeyName,
+		AwsKMSKeyID:          opts.SecureBoot.AWSKMS.KeyID,
+		AwsKMSPCRKeyID:       opts.SecureBoot.AWSKMS.PCRKeyID,
+		AwsCertPath:          opts.SecureBoot.AWSKMS.CertPath,
+		AwsRegion:            opts.SecureBoot.AWSKMS.Region,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to initialize SecureBoot service: %w", err)
 	}
@@ -100,13 +112,13 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	frontendOptions.CacheSigningKey = cacheSigningKey
 
-	frontendOptions.ExternalURL, err = url.Parse(opts.ExternalURL)
+	frontendOptions.ExternalURL, err = url.Parse(opts.HTTP.ExternalURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse self URL: %w", err)
 	}
 
-	if opts.ExternalPXEURL != "" {
-		frontendOptions.ExternalPXEURL, err = url.Parse(opts.ExternalPXEURL)
+	if opts.HTTP.ExternalPXEURL != "" {
+		frontendOptions.ExternalPXEURL, err = url.Parse(opts.HTTP.ExternalPXEURL)
 		if err != nil {
 			return fmt.Errorf("failed to parse self PXE URL: %w", err)
 		}
@@ -116,27 +128,27 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	var repoOpts []name.Option
 
-	if opts.InsecureInstallerInternalRepository {
+	if opts.Artifacts.Installer.Internal.Insecure {
 		repoOpts = append(repoOpts, name.Insecure)
 	}
 
-	frontendOptions.InstallerInternalRepository, err = name.NewRepository(opts.InstallerInternalRepository, repoOpts...)
+	frontendOptions.InstallerInternalRepository, err = name.NewRepository(opts.Artifacts.Installer.Internal.String(), repoOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to parse internal installer repository: %w", err)
 	}
 
-	if opts.InstallerExternalRepository == "" {
+	if opts.Artifacts.Installer.External.String() == "" {
 		frontendOptions.ProxyInstallerInternalRepository = true
 	} else {
-		frontendOptions.InstallerExternalRepository, err = name.NewRepository(opts.InstallerExternalRepository)
+		frontendOptions.InstallerExternalRepository, err = name.NewRepository(opts.Artifacts.Installer.External.String())
 		if err != nil {
 			return fmt.Errorf("failed to parse external installer repository: %w", err)
 		}
 	}
 
 	frontendOptions.RemoteOptions = append(frontendOptions.RemoteOptions, remoteOptions()...)
-	frontendOptions.RegistryRefreshInterval = opts.RegistryRefreshInterval
-	frontendOptions.MetricsNamespace = opts.MetricsNamespace
+	frontendOptions.RegistryRefreshInterval = opts.Artifacts.RefreshInterval
+	frontendOptions.MetricsNamespace = opts.Metrics.Namespace
 
 	frontendHTTP, err := frontendhttp.NewFrontend(logger, configFactory, assetBuilder, artifactsManager, secureBootService, frontendOptions)
 	if err != nil {
@@ -144,18 +156,18 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	}
 
 	httpServer := &http.Server{
-		Addr:    opts.HTTPListenAddr,
+		Addr:    opts.HTTP.ListenAddr,
 		Handler: frontendHTTP.Handler(),
 	}
 
 	httpServer.Handler = frontendHTTP.Handler()
 
-	insecure := opts.HTTPCertFile == "" && opts.HTTPKeyFile == ""
+	insecure := opts.HTTP.CertFile == "" && opts.HTTP.KeyFile == ""
 
 	eg, ctx := errgroup.WithContext(ctx)
 
 	if !insecure {
-		certLoader := cryptotls.NewDynamicCertificate(opts.HTTPCertFile, opts.HTTPKeyFile)
+		certLoader := cryptotls.NewDynamicCertificate(opts.HTTP.CertFile, opts.HTTP.KeyFile)
 		if err = certLoader.Load(); err != nil {
 			return fmt.Errorf("failed to load certificate: %w", err)
 		}
@@ -195,7 +207,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return httpServer.Shutdown(shutdownCtx) //nolint:contextcheck
 	})
 
-	if opts.MetricsListenAddr != "" {
+	if opts.Metrics.Addr != "" {
 		runMetricsServer(ctx, logger, eg, opts)
 	}
 
@@ -208,12 +220,12 @@ func runMetricsServer(ctx context.Context, logger *zap.Logger, eg *errgroup.Grou
 	metricsMux.Handle("/metrics", promhttp.Handler())
 
 	metricsServer := &http.Server{
-		Addr:    opts.MetricsListenAddr,
+		Addr:    opts.Metrics.Addr,
 		Handler: &metricsMux,
 	}
 
 	eg.Go(func() error {
-		logger.Info("serving metrics", zap.String("listen_addr", opts.MetricsListenAddr))
+		logger.Info("serving metrics", zap.String("listen_addr", opts.Metrics.Addr))
 
 		err := metricsServer.ListenAndServe()
 		if errors.Is(err, http.ErrServerClosed) {
@@ -236,7 +248,7 @@ func runMetricsServer(ctx context.Context, logger *zap.Logger, eg *errgroup.Grou
 func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager, error) {
 	var checkOpts []cosign.CheckOpts
 
-	if opts.ContainerSignatureDisabled {
+	if opts.ContainerSignature.Disabled {
 		logger.Warn("container signature verification is disabled, this is not recommended")
 	} else {
 		trustedRoot, err := cosign.TrustedRoot()
@@ -244,12 +256,12 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 			return nil, fmt.Errorf("failed to get cosign trusted root: %w", err)
 		}
 
-		if len(strings.TrimSpace(opts.ContainerSignaturePublicKeyFile)) > 0 {
+		if len(strings.TrimSpace(opts.ContainerSignature.PublicKeyFile)) > 0 {
 			var keyVerifier sigstoresignature.Verifier
 
 			keyVerifier, err = getPublicKeyVerifier(opts)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get signature verifier for key %s: %w", opts.ContainerSignaturePublicKeyFile, err)
+				return nil, fmt.Errorf("failed to get signature verifier for key %s: %w", opts.ContainerSignature.PublicKeyFile, err)
 			}
 
 			checkOpts = append(checkOpts, cosign.CheckOpts{
@@ -262,14 +274,14 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 		// Prefer opts.ContainerSignatureIssuerRegExp if set as this is more flexible
 		cosignIdentities := []cosign.Identity{
 			{
-				SubjectRegExp: opts.ContainerSignatureSubjectRegExp,
+				SubjectRegExp: opts.ContainerSignature.SubjectRegExp,
 			},
 		}
 
-		if len(strings.TrimSpace(opts.ContainerSignatureIssuerRegExp)) > 0 {
-			cosignIdentities[0].IssuerRegExp = opts.ContainerSignatureIssuerRegExp
+		if len(strings.TrimSpace(opts.ContainerSignature.IssuerRegExp)) > 0 {
+			cosignIdentities[0].IssuerRegExp = opts.ContainerSignature.IssuerRegExp
 		} else {
-			cosignIdentities[0].Issuer = opts.ContainerSignatureIssuer
+			cosignIdentities[0].Issuer = opts.ContainerSignature.Issuer
 		}
 
 		checkOpts = append(checkOpts, cosign.CheckOpts{
@@ -280,29 +292,29 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 
 	imageVerifyOptions := artifacts.ImageVerifyOptions{
 		CheckOpts: checkOpts,
-		Disabled:  opts.ContainerSignatureDisabled,
+		Disabled:  opts.ContainerSignature.Disabled,
 	}
 
-	minVersion, err := semver.Parse(opts.MinTalosVersion)
+	minVersion, err := semver.Parse(opts.Build.MinTalosVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse minimum Talos version: %w", err)
 	}
 
 	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
 		MinVersion:                  minVersion,
-		ImageRegistry:               opts.ImageRegistry,
-		InsecureImageRegistry:       opts.InsecureImageRegistry,
+		ImageRegistry:               opts.Artifacts.Core.Registry,
+		InsecureImageRegistry:       opts.Artifacts.Core.Insecure,
 		ImageVerifyOptions:          imageVerifyOptions,
-		TalosVersionRecheckInterval: opts.TalosVersionRecheckInterval,
+		TalosVersionRecheckInterval: opts.Artifacts.TalosVersionRecheckInterval,
 		RemoteOptions:               remoteOptions(),
-		RegistryRefreshInterval:     opts.RegistryRefreshInterval,
+		RegistryRefreshInterval:     opts.Artifacts.RefreshInterval,
 
-		InstallerBaseImage:     opts.Images.InstallerBaseImage,
-		InstallerImage:         opts.Images.InstallerImage,
-		ImagerImage:            opts.Images.ImagerImage,
-		ExtensionManifestImage: opts.Images.ExtensionManifestImage,
-		OverlayManifestImage:   opts.Images.OverlayManifestImage,
-		TalosctlImage:          opts.Images.TalosctlImage,
+		InstallerBaseImage:     opts.Artifacts.Core.Components.InstallerBase,
+		InstallerImage:         opts.Artifacts.Core.Components.Installer,
+		ImagerImage:            opts.Artifacts.Core.Components.Imager,
+		ExtensionManifestImage: opts.Artifacts.Core.Components.ExtensionManifest,
+		OverlayManifestImage:   opts.Artifacts.Core.Components.OverlayManifest,
+		TalosctlImage:          opts.Artifacts.Core.Components.Talosctl,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize artifacts manager: %w", err)
@@ -319,17 +331,17 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 
 	regOptions := assetcachereg.Options{
 		CacheSigningKey:         cacheSigningKey,
-		RegistryRefreshInterval: opts.RegistryRefreshInterval,
+		RegistryRefreshInterval: opts.Artifacts.RefreshInterval,
 	}
 	regOptions.RemoteOptions = append(regOptions.RemoteOptions, remoteOptions()...)
 
 	var repoOpts []name.Option
 
-	if opts.InsecureCacheRepository {
+	if opts.Cache.OCI.Insecure {
 		repoOpts = append(repoOpts, name.Insecure)
 	}
 
-	regOptions.CacheRepository, err = name.NewRepository(opts.CacheRepository, repoOpts...)
+	regOptions.CacheRepository, err = name.NewRepository(opts.Cache.OCI.String(), repoOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cache repository: %w", err)
 	}
@@ -339,12 +351,12 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 		return nil, fmt.Errorf("failed to initialize repository cache: %w", err)
 	}
 
-	if opts.CacheS3Enabled {
+	if opts.Cache.S3.Enabled {
 		s3Options := assetcaches3.Options{
-			Bucket:   opts.CacheS3Bucket,
-			Endpoint: opts.CacheS3Endpoint,
-			Region:   opts.CacheS3Region,
-			Insecure: opts.InsecureCacheS3,
+			Bucket:   opts.Cache.S3.Bucket,
+			Endpoint: opts.Cache.S3.Endpoint,
+			Region:   opts.Cache.S3.Region,
+			Insecure: opts.Cache.S3.Insecure,
 		}
 
 		cache, err = assetcaches3.New(logger, cache, s3Options)
@@ -353,10 +365,10 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 		}
 	}
 
-	if opts.CacheCDNEnabled {
+	if opts.Cache.CDN.Enabled {
 		cdnOptions := cdn.Options{
-			Host:       opts.CacheCDNHost,
-			TrimPrefix: opts.CacheCDNTrimPrefix,
+			Host:       opts.Cache.CDN.Host,
+			TrimPrefix: opts.Cache.CDN.TrimPrefix,
 		}
 
 		cache, err = cdn.New(logger, cache, cdnOptions)
@@ -366,9 +378,9 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 	}
 
 	builderOptions := asset.Options{
-		MetricsNamespace:   opts.MetricsNamespace,
-		AllowedConcurrency: opts.AssetBuildMaxConcurrency,
-		GetAfterPut:        opts.CacheS3Enabled,
+		MetricsNamespace:   opts.Metrics.Namespace,
+		AllowedConcurrency: opts.Build.MaxConcurrency,
+		GetAfterPut:        opts.Cache.S3.Enabled,
 	}
 
 	builder, err := asset.NewBuilder(logger, artifactsManager, cache, builderOptions)
@@ -384,23 +396,23 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory, error) {
 	var repoOpts []name.Option
 
-	if opts.InsecureSchematicRepository {
+	if opts.Artifacts.Schematic.Insecure {
 		repoOpts = append(repoOpts, name.Insecure)
 	}
 
-	repo, err := name.NewRepository(opts.SchematicServiceRepository, repoOpts...)
+	repo, err := name.NewRepository(opts.Artifacts.Schematic.String(), repoOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse repository: %w", err)
 	}
 
-	storage, err := schematicreg.NewStorage(repo, opts.RegistryRefreshInterval, remoteOptions())
+	storage, err := schematicreg.NewStorage(repo, opts.Artifacts.RefreshInterval, remoteOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize registry storage: %w", err)
 	}
 
-	c := schematiccache.NewCache(storage, schematiccache.Options{MetricsNamespace: opts.MetricsNamespace})
+	c := schematiccache.NewCache(storage, schematiccache.Options{MetricsNamespace: opts.Metrics.Namespace})
 
-	factory := schematic.NewFactory(logger, c, schematic.Options{MetricsNamespace: opts.MetricsNamespace})
+	factory := schematic.NewFactory(logger, c, schematic.Options{MetricsNamespace: opts.Metrics.Namespace})
 
 	prometheus.MustRegister(factory)
 
@@ -458,12 +470,12 @@ func getHashAlgo(algo string) (crypto.Hash, error) {
 }
 
 func getPublicKeyVerifier(opts Options) (sigstoresignature.Verifier, error) {
-	hashAlgo, err := getHashAlgo(opts.ContainerSignaturePublicKeyHashAlgo)
+	hashAlgo, err := getHashAlgo(opts.ContainerSignature.PublicKeyHashAlgo)
 	if err != nil {
 		return nil, err
 	}
 
-	key, err := os.ReadFile(opts.ContainerSignaturePublicKeyFile)
+	key, err := os.ReadFile(opts.ContainerSignature.PublicKeyFile)
 	if err != nil {
 		return nil, err
 	}

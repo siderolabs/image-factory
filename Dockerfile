@@ -2,17 +2,18 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-12-08T17:38:09Z by kres 5e26a1d-dirty.
+# Generated on 2025-12-22T11:59:33Z by kres 26be706.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
 ARG PKGS=scratch
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.3-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.4-alpine AS lint-markdown
 WORKDIR /src
-RUN bun i markdownlint-cli@0.46.0 sentences-per-line@0.3.0
+RUN bun i markdownlint-cli@0.47.0 sentences-per-line@0.3.0
 COPY .markdownlint.json .
+COPY ./docs ./docs
 COPY ./CHANGELOG.md ./CHANGELOG.md
 COPY ./README.md ./README.md
 RUN bunx markdownlint --ignore "CHANGELOG.md" --ignore "**/node_modules/**" --ignore '**/hack/chglog/**' --rules sentences-per-line .
@@ -167,6 +168,7 @@ COPY ./cmd ./cmd
 COPY ./internal ./internal
 COPY ./pkg ./pkg
 COPY ./enterprise ./enterprise
+COPY ./tools ./tools
 RUN --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go list -mod=readonly all >/dev/null
 
 FROM tools AS embed-generate
@@ -176,6 +178,10 @@ WORKDIR /src
 RUN mkdir -p internal/version/data && \
     echo -n ${SHA} > internal/version/data/sha && \
     echo -n ${TAG} > internal/version/data/tag
+
+# run the docgen
+FROM base AS docgen
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go run ./tools/docgen ./cmd/image-factory/cmd/options.go docs/configuration.md
 
 # builds the integration test binary
 FROM base AS integration-build
@@ -208,7 +214,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 FROM base AS lint-govulncheck
 WORKDIR /src
 COPY --chmod=0755 hack/govulncheck.sh ./hack/govulncheck.sh
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh -exclude 'GO-2025-3770' ./...
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh ./...
 
 # runs unit-tests with race detector
 FROM base AS unit-tests-race
@@ -232,6 +238,10 @@ WORKDIR /src
 ARG ABBREV_TAG
 RUN echo -n 'undefined' > internal/version/data/sha && \
     echo -n ${ABBREV_TAG} > internal/version/data/tag
+
+# copies out the generated docs
+FROM scratch AS docs
+COPY --from=docgen /src/docs/configuration.md /configuration.md
 
 # copies out the integration test binary
 FROM scratch AS integration.test

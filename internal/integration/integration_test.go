@@ -45,14 +45,14 @@ func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, s
 	defaultAddr := net.JoinHostPort(host, port)
 	pxeAddr := net.JoinHostPort("localhost", port)
 
-	options.HTTPListenAddr = net.JoinHostPort(host, port)
-	options.ImageRegistry = imageRegistryFlag
-	options.ExternalURL = "http://" + defaultAddr + "/"
-	options.ExternalPXEURL = "http://" + pxeAddr + "/"
-	options.SchematicServiceRepository = schematicFactoryRepositoryFlag
-	options.InstallerExternalRepository = installerExternalRepository
-	options.InstallerInternalRepository = installerInternalRepository
-	options.RegistryRefreshInterval = time.Minute // use a short interval for the tests
+	options.HTTP.ListenAddr = net.JoinHostPort(host, port)
+	options.HTTP.ExternalURL = "http://" + defaultAddr + "/"
+	options.HTTP.ExternalPXEURL = "http://" + pxeAddr + "/"
+	options.Artifacts.Core.Registry = imageRegistryFlag
+	options.Artifacts.Schematic = schematicFactoryRepositoryFlag.OCIRepositoryOptions
+	options.Artifacts.Installer.External = installerExternalRepository.OCIRepositoryOptions
+	options.Artifacts.Installer.Internal = installerInternalRepository.OCIRepositoryOptions
+	options.Artifacts.RefreshInterval = time.Minute // use a short interval for the tests
 
 	setupSecureBoot(t, &options)
 	setupCacheSigningKey(t, &options)
@@ -73,7 +73,7 @@ func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, s
 
 	// wait for the endpoint to be ready
 	require.Eventually(t, func() bool {
-		d, err := net.Dial("tcp", options.HTTPListenAddr)
+		d, err := net.Dial("tcp", options.HTTP.ListenAddr)
 		if d != nil {
 			require.NoError(t, d.Close())
 		}
@@ -95,7 +95,7 @@ func setupCacheSigningKey(t *testing.T, options *cmd.Options) {
 
 	require.NoError(t, os.WriteFile(optionsDir+"/cache-signing-key.pem", priv, 0o600))
 
-	options.CacheSigningKeyPath = optionsDir + "/cache-signing-key.pem"
+	options.Cache.SigningKeyPath = optionsDir + "/cache-signing-key.pem"
 }
 
 func docker(t *testing.T) *dockertest.Pool {
@@ -226,10 +226,11 @@ func setupSecureBoot(t *testing.T, options *cmd.Options) {
 	// use fixed SecureBoot keys
 	options.SecureBoot = cmd.SecureBootOptions{
 		Enabled: true,
-
-		SigningKeyPath:  filepath.Join(certDir, "secureboot-signing-key.pem"),
-		SigningCertPath: filepath.Join(certDir, "secureboot-signing-cert.pem"),
-		PCRKeyPath:      filepath.Join(certDir, "pcr-signing-key.pem"),
+		File: cmd.FileProviderOptions{
+			SigningKeyPath:  filepath.Join(certDir, "secureboot-signing-key.pem"),
+			SigningCertPath: filepath.Join(certDir, "secureboot-signing-cert.pem"),
+			PCRKeyPath:      filepath.Join(certDir, "pcr-signing-key.pem"),
+		},
 	}
 }
 
@@ -302,20 +303,38 @@ func commonTest(t *testing.T, options cmd.Options) {
 	})
 }
 
+type ociRepositoryFalg struct {
+	cmd.OCIRepositoryOptions
+}
+
+func (o *ociRepositoryFalg) Set(s string) error {
+	return o.UnmarshalText([]byte(s))
+}
+
+func mustNewDefaultOCIRepository(s string) ociRepositoryFalg {
+	o := ociRepositoryFalg{}
+
+	if err := o.Set(s); err != nil {
+		panic(err)
+	}
+
+	return o
+}
+
 var (
 	imageRegistryFlag              string
-	schematicFactoryRepositoryFlag string
-	installerExternalRepository    string
-	installerInternalRepository    string
-	cacheRepository                string
-	signingCacheRepository         string
+	schematicFactoryRepositoryFlag = mustNewDefaultOCIRepository(cmd.DefaultOptions.Artifacts.Schematic.String())
+	installerExternalRepository    = mustNewDefaultOCIRepository(cmd.DefaultOptions.Artifacts.Installer.External.String())
+	installerInternalRepository    = mustNewDefaultOCIRepository(cmd.DefaultOptions.Artifacts.Installer.Internal.String())
+	cacheRepository                = mustNewDefaultOCIRepository(cmd.DefaultOptions.Cache.OCI.String())
+	signingCacheRepository         = mustNewDefaultOCIRepository(cmd.DefaultOptions.Cache.OCI.String() + "sign")
 )
 
 func init() {
-	flag.StringVar(&imageRegistryFlag, "test.image-registry", cmd.DefaultOptions.ImageRegistry, "image registry")
-	flag.StringVar(&schematicFactoryRepositoryFlag, "test.schematic-service-repository", cmd.DefaultOptions.SchematicServiceRepository, "schematic factory repository")
-	flag.StringVar(&installerExternalRepository, "test.installer-external-repository", cmd.DefaultOptions.InstallerExternalRepository, "image repository for the installer (external)")
-	flag.StringVar(&installerInternalRepository, "test.installer-internal-repository", cmd.DefaultOptions.InstallerInternalRepository, "image repository for the installer (internal)")
-	flag.StringVar(&cacheRepository, "test.cache-repository", cmd.DefaultOptions.CacheRepository, "image repository for cached boot assets")
-	flag.StringVar(&signingCacheRepository, "test.signing-cache-repository", cmd.DefaultOptions.CacheRepository+"sign", "image repository for signatures of cached boot assets (used for S3+CDN tests)")
+	flag.StringVar(&imageRegistryFlag, "test.image-registry", cmd.DefaultOptions.Artifacts.Core.Registry, "image registry")
+	flag.Var(&schematicFactoryRepositoryFlag, "test.schematic-service-repository", "schematic factory repository")
+	flag.Var(&installerExternalRepository, "test.installer-external-repository", "image repository for the installer (external)")
+	flag.Var(&installerInternalRepository, "test.installer-internal-repository", "image repository for the installer (internal)")
+	flag.Var(&cacheRepository, "test.cache-repository", "image repository for cached boot assets")
+	flag.Var(&signingCacheRepository, "test.signing-cache-repository", "image repository for signatures of cached boot assets (used for S3+CDN tests)")
 }
