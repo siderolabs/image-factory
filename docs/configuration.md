@@ -69,6 +69,15 @@ ExternalPXEURL is the public URL for the PXE frontend, used for booting nodes vi
 
 ---
 
+### `http.allowedOrigins`
+
+- **Type:** `[]string`
+- **Env:** `HTTP_ALLOWEDORIGINS`
+
+AllowedOrigins configures the frontend API CORS with custom origins list.
+
+---
+
 ### `build.minTalosVersion`
 
 - **Type:** `string`
@@ -650,6 +659,8 @@ containerSignature:
     publicKeyHashAlgo: sha256
     subjectRegExp: '@siderolabs\.com$'
 http:
+    allowedOrigins:
+        - '*'
     certFile: ""
     externalPXEURL: ""
     externalURL: https://localhost/
@@ -721,6 +732,7 @@ IF_CONTAINERSIGNATURE_ISSUERREGEXP=
 IF_CONTAINERSIGNATURE_PUBLICKEYFILE=
 IF_CONTAINERSIGNATURE_PUBLICKEYHASHALGO=sha256
 IF_CONTAINERSIGNATURE_SUBJECTREGEXP=@siderolabs\.com$
+IF_HTTP_ALLOWEDORIGINS=[*]
 IF_HTTP_CERTFILE=
 IF_HTTP_EXTERNALPXEURL=
 IF_HTTP_EXTERNALURL=https://localhost/

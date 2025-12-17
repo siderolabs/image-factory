@@ -10,6 +10,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,6 +36,28 @@ func downloadAsset(ctx context.Context, t *testing.T, baseURL string, schematicI
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/image/"+schematicID+"/"+talosVersion+"/"+path, nil)
 	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		resp.Body.Close()
+	})
+
+	return resp
+}
+
+func downloadAssetWithFilename(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path, filename string) *http.Response {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/image/"+schematicID+"/"+talosVersion+"/"+path, nil)
+	require.NoError(t, err)
+
+	query := url.Values{}
+
+	query.Add("filename", filename)
+
+	req.URL.RawQuery = query.Encode()
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -138,6 +161,54 @@ func downloadAssetAndMatchSize(ctx context.Context, t *testing.T, baseURL string
 	size := matchSizeAndType(t, body, fileType, expectedSize)
 
 	downloadAssetAssertCached(ctx, t, baseURL, schematicID, talosVersion, path, size)
+}
+
+func checkCors(ctx context.Context, t *testing.T, baseURL, schematicID, talosVersion, path string) {
+	doRequest := func(method string) *http.Response {
+		req, err := http.NewRequestWithContext(ctx, method, baseURL+"/image/"+schematicID+"/"+talosVersion+"/"+path, nil)
+		require.NoError(t, err)
+
+		if req.Method == http.MethodOptions {
+			req.Header.Set("Access-Control-Request-Method", http.MethodGet)
+			req.Header.Set("Access-Control-Request-Headers", "authentication")
+		}
+
+		req.Header.Set("Origin", "https://foo.com")
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			resp.Body.Close()
+		})
+
+		return resp
+	}
+
+	for _, method := range []string{
+		http.MethodOptions, http.MethodGet, http.MethodHead,
+	} {
+		t.Run(method, func(t *testing.T) {
+			resp := doRequest(method)
+
+			allowedHost := resp.Header.Get("Access-Control-Allow-Origin")
+
+			assert.Contains(t, []string{"*", "https://foo.com"}, allowedHost)
+
+			if method == http.MethodOptions {
+				assert.Equal(t, "GET", resp.Header.Get("Access-Control-Allow-Methods"))
+				assert.Equal(t, "authentication", resp.Header.Get("Access-Control-Allow-Headers"))
+			} else {
+				headers := xslices.Map(strings.Split(resp.Header.Get("Access-Control-Expose-Headers"), ","), func(s string) string {
+					return strings.TrimSpace(s)
+				})
+
+				for _, header := range []string{"Content-Disposition", "Content-Length", "Content-Type"} {
+					assert.Contains(t, headers, header)
+				}
+			}
+		})
+	}
 }
 
 func downloadDiskImageMatchSizeAndPartitions(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, fileType string, expectedSize int64, expectedPartitions []partitionAssertion) {
@@ -439,6 +510,16 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					)
 				})
 
+				t.Run("custom filename", func(t *testing.T) {
+					t.Parallel()
+
+					response := downloadAssetWithFilename(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.iso", "custom-filename.iso")
+
+					disposition := response.Header.Get("Content-Disposition")
+
+					require.Equal(t, `attachment; filename="custom-filename.iso"`, disposition)
+				})
+
 				t.Run("secureboot iso", func(t *testing.T) {
 					t.Parallel()
 
@@ -582,6 +663,8 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 				t.Run("metal image", func(t *testing.T) {
 					t.Parallel()
+
+					checkCors(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.xz")
 
 					downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.raw.xz", "application/x-xz",
 						sizePicker(talosVersion, "1.5", 78472708, "1.8", 101464300, "1.9", 101464300, "1.10", 192*MiB, "1.11", 192*MiB),

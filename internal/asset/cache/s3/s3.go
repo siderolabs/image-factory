@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 	"time"
 
@@ -121,35 +122,43 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 		return nil, cache.ErrCacheNotFound
 	}
 
-	redirect, err := c.s3cli.PresignedGetObject(ctx, c.bucketName, key, expires, nil)
-	if err != nil {
-		var minioErr minio.ErrorResponse
-		if errors.As(err, &minioErr) && minioErr.Code == minio.NoSuchKey {
-			return nil, cache.ErrCacheNotFound
-		}
-
-		// ignore the error, as we can still return the object without a presigned URL
-		c.logger.Warn("error generating presigned URL for object", zap.Error(err), zap.String("object.key", key),
-			zap.Int("minio.error.statusCode", minioErr.StatusCode),
-			zap.String("minio.error.code", minioErr.Code),
-			zap.String("minio.error.message", minioErr.Message),
-			zap.String("minio.error.bucketName", minioErr.BucketName),
-			zap.String("minio.error.key", minioErr.Key),
-			zap.String("minio.error.resource", minioErr.Resource),
-			zap.String("minio.error.requestID", minioErr.RequestID),
-			zap.String("minio.error.hostID", minioErr.HostID),
-			zap.String("minio.error.region", minioErr.Region),
-			zap.String("minio.error.server", minioErr.Server),
-		)
-	}
-
 	return &objectAsset{
-		getter:       c.s3cli.GetObject,
-		bucket:       c.bucketName,
-		etag:         ref.ETag,
-		key:          key,
-		size:         stat.Size,
-		presignedUrl: redirect.String(),
+		getter: c.s3cli.GetObject,
+		bucket: c.bucketName,
+		etag:   ref.ETag,
+		key:    key,
+		size:   stat.Size,
+		getPresignedURL: func(ctx context.Context, filename string) (string, error) {
+			reqParams := make(url.Values, 1)
+
+			if filename != "" {
+				reqParams.Set("response-content-disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+			}
+
+			redirect, err := c.s3cli.PresignedGetObject(ctx, c.bucketName, key, expires, reqParams)
+			if err != nil {
+				var minioErr minio.ErrorResponse
+				if errors.As(err, &minioErr) && minioErr.Code == minio.NoSuchKey {
+					return "", cache.ErrCacheNotFound
+				}
+
+				// ignore the error, as we can still return the object without a presigned URL
+				c.logger.Warn("error generating presigned URL for object", zap.Error(err), zap.String("object.key", key),
+					zap.Int("minio.error.statusCode", minioErr.StatusCode),
+					zap.String("minio.error.code", minioErr.Code),
+					zap.String("minio.error.message", minioErr.Message),
+					zap.String("minio.error.bucketName", minioErr.BucketName),
+					zap.String("minio.error.key", minioErr.Key),
+					zap.String("minio.error.resource", minioErr.Resource),
+					zap.String("minio.error.requestID", minioErr.RequestID),
+					zap.String("minio.error.hostID", minioErr.HostID),
+					zap.String("minio.error.region", minioErr.Region),
+					zap.String("minio.error.server", minioErr.Server),
+				)
+			}
+
+			return redirect.String(), err
+		},
 	}, nil
 }
 

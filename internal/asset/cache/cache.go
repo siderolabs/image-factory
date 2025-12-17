@@ -34,7 +34,7 @@ type BootAsset interface {
 // RedirectableAsset is an interface for a boot asset that supports redirects.
 type RedirectableAsset interface {
 	BootAsset
-	Redirect() (string, error)
+	Redirect(ctx context.Context, filename string) (string, error)
 }
 
 // Cache is an interface for a cache that stores boot assets.

@@ -58,6 +58,9 @@ type HTTPOptions struct {
 
 	// ExternalPXEURL is the public URL for the PXE frontend, used for booting nodes via PXE.
 	ExternalPXEURL string `koanf:"externalPXEURL"`
+
+	// AllowedOrigins configures the frontend API CORS with custom origins list.
+	AllowedOrigins []string `koanf:"allowedOrigins"`
 }
 
 // InstallerOptions configures storage for installer images, including internal and external OCI repositories.
@@ -348,8 +351,9 @@ type ComponentsOptions struct {
 // DefaultOptions are the default options.
 var DefaultOptions = Options{
 	HTTP: HTTPOptions{
-		ListenAddr:  ":8080",
-		ExternalURL: "https://localhost/",
+		ListenAddr:     ":8080",
+		ExternalURL:    "https://localhost/",
+		AllowedOrigins: []string{"*"},
 	},
 
 	Build: AssetBuilderOptions{

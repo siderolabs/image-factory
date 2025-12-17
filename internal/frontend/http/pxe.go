@@ -59,7 +59,7 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 	}
 
 	// build the cmdline
-	asset, err := f.assetBuilder.Build(ctx, prof, version.String(), path)
+	asset, err := f.assetBuilder.Build(ctx, prof, version.String(), path, "")
 	if err != nil {
 		return err
 	}

@@ -139,7 +139,7 @@ func (b *Builder) getBuildAsset(ctx context.Context, versionString, arch string,
 //
 // First, check if the asset has already been built and cached then use the cached version.
 // If the asset hasn't been built yet, build it and cache it honoring the concurrency limit, and push it to the cache.
-func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString, filename string) (BootAsset, error) {
+func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString, filename, filenameOverride string) (BootAsset, error) {
 	profileHash, err := factoryprofile.Hash(prof)
 	if err != nil {
 		return nil, err

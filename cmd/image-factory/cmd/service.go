@@ -150,6 +150,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	frontendOptions.RemoteOptions = append(frontendOptions.RemoteOptions, remoteOptions()...)
 	frontendOptions.RegistryRefreshInterval = opts.Artifacts.RefreshInterval
 	frontendOptions.MetricsNamespace = opts.Metrics.Namespace
+	frontendOptions.AllowedOrigins = opts.HTTP.AllowedOrigins
 
 	frontendHTTP, err := frontendhttp.NewFrontend(logger, configFactory, assetBuilder, artifactsManager, secureBootService, frontendOptions)
 	if err != nil {

@@ -5,6 +5,7 @@
 package cdn
 
 import (
+	"context"
 	"io"
 	"net/url"
 	"strings"
@@ -34,8 +35,8 @@ func (a *cdnAsset) Reader() (io.ReadCloser, error) {
 	return a.underlying.Reader()
 }
 
-func (a *cdnAsset) rewriteURL() (string, error) {
-	raw, err := a.underlying.Redirect()
+func (a *cdnAsset) rewriteURL(ctx context.Context, filename string) (string, error) {
+	raw, err := a.underlying.Redirect(ctx, filename)
 	if err != nil {
 		return "", err
 	}
@@ -57,6 +58,6 @@ func (a *cdnAsset) rewriteURL() (string, error) {
 }
 
 // Redirect returns the URL for the boot asset.
-func (a *cdnAsset) Redirect() (string, error) {
-	return a.rewriteURL()
+func (a *cdnAsset) Redirect(ctx context.Context, filename string) (string, error) {
+	return a.rewriteURL(ctx, filename)
 }

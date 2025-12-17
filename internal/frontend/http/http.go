@@ -19,6 +19,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/julienschmidt/httprouter"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/rs/cors"
 	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/gen/xerrors"
 	metrics "github.com/slok/go-http-metrics/metrics/prometheus"
@@ -62,6 +63,7 @@ type Options struct {
 	InstallerInternalRepository      name.Repository
 	InstallerExternalRepository      name.Repository
 	MetricsNamespace                 string
+	AllowedOrigins                   []string
 	RemoteOptions                    []remote.Option
 	RegistryRefreshInterval          time.Duration
 	ProxyInstallerInternalRepository bool
@@ -166,7 +168,16 @@ func NewFrontend(
 
 // Handler returns the HTTP handler.
 func (f *Frontend) Handler() http.Handler {
-	return f.router
+	return cors.New(cors.Options{
+		AllowedOrigins: f.options.AllowedOrigins,
+		AllowedMethods: []string{
+			http.MethodHead,
+			http.MethodGet,
+			http.MethodOptions,
+		},
+		AllowedHeaders: []string{"Authentication"},
+		ExposedHeaders: []string{"Content-Disposition", "Content-Length", "Content-Type"},
+	}).Handler(f.router)
 }
 
 func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error) httprouter.Handle {

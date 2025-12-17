@@ -14,12 +14,12 @@ import (
 )
 
 type objectAsset struct {
-	getter       func(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (*minio.Object, error)
-	bucket       string
-	key          string
-	etag         string
-	presignedUrl string
-	size         int64
+	getter          func(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (*minio.Object, error)
+	getPresignedURL func(context.Context, string) (string, error)
+	bucket          string
+	key             string
+	etag            string
+	size            int64
 }
 
 // Check interface.
@@ -30,12 +30,8 @@ var (
 
 // Redirect returns the presigned URL for the boot asset.
 // If the URL is empty, it returns error.
-func (r *objectAsset) Redirect() (string, error) {
-	if r.presignedUrl == "" {
-		return "", cache.ErrNoRedirect
-	}
-
-	return r.presignedUrl, nil
+func (r *objectAsset) Redirect(ctx context.Context, filename string) (string, error) {
+	return r.getPresignedURL(ctx, filename)
 }
 
 // Size returns the size of the boot asset.

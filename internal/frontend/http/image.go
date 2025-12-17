@@ -56,7 +56,15 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error enhancing profile from schematic: %w", err)
 	}
 
-	asset, err := f.assetBuilder.Build(ctx, prof, version.String(), path)
+	filename := path
+
+	if r.URL.Query().Get("filename") != "" {
+		filename = r.URL.Query().Get("filename")
+
+		f.logger.Info("using filename override", zap.String("filename", filename))
+	}
+
+	asset, err := f.assetBuilder.Build(ctx, prof, version.String(), path, filename)
 	if err != nil {
 		return err
 	}
@@ -64,7 +72,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 	if asset, ok := asset.(cache.RedirectableAsset); ok && !disableRedirect && r.Method != http.MethodHead {
 		var url string
 
-		url, err = asset.Redirect()
+		url, err = asset.Redirect(ctx, filename)
 		if err == nil {
 			http.Redirect(w, r, url, http.StatusFound)
 
@@ -80,7 +88,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 	}
 
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, path))
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.WriteHeader(http.StatusOK)
 
 	if r.Method == http.MethodHead {
