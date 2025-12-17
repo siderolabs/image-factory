@@ -103,6 +103,8 @@ func initFlags() cmd.Options {
 	flag.StringVar(&opts.Images.OverlayManifestImage, "overlay-manifest-image", cmd.DefaultOptions.Images.OverlayManifestImage, "Name of image OverlayManifestImage")
 	flag.StringVar(&opts.Images.TalosctlImage, "talosctl-image", cmd.DefaultOptions.Images.TalosctlImage, "Name of image TalosctlImage")
 
+	flag.Var(&opts.AllowedOrigins, "allowed-origins", "Allowed origins in the frontend CORS")
+
 	opts.LogLevel = zap.LevelFlag("log-level", zap.InfoLevel, "set the logging level")
 
 	flag.Parse()
