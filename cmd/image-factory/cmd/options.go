@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"strings"
 	"time"
 
 	"go.uber.org/zap/zapcore"
@@ -112,6 +113,24 @@ type Options struct { //nolint:govet
 	SecureBoot SecureBootOptions
 
 	Images ImageOptions
+
+	// AllowedOrigins configures the frontend API CORS with custom origins list.
+	AllowedOrigins AllowedOrigins
+}
+
+// AllowedOrigins implements flag.Var.
+type AllowedOrigins []string
+
+// Set implements flag.Set.
+func (aa *AllowedOrigins) Set(s string) error {
+	*aa = strings.Split(s, ",")
+
+	return nil
+}
+
+// String implements flag.String.
+func (aa *AllowedOrigins) String() string {
+	return strings.Join(*aa, ",")
 }
 
 // SecureBootOptions configures SecureBoot.
@@ -186,4 +205,6 @@ var DefaultOptions = Options{
 		OverlayManifestImage:   "siderolabs/overlays",
 		TalosctlImage:          "siderolabs/talosctl-all",
 	},
+
+	AllowedOrigins: []string{"*"},
 }
