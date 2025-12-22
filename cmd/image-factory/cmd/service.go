@@ -290,6 +290,7 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 
 	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
 		MinVersion:                  minVersion,
+		SkipVersionFilter:           opts.SkipVersionFilter,
 		ImageRegistry:               opts.ImageRegistry,
 		InsecureImageRegistry:       opts.InsecureImageRegistry,
 		ImageVerifyOptions:          imageVerifyOptions,
