@@ -1,0 +1,44 @@
+configs:
+  if_config:
+    file: config.yaml
+  if_signing_key:
+    file: ../../_out/cache-signing-key.key
+volumes:
+  if-registry-ghcr-io-data:
+  if-registry-local-data:
+services:
+  registry.local:
+    image: ghcr.io/distribution/distribution:edge
+    volumes:
+      - if-registry-local-data:/var/lib/registry
+    environment:
+      - OTEL_TRACES_EXPORTER=none
+      - REGISTRY_LOG_LEVEL=info
+      - REGISTRY_STORAGE_DELETE_ENABLED=true
+    restart: unless-stopped
+  registry.ghcr.io:
+    image: registry:2
+    volumes:
+      - if-registry-ghcr-io-data:/var/lib/registry
+    environment:
+      - REGISTRY_PROXY_REMOTEURL=https://ghcr.io
+      - OTEL_TRACES_EXPORTER=none
+      - REGISTRY_LOG_LEVEL=info
+      - REGISTRY_STORAGE_DELETE_ENABLED=true
+    restart: unless-stopped
+  image-factory:
+    image: ${IMAGE_FACTORY_IMAGE?}
+    command:
+      - /image-factory
+      - --config
+      - /etc/image-factory/config.yaml
+    depends_on:
+      - registry.local
+      - registry.ghcr.io
+    ports:
+      - "8080:8080"
+    configs:
+      - source: if_config
+        target: /etc/image-factory/config.yaml
+      - source: if_signing_key
+        target: /etc/image-factory/cache-signing-key.key

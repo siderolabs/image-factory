@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-12-22T11:58:31Z by kres 26be706.
+# Generated on 2025-12-25T06:40:27Z by kres 26be706.
 
 # common variables
 
@@ -82,7 +82,7 @@ TOOLCHAIN ?= docker.io/golang:1.25-alpine
 # extra variables
 
 PKGS_PREFIX ?= ghcr.io/siderolabs
-PKGS ?= v1.12.0
+PKGS ?= v1.13.0-alpha.0-21-g59241bd
 RUN_TESTS ?= TestIntegrationCDN
 TEST_FLAGS ?=
 
@@ -220,7 +220,7 @@ integration-direct: integration.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: integration-s3
@@ -229,7 +229,7 @@ integration-s3: integration.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: integration-cdn
@@ -238,7 +238,7 @@ integration-cdn: integration.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: integration-proxy-installer
@@ -247,7 +247,7 @@ integration-proxy-installer: integration.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: integration-enterprise
@@ -256,7 +256,7 @@ integration-enterprise: integration.enterprise.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host --privileged -v /dev:/dev -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS)
+	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS)
 	docker rm -f local-if
 
 .PHONY: $(ARTIFACTS)/image-factory-linux-amd64
@@ -331,6 +331,16 @@ docs:
 .PHONY: check-dirty
 check-dirty:
 	@if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; git diff; exit 1 ; fi
+
+.PHONY: docker-compose-up
+docker-compose-up:
+	@$(MAKE) image-image-factory PUSH=true
+	@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml up -d --remove-orphans
+	@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml logs -f image-factory
+
+.PHONY: docker-compose-down
+docker-compose-down:
+	@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml down
 
 .PHONY: rekres
 rekres:

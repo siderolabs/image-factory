@@ -34,9 +34,8 @@ func Hash(p profile.Profile) (string, error) {
 	// update the hash value to force rebuild assets once the bug is fixed
 	//
 	// 1. errata https://github.com/siderolabs/image-factory/issues/65
-	if p.Board != "" {
-		hasher.Write([]byte("board fix #65"))
-	}
+	// board is now removed from talos imager profile
+
 	// 2. installer wrong base layers https://github.com/siderolabs/talos/pull/8107
 	if p.Output.Kind == profile.OutKindInstaller {
 		hasher.Write([]byte("installer fix #8107"))

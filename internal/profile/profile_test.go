@@ -96,20 +96,6 @@ func TestParseFromPath(t *testing.T) {
 			},
 		},
 		{
-			path:    "cmdline-metal-rpi_generic-arm64",
-			version: "v1.6.0",
-
-			expectedProfile: profile.Profile{
-				Platform: "metal",
-				Arch:     "arm64",
-				Board:    "rpi_generic",
-				Output: profile.Output{
-					Kind:      profile.OutKindCmdline,
-					OutFormat: profile.OutFormatRaw,
-				},
-			},
-		},
-		{
 			path:    "initramfs-amd64.xz",
 			version: "v1.6.0",
 
@@ -229,24 +215,6 @@ func TestParseFromPath(t *testing.T) {
 				Output: profile.Output{
 					Kind:      profile.OutKindImage,
 					OutFormat: profile.OutFormatZSTD,
-					ImageOptions: &profile.ImageOptions{
-						DiskFormat: profile.DiskFormatRaw,
-						DiskSize:   profile.MinRAWDiskSize,
-					},
-				},
-			},
-		},
-		{
-			path:    "metal-rpi_generic-arm64.raw.xz",
-			version: "v1.6.0",
-
-			expectedProfile: profile.Profile{
-				Platform: "metal",
-				Arch:     "arm64",
-				Board:    "rpi_generic",
-				Output: profile.Output{
-					Kind:      profile.OutKindImage,
-					OutFormat: profile.OutFormatXZ,
 					ImageOptions: &profile.ImageOptions{
 						DiskFormat: profile.DiskFormatRaw,
 						DiskSize:   profile.MinRAWDiskSize,

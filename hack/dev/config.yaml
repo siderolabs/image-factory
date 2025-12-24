@@ -1,0 +1,38 @@
+artifacts:
+  # registry mirror for ghcr.io
+  core:
+   registry: registry.ghcr.io:5000
+   insecure: true
+
+  # private registry repository for schematics
+  #
+  # resolves to 127.0.0.1:5005/image-factory/schematic
+  schematic:
+    registry: registry.local:5000
+    namespace: image-factory
+    repository: schematic
+
+  installer:
+    # internal registry namespace to push installer images to
+    internal:
+      registry: registry.local:5000
+      namespace: siderolabs
+
+    # external registry namespace to redirect users to pull installer
+    external:
+      registry: registry.local:5000
+      namespace: siderolabs
+
+cache:
+  oci:
+    # private registry repository for cached assets
+    registry: registry.local:5000
+    namespace: image-factory
+    repository: cache
+
+  # path to the ECDSA private key (to sign cached assets)
+  signingKeyPath: /etc/image-factory/cache-signing-key.key
+
+http:
+  # external URL the Image Factory is available at
+  externalURL: http://localhost:8080

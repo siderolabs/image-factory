@@ -39,9 +39,8 @@ type InvalidErrorTag struct{}
 //
 // Supported formats:
 // - metal-amd64
-// - aws-arm64-secureboot
-// - metal-rpi_generic-arm64.
-func parsePlatformArch(s, version string, prof *profile.Profile) error {
+// - aws-arm64-secureboot.
+func parsePlatformArch(s string, prof *profile.Profile) error {
 	s, ok := strings.CutSuffix(s, "-secureboot")
 	if ok {
 		prof.SecureBoot = pointer.To(true)
@@ -59,11 +58,6 @@ func parsePlatformArch(s, version string, prof *profile.Profile) error {
 	}
 
 	prof.Platform = platform
-
-	if platform == constants.PlatformMetal && strings.HasSuffix(rest, "-"+string(artifacts.ArchArm64)) && !quirks.New(version).SupportsOverlay() {
-		// arm64 metal images might be "board" images
-		prof.Board, rest, _ = strings.Cut(rest, "-")
-	}
 
 	return parseArch(rest, prof)
 }
@@ -106,7 +100,7 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 		prof.Output.Kind = profile.OutKindCmdline
 		prof.Output.OutFormat = profile.OutFormatRaw
 
-		if err := parsePlatformArch(rest, version, &prof); err != nil {
+		if err := parsePlatformArch(rest, &prof); err != nil {
 			return prof, err
 		}
 
@@ -133,7 +127,7 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 		prof.Output.Kind = profile.OutKindISO
 		prof.Output.OutFormat = profile.OutFormatRaw
 
-		if err := parsePlatformArch(rest, version, &prof); err != nil {
+		if err := parsePlatformArch(rest, &prof); err != nil {
 			return prof, err
 		}
 
@@ -145,7 +139,7 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 		prof.Output.Kind = profile.OutKindUKI
 		prof.Output.OutFormat = profile.OutFormatRaw
 
-		if err := parsePlatformArch(rest, version, &prof); err != nil {
+		if err := parsePlatformArch(rest, &prof); err != nil {
 			return prof, err
 		}
 
@@ -178,7 +172,7 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 			prof.Output.Kind = profile.OutKindInstaller
 			prof.Output.OutFormat = profile.OutFormatRaw
 
-			if err := parsePlatformArch(platform+"-"+rest, version, &prof); err != nil {
+			if err := parsePlatformArch(platform+"-"+rest, &prof); err != nil {
 				return prof, err
 			}
 
@@ -235,7 +229,7 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 	}
 
 	// third, figure out the platform and arch
-	if err := parsePlatformArch(path, version, &prof); err != nil {
+	if err := parsePlatformArch(path, &prof); err != nil {
 		return prof, err
 	}
 

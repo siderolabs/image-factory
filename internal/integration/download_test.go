@@ -610,10 +610,10 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 					t.Parallel()
 
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64.qcow2", "",
-						sizePicker(talosVersion, "1.5", 92176384, "1.8", 119808000, "1.9", 119808000, "1.10", 191*MiB, "1.11", 191*MiB),
+						sizePicker(talosVersion, "1.5", 75*MiB, "1.8", 94*MiB, "1.9", 93*MiB, "1.10", 191*MiB, "1.11", 191*MiB),
 					)
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-arm64.qcow2", "",
-						sizePicker(talosVersion, "1.5", 119808000, "1.8", 90415104, "1.9", 90415104, "1.10", 86*MiB, "1.11", 86*MiB),
+						sizePicker(talosVersion, "1.5", 108*MiB, "1.8", 79*MiB, "1.9", 85*MiB, "1.10", 86*MiB, "1.11", 86*MiB),
 					)
 				})
 
@@ -668,8 +668,6 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 					if quirks.New(talosVersion).SupportsOverlay() {
 						downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, rpiGenericOverlaySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 136632380, grubPartitions(talosVersion))
-					} else {
-						downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 107183936, grubPartitions(talosVersion))
 					}
 				})
 			})
@@ -714,8 +712,6 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 					if quirks.New(talosVersion).SupportsOverlay() {
 						downloadAssetAndMatchSize(ctx, t, baseURL, rpiGenericOverlaySchematicID, talosVersion, "metal-arm64.raw.xz", "application/x-xz", 136632380)
-					} else {
-						downloadAssetAndMatchSize(ctx, t, baseURL, systemExtensionsSchematicID, talosVersion, "metal-rpi_generic-arm64.raw.xz", "application/x-xz", 132095368)
 					}
 				})
 
@@ -1075,13 +1071,13 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		t.Run("grub", func(t *testing.T) {
 			t.Parallel()
 
-			downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, grubBootloaderOverrideSchematicID, "v1.12.0-alpha.2", "metal-amd64.raw.zst", "application/zstd", 95*MiB, grubPartitions("v1.12.0-alpha.2"))
+			downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, grubBootloaderOverrideSchematicID, "v1.12.0", "metal-amd64.raw.zst", "application/zstd", 95*MiB, grubPartitions("v1.12.0"))
 		})
 
 		t.Run("sd-boot", func(t *testing.T) {
 			t.Parallel()
 
-			downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, sdBootBootloaderOverrideSchematicID, "v1.12.0-alpha.2", "metal-amd64.raw.zst", "application/zstd", 93*MiB, sdBootPartitions("v1.12.0-alpha.2"))
+			downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, sdBootBootloaderOverrideSchematicID, "v1.12.0", "metal-amd64.raw.zst", "application/zstd", 93*MiB, sdBootPartitions("v1.12.0"))
 		})
 	})
 
