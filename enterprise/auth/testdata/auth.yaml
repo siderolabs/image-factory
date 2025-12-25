@@ -1,0 +1,9 @@
+# authentication configuration
+apiTokens:
+  - token: user1
+    passwords:
+      - pass1
+      - pass1.1
+  - token: user2
+    passwords:
+      - pass2

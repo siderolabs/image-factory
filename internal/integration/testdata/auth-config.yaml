@@ -1,0 +1,9 @@
+# Fixture for authentication configuration in the integration tests.
+apiTokens:
+  - token: alice
+    passwords:
+      - alicesecret
+      - alicetopsecret
+  - token: bob
+    passwords:
+      - bobsecret

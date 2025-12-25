@@ -37,6 +37,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/internal/version"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -60,6 +61,7 @@ type Options struct {
 	CacheSigningKey                  crypto.PrivateKey
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
+	AuthProvider                     enterprise.AuthProvider
 	InstallerInternalRepository      name.Repository
 	InstallerExternalRepository      name.Repository
 	MetricsNamespace                 string
@@ -188,6 +190,10 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 
 		w.Header().Set("Server", version.ServerString())
 
+		if f.options.AuthProvider != nil {
+			h = f.options.AuthProvider.Middleware(h)
+		}
+
 		err := h(ctx, w, r, p)
 
 		duration := time.Since(start)
@@ -209,6 +215,13 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 			status = http.StatusBadRequest
 
 			http.Error(w, err.Error(), http.StatusBadRequest)
+		case xerrors.TagIs[schematicpkg.RequiresAuthenticationTag](err):
+			level = zap.WarnLevel
+			status = http.StatusUnauthorized
+
+			w.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise"`)
+
+			http.Error(w, "authentication required to access this schematic", http.StatusUnauthorized)
 		case errors.Is(err, context.Canceled):
 			status = 499
 			// client closed connection

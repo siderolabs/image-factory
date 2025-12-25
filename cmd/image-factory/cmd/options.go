@@ -10,7 +10,7 @@ import (
 )
 
 // Options configures the behavior of the image factory.
-type Options struct {
+type Options struct { //nolint:govet // keeping order for semantic clarity
 	// HTTP configuration for the image factory frontend.
 	HTTP HTTPOptions `koanf:"http"`
 
@@ -31,6 +31,11 @@ type Options struct {
 
 	// Artifacts defines names and references for various images used by the factory.
 	Artifacts ArtifactsOptions `koanf:"artifacts"`
+
+	// Authentication settings.
+	//
+	// Note: only available in the Enterprise edition.
+	Authentication AuthenticationOptions `koanf:"authentication"`
 }
 
 // AssetBuilderOptions contains settings for building assets.
@@ -346,6 +351,16 @@ type ComponentsOptions struct {
 
 	// Talosctl is the image containing the Talos CLI tool.
 	Talosctl string `koanf:"talosctl"`
+}
+
+// AuthenticationOptions holds authentication settings.
+type AuthenticationOptions struct { //nolint:govet // keeping order for semantic clarity
+	// Enabled enables authentication.
+	Enabled bool `koanf:"enabled"`
+	// ConfigPath is the path to the authentication configuration file.
+	//
+	// It is required if authentication is enabled.
+	ConfigPath string `koanf:"configPath"`
 }
 
 // DefaultOptions are the default options.

@@ -597,6 +597,26 @@ RefreshInterval specifies how often the image factory should refresh its connect
 
 ---
 
+### `authentication.enabled`
+
+- **Type:** `bool`
+- **Env:** `AUTHENTICATION_ENABLED`
+
+Enabled enables authentication.
+
+---
+
+### `authentication.configPath`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_CONFIGPATH`
+
+ConfigPath is the path to the authentication configuration file.
+
+It is required if authentication is enabled.
+
+---
+
 ## Default Configuration
 
 ### YAML
@@ -631,6 +651,9 @@ artifacts:
         registry: ghcr.io
         repository: schematics
     talosVersionRecheckInterval: 15m0s
+authentication:
+    configPath: ""
+    enabled: false
 build:
     maxConcurrency: 6
     minTalosVersion: 1.2.0
@@ -711,6 +734,8 @@ IF_ARTIFACTS_SCHEMATIC_NAMESPACE=siderolabs/image-factory
 IF_ARTIFACTS_SCHEMATIC_REGISTRY=ghcr.io
 IF_ARTIFACTS_SCHEMATIC_REPOSITORY=schematics
 IF_ARTIFACTS_TALOSVERSIONRECHECKINTERVAL=15m0s
+IF_AUTHENTICATION_CONFIGPATH=
+IF_AUTHENTICATION_ENABLED=false
 IF_BUILD_MAXCONCURRENCY=6
 IF_BUILD_MINTALOSVERSION=1.2.0
 IF_CACHE_CDN_ENABLED=false
