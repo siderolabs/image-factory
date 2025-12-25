@@ -4,10 +4,14 @@
 
 //go:build enterprise
 
-// Package enterprise provide glue to Enterprise code.
 package enterprise
 
 // Enabled indicates whether Enterprise features are enabled.
 func Enabled() bool {
 	return true
+}
+
+// NewAuthProvider creates a new authentication provider.
+func NewAuthProvider(configPath string) (AuthProvider, error) {
+	return auth.NewProvider(configPath)
 }

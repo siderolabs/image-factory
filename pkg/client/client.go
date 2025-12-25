@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 
@@ -36,8 +37,9 @@ type OverlayInfo struct {
 
 // Client is the Image Factory HTTP API client.
 type Client struct {
-	baseURL *url.URL
-	client  http.Client
+	baseURL      *url.URL
+	extraHeaders http.Header
+	client       http.Client
 }
 
 // New creates a new Image Factory API client.
@@ -50,8 +52,9 @@ func New(baseURL string, options ...Option) (*Client, error) {
 	}
 
 	c := &Client{
-		baseURL: bURL,
-		client:  opts.Client,
+		baseURL:      bURL,
+		client:       opts.Client,
+		extraHeaders: opts.ExtraHeaders,
 	}
 
 	return c, nil
@@ -140,6 +143,8 @@ func (c *Client) do(ctx context.Context, method, uri string, requestData []byte,
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
+
+	maps.Copy(req.Header, c.extraHeaders)
 
 	resp, err := c.client.Do(req)
 	if err != nil {

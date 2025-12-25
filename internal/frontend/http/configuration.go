@@ -28,12 +28,12 @@ func (f *Frontend) handleSchematicCreate(ctx context.Context, w http.ResponseWri
 		return err
 	}
 
-	cfg, err := schematic.Unmarshal(data)
+	schmtic, err := schematic.Unmarshal(data)
 	if err != nil {
 		return err
 	}
 
-	id, err := f.schematicFactory.Put(ctx, cfg)
+	id, err := f.schematicFactory.Put(ctx, schmtic)
 	if err != nil {
 		return err
 	}
