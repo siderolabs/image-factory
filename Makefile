@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-12-25T06:40:27Z by kres 26be706.
+# Generated on 2025-12-26T15:02:01Z by kres 26be706.
 
 # common variables
 
@@ -335,8 +335,7 @@ check-dirty:
 .PHONY: docker-compose-up
 docker-compose-up:
 	@$(MAKE) image-image-factory PUSH=true
-	@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml up -d --remove-orphans
-	@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml logs -f image-factory
+	@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml up --pull=always --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io
 
 .PHONY: docker-compose-down
 docker-compose-down:

@@ -652,8 +652,7 @@ spec:
     phony: true
     script:
       - "@$(MAKE) image-image-factory PUSH=true"
-      - "@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml up -d --remove-orphans"
-      - "@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml logs -f image-factory"
+      - "@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml up --pull=always --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io"
 ---
 kind: custom.Step
 name: docker-compose-down

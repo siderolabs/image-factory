@@ -529,7 +529,7 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 						sizePicker(talosVersion, "1.5", 167482880, "1.8", 185155584, "1.9", 136*MiB, "1.10", 127*MiB, "1.11", 127*MiB),
 					)
 					downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar",
-						sizePicker(talosVersion, "1.5", 222793728, "1.8", 170119168, "1.9", 126*MiB, "1.10", 116*MiB, "1.11", 116*MiB),
+						sizePicker(talosVersion, "1.5", 157*MiB, "1.8", 170119168, "1.9", 126*MiB, "1.10", 116*MiB, "1.11", 116*MiB),
 					)
 				})
 
@@ -836,7 +836,7 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Parallel()
 
 				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-amd64.tar", "application/x-tar", 188085248)
-				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar", 275915264)
+				downloadAssetAndMatchSize(ctx, t, baseURL, emptySchematicID, talosVersion, "installer-arm64.tar", "application/x-tar", 214*MiB)
 			})
 
 			t.Run("metal image", func(t *testing.T) {

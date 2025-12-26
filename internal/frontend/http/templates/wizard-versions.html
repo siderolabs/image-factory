@@ -2,25 +2,28 @@
 {{ template "hidden-inputs" . }}
 {{ template "header" (t .Localizer "versions.title") }}
 <div class="mb-6">
-    <select
-        name="version"
+    {{ if eq .Target "sbc" }}
+    <div class="mb-4 p-4 text-sm text-blue-800 rounded-lg bg-blue-50 dark:bg-gray-800 dark:text-blue-400" role="alert">
+        Only Talos 1.7+ is supported with SBCs
+    </div>
+    {{ end }}
+    <select name="version"
         class="w-64 bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
-        hx-get="/ui/version-doc" hx-target="#version-doc" hx-params="version"
-    >
+        hx-get="/ui/version-doc" hx-target="#version-doc" hx-params="version">
         {{ $defaultVersion := .Versions.DefaultVersion }}
         {{ range .Versions.Groups }}
-            <optgroup label="{{ .Label }}">
-                {{ range .Versions }}
-                    <option value="{{ . }}" {{ if eq . $defaultVersion }}selected{{ end }}>{{ . }}</option>
-                {{ end }}
-            </optgroup>
+        <optgroup label="{{ .Label }}">
+            {{ range .Versions }}
+            <option value="{{ . }}" {{ if eq . $defaultVersion }}selected{{ end }}>{{ . }}</option>
+            {{ end }}
+        </optgroup>
         {{ end }}
     </select>
     <div class="mt-6">
         <p class="text-xs font-normal text-gray-500 dark:text-gray-300">
-                    {{ t .Localizer "versions.recommendation" }} ({{ .Versions.LatestStable }}).
-                    <br>
-                    {{ t .Localizer "versions.recommendation.pre_release" }}
+            {{ t .Localizer "versions.recommendation" }} ({{ .Versions.LatestStable }}).
+            <br>
+            {{ t .Localizer "versions.recommendation.pre_release" }}
         </p>
     </div>
     <div class="mt-6" id="version-doc">

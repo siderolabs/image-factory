@@ -61,13 +61,12 @@ Common used parameters:
 
 * `<arch>` image architecture: `amd64` or `arm64`
 * `<platform>` Talos Linux platform, e.g. `metal`, `aws`, `gcp`, etc.
-* `<board>` is a board name (only for `arm64` `metal` platform), e.g. `rpi_generic` # for talos versions >= v1.7.0 this is deprecated, use metal image instead
 * `-secureboot` identifies a Secure Boot asset
 
 Supported image paths:
 
 * `kernel-<arch>` (e.g. `kernel-amd64`) - raw kernel image
-* `cmdline-<platform>[-<board>]-<arch>[-secureboot]` (e.g. `cmdline-metal-amd64`) - kernel command line
+* `cmdline-<platform>-<arch>[-secureboot]` (e.g. `cmdline-metal-amd64`) - kernel command line
 * `initramfs-<arch>.xz` (e.g. `initramfs-amd64.xz`) - initramfs image (including system extensions if configured)
 * `<platform>-<arch>[-secureboot].iso` (e.g. `metal-amd64.iso`) - ISO image
 * `<platform>-<arch>[-secureboot]-uki.efi` (e.g. `metal-amd64-secureboot-uki.efi`) UEFI UKI image (Secure Boot compatible)

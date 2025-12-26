@@ -54,9 +54,6 @@ const (
 	KindInitramfs   Kind = "initramfs.xz"
 	KindSystemdBoot Kind = "systemd-boot.efi"
 	KindSystemdStub Kind = "systemd-stub.efi"
-	KindDTB         Kind = "dtb"
-	KindUBoot       Kind = "u-boot"
-	KindRPiFirmware Kind = "raspberrypi-firmware"
 )
 
 // OverlayKind if the kind of overlay artifacts.

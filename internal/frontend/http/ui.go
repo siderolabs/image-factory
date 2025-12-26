@@ -362,7 +362,7 @@ func (p WizardParams) URLValues() url.Values {
 
 // wizardVersions handles the 'pick Talos version' step.
 func (f *Frontend) wizardVersions(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
-	versions, err := f.getTalosVersions(ctx, params.SelectedVersion)
+	versions, err := f.getTalosVersions(ctx, params.SelectedVersion, params.Target)
 	if err != nil {
 		return "", nil, nil, err
 	}
@@ -701,7 +701,7 @@ func (f *Frontend) handleUIExtensionsList(ctx context.Context, w http.ResponseWr
 	})
 }
 
-func (f *Frontend) getTalosVersions(ctx context.Context, selectedVersion string) (any, error) {
+func (f *Frontend) getTalosVersions(ctx context.Context, selectedVersion string, target string) (any, error) {
 	versions, err := f.artifactsManager.GetTalosVersions(ctx)
 	if err != nil {
 		return nil, err
@@ -709,6 +709,14 @@ func (f *Frontend) getTalosVersions(ctx context.Context, selectedVersion string)
 
 	versions = slices.Clone(versions)
 	slices.Reverse(versions)
+
+	// Filter versions for SBC target to only show 1.7.0+
+	if target == TargetSBC {
+		minVersion := semver.MustParse("1.7.0")
+		versions = xslices.Filter(versions, func(v semver.Version) bool {
+			return v.GTE(minVersion)
+		})
+	}
 
 	var latestStable semver.Version
 

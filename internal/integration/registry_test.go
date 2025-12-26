@@ -103,16 +103,7 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 		expectedFiles[fmt.Sprintf("usr/install/%s/initramfs.xz", platform.Architecture)] = struct{}{}
 	}
 
-	if !overlay {
-		if platform.Architecture == "arm64" && !q.SupportsOverlay() {
-			if talosVersion != "v1.3.7" {
-				expectedFiles["usr/install/arm64/dtb/allwinner/sun50i-h616-x96-mate.dtb"] = struct{}{}
-			}
-
-			expectedFiles["usr/install/arm64/raspberrypi-firmware/boot/bootcode.bin"] = struct{}{}
-			expectedFiles["usr/install/arm64/u-boot/rockpi_4/rkspi_loader.img"] = struct{}{}
-		}
-	} else {
+	if overlay {
 		expectedFiles["overlay/artifacts/arm64/firmware/boot/fixup.dat"] = struct{}{}
 		expectedFiles["overlay/extra-options"] = struct{}{}
 		expectedFiles["overlay/installers/default"] = struct{}{}
