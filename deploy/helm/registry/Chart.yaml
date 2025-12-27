@@ -1,0 +1,10 @@
+apiVersion: v2
+type: application
+name: registry
+description: |
+  A minimal registry deployment to back Image Factory.
+home: https://github.com/siderolabs/image-factory
+version: 0.0.0-alpha.1
+appVersion: "v0.1.2"
+sources:
+  - https://github.com/siderolabs/image-factory
