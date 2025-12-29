@@ -62,7 +62,7 @@ func verifyLegacySignature(ctx context.Context, digestRef name.Reference, ivo co
 	ivo.NewBundleFormat = false
 
 	_, bundleVerified, err := cosign.VerifyImageSignatures(ctx, digestRef, &ivo)
-	if err == nil && bundleVerified {
+	if err == nil {
 		// determine verification method
 		var verificationMethod string
 
@@ -75,10 +75,6 @@ func verifyLegacySignature(ctx context.Context, digestRef name.Reference, ivo co
 		return VerifyResult{Verified: bundleVerified, Method: verificationMethod}, nil
 	}
 
-	if !bundleVerified && err == nil {
-		err = errors.New("legacy signatures found but verification failed")
-	}
-
 	return VerifyResult{}, err
 }
 
@@ -86,7 +82,7 @@ func verifyBundledSignature(ctx context.Context, digestRef name.Reference, ivo c
 	ivo.NewBundleFormat = true
 
 	_, bundleVerified, err := cosign.VerifyImageAttestations(ctx, digestRef, &ivo)
-	if err == nil && bundleVerified {
+	if err == nil {
 		// determine verification method
 		var verificationMethod string
 
@@ -97,10 +93,6 @@ func verifyBundledSignature(ctx context.Context, digestRef name.Reference, ivo c
 		}
 
 		return VerifyResult{Verified: bundleVerified, Method: verificationMethod}, nil
-	}
-
-	if !bundleVerified && err == nil {
-		err = errors.New("bundled signatures found but verification failed")
 	}
 
 	return VerifyResult{}, err
