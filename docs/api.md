@@ -42,6 +42,9 @@ Well-known schematic IDs:
 
 * `376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba` - default schematic (without any customizations)
 
+The schematic in Enterprise edition may contain an `owner` field, which restricts access to the schematic to the specified owner only.
+This requires authentication to be enabled.
+
 ### `GET /schematics/:schematic`
 
 Retrieve a specific schematic by its ID.
