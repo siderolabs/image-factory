@@ -42,6 +42,8 @@ name: image-image-factory
 spec:
   extraEnvironment:
     PLATFORM: linux/amd64,linux/arm64
+  environment:
+    TUF_ROOT: /tmp
   additionalImages: [] # so we copy same fhs and ca-certificates as the version of other tools
   allowedLocalPaths:
     - tailwind.config.js
