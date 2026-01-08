@@ -83,13 +83,8 @@ TOOLCHAIN ?= docker.io/golang:1.25-alpine
 # extra variables
 
 PKGS_PREFIX ?= ghcr.io/siderolabs
-<<<<<<< HEAD
 PKGS ?= v1.13.0-alpha.0-28-gdf4b4c8
-RUN_TESTS ?= TestIntegrationCDN
-=======
-PKGS ?= v1.13.0-alpha.0-21-g59241bd
 RUN_TESTS_DIRECT ?= TestIntegrationDirect
->>>>>>> d99dc6c (chore: separate kres integration-test variables)
 TEST_FLAGS ?=
 RUN_TESTS_S3 ?= TestIntegrationS3
 RUN_TESTS_CDN ?= TestIntegrationCDN

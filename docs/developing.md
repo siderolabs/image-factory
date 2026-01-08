@@ -1,10 +1,26 @@
 # Developing Image Factory
 
-Run integration tests in local mode, with registry mirrors:
+## Running with Docker Compose
+
+`docker-compose-{up|down}` make targets are available for running Image Factory.
+
+To run:
 
 ```bash
-make integration TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5005/image-factory/schematic -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test -test.cache-repository=127.0.0.1:5005/image-factory/cache" REGISTRY=127.0.0.1:5005
+# Generate signing key
+openssl ecparam -name prime256v1 -genkey -noout -out _out/cache-signing-key.key
+
+# Build and run
+make docker-compose-up REGISTRY=127.0.0.1:5005
 ```
+
+To stop:
+
+```bash
+make docker-compose-down
+```
+
+## Running Image Factory Manually
 
 In order to run the Image Factory, generate a ECDSA key pair:
 
@@ -52,4 +68,20 @@ cache:
 http:
   # external URL the Image Factory is available at
   externalURL: https://example.com/
+```
+
+## Running Integration Tests
+
+Integration tests can be run with specific targets:
+
+- `integration-direct`
+- `integration-s3`
+- `integration-cdn`
+- `integration-proxy-installer`
+- `integration-enterprise`
+
+Example running direct integration tests with registry mirrors:
+
+```bash
+make integration-direct TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5005/image-factory/schematic -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test -test.cache-repository=127.0.0.1:5005/image-factory/cache" REGISTRY=127.0.0.1:5005
 ```
