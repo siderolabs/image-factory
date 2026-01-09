@@ -23,7 +23,7 @@ spec:
       - name: PKGS_PREFIX
         defaultValue: ghcr.io/siderolabs
       - name: PKGS
-        defaultValue: v1.13.0-alpha.0-21-g59241bd
+        defaultValue: v1.13.0-alpha.0-28-gdf4b4c8
   docker:
     extraArgs:
       - PKGS_PREFIX
@@ -137,6 +137,8 @@ spec:
         from: ${PKGS_PREFIX}/installer:v1.9.4
       - name: pkg-kmod
         from: ${PKGS_PREFIX}/kmod:${PKGS}
+      - name: pkg-libarchive
+        from: ${PKGS_PREFIX}/libarchive:${PKGS}
       - name: pkg-libattr
         from: ${PKGS_PREFIX}/libattr:${PKGS}
       - name: pkg-libinih
@@ -230,6 +232,10 @@ spec:
               dst: /usr/share/grub/unicode.pf2
           - copy:
               from: pkg-kmod
+              src: /
+              dst: /
+          - copy:
+              from: pkg-libarchive
               src: /
               dst: /
           - copy:

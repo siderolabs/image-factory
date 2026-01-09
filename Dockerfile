@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-08T09:01:34Z by kres 0e8da31.
+# Generated on 2026-01-09T11:46:00Z by kres 0e8da31.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -39,6 +39,8 @@ FROM --platform=linux/arm64 ${PKGS_PREFIX}/grub:${PKGS} AS pkg-grub-arm64
 FROM ${PKGS_PREFIX}/installer:v1.9.4 AS pkg-grub-unicode
 
 FROM ${PKGS_PREFIX}/kmod:${PKGS} AS pkg-kmod
+
+FROM ${PKGS_PREFIX}/libarchive:${PKGS} AS pkg-libarchive
 
 FROM ${PKGS_PREFIX}/libattr:${PKGS} AS pkg-libattr
 
@@ -102,6 +104,7 @@ COPY --from=pkg-grub-amd64 /usr/lib/grub /usr/lib/grub
 COPY --from=pkg-grub-arm64 /usr/lib/grub /usr/lib/grub
 COPY --from=pkg-grub-unicode /usr/share/grub/unicode.pf2 /usr/share/grub/unicode.pf2
 COPY --from=pkg-kmod / /
+COPY --from=pkg-libarchive / /
 COPY --from=pkg-libattr / /
 COPY --from=pkg-libinih / /
 COPY --from=pkg-liblzma / /
