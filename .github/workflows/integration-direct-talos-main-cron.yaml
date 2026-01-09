@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-08T09:01:34Z by kres 0e8da31.
+# Generated on 2026-01-09T09:46:37Z by kres 0e8da31.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -54,7 +54,7 @@ jobs:
       - name: integration-direct-talos-main
         env:
           REGISTRY: registry.dev.siderolabs.io
-          RUN_TESTS: TestIntegrationDirect
+          RUN_TESTS_DIRECT: TestIntegrationDirect
           TEST_FLAGS: -test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache
         run: |
           make integration-direct-talos-main

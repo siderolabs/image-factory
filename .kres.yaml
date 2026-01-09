@@ -424,12 +424,17 @@ spec:
     phony: true
     depends:
       - integration.test
+    variables:
+      - name: RUN_TESTS_DIRECT
+        defaultValue: TestIntegrationDirect
+      - name: TEST_FLAGS
+        defaultValue: ""
     script:
       - "@$(MAKE) image-image-factory PUSH=true"
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS_DIRECT)
       - docker rm -f local-if
   ghaction:
     enabled: true
@@ -442,7 +447,7 @@ spec:
         - coverage-integration-direct.txt
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS: TestIntegrationDirect
+      RUN_TESTS_DIRECT: TestIntegrationDirect
       TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
 ---
 kind: custom.Step
@@ -453,12 +458,17 @@ spec:
     phony: true
     depends:
       - integration.test
+    variables:
+      - name: RUN_TESTS_S3
+        defaultValue: TestIntegrationS3
+      - name: TEST_FLAGS
+        defaultValue: ""
     script:
       - "@$(MAKE) image-image-factory PUSH=true"
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS_S3)
       - docker rm -f local-if
   ghaction:
     enabled: true
@@ -483,7 +493,7 @@ spec:
     depends:
       - integration.test
     variables:
-      - name: RUN_TESTS
+      - name: RUN_TESTS_CDN
         defaultValue: TestIntegrationCDN
       - name: TEST_FLAGS
         defaultValue: ""
@@ -492,7 +502,7 @@ spec:
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS_CDN)
       - docker rm -f local-if
   ghaction:
     enabled: true
@@ -502,10 +512,10 @@ spec:
       runnerGroup: generic
     coverage:
       inputPaths:
-       - coverage-integration-cdn.txt
+        - coverage-integration-cdn.txt
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS: TestIntegrationCDN
+      RUN_TESTS_CDN: TestIntegrationCDN
       TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/siderolabs -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
 ---
 kind: custom.Step
@@ -517,7 +527,7 @@ spec:
     depends:
       - integration.test
     variables:
-      - name: RUN_TESTS
+      - name: RUN_TESTS_PROXY
         defaultValue: TestIntegrationDirect
       - name: TEST_FLAGS
         defaultValue: ""
@@ -526,7 +536,7 @@ spec:
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS_PROXY)
       - docker rm -f local-if
   ghaction:
     enabled: true
@@ -536,10 +546,10 @@ spec:
       runnerGroup: generic
     coverage:
       inputPaths:
-       - coverage-integration-proxy-installer.txt
+        - coverage-integration-proxy-installer.txt
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS: TestIntegrationDirect
+      RUN_TESTS_PROXY: TestIntegrationDirect
       TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
 ---
 kind: custom.Step
@@ -551,7 +561,7 @@ spec:
     depends:
       - integration.enterprise.test
     variables:
-      - name: RUN_TESTS
+      - name: RUN_TESTS_ENTERPRISE
         defaultValue: TestIntegrationDirect
       - name: TEST_FLAGS
         defaultValue: ""
@@ -560,7 +570,7 @@ spec:
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
-      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS)
+      - docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS_ENTERPRISE)
       - docker rm -f local-if
   ghaction:
     enabled: true
@@ -570,10 +580,10 @@ spec:
       runnerGroup: generic
     coverage:
       inputPaths:
-       - coverage-integration-enterprise.txt
+        - coverage-integration-enterprise.txt
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS: TestIntegrationDirect
+      RUN_TESTS_ENTERPRISE: TestIntegrationDirect
       TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
       TAG_SUFFIX: "-enterprise"
 ---
@@ -592,7 +602,7 @@ spec:
     cronOnly: true
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS: TestIntegrationDirect
+      RUN_TESTS_DIRECT: TestIntegrationDirect
       TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
     jobs:
       - name: integration-direct-talos-main
@@ -617,7 +627,7 @@ spec:
     cronOnly: true
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS: TestIntegrationS3
+      RUN_TESTS_S3: TestIntegrationS3
       TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
     jobs:
       - name: integration-s3-talos-main
@@ -642,7 +652,7 @@ spec:
     cronOnly: true
     environment:
       REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS: TestIntegrationCDN
+      RUN_TESTS_CDN: TestIntegrationCDN
       TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
     jobs:
       - name: integration-cdn-talos-main
