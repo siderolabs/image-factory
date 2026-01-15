@@ -1,0 +1,420 @@
+# -- Provide a name in place of `image-factory`
+nameOverride: "image-factory"
+# -- String to fully override `"image-factory.fullname"`
+fullnameOverride: ""
+
+replicaCount: 1
+
+# -- Deployment strategy. Image-Facory currently only supports Recreate strategy.
+strategy:
+  type: Recreate
+
+# Image-Facory image
+image:
+  # -- Repository to use for Image-Facory
+  repository: ghcr.io/siderolabs/image-factory
+  # -- Image pull policy for Image-Facory
+  pullPolicy: IfNotPresent
+  # -- Tag to use for Image-Facory
+  tag: ""
+
+# -- Secrets with credentials to pull images from a private registry
+imagePullSecrets: []
+
+## Container Arguments
+args:
+  # -- Path to the configuration file (mounted via ConfigMap).
+  ## Do not remove this unless you are using args only.
+  - --config=/config.yaml
+  # -- Log level [debug info warn error dpanic panic fatal] (default info)
+  - --log-level=info
+
+# Sidero Image-Factory Configuration
+config:
+  ## Artifacts Configuration
+  # Configures where the Image Factory retrieves base images, components, and schematics.
+  artifacts:
+    # -- Core components configuration (installer, imager, extensions, etc.)
+    # core:
+      # components:
+        # -- Image manifest for extensions
+        # extensionManifest: siderolabs/extensions
+        # -- Image builder used by the factory
+        # imager: siderolabs/imager
+        # -- Main installer image
+        # installer: siderolabs/installer
+        # -- Base image for creating installer images
+        # installerBase: siderolabs/installer-base
+        # -- Image manifest for overlays
+        # overlayManifest: siderolabs/overlays
+        # -- Image containing the Talos CLI tool
+        # talosctl: siderolabs/talosctl-all
+      # -- Allow connections to the registry over HTTP or with invalid TLS certificates.
+      # insecure: false
+      # -- OCI registry host for base images and extensions (e.g., ghcr.io)
+      # registry: ghcr.io
+
+    # -- Installer image configuration
+    # installer:
+      # -- External registry configuration for installer images
+      # external:
+        # -- Allow insecure connections
+        # insecure: false
+        # -- Repository namespace (e.g., sidero-labs)
+        # namespace: ""
+        # -- Registry hostname (e.g., ghcr.io)
+        # registry: ""
+        # -- Repository name (e.g., talos)
+        # repository: ""
+      # -- Internal registry configuration for installer images
+      # internal:
+        # insecure: false
+        # namespace: ""
+        # registry: ghcr.io
+        # repository: siderolabs
+
+    # -- Interval to refresh registry connections
+    # refreshInterval: 5m0s
+
+    # -- Schematic storage configuration
+    schematic:
+      insecure: false
+      # -- Namespace for schematics repository
+      namespace: siderolabs/image-factory
+      # -- Registry for schematics
+      registry: registry.example.com
+      # -- Repository name for schematics
+      repository: schematics
+
+    # -- Interval to recheck for available Talos versions
+    # talosVersionRecheckInterval: 15m0s
+
+  ## Build Configuration
+  # build:
+    # -- Maximum number of simultaneous asset build operations
+    # maxConcurrency: 6
+    # -- Minimum supported Talos version for assets
+    # minTalosVersion: 1.2.0
+
+  ## Cache Configuration
+  # Configures caching backends (OCI, S3, CDN) to store built artifacts.
+  cache:
+    # -- CDN configuration for serving cached assets
+    # cdn:
+      # -- Enable CDN cache
+      # enabled: false
+      # -- CDN URL host
+      # host: ""
+      # -- Prefix to remove from asset paths before redirecting to CDN
+      # trimPrefix: ""
+
+    # -- OCI Registry Cache configuration
+    # oci:
+      # -- Allow insecure connections to the cache registry
+      # insecure: false
+      # -- Namespace for the cache repository
+      # namespace: siderolabs/image-factory
+      # -- Registry hostname for the cache
+      # registry: ghcr.io
+      # -- Repository name for the cache
+      # repository: cache
+
+    # -- S3 Bucket Cache configuration
+    # s3:
+      # -- S3 Bucket name
+      # bucket: image-factory
+      # -- Enable S3 cache
+      # enabled: false
+      # -- S3 Endpoint URL (leave empty for AWS default)
+      # endpoint: ""
+      # -- Allow insecure S3 connections (no TLS)
+      # insecure: false
+      # -- S3 Region
+      # region: ""
+
+    # -- Path to the ECDSA key used to sign cached assets
+    signingKeyPath: "/etc/image-factory/keys/cache-signing.key"
+
+  ## Container Signature Verification
+  # Configures verification of upstream images using Sigstore/Cosign.
+  # containerSignature:
+    # -- Disable signature verification
+    # disabled: false
+    # -- Expected issuer URL (overrides issuerRegExp if set)
+    # issuer: https://accounts.google.com
+    # -- Regex to validate the issuer
+    # issuerRegExp: ""
+    # -- Path to the public key for verification
+    # publicKeyFile: ""
+    # -- Hash algorithm for the public key (default: sha256)
+    # publicKeyHashAlgo: sha256
+    # -- Regex to validate the subject (e.g., matches siderolabs.com emails)
+    # subjectRegExp: '@siderolabs\.com$'
+
+  ## HTTP Server Configuration
+  # http:
+    # -- TLS Certificate file path
+    # certFile: ""
+    # -- Public URL for the PXE frontend (used for iPXE scripts)
+    # externalPXEURL: ""
+    # -- Public URL for the HTTP frontend (used in links and redirects)
+    # externalURL: https://localhost/
+    # -- Local bind address for the HTTP server
+    # httpListenAddr: 0.0.0.0:8080
+    # -- TLS Key file path
+    # keyFile: ""
+
+  ## Metrics Configuration
+  # metrics:
+    # -- Bind address for Prometheus metrics (empty to disable)
+    # addr: 0.0.0.0:2122
+
+  ## Secure Boot Configuration
+  # Configures generation of Unified Kernel Images (UKI) and Secure Boot signing.
+  # secureBoot:
+    # -- AWS KMS configuration for signing
+    # awsKMS:
+      # certPath: ""
+      # keyID: ""
+      # pcrKeyID: ""
+      # region: ""
+    # -- Azure Key Vault configuration for signing
+    # azureKeyVault:
+      # certificateName: ""
+      # keyName: ""
+      # url: ""
+    # -- Enable SecureBoot asset generation
+    # enabled: false
+    # -- Local file-based keys for signing
+    # file:
+      # -- Path to the key used for PCR measurement
+      # pcrKeyPath: ""
+      # -- Path to the certificate used for signing boot assets
+      # signingCertPath: ""
+      # -- Path to the private key used for signing boot assets
+      # signingKeyPath: ""
+
+# -- Environment variables to pass to Image-Facory
+env: []
+
+# -- envForm to pass to Image-Facory
+envFrom: []
+# - configMapRef:
+#     name: config-map-name
+# - secretRef:
+#     name: secret-name
+
+# -- Image Cache Signing Key Configuration
+## This secret contains the ECDSA private key used to sign cached Talos image artifacts.
+## This ensures that nodes can verify the integrity of images served by the Image Factory.
+## If you are running a self-hosted Image Factory, this key is required.
+cacheSigningKey:
+  # -- Name of an existing Secret containing the ECDSA private key.
+  # -- IMPORTANT: The existing secret MUST contain a data key named exactly "cache-signing.key".
+  # -- If your secret uses a different key, Image Factory will not find the file.
+  # -- Example creation: kubectl create secret generic image-factory-cache-signing-key --from-file=cache-signing.key=./signing-key.key
+  existingSecret: ""
+  # -- If 'existingSecret' is empty, a new Secret will be created.
+  # -- The ECDSA private key content (multiline string).
+  # -- Generate using: openssl ecparam -name prime256v1 -genkey -noout -out cache-signing.key
+  key: |-
+    -----BEGIN EC PRIVATE KEY-----
+    MHcCAQEEI... (your EC private key content here) ...
+    ...
+    -----END EC PRIVATE KEY-----
+
+# -- Ingress Configuration
+## This section configures standard Kubernetes Ingress resources.
+## Use this if you are using an Ingress Controller like NGINX, Traefik, or HAProxy.
+ingress:
+  ui:
+    enabled: false
+    # -- Additional Annotations
+    annotations: {}
+    # -- Additional Labels
+    labels: {}
+    # -- Ingress Class Name
+    className: ""
+    # -- Image-Facory UI hostname
+    host: factory.example.com
+    # -- TLS configuration
+    tls: []
+    #  - secretName: image-factory-ui-tls
+    #    hosts:
+    #      - image-factory.example.com
+  pxe:
+    enabled: false
+    # -- Additional Annotations
+    annotations: {}
+    # -- Additional Labels
+    labels: {}
+    # -- Ingress Class Name
+    className: ""
+    # -- Image-Facory PXE hostname
+    host: pxe-factory.example.com
+    # -- TLS configuration
+    tls: []
+    #  - secretName: image-factory-pxe-tls
+    #    hosts:
+    #      - pxe-factory.example.com
+
+# -- Gateway API Configuration
+## NOTE: Gateway API support is in EXPERIMENTAL status
+## Support depends on your Gateway controller implementation
+gatewayApi:
+  ui:
+    enabled: false
+    # -- Additional Annotations
+    annotations: {}
+    # -- Additional Annotations
+    labels: {}
+    # -- The Gateway(s) to attach this route to.
+    # -- You MUST define at least one parentRef for the route to be active.
+    parentRefs: []
+      # - name: my-gateway
+      #   namespace: my-gateway-namespace
+      #   sectionName: https-listener
+    # -- Image-Facory UI hostname
+    hostnames:
+      - factory.example.com
+  pxe:
+    enabled: false
+    # -- Additional Annotations
+    annotations: {}
+    # -- Additional Annotations
+    labels: {}
+    # -- The Gateway(s) to attach this route to.
+    # -- You MUST define at least one parentRef for the route to be active.
+    parentRefs: []
+      # - name: my-gateway
+      #   namespace: my-gateway-namespace
+      #   sectionName: https-listener
+    # -- Image-Facory PXE hostname
+    hostnames:
+      - pxe-factory.example.com
+
+# -- Probes Configuration
+livenessProbe: {}
+readinessProbe: {}
+
+# -- Resources Configuration
+## Set CPU and Memory resource requests and limits for the Image-Facory pod.
+resources: {}
+# limits:
+#   cpu: 100m
+#   memory: 128Mi
+# requests:
+#   cpu: 100m
+#   memory: 128Mi
+
+# -- Pod Security Context
+## Image-Facory container-level security context
+securityContext:
+  privileged: true 
+
+# -- Service Configuration
+## Configures the Kubernetes Services to expose Image-Facory's network endpoints.
+## - 'main': Exposes the UI and PXE services (ClusterIP by default).
+## - 'metrics': Exposes the UDP WireGuard interface for SideroLink (NodePort/LoadBalancer required for external access).
+service:
+  # -- Main Service (Image-Factory)
+  main:
+    # -- Additional Annotations
+    annotations: {}
+    # -- Additional Labels
+    labels: {}
+    # -- Default: ClusterIP
+    type: ClusterIP
+    # -- If type is Loadbalancer
+    loadBalancerIP: ""
+    # -- Web UI
+    port: 8080
+
+## Omni metrics configuration
+metrics:
+  # -- Deploy metrics service
+  enabled: false
+  service:
+    # -- Metrics service type
+    type: ClusterIP
+    # -- Metrics service clusterIP. `None` makes a "headless service" (no virtual IP)
+    clusterIP: ""
+    # -- Metrics service annotations
+    annotations: {}
+    # -- Metrics service labels
+    labels: {}
+    # -- Metrics service port
+    servicePort: 2122
+  serviceMonitor:
+    # -- Enable a prometheus ServiceMonitor
+    enabled: false
+    # -- Prometheus ServiceMonitor interval
+    interval: 30s
+    # -- Prometheus ServiceMonitor scrapeTimeout. If empty, Prometheus uses the global scrape timeout unless it is less than the target's scrape interval value in which the latter is used.
+    scrapeTimeout: ""
+    # -- When true, honorLabels preserves the metric’s labels when they collide with the target’s labels.
+    honorLabels: false
+    # -- Prometheus [RelabelConfigs] to apply to samples before scraping
+    relabelings: []
+    # -- Prometheus [MetricRelabelConfigs] to apply to samples before ingestion
+    metricRelabelings: []
+    # -- Prometheus ServiceMonitor selector
+    scheme: ""
+    # -- Prometheus ServiceMonitor tlsConfig
+    tlsConfig: {}
+    # -- Prometheus ServiceMonitor namespace
+    namespace: "" # "monitoring"
+    # -- Prometheus ServiceMonitor labels
+    selector: {}
+      # prometheus: kube-prometheus
+    labels: {}
+    # -- Prometheus ServiceMonitor annotations
+    annotations: {}
+  rules:
+    # -- Deploy a PrometheusRule for the application controller
+    enabled: false
+    # -- PrometheusRule namespace
+    namespace: "" # "monitoring"
+    # -- PrometheusRule selector
+    selector: {}
+      # prometheus: kube-prometheus
+    # -- PrometheusRule labels
+    labels: {}
+    # -- PrometheusRule annotations
+    annotations: {}
+
+    # -- PrometheusRule.Spec for the application controller
+    spec: []
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+# -- List of additional mounts to add (normally used with extraVolumes)
+extraVolumeMounts: []
+
+# -- List of extra volumes to add
+extraVolumes: []
+
+affinity: {}
+
+nodeSelector: {}
+
+podAnnotations: {}
+
+podLabels: {}
+
+podSecurityContext: {}
+
+tolerations: []
+
+## -- Extra Kubernetes objects to deploy with the helm chart
+extraObjects: []
+  # - apiVersion: v1
+  #   kind: ConfigMap
+  #   metadata:
+  #     name: image-factory-example
+  #   data:
+  #     custom-setting: "true"
