@@ -21,8 +21,8 @@ import (
 	"github.com/siderolabs/gen/maps"
 	"github.com/siderolabs/gen/value"
 	"github.com/siderolabs/gen/xslices"
-	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
+	"github.com/siderolabs/talos/pkg/machinery/imager/imageropts"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/platforms"
 	"go.yaml.in/yaml/v4"
@@ -541,7 +541,7 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 	}
 
 	if params.Bootloader != "" && params.Bootloader != "auto" {
-		bootloader, err := profile.BootloaderKindString(params.Bootloader)
+		bootloader, err := imageropts.BootloaderKindString(params.Bootloader)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("invalid bootloader %q: %w", params.Bootloader, err)
 		}
