@@ -1,0 +1,35 @@
+{{- if .Values.ingress.pxe.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "image-factory.fullname" . }}-pxe
+  namespace: {{ include "image-factory.namespace" . }}
+  labels:
+    {{- include "image-factory.labels" . | nindent 4 }}
+    {{- with .Values.ingress.pxe.labels }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.ingress.pxe.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.pxe.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingress.pxe.tls }}
+  tls:
+    {{- toYaml .Values.ingress.pxe.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.pxe.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ include "image-factory.fullname" $ }}
+                port:
+                  number: {{ .Values.service.main.port }}
+{{- end }}
