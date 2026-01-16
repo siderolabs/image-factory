@@ -1,7 +1,4 @@
 {{- if .Values.ingress.pxe.enabled -}}
-{{- if not (semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion) -}}
-  {{- fail "Ingress requires Kubernetes v1.19 or later" }}
-{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

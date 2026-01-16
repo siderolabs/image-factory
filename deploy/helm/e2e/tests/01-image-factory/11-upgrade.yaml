@@ -1,0 +1,11 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: upgrade-with-ingress
+commands:
+  - command: >-
+      helm upgrade --install image-factory ../../../image-factory
+        --wait --timeout=120s --reuse-values 
+        --set ingress.ui.enabled=true 
+        --set ingress.pxe.enabled=true
+    namespaced: true

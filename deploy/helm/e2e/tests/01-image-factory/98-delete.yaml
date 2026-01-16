@@ -1,0 +1,7 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: install-image-factory
+commands:
+  - command: helm uninstall image-factory --wait --timeout=120s
+    namespaced: true
