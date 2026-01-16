@@ -9,18 +9,12 @@ tests:
   # ========================================
   - it: Should not create UI ingress by default
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     asserts:
       - hasDocuments:
           count: 0
 
   - it: Should not create UI ingress when explicitly disabled
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -31,9 +25,6 @@ tests:
 
   - it: Should create UI ingress when enabled
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -50,9 +41,6 @@ tests:
 
   - it: Should render UI Ingress with default settings for Kubernetes >=1.19
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -70,9 +58,6 @@ tests:
 
   - it: Should configure UI ingress hostname
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -85,9 +70,6 @@ tests:
 
   - it: Should configure UI ingress className
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -101,9 +83,6 @@ tests:
 
   - it: Should configure UI ingress TLS
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -123,9 +102,6 @@ tests:
 
   - it: Should add UI ingress custom annotations
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -144,9 +120,6 @@ tests:
 
   - it: Should add UI ingress custom labels
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -165,9 +138,6 @@ tests:
 
   - it: Should configure UI ingress backend service
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -189,18 +159,12 @@ tests:
   # ========================================
   - it: Should not create PXE ingress by default
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     asserts:
       - hasDocuments:
           count: 0
 
   - it: Should not create PXE ingress when explicitly disabled
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:
@@ -211,9 +175,6 @@ tests:
 
   - it: Should create PXE ingress when enabled
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:
@@ -230,9 +191,6 @@ tests:
 
   - it: Should render PXE Ingress with default settings for Kubernetes >=1.19
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:
@@ -250,9 +208,6 @@ tests:
 
   - it: Should configure PXE ingress hostname
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:
@@ -265,9 +220,6 @@ tests:
 
   - it: Should configure PXE ingress className
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:
@@ -281,9 +233,6 @@ tests:
 
   - it: Should configure PXE ingress TLS
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:
@@ -303,9 +252,6 @@ tests:
 
   - it: Should add PXE ingress custom annotations
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:
@@ -320,9 +266,6 @@ tests:
 
   - it: Should add PXE ingress custom labels
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:
@@ -336,9 +279,6 @@ tests:
           value: production
   - it: Should render UI Ingress with non-default settings for Kubernetes >=1.19
     template: ingress-ui.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         ui:
@@ -378,9 +318,6 @@ tests:
           content: factory.example.com
   - it: Should render PXE Ingress with non-default settings for Kubernetes >=1.19
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:
@@ -422,9 +359,6 @@ tests:
 
   - it: Should configure PXE ingress backend service
     template: ingress-pxe.yaml
-    capabilities:
-      majorVersion: 1
-      minorVersion: 19
     set:
       ingress:
         pxe:

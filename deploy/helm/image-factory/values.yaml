@@ -266,7 +266,7 @@ gatewayApi:
     enabled: false
     # -- Additional Annotations
     annotations: {}
-    # -- Additional Annotations
+    # -- Additional Labels
     labels: {}
     # -- The Gateway(s) to attach this route to.
     # -- You MUST define at least one parentRef for the route to be active.
@@ -281,7 +281,7 @@ gatewayApi:
     enabled: false
     # -- Additional Annotations
     annotations: {}
-    # -- Additional Annotations
+    # -- Additional Labels
     labels: {}
     # -- The Gateway(s) to attach this route to.
     # -- You MUST define at least one parentRef for the route to be active.
@@ -310,7 +310,7 @@ resources: {}
 # -- Pod Security Context
 ## Image Factory container-level security context
 securityContext:
-  privileged: true 
+  privileged: true
 
 # -- Service Configuration
 ## Configures the Kubernetes Services to expose Image Factory's network endpoints.
