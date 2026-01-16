@@ -1,0 +1,13 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: upgrade-with-metrics
+commands:
+  - command: >-
+      helm upgrade --install image-factory ../../../image-factory
+        --wait --timeout=120s --reuse-values
+        --set service.metrics.enabled=true
+        --set service.metrics.serviceMonitor.enabled=true
+        --set ingress.ui.enabled=false
+        --set ingress.pxe.enabled=false
+    namespaced: true

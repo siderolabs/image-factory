@@ -1,0 +1,16 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+metadata:
+  name: image-factory-helm-chart
+startKIND: true
+namespace: image-factory-e2e
+crdDir: ./_crds
+manifestDirs:
+    - ./_manifests
+testDirs:
+    - ./tests
+timeout: 300
+parallel: 1
+commands:
+  - command: kubectl kuttl version
+  - command: helm version
