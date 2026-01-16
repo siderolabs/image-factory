@@ -70,9 +70,9 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
-Return the name of the etcd encryption secret to use.
+Return the name of the cache signing key secret to use.
 If 'existingSecret' is set, use it.
-Otherwise, use the chart's fullname suffix.
+Otherwise, use the chart's fullname with a '-cache-signing-key' suffix.
 */}}
 {{- define "image-factory.cacheSigningKey" -}}
 {{- if .Values.cacheSigningKey.existingSecret -}}
