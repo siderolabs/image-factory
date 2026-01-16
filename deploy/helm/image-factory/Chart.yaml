@@ -1,6 +1,18 @@
 apiVersion: v2
 name: image-factory
-description: A helm chart to deploy Image-Facory on a Kubernetes cluster
+description: A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 type: application
 version: 1.0.0
 appVersion: "v0.9.0-11-gfca99d0"
+home: https://github.com/siderolabs/image-factory
+sources:
+  - https://github.com/siderolabs/image-factory
+keywords:
+  - talos
+  - sidero
+  - image-factory
+  - kubernetes
+  - baremetal
+maintainers:
+  - name: Sidero Labs
+    url: https://www.siderolabs.com

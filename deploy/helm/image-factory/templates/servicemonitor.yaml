@@ -1,44 +1,44 @@
-{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled -}}
+{{- if and .Values.service.metrics.enabled .Values.service.metrics.serviceMonitor.enabled -}}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: {{ template "image-factory.fullname" . }}
-  namespace: {{ default (include "image-factory.namespace" .) .Values.metrics.serviceMonitor.namespace }}
+  namespace: {{ default (include "image-factory.namespace" .) .Values.service.metrics.serviceMonitor.namespace }}
   labels:
     {{- include "image-factory.labels" . | nindent 4 }}
-    {{- with .Values.metrics.serviceMonitor.selector }}
+    {{- with .Values.service.metrics.serviceMonitor.selector }}
       {{- toYaml . | nindent 4 }}
     {{- end }}
-    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- with .Values.service.metrics.serviceMonitor.labels }}
       {{- toYaml . | nindent 4 }}
     {{- end }}
-  {{- with .Values.metrics.serviceMonitor.annotations }}
+  {{- with .Values.service.metrics.serviceMonitor.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
   endpoints:
     - port: metrics
-      {{- with .Values.metrics.serviceMonitor.interval }}
+      {{- with .Values.service.metrics.serviceMonitor.interval }}
       interval: {{ . }}
       {{- end }}
-      {{- with .Values.metrics.serviceMonitor.scrapeTimeout }}
+      {{- with .Values.service.metrics.serviceMonitor.scrapeTimeout }}
       scrapeTimeout: {{ . }}
       {{- end }}
       path: /metrics
-      {{- with .Values.metrics.serviceMonitor.relabelings }}
+      {{- with .Values.service.metrics.serviceMonitor.relabelings }}
       relabelings:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.metrics.serviceMonitor.metricRelabelings }}
+      {{- with .Values.service.metrics.serviceMonitor.metricRelabelings }}
       metricRelabelings:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      honorLabels: {{ .Values.metrics.serviceMonitor.honorLabels }}
-      {{- with .Values.metrics.serviceMonitor.scheme }}
+      honorLabels: {{ .Values.service.metrics.serviceMonitor.honorLabels }}
+      {{- with .Values.service.metrics.serviceMonitor.scheme }}
       scheme: {{ . }}
       {{- end }}
-      {{- with .Values.metrics.serviceMonitor.tlsConfig }}
+      {{- with .Values.service.metrics.serviceMonitor.tlsConfig }}
       tlsConfig:
         {{- toYaml . | nindent 8 }}
       {{- end }}

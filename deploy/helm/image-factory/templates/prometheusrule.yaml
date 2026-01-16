@@ -1,24 +1,24 @@
-{{- if and .Values.metrics.enabled .Values.metrics.rules.enabled -}}
+{{- if and .Values.service.metrics.enabled .Values.service.metrics.rules.enabled -}}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: {{ template "image-factory.fullname" . }}
-  namespace: {{ default (include  "image-factory.namespace" .) .Values.metrics.rules.namespace }}
+  namespace: {{ default (include  "image-factory.namespace" .) .Values.service.metrics.rules.namespace }}
   labels:
     {{- include "image-factory.labels" . | nindent 4 }}
-    {{- with .Values.metrics.rules.selector }}
+    {{- with .Values.service.metrics.rules.selector }}
       {{- toYaml . | nindent 4 }}
     {{- end }}
-    {{- if .Values.metrics.rules.labels }}
-      {{- toYaml .Values.metrics.rules.labels | nindent 4 }}
+    {{- if .Values.service.metrics.rules.labels }}
+      {{- toYaml .Values.service.metrics.rules.labels | nindent 4 }}
     {{- end }}
-  {{- with .Values.metrics.rules.annotations }}
+  {{- with .Values.service.metrics.rules.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
   groups:
-  - name: omni
+  - name: image-factory
     rules:
-      {{- toYaml .Values.metrics.rules.spec | nindent 4 }}
+      {{- toYaml .Values.service.metrics.rules.spec | nindent 4 }}
 {{- end }}

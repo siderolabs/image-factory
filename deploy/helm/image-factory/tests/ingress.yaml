@@ -1,0 +1,243 @@
+suite: Ingress Logic
+templates:
+  - ingress-ui.yaml
+  - ingress-pxe.yaml
+
+tests:
+  # ========================================
+  # UI Ingress Tests
+  # ========================================
+  - it: should not create UI ingress by default
+    template: ingress-ui.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create UI ingress when enabled
+    template: ingress-ui.yaml
+    set:
+      ingress:
+        ui:
+          enabled: true
+          host: factory.example.com
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-image-factory-ui
+
+  - it: should configure UI ingress hostname
+    template: ingress-ui.yaml
+    set:
+      ingress:
+        ui:
+          enabled: true
+          host: factory.example.com
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: factory.example.com
+
+  - it: should configure UI ingress className
+    template: ingress-ui.yaml
+    set:
+      ingress:
+        ui:
+          enabled: true
+          host: factory.example.com
+          className: nginx
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+
+  - it: should configure UI ingress TLS
+    template: ingress-ui.yaml
+    set:
+      ingress:
+        ui:
+          enabled: true
+          host: factory.example.com
+          tls:
+            - secretName: factory-ui-tls
+              hosts:
+                - factory.example.com
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: factory-ui-tls
+      - contains:
+          path: spec.tls[0].hosts
+          content: factory.example.com
+
+  - it: should add UI ingress custom annotations
+    template: ingress-ui.yaml
+    set:
+      ingress:
+        ui:
+          enabled: true
+          host: factory.example.com
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-prod
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    asserts:
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt-prod
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/ssl-redirect"]
+          value: "true"
+
+  - it: should add UI ingress custom labels
+    template: ingress-ui.yaml
+    set:
+      ingress:
+        ui:
+          enabled: true
+          host: factory.example.com
+          labels:
+            environment: production
+            team: platform
+    asserts:
+      - equal:
+          path: metadata.labels.environment
+          value: production
+      - equal:
+          path: metadata.labels.team
+          value: platform
+
+  - it: should configure UI ingress backend service
+    template: ingress-ui.yaml
+    set:
+      ingress:
+        ui:
+          enabled: true
+          host: factory.example.com
+      service:
+        main:
+          port: 8080
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: RELEASE-NAME-image-factory
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 8080
+
+  # ========================================
+  # PXE Ingress Tests
+  # ========================================
+  - it: should not create PXE ingress by default
+    template: ingress-pxe.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create PXE ingress when enabled
+    template: ingress-pxe.yaml
+    set:
+      ingress:
+        pxe:
+          enabled: true
+          host: pxe-factory.example.com
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-image-factory-pxe
+
+  - it: should configure PXE ingress hostname
+    template: ingress-pxe.yaml
+    set:
+      ingress:
+        pxe:
+          enabled: true
+          host: pxe-factory.example.com
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: pxe-factory.example.com
+
+  - it: should configure PXE ingress className
+    template: ingress-pxe.yaml
+    set:
+      ingress:
+        pxe:
+          enabled: true
+          host: pxe-factory.example.com
+          className: nginx
+    asserts:
+      - equal:
+          path: spec.ingressClassName
+          value: nginx
+
+  - it: should configure PXE ingress TLS
+    template: ingress-pxe.yaml
+    set:
+      ingress:
+        pxe:
+          enabled: true
+          host: pxe-factory.example.com
+          tls:
+            - secretName: factory-pxe-tls
+              hosts:
+                - pxe-factory.example.com
+    asserts:
+      - equal:
+          path: spec.tls[0].secretName
+          value: factory-pxe-tls
+      - contains:
+          path: spec.tls[0].hosts
+          content: pxe-factory.example.com
+
+  - it: should add PXE ingress custom annotations
+    template: ingress-pxe.yaml
+    set:
+      ingress:
+        pxe:
+          enabled: true
+          host: pxe-factory.example.com
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-prod
+    asserts:
+      - equal:
+          path: metadata.annotations["cert-manager.io/cluster-issuer"]
+          value: letsencrypt-prod
+
+  - it: should add PXE ingress custom labels
+    template: ingress-pxe.yaml
+    set:
+      ingress:
+        pxe:
+          enabled: true
+          host: pxe-factory.example.com
+          labels:
+            environment: production
+    asserts:
+      - equal:
+          path: metadata.labels.environment
+          value: production
+
+  - it: should configure PXE ingress backend service
+    template: ingress-pxe.yaml
+    set:
+      ingress:
+        pxe:
+          enabled: true
+          host: pxe-factory.example.com
+      service:
+        main:
+          port: 8080
+    asserts:
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: RELEASE-NAME-image-factory
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.number
+          value: 8080
