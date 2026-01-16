@@ -6,13 +6,13 @@ tests:
   # ========================================
   # PrometheusRule Creation Tests
   # ========================================
-  - it: should not create PrometheusRule by default
+  - it: Should not create PrometheusRule by default
     template: prometheusrule.yaml
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: should not create PrometheusRule when only metrics enabled
+  - it: Should not create PrometheusRule when only metrics enabled
     template: prometheusrule.yaml
     set:
       service:
@@ -24,7 +24,7 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: should create PrometheusRule when both metrics and rules enabled
+  - it: Should create PrometheusRule when both metrics and rules enabled
     template: prometheusrule.yaml
     set:
       service:
@@ -45,7 +45,7 @@ tests:
           path: apiVersion
           value: monitoring.coreos.com/v1
 
-  - it: should configure PrometheusRule metadata
+  - it: Should configure PrometheusRule metadata
     template: prometheusrule.yaml
     set:
       service:
@@ -60,7 +60,7 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-image-factory
 
-  - it: should configure PrometheusRule in custom namespace
+  - it: Should configure PrometheusRule in custom namespace
     template: prometheusrule.yaml
     set:
       service:
@@ -76,7 +76,7 @@ tests:
           path: metadata.namespace
           value: monitoring
 
-  - it: should use default namespace when rules namespace not set
+  - it: Should use default namespace when rules namespace not set
     template: prometheusrule.yaml
     release:
       namespace: custom-namespace
@@ -93,7 +93,7 @@ tests:
           path: metadata.namespace
           value: custom-namespace
 
-  - it: should add PrometheusRule custom labels
+  - it: Should add PrometheusRule custom labels
     template: prometheusrule.yaml
     set:
       service:
@@ -114,7 +114,7 @@ tests:
           path: metadata.labels.team
           value: platform
 
-  - it: should add PrometheusRule selector labels
+  - it: Should add PrometheusRule selector labels
     template: prometheusrule.yaml
     set:
       service:
@@ -131,7 +131,7 @@ tests:
           path: metadata.labels.prometheus
           value: kube-prometheus
 
-  - it: should add PrometheusRule custom annotations
+  - it: Should add PrometheusRule custom annotations
     template: prometheusrule.yaml
     set:
       service:
@@ -148,7 +148,7 @@ tests:
           path: metadata.annotations["custom-annotation"]
           value: custom-value
 
-  - it: should include standard Helm labels
+  - it: Should include standard Helm labels
     template: prometheusrule.yaml
     set:
       service:
@@ -171,7 +171,7 @@ tests:
   # ========================================
   # PrometheusRule Spec Tests
   # ========================================
-  - it: should configure rule spec with alerts
+  - it: Should configure rule spec with alerts
     template: prometheusrule.yaml
     set:
       service:

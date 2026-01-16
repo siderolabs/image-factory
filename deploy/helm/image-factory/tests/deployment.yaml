@@ -7,7 +7,7 @@ tests:
   # ========================================
   # Basic Deployment Tests
   # ========================================
-  - it: should create a deployment with correct metadata
+  - it: Should create a deployment with correct metadata
     template: deployment.yaml
     asserts:
       - isKind:
@@ -19,7 +19,7 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-image-factory
 
-  - it: should have correct selector labels
+  - it: Should have correct selector labels
     template: deployment.yaml
     asserts:
       - equal:
@@ -31,7 +31,7 @@ tests:
   # ========================================
   # Image Configuration Tests
   # ========================================
-  - it: should use the correct image and tag
+  - it: Should use the correct image and tag
     template: deployment.yaml
     set:
       image:
@@ -42,7 +42,7 @@ tests:
           path: spec.template.spec.containers[0].image
           value: ghcr.io/siderolabs/image-factory:v0.9.0
 
-  - it: should use chart appVersion when tag is not specified
+  - it: Should use chart appVersion when tag is not specified
     template: deployment.yaml
     chart:
       appVersion: v1.2.3
@@ -51,7 +51,7 @@ tests:
           path: spec.template.spec.containers[0].image
           value: ghcr.io/siderolabs/image-factory:v1.2.3
 
-  - it: should use custom image repository
+  - it: Should use custom image repository
     template: deployment.yaml
     set:
       image:
@@ -64,7 +64,7 @@ tests:
   # ========================================
   # Replica and Strategy Tests
   # ========================================
-  - it: should set custom replica count
+  - it: Should set custom replica count
     template: deployment.yaml
     set:
       replicaCount: 3
@@ -73,14 +73,14 @@ tests:
           path: spec.replicas
           value: 3
 
-  - it: should use Recreate strategy by default
+  - it: Should use Recreate strategy by default
     template: deployment.yaml
     asserts:
       - equal:
           path: spec.strategy.type
           value: Recreate
 
-  - it: should allow custom deployment strategy
+  - it: Should allow custom deployment strategy
     template: deployment.yaml
     set:
       strategy:
@@ -99,7 +99,7 @@ tests:
   # ========================================
   # Arguments Tests
   # ========================================
-  - it: should mount config file by default
+  - it: Should mount config file by default
     template: deployment.yaml
     asserts:
       - contains:
@@ -109,7 +109,7 @@ tests:
           path: spec.template.spec.containers[0].args
           content: --log-level=info
 
-  - it: should allow custom args
+  - it: Should allow custom args
     template: deployment.yaml
     set:
       args:
@@ -127,7 +127,7 @@ tests:
   # ========================================
   # Environment Variables Tests
   # ========================================
-  - it: should allow custom environment variables
+  - it: Should allow custom environment variables
     template: deployment.yaml
     set:
       env:
@@ -142,7 +142,7 @@ tests:
             name: MY_VAR
             value: my-value
 
-  - it: should allow envFrom configuration
+  - it: Should allow envFrom configuration
     template: deployment.yaml
     set:
       envFrom:
@@ -165,7 +165,7 @@ tests:
   # ========================================
   # Volume and Volume Mount Tests
   # ========================================
-  - it: should mount required volumes
+  - it: Should mount required volumes
     template: deployment.yaml
     asserts:
       - contains:
@@ -186,7 +186,7 @@ tests:
             name: scratch
             emptyDir: {}
 
-  - it: should mount the cache signing key volume with default secret name
+  - it: Should mount the cache signing key volume with default secret name
     template: deployment.yaml
     asserts:
       - contains:
@@ -199,7 +199,7 @@ tests:
                 - key: cache-signing.key
                   path: cache-signing.key
 
-  - it: should use existing secret for cache signing key
+  - it: Should use existing secret for cache signing key
     template: deployment.yaml
     set:
       cacheSigningKey:
@@ -215,7 +215,7 @@ tests:
                 - key: cache-signing.key
                   path: cache-signing.key
 
-  - it: should mount volumes to container
+  - it: Should mount volumes to container
     template: deployment.yaml
     asserts:
       - contains:
@@ -241,7 +241,7 @@ tests:
             mountPath: /etc/image-factory/keys
             readOnly: true
 
-  - it: should allow extra volumes and volume mounts
+  - it: Should allow extra volumes and volume mounts
     template: deployment.yaml
     set:
       extraVolumes:
@@ -265,7 +265,7 @@ tests:
   # ========================================
   # Port Configuration Tests
   # ========================================
-  - it: should expose correct container ports
+  - it: Should expose correct container ports
     template: deployment.yaml
     asserts:
       - contains:
@@ -282,14 +282,14 @@ tests:
   # ========================================
   # Security Context Tests
   # ========================================
-  - it: should set security context as privileged by default
+  - it: Should set security context as privileged by default
     template: deployment.yaml
     asserts:
       - equal:
           path: spec.template.spec.containers[0].securityContext.privileged
           value: true
 
-  - it: should allow custom security context
+  - it: Should allow custom security context
     template: deployment.yaml
     set:
       securityContext:
@@ -306,7 +306,7 @@ tests:
           path: spec.template.spec.containers[0].securityContext.runAsUser
           value: 1000
 
-  - it: should allow pod security context
+  - it: Should allow pod security context
     template: deployment.yaml
     set:
       podSecurityContext:
@@ -323,7 +323,7 @@ tests:
   # ========================================
   # Resource Management Tests
   # ========================================
-  - it: should allow resource limits and requests
+  - it: Should allow resource limits and requests
     template: deployment.yaml
     set:
       resources:
@@ -350,7 +350,7 @@ tests:
   # ========================================
   # Probe Configuration Tests
   # ========================================
-  - it: should configure liveness probe when specified
+  - it: Should configure liveness probe when specified
     template: deployment.yaml
     set:
       livenessProbe:
@@ -367,7 +367,7 @@ tests:
           path: spec.template.spec.containers[0].livenessProbe.initialDelaySeconds
           value: 30
 
-  - it: should configure readiness probe when specified
+  - it: Should configure readiness probe when specified
     template: deployment.yaml
     set:
       readinessProbe:
@@ -387,14 +387,14 @@ tests:
   # ========================================
   # Service Account Tests
   # ========================================
-  - it: should use default service account name
+  - it: Should use default service account name
     template: deployment.yaml
     asserts:
       - equal:
           path: spec.template.spec.serviceAccountName
           value: RELEASE-NAME-image-factory
 
-  - it: should use custom service account name
+  - it: Should use custom service account name
     template: deployment.yaml
     set:
       serviceAccount:
@@ -405,7 +405,7 @@ tests:
           path: spec.template.spec.serviceAccountName
           value: custom-sa
 
-  - it: should use existing service account when not creating
+  - it: Should use existing service account when not creating
     template: deployment.yaml
     set:
       serviceAccount:
@@ -419,7 +419,7 @@ tests:
   # ========================================
   # Pod Scheduling Tests
   # ========================================
-  - it: should configure node selector
+  - it: Should configure node selector
     template: deployment.yaml
     set:
       nodeSelector:
@@ -433,7 +433,7 @@ tests:
           path: spec.template.spec.nodeSelector["kubernetes.io/arch"]
           value: amd64
 
-  - it: should configure tolerations
+  - it: Should configure tolerations
     template: deployment.yaml
     set:
       tolerations:
@@ -450,7 +450,7 @@ tests:
             value: "value1"
             effect: "NoSchedule"
 
-  - it: should configure affinity
+  - it: Should configure affinity
     template: deployment.yaml
     set:
       affinity:
@@ -469,7 +469,7 @@ tests:
   # ========================================
   # Pod Metadata Tests
   # ========================================
-  - it: should add pod annotations
+  - it: Should add pod annotations
     template: deployment.yaml
     set:
       podAnnotations:
@@ -483,13 +483,13 @@ tests:
           path: spec.template.metadata.annotations["another-annotation"]
           value: another-value
 
-  - it: should include configmap checksum annotation
+  - it: Should include configmap checksum annotation
     template: deployment.yaml
     asserts:
       - isNotNull:
           path: spec.template.metadata.annotations["checksum/configmap"]
 
-  - it: should add pod labels
+  - it: Should add pod labels
     template: deployment.yaml
     set:
       podLabels:
@@ -506,7 +506,7 @@ tests:
   # ========================================
   # Image Pull Secrets Tests
   # ========================================
-  - it: should configure image pull secrets
+  - it: Should configure image pull secrets
     template: deployment.yaml
     set:
       imagePullSecrets:
@@ -525,7 +525,7 @@ tests:
   # ========================================
   # Namespace Tests
   # ========================================
-  - it: should use release namespace by default
+  - it: Should use release namespace by default
     template: deployment.yaml
     release:
       namespace: custom-namespace

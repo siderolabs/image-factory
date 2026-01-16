@@ -7,13 +7,23 @@ tests:
   # ========================================
   # UI HTTPRoute Tests
   # ========================================
-  - it: should not create UI HTTPRoute by default
+  - it: Should not create UI HTTPRoute by default
     template: httproute-ui.yaml
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: should create UI HTTPRoute when enabled
+  - it: Should not create UI HTTPRoute when explicitly disabled
+    template: httproute-ui.yaml
+    set:
+      gatewayApi:
+        ui:
+          enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Should create UI HTTPRoute when enabled
     template: httproute-ui.yaml
     set:
       gatewayApi:
@@ -33,7 +43,7 @@ tests:
           path: apiVersion
           value: gateway.networking.k8s.io/v1
 
-  - it: should configure UI HTTPRoute parentRefs
+  - it: Should configure UI HTTPRoute parentRefs
     template: httproute-ui.yaml
     set:
       gatewayApi:
@@ -53,7 +63,7 @@ tests:
             namespace: gateway-system
             sectionName: https-listener
 
-  - it: should configure UI HTTPRoute hostnames
+  - it: Should configure UI HTTPRoute hostnames
     template: httproute-ui.yaml
     set:
       gatewayApi:
@@ -72,7 +82,7 @@ tests:
           path: spec.hostnames
           content: factory-alt.example.com
 
-  - it: should configure UI HTTPRoute backend service
+  - it: Should configure UI HTTPRoute backend service
     template: httproute-ui.yaml
     set:
       gatewayApi:
@@ -93,7 +103,7 @@ tests:
           path: spec.rules[0].backendRefs[0].port
           value: 8080
 
-  - it: should add UI HTTPRoute custom annotations
+  - it: Should add UI HTTPRoute custom annotations
     template: httproute-ui.yaml
     set:
       gatewayApi:
@@ -110,7 +120,7 @@ tests:
           path: metadata.annotations["custom-annotation"]
           value: custom-value
 
-  - it: should add UI HTTPRoute custom labels
+  - it: Should add UI HTTPRoute custom labels
     template: httproute-ui.yaml
     set:
       gatewayApi:
@@ -130,13 +140,23 @@ tests:
   # ========================================
   # PXE HTTPRoute Tests
   # ========================================
-  - it: should not create PXE HTTPRoute by default
+  - it: Should not create PXE HTTPRoute by default
     template: httproute-pxe.yaml
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: should create PXE HTTPRoute when enabled
+  - it: Should not create PXE HTTPRoute when explicitly disabled
+    template: httproute-pxe.yaml
+    set:
+      gatewayApi:
+        pxe:
+          enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Should create PXE HTTPRoute when enabled
     template: httproute-pxe.yaml
     set:
       gatewayApi:
@@ -153,7 +173,7 @@ tests:
       - isKind:
           of: HTTPRoute
 
-  - it: should configure PXE HTTPRoute parentRefs
+  - it: Should configure PXE HTTPRoute parentRefs
     template: httproute-pxe.yaml
     set:
       gatewayApi:
@@ -171,7 +191,7 @@ tests:
             name: pxe-gateway
             namespace: gateway-system
 
-  - it: should configure PXE HTTPRoute hostnames
+  - it: Should configure PXE HTTPRoute hostnames
     template: httproute-pxe.yaml
     set:
       gatewayApi:
@@ -186,7 +206,7 @@ tests:
           path: spec.hostnames
           content: pxe-factory.example.com
 
-  - it: should configure PXE HTTPRoute backend service
+  - it: Should configure PXE HTTPRoute backend service
     template: httproute-pxe.yaml
     set:
       gatewayApi:
