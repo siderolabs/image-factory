@@ -6,7 +6,7 @@ tests:
   # ========================================
   # ConfigMap Creation Tests
   # ========================================
-  - it: should create ConfigMap
+  - it: Should create ConfigMap
     template: configmap.yaml
     asserts:
       - hasDocuments:
@@ -17,13 +17,13 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-image-factory
 
-  - it: should include config.yaml data
+  - it: Should include config.yaml data
     template: configmap.yaml
     asserts:
       - isNotNull:
           path: data["config.yaml"]
 
-  - it: should contain artifacts configuration
+  - it: Should contain artifacts configuration
     template: configmap.yaml
     set:
       config:
@@ -37,7 +37,7 @@ tests:
           path: data["config.yaml"]
           pattern: "registry.example.com"
 
-  - it: should contain cache configuration
+  - it: Should contain cache configuration
     template: configmap.yaml
     set:
       config:
@@ -48,7 +48,7 @@ tests:
           path: data["config.yaml"]
           pattern: "signingKeyPath"
 
-  - it: should include standard Helm labels
+  - it: Should include standard Helm labels
     template: configmap.yaml
     asserts:
       - equal:
@@ -60,7 +60,7 @@ tests:
       - isNotNull:
           path: metadata.labels["helm.sh/chart"]
 
-  - it: should be created in correct namespace
+  - it: Should be created in correct namespace
     template: configmap.yaml
     release:
       namespace: custom-namespace

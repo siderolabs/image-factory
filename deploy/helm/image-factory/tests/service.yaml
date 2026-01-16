@@ -8,7 +8,7 @@ tests:
   # ========================================
   # Main Service Tests
   # ========================================
-  - it: should create main service
+  - it: Should create main service
     template: service.yaml
     asserts:
       - hasDocuments:
@@ -19,14 +19,14 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-image-factory
 
-  - it: should use ClusterIP by default
+  - it: Should use ClusterIP by default
     template: service.yaml
     asserts:
       - equal:
           path: spec.type
           value: ClusterIP
 
-  - it: should configure main service port
+  - it: Should configure main service port
     template: service.yaml
     set:
       service:
@@ -46,7 +46,7 @@ tests:
           path: spec.ports[0].protocol
           value: TCP
 
-  - it: should configure LoadBalancer service type
+  - it: Should configure LoadBalancer service type
     template: service.yaml
     set:
       service:
@@ -57,7 +57,7 @@ tests:
           path: spec.type
           value: LoadBalancer
 
-  - it: should add loadBalancerIP when type is LoadBalancer
+  - it: Should add loadBalancerIP when type is LoadBalancer
     template: service.yaml
     set:
       service:
@@ -72,7 +72,7 @@ tests:
           path: spec.loadBalancerIP
           value: "1.2.3.4"
 
-  - it: should NOT add loadBalancerIP when type is ClusterIP
+  - it: Should not add loadBalancerIP when type is ClusterIP
     template: service.yaml
     set:
       service:
@@ -86,7 +86,7 @@ tests:
       - isNull:
           path: spec.loadBalancerIP
 
-  - it: should configure NodePort service type
+  - it: Should configure NodePort service type
     template: service.yaml
     set:
       service:
@@ -97,7 +97,7 @@ tests:
           path: spec.type
           value: NodePort
 
-  - it: should add custom service annotations
+  - it: Should add custom service annotations
     template: service.yaml
     set:
       service:
@@ -113,7 +113,7 @@ tests:
           path: metadata.annotations["service.beta.kubernetes.io/aws-load-balancer-internal"]
           value: "true"
 
-  - it: should add custom service labels
+  - it: Should add custom service labels
     template: service.yaml
     set:
       service:
@@ -129,7 +129,7 @@ tests:
           path: metadata.labels.team
           value: platform
 
-  - it: should have correct selector labels
+  - it: Should have correct selector labels
     template: service.yaml
     asserts:
       - equal:
@@ -141,13 +141,13 @@ tests:
   # ========================================
   # Metrics Service Tests
   # ========================================
-  - it: should not create metrics service by default
+  - it: Should not create metrics service by default
     template: service-metrics.yaml
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: should create metrics service when enabled
+  - it: Should create metrics service when enabled
     template: service-metrics.yaml
     set:
       service:
@@ -162,7 +162,7 @@ tests:
           path: metadata.name
           value: RELEASE-NAME-image-factory-metrics
 
-  - it: should configure metrics service port
+  - it: Should configure metrics service port
     template: service-metrics.yaml
     set:
       service:
@@ -184,7 +184,7 @@ tests:
           path: spec.ports[0].protocol
           value: TCP
 
-  - it: should configure metrics service type
+  - it: Should configure metrics service type
     template: service-metrics.yaml
     set:
       service:
@@ -197,7 +197,7 @@ tests:
           path: spec.type
           value: NodePort
 
-  - it: should configure metrics service clusterIP
+  - it: Should configure metrics service clusterIP
     template: service-metrics.yaml
     set:
       service:
@@ -211,7 +211,7 @@ tests:
           path: spec.clusterIP
           value: None
 
-  - it: should not set clusterIP for LoadBalancer service
+  - it: Should not set clusterIP for LoadBalancer service
     template: service-metrics.yaml
     set:
       service:
@@ -224,7 +224,7 @@ tests:
       - isNull:
           path: spec.clusterIP
 
-  - it: should add custom metrics service annotations
+  - it: Should add custom metrics service annotations
     template: service-metrics.yaml
     set:
       service:
@@ -242,7 +242,7 @@ tests:
           path: metadata.annotations["prometheus.io/port"]
           value: "2122"
 
-  - it: should add custom metrics service labels
+  - it: Should add custom metrics service labels
     template: service-metrics.yaml
     set:
       service:
@@ -256,7 +256,7 @@ tests:
           path: metadata.labels.monitoring
           value: enabled
 
-  - it: should have correct selector labels for metrics service
+  - it: Should have correct selector labels for metrics service
     template: service-metrics.yaml
     set:
       service:
@@ -272,13 +272,13 @@ tests:
   # ========================================
   # ServiceMonitor Tests
   # ========================================
-  - it: should not create ServiceMonitor by default
+  - it: Should not create ServiceMonitor by default
     template: servicemonitor.yaml
     asserts:
       - hasDocuments:
           count: 0
 
-  - it: should create ServiceMonitor when enabled
+  - it: Should create ServiceMonitor when enabled
     template: servicemonitor.yaml
     set:
       service:
@@ -292,7 +292,7 @@ tests:
       - isKind:
           of: ServiceMonitor
 
-  - it: should configure ServiceMonitor to scrape metrics port
+  - it: Should configure ServiceMonitor to scrape metrics port
     template: servicemonitor.yaml
     set:
       service:
@@ -308,7 +308,7 @@ tests:
           path: spec.endpoints[0].path
           value: /metrics
 
-  - it: should configure ServiceMonitor interval
+  - it: Should configure ServiceMonitor interval
     template: servicemonitor.yaml
     set:
       service:
@@ -322,7 +322,7 @@ tests:
           path: spec.endpoints[0].interval
           value: 60s
 
-  - it: should configure ServiceMonitor scrapeTimeout
+  - it: Should configure ServiceMonitor scrapeTimeout
     template: servicemonitor.yaml
     set:
       service:
