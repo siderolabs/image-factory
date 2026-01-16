@@ -1,0 +1,70 @@
+suite: ConfigMap Logic
+templates:
+  - configmap.yaml
+
+tests:
+  # ========================================
+  # ConfigMap Creation Tests
+  # ========================================
+  - it: should create ConfigMap
+    template: configmap.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-image-factory
+
+  - it: should include config.yaml data
+    template: configmap.yaml
+    asserts:
+      - isNotNull:
+          path: data["config.yaml"]
+
+  - it: should contain artifacts configuration
+    template: configmap.yaml
+    set:
+      config:
+        artifacts:
+          schematic:
+            registry: registry.example.com
+            namespace: siderolabs/image-factory
+            repository: schematics
+    asserts:
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "registry.example.com"
+
+  - it: should contain cache configuration
+    template: configmap.yaml
+    set:
+      config:
+        cache:
+          signingKeyPath: /etc/image-factory/keys/cache-signing.key
+    asserts:
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "signingKeyPath"
+
+  - it: should include standard Helm labels
+    template: configmap.yaml
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: image-factory
+      - equal:
+          path: metadata.labels["app.kubernetes.io/instance"]
+          value: RELEASE-NAME
+      - isNotNull:
+          path: metadata.labels["helm.sh/chart"]
+
+  - it: should be created in correct namespace
+    template: configmap.yaml
+    release:
+      namespace: custom-namespace
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: custom-namespace

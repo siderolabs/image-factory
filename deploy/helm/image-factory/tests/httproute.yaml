@@ -1,0 +1,208 @@
+suite: HTTPRoute Logic (Gateway API)
+templates:
+  - httproute-ui.yaml
+  - httproute-pxe.yaml
+
+tests:
+  # ========================================
+  # UI HTTPRoute Tests
+  # ========================================
+  - it: should not create UI HTTPRoute by default
+    template: httproute-ui.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create UI HTTPRoute when enabled
+    template: httproute-ui.yaml
+    set:
+      gatewayApi:
+        ui:
+          enabled: true
+          parentRefs:
+            - name: my-gateway
+              namespace: gateway-system
+          hostnames:
+            - factory.example.com
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HTTPRoute
+      - equal:
+          path: apiVersion
+          value: gateway.networking.k8s.io/v1
+
+  - it: should configure UI HTTPRoute parentRefs
+    template: httproute-ui.yaml
+    set:
+      gatewayApi:
+        ui:
+          enabled: true
+          parentRefs:
+            - name: my-gateway
+              namespace: gateway-system
+              sectionName: https-listener
+          hostnames:
+            - factory.example.com
+    asserts:
+      - contains:
+          path: spec.parentRefs
+          content:
+            name: my-gateway
+            namespace: gateway-system
+            sectionName: https-listener
+
+  - it: should configure UI HTTPRoute hostnames
+    template: httproute-ui.yaml
+    set:
+      gatewayApi:
+        ui:
+          enabled: true
+          parentRefs:
+            - name: my-gateway
+          hostnames:
+            - factory.example.com
+            - factory-alt.example.com
+    asserts:
+      - contains:
+          path: spec.hostnames
+          content: factory.example.com
+      - contains:
+          path: spec.hostnames
+          content: factory-alt.example.com
+
+  - it: should configure UI HTTPRoute backend service
+    template: httproute-ui.yaml
+    set:
+      gatewayApi:
+        ui:
+          enabled: true
+          parentRefs:
+            - name: my-gateway
+          hostnames:
+            - factory.example.com
+      service:
+        main:
+          port: 8080
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: RELEASE-NAME-image-factory
+      - equal:
+          path: spec.rules[0].backendRefs[0].port
+          value: 8080
+
+  - it: should add UI HTTPRoute custom annotations
+    template: httproute-ui.yaml
+    set:
+      gatewayApi:
+        ui:
+          enabled: true
+          parentRefs:
+            - name: my-gateway
+          hostnames:
+            - factory.example.com
+          annotations:
+            custom-annotation: custom-value
+    asserts:
+      - equal:
+          path: metadata.annotations["custom-annotation"]
+          value: custom-value
+
+  - it: should add UI HTTPRoute custom labels
+    template: httproute-ui.yaml
+    set:
+      gatewayApi:
+        ui:
+          enabled: true
+          parentRefs:
+            - name: my-gateway
+          hostnames:
+            - factory.example.com
+          labels:
+            environment: production
+    asserts:
+      - equal:
+          path: metadata.labels.environment
+          value: production
+
+  # ========================================
+  # PXE HTTPRoute Tests
+  # ========================================
+  - it: should not create PXE HTTPRoute by default
+    template: httproute-pxe.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should create PXE HTTPRoute when enabled
+    template: httproute-pxe.yaml
+    set:
+      gatewayApi:
+        pxe:
+          enabled: true
+          parentRefs:
+            - name: my-gateway
+              namespace: gateway-system
+          hostnames:
+            - pxe-factory.example.com
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: HTTPRoute
+
+  - it: should configure PXE HTTPRoute parentRefs
+    template: httproute-pxe.yaml
+    set:
+      gatewayApi:
+        pxe:
+          enabled: true
+          parentRefs:
+            - name: pxe-gateway
+              namespace: gateway-system
+          hostnames:
+            - pxe-factory.example.com
+    asserts:
+      - contains:
+          path: spec.parentRefs
+          content:
+            name: pxe-gateway
+            namespace: gateway-system
+
+  - it: should configure PXE HTTPRoute hostnames
+    template: httproute-pxe.yaml
+    set:
+      gatewayApi:
+        pxe:
+          enabled: true
+          parentRefs:
+            - name: my-gateway
+          hostnames:
+            - pxe-factory.example.com
+    asserts:
+      - contains:
+          path: spec.hostnames
+          content: pxe-factory.example.com
+
+  - it: should configure PXE HTTPRoute backend service
+    template: httproute-pxe.yaml
+    set:
+      gatewayApi:
+        pxe:
+          enabled: true
+          parentRefs:
+            - name: my-gateway
+          hostnames:
+            - pxe-factory.example.com
+      service:
+        main:
+          port: 8080
+    asserts:
+      - equal:
+          path: spec.rules[0].backendRefs[0].name
+          value: RELEASE-NAME-image-factory
+      - equal:
+          path: spec.rules[0].backendRefs[0].port
+          value: 8080

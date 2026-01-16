@@ -5,17 +5,17 @@ fullnameOverride: ""
 
 replicaCount: 1
 
-# -- Deployment strategy. Image-Facory currently only supports Recreate strategy.
+# -- Deployment strategy. Image Factory currently only supports Recreate strategy.
 strategy:
   type: Recreate
 
-# Image-Facory image
+# Image Factory image
 image:
-  # -- Repository to use for Image-Facory
+  # -- Repository to use for Image Factory
   repository: ghcr.io/siderolabs/image-factory
-  # -- Image pull policy for Image-Facory
+  # -- Image pull policy for Image Factory
   pullPolicy: IfNotPresent
-  # -- Tag to use for Image-Facory
+  # -- Tag to use for Image Factory
   tag: ""
 
 # -- Secrets with credentials to pull images from a private registry
@@ -194,10 +194,10 @@ config:
       # -- Path to the private key used for signing boot assets
       # signingKeyPath: ""
 
-# -- Environment variables to pass to Image-Facory
+# -- Environment variables to pass to Image Factory
 env: []
 
-# -- envForm to pass to Image-Facory
+# -- envFrom to pass to Image Factory
 envFrom: []
 # - configMapRef:
 #     name: config-map-name
@@ -235,7 +235,7 @@ ingress:
     labels: {}
     # -- Ingress Class Name
     className: ""
-    # -- Image-Facory UI hostname
+    # -- Image Factory UI hostname
     host: factory.example.com
     # -- TLS configuration
     tls: []
@@ -250,7 +250,7 @@ ingress:
     labels: {}
     # -- Ingress Class Name
     className: ""
-    # -- Image-Facory PXE hostname
+    # -- Image Factory PXE hostname
     host: pxe-factory.example.com
     # -- TLS configuration
     tls: []
@@ -274,7 +274,7 @@ gatewayApi:
       # - name: my-gateway
       #   namespace: my-gateway-namespace
       #   sectionName: https-listener
-    # -- Image-Facory UI hostname
+    # -- Image Factory UI hostname
     hostnames:
       - factory.example.com
   pxe:
@@ -289,7 +289,7 @@ gatewayApi:
       # - name: my-gateway
       #   namespace: my-gateway-namespace
       #   sectionName: https-listener
-    # -- Image-Facory PXE hostname
+    # -- Image Factory PXE hostname
     hostnames:
       - pxe-factory.example.com
 
@@ -298,7 +298,7 @@ livenessProbe: {}
 readinessProbe: {}
 
 # -- Resources Configuration
-## Set CPU and Memory resource requests and limits for the Image-Facory pod.
+## Set CPU and Memory resource requests and limits for the Image Factory pod.
 resources: {}
 # limits:
 #   cpu: 100m
@@ -308,14 +308,14 @@ resources: {}
 #   memory: 128Mi
 
 # -- Pod Security Context
-## Image-Facory container-level security context
+## Image Factory container-level security context
 securityContext:
   privileged: true 
 
 # -- Service Configuration
-## Configures the Kubernetes Services to expose Image-Facory's network endpoints.
+## Configures the Kubernetes Services to expose Image Factory's network endpoints.
 ## - 'main': Exposes the UI and PXE services (ClusterIP by default).
-## - 'metrics': Exposes the UDP WireGuard interface for SideroLink (NodePort/LoadBalancer required for external access).
+## - 'metrics': Exposes Prometheus metrics endpoint (ClusterIP by default).
 service:
   # -- Main Service (Image-Factory)
   main:
@@ -330,61 +330,61 @@ service:
     # -- Web UI
     port: 8080
 
-## Omni metrics configuration
-metrics:
-  # -- Deploy metrics service
-  enabled: false
-  service:
-    # -- Metrics service type
-    type: ClusterIP
-    # -- Metrics service clusterIP. `None` makes a "headless service" (no virtual IP)
-    clusterIP: ""
-    # -- Metrics service annotations
-    annotations: {}
-    # -- Metrics service labels
-    labels: {}
-    # -- Metrics service port
-    servicePort: 2122
-  serviceMonitor:
-    # -- Enable a prometheus ServiceMonitor
+  ## Image Factory metrics configuration
+  metrics:
+    # -- Deploy metrics service
     enabled: false
-    # -- Prometheus ServiceMonitor interval
-    interval: 30s
-    # -- Prometheus ServiceMonitor scrapeTimeout. If empty, Prometheus uses the global scrape timeout unless it is less than the target's scrape interval value in which the latter is used.
-    scrapeTimeout: ""
-    # -- When true, honorLabels preserves the metric’s labels when they collide with the target’s labels.
-    honorLabels: false
-    # -- Prometheus [RelabelConfigs] to apply to samples before scraping
-    relabelings: []
-    # -- Prometheus [MetricRelabelConfigs] to apply to samples before ingestion
-    metricRelabelings: []
-    # -- Prometheus ServiceMonitor selector
-    scheme: ""
-    # -- Prometheus ServiceMonitor tlsConfig
-    tlsConfig: {}
-    # -- Prometheus ServiceMonitor namespace
-    namespace: "" # "monitoring"
-    # -- Prometheus ServiceMonitor labels
-    selector: {}
-      # prometheus: kube-prometheus
-    labels: {}
-    # -- Prometheus ServiceMonitor annotations
-    annotations: {}
-  rules:
-    # -- Deploy a PrometheusRule for the application controller
-    enabled: false
-    # -- PrometheusRule namespace
-    namespace: "" # "monitoring"
-    # -- PrometheusRule selector
-    selector: {}
-      # prometheus: kube-prometheus
-    # -- PrometheusRule labels
-    labels: {}
-    # -- PrometheusRule annotations
-    annotations: {}
+    service:
+      # -- Metrics service type
+      type: ClusterIP
+      # -- Metrics service clusterIP. `None` makes a "headless service" (no virtual IP)
+      clusterIP: ""
+      # -- Metrics service annotations
+      annotations: {}
+      # -- Metrics service labels
+      labels: {}
+      # -- Metrics service port
+      servicePort: 2122
+    serviceMonitor:
+      # -- Enable a prometheus ServiceMonitor
+      enabled: false
+      # -- Prometheus ServiceMonitor interval
+      interval: 30s
+      # -- Prometheus ServiceMonitor scrapeTimeout. If empty, Prometheus uses the global scrape timeout unless it is less than the target's scrape interval value in which the latter is used.
+      scrapeTimeout: ""
+      # -- When true, honorLabels preserves the metric’s labels when they collide with the target’s labels.
+      honorLabels: false
+      # -- Prometheus [RelabelConfigs] to apply to samples before scraping
+      relabelings: []
+      # -- Prometheus [MetricRelabelConfigs] to apply to samples before ingestion
+      metricRelabelings: []
+      # -- Prometheus ServiceMonitor selector
+      scheme: ""
+      # -- Prometheus ServiceMonitor tlsConfig
+      tlsConfig: {}
+      # -- Prometheus ServiceMonitor namespace
+      namespace: "" # "monitoring"
+      # -- Prometheus ServiceMonitor labels
+      selector: {}
+        # prometheus: kube-prometheus
+      labels: {}
+      # -- Prometheus ServiceMonitor annotations
+      annotations: {}
+    rules:
+      # -- Deploy a PrometheusRule for Image Factory
+      enabled: false
+      # -- PrometheusRule namespace
+      namespace: "" # "monitoring"
+      # -- PrometheusRule selector
+      selector: {}
+        # prometheus: kube-prometheus
+      # -- PrometheusRule labels
+      labels: {}
+      # -- PrometheusRule annotations
+      annotations: {}
 
-    # -- PrometheusRule.Spec for the application controller
-    spec: []
+      # -- PrometheusRule.Spec for Image Factory
+      spec: []
 
 serviceAccount:
   create: true
