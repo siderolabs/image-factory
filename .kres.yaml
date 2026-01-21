@@ -23,7 +23,7 @@ spec:
       - name: PKGS_PREFIX
         defaultValue: ghcr.io/siderolabs
       - name: PKGS
-        defaultValue: v1.13.0-alpha.0-28-gdf4b4c8
+        defaultValue: v1.13.0-alpha.0-35-g375983f
   docker:
     extraArgs:
       - PKGS_PREFIX

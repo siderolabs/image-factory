@@ -441,7 +441,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 		return p.DeepCopy()
 	}
 
-	tests := []testCase{}
+	tests := []testCase{} //nolint:prealloc
 
 	// Generate systematic test cases
 	versions := []string{"v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.9.0", "v1.10.0", "v1.11.0"}

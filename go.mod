@@ -8,7 +8,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/klauspost/compress v1.18.2
+	github.com/klauspost/compress v1.18.3
 	github.com/knadh/koanf/parsers/dotenv v1.1.1
 	github.com/knadh/koanf/parsers/json v1.0.0
 	github.com/knadh/koanf/parsers/yaml v1.1.0
@@ -23,11 +23,11 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/siderolabs/crypto v0.6.4
 	github.com/siderolabs/gen v0.8.6
-	github.com/siderolabs/go-blockdevice/v2 v2.0.22
+	github.com/siderolabs/go-blockdevice/v2 v2.0.23
 	github.com/siderolabs/go-debug v0.6.1
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/talos v1.13.0-alpha.0.0.20260115162111-7033275a7a22
-	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.0.0.20260115162111-7033275a7a22
+	github.com/siderolabs/talos v1.13.0-alpha.0.0.20260121123725-ddd6b186eb8f
+	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.0.0.20260121123725-ddd6b186eb8f
 	github.com/sigstore/cosign/v3 v3.0.4
 	github.com/sigstore/sigstore v1.10.3
 	github.com/slok/go-http-metrics v0.13.0
@@ -38,8 +38,8 @@ require (
 	go.uber.org/zap v1.27.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.3
 	golang.org/x/sync v0.19.0
-	golang.org/x/sys v0.39.0
-	golang.org/x/text v0.32.0
+	golang.org/x/sys v0.40.0
+	golang.org/x/text v0.33.0
 )
 
 require (

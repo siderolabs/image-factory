@@ -2,14 +2,14 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-09T09:46:37Z by kres 0e8da31.
+# Generated on 2026-01-21T13:19:04Z by kres 1ffefb6.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
 ARG PKGS=scratch
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.5-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.6-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.47.0 sentences-per-line@0.5.0
 COPY .markdownlint.json .
@@ -145,15 +145,15 @@ ENV GOEXPERIMENT=${GOEXPERIMENT}
 ENV GOPATH=/go
 ARG DEEPCOPY_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/siderolabs/deep-copy@${DEEPCOPY_VERSION} \
-    && mv /go/bin/deep-copy /bin/deep-copy
+	&& mv /go/bin/deep-copy /bin/deep-copy
 ARG GOLANGCILINT_VERSION
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCILINT_VERSION} \
-    && mv /go/bin/golangci-lint /bin/golangci-lint
+	&& mv /go/bin/golangci-lint /bin/golangci-lint
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install golang.org/x/vuln/cmd/govulncheck@latest \
-    && mv /go/bin/govulncheck /bin/govulncheck
+	&& mv /go/bin/govulncheck /bin/govulncheck
 ARG GOFUMPT_VERSION
 RUN go install mvdan.cc/gofumpt@${GOFUMPT_VERSION} \
-    && mv /go/bin/gofumpt /bin/gofumpt
+	&& mv /go/bin/gofumpt /bin/gofumpt
 
 # Copies assets
 FROM scratch AS tailwind-copy
