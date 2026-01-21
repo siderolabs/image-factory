@@ -26,8 +26,8 @@ require (
 	github.com/siderolabs/go-blockdevice/v2 v2.0.23
 	github.com/siderolabs/go-debug v0.6.1
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/talos v1.13.0-alpha.0.0.20260121123725-ddd6b186eb8f
-	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.0.0.20260121123725-ddd6b186eb8f
+	github.com/siderolabs/talos v1.13.0-alpha.0.0.20260121173359-4b274f761594
+	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.0.0.20260121173359-4b274f761594
 	github.com/sigstore/cosign/v3 v3.0.4
 	github.com/sigstore/sigstore v1.10.3
 	github.com/slok/go-http-metrics v0.13.0
@@ -64,13 +64,14 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.41.0 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.41.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.6 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.6 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.16 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.16 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.16 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.17 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/acm v1.37.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.16 // indirect
 	github.com/aws/aws-sdk-go-v2/service/kms v1.49.4 // indirect

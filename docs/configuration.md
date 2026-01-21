@@ -352,6 +352,15 @@ CertPath is the path to the certificate used with AWS KMS.
 
 ---
 
+### `secureBoot.awsKMS.certARN`
+
+- **Type:** `string`
+- **Env:** `SECUREBOOT_AWSKMS_CERTARN`
+
+CertARN is the ARN of the ACM certificate used with AWS KMS.
+
+---
+
 ### `secureBoot.awsKMS.region`
 
 - **Type:** `string`
@@ -650,6 +659,7 @@ metrics:
     addr: :2122
 secureBoot:
     awsKMS:
+        certARN: ""
         certPath: ""
         keyID: ""
         pcrKeyID: ""
@@ -717,6 +727,7 @@ IF_HTTP_EXTERNALURL=https://localhost/
 IF_HTTP_HTTPLISTENADDR=:8080
 IF_HTTP_KEYFILE=
 IF_METRICS_ADDR=:2122
+IF_SECUREBOOT_AWSKMS_CERTARN=
 IF_SECUREBOOT_AWSKMS_CERTPATH=
 IF_SECUREBOOT_AWSKMS_KEYID=
 IF_SECUREBOOT_AWSKMS_PCRKEYID=

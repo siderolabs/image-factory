@@ -284,6 +284,9 @@ type AWSKMSProviderOptions struct {
 	// CertPath is the path to the certificate used with AWS KMS.
 	CertPath string `koanf:"certPath"`
 
+	// CertARN is the ARN of the ACM certificate used with AWS KMS.
+	CertARN string `koanf:"certARN"`
+
 	// Region is the AWS region containing the KMS keys.
 	Region string `koanf:"region"`
 }

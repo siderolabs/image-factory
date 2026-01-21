@@ -102,6 +102,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		AwsKMSKeyID:          opts.SecureBoot.AWSKMS.KeyID,
 		AwsKMSPCRKeyID:       opts.SecureBoot.AWSKMS.PCRKeyID,
 		AwsCertPath:          opts.SecureBoot.AWSKMS.CertPath,
+		AwsCertARN:           opts.SecureBoot.AWSKMS.CertARN,
 		AwsRegion:            opts.SecureBoot.AWSKMS.Region,
 	})
 	if err != nil {

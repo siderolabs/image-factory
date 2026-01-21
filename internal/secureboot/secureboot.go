@@ -39,11 +39,12 @@ type Options struct { //nolint:govet
 
 	// AWS KMS approach.
 	//
-	// AWS KMS Key ID and region.
-	// AWS doesn't have a good way to store a certificate, so it's expected to be a file.
+	// AWS KMS Key ID, ACM certificate ARN, and region.
+	// Support local cert file for legacy use cases.
 	AwsKMSKeyID    string
 	AwsKMSPCRKeyID string
 	AwsCertPath    string
+	AwsCertARN     string
 	AwsRegion      string
 }
 
@@ -89,6 +90,20 @@ func NewService(opts Options) (*Service, error) {
 					AwsRegion:   opts.AwsRegion,
 					AwsKMSKeyID: opts.AwsKMSKeyID,
 					AwsCertPath: opts.AwsCertPath,
+				},
+				PCRSigner: profile.SigningKey{
+					AwsRegion:   opts.AwsRegion,
+					AwsKMSKeyID: opts.AwsKMSPCRKeyID,
+				},
+			},
+		}, nil
+	case opts.AwsKMSKeyID != "" && opts.AwsKMSPCRKeyID != "" && opts.AwsCertARN != "" && opts.AwsRegion != "":
+		return &Service{
+			in: &profile.SecureBootAssets{
+				SecureBootSigner: profile.SigningKeyAndCertificate{
+					AwsRegion:   opts.AwsRegion,
+					AwsKMSKeyID: opts.AwsKMSKeyID,
+					AwsCertARN:  opts.AwsCertARN,
 				},
 				PCRSigner: profile.SigningKey{
 					AwsRegion:   opts.AwsRegion,
