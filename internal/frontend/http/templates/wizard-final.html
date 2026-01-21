@@ -194,21 +194,29 @@
 
 {{ define "pxe-boot" }}
 {{ if eq .SecureBoot "true" }}
-<dt>{{ t .Localizer "final.pxe.secure_boot" }} (iPXE script)</dt>
+<dt>
+        {{ t .Localizer "final.pxe.secure_boot" }} (iPXE script)
+
+        {{ if eq .Target "metal" }}
+        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/"
+                target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
+        {{ end }}
+</dt>
 <dd>{{ .PlatformMeta.SecureBootPXEScriptPath .Arch | $.PXEBaseURL.JoinPath }}</dd>
 
-{{ if eq .Target "metal" }}
-(<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/"
-        target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
-{{ end }}
 {{ else }}
-<dt>{{ t .Localizer "final.pxe.boot" }} (iPXE script)</dt>
-<dd>{{ .PlatformMeta.PXEScriptPath .Arch | $.PXEBaseURL.JoinPath }}</dd>
+<dt>
+        {{ t .Localizer "final.pxe.boot" }} (iPXE script)
 
-{{ if eq .Target "metal" }}
-(<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/"
-        target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
-{{ end }}
+        {{ if eq .Target "metal" }}
+        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/"
+                target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
+        {{ end }}
+</dt>
+<dd>
+        {{ template "copyable-text" (.PlatformMeta.PXEScriptPath .Arch | $.PXEBaseURL.JoinPath) }}
+</dd>
+
 {{ end }}
 {{ end }}
 
@@ -220,25 +228,19 @@
 {{ end }}
 
 {{ define "installer-image" }}
-<span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">
-        {{ if eq .SecureBoot "true"}}
-        {{ .SecureBootInstallerImage }}
-        {{ else }}
-        {{ .InstallerImage }}
-        {{ end }}
-</span>
+{{ if eq .SecureBoot "true"}}
+        {{ template "copyable-text" .SecureBootInstallerImage }}
+{{ else }}
+        {{ template "copyable-text" .InstallerImage }}
+{{ end }}
 {{ end }}
 
 {{ define "talosctl-cluster-create" }}
-<span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">
-        talosctl cluster create qemu --schematic-id={{ .Schematic }} --talos-version=v{{ .Version }}
-</span>
+{{ template "copyable-text" (printf "talosctl cluster create qemu --schematic-id=%s --talos-version=v%s" .Schematic .Version) }}
 {{ end }}
 
 {{ define "booter-command" }}
-<span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">
-        docker run --rm --network host ghcr.io/siderolabs/booter:v0.3.0 --talos-version=v{{ .Version }} --schematic-id={{ .Schematic }}
-</span>
+{{ template "copyable-text" (printf "docker run --rm --network host ghcr.io/siderolabs/booter:v0.3.0 --talos-version=v%s --schematic-id=%s" .Version .Schematic) }}
 {{ end }}
 
 {{ define "extra-assets" }}
