@@ -5,19 +5,28 @@ project_name = "image-factory"
 github_repo = "siderolabs/image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v0.8.4"
-# pre_release = true
+previous = "v0.9.0"
+pre_release = true
 
 [notes]
 
     [notes.configuration]
-    title = "Configuration moved to env and config files only"
-    description = """\
+      title = "Configuration moved to env and config files only"
+      description = """\
 All configuration is now provided exclusively via environment variables and/or configuration files.
 Command-line flags for configuration have been removed.
 
 Users must migrate any existing CLI-based configuration to env variables or supported config file formats.
 This change simplifies the runtime interface but is a breaking change and requires updates to existing workflows relying on CLI flags.
+"""
+
+    [notes.rootless]
+        title = "Disk Image"
+        description = """\ 
+The disk image build process no longer requires privileged deployment and mounting '/dev'.
+The build process now operates in userspace, and it doesn't depend on host Linux kernel anymore.
+This change enhances security and portability, allowing disk images to be built in a wider range of environments without elevated permissions.
+This also enables most of the image builds to be fully reproducible.
 """
 
 [make_deps]
