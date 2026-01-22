@@ -65,21 +65,12 @@
     {{ if .SupportsBootloaderSelection }}
     <div class="mb-6 mt-6">
         <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-            {{ t .Localizer "customization.bootloader.title" }}
+            {{ t .Localizer "customization.bootloader.title" }}:
         </label>
-        <div class="flex mt-4">
-            <div class="flex items-center h-5">
-                <input id="bootloader-auto" aria-describedby="bootloader-auto-text" type="radio" name="bootloader"
-                    value="auto" {{ if or (not .SelectedBootloader) (eq .SelectedBootloader "auto" ) }}checked{{ end }}
-                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-            </div>
-            <div class="ps-2 text-sm">
-                <label for="bootloader-auto" class="font-medium text-gray-900 dark:text-gray-300">{{ t .Localizer
-                    "customization.bootloader.auto.name" }}</label>
-                <p id="bootloader-auto-text" class="text-xs font-normal text-gray-500 dark:text-gray-300">{{ t
-                    .Localizer "customization.bootloader.auto.description" }}</p>
-            </div>
-        </div>
+        {{ template "radio-with-description" dict "name" "bootloader" "value" "auto" "current"
+        .SelectedBootloader "label" (t .Localizer "customization.bootloader.auto.name") "description" (t
+        .Localizer "customization.bootloader.auto.description")
+        }}
         {{ template "radio-with-description" dict "name" "bootloader" "value" "sd-boot" "current"
         .SelectedBootloader "label" (t .Localizer
         "customization.bootloader.sd_boot.name") "description" (t

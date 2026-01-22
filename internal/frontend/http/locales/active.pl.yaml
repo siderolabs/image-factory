@@ -188,25 +188,25 @@
   translation: "auto"
 
 - id: customization.bootloader.auto.description
-  translation: "Automatyczny wybór programu rozruchowego."
+  translation: "Automatycznie wybierz obsługę programu rozruchowego na podstawie typu obrazu i architektury (zalecane)."
 
 - id: customization.bootloader.sd_boot.name
-  translation: "sd-boot"
+  translation: "Tylko UEFI"
 
 - id: customization.bootloader.sd_boot.description
-  translation: "Użyj systemd-boot jako programu rozruchowego, jeśli jest obsługiwany."
+  translation: "Obsługuje nowoczesny sprzęt z oprogramowaniem UEFI (używa systemd-boot)."
 
 - id: customization.bootloader.grub.name
-  translation: "grub"
+  translation: "Tylko BIOS"
 
 - id: customization.bootloader.grub.description
-  translation: "Użyj GRUB jako programu rozruchowego (nie obsługiwane z SecureBoot)."
+  translation: "Obsługa starszego sprzętu, niektóre maszyny wirtualne (używa GRUB)."
 
 - id: customization.bootloader.dual_boot.name
-  translation: "dual-boot"
+  translation: "Podwójny rozruch"
 
 - id: customization.bootloader.dual_boot.description
-  translation: "Użyj GRUB dla BIOS i systemd-boot dla systemów UEFI."
+  translation: "Uniwersalny obraz, zawiera obsługę systemów BIOS i UEFI."
 
 - id: final.title
   translation: "Schemat gotowy"

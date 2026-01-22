@@ -188,25 +188,25 @@
   translation: "auto"
 
 - id: customization.bootloader.auto.description
-  translation: "Automatic bootloader selection."
+  translation: "Automatically select bootloader support based on image type and architecture (recommended)."
 
 - id: customization.bootloader.sd_boot.name
-  translation: "sd-boot"
+  translation: "UEFI only"
 
 - id: customization.bootloader.sd_boot.description
-  translation: "Use systemd-boot as bootloader if supported."
+  translation: "Supports modern hardware with UEFI firmware (uses systemd-boot)."
 
 - id: customization.bootloader.grub.name
-  translation: "grub"
+  translation: "BIOS only"
 
 - id: customization.bootloader.grub.description
-  translation: "Use GRUB as a bootloader (not supported with SecureBoot)."
+  translation: "Legacy hardware support, some virtual machines (uses GRUB)."
 
 - id: customization.bootloader.dual_boot.name
-  translation: "dual-boot"
+  translation: "Dual Boot"
 
 - id: customization.bootloader.dual_boot.description
-  translation: "Use GRUB for BIOS and systemd-boot for UEFI systems."
+  translation: "Universal image, includes support for BIOS and UEFI systems."
 
 - id: final.title
   translation: "Schematic Ready"

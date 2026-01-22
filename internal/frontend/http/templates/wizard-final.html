@@ -2,8 +2,7 @@
 {{ template "hidden-inputs" . }}
 {{ template "header" (t .Localizer "final.title") }}
 <div class="mb-6 text-sm">
-        {{ t .Localizer "final.image" }}<span class="font-mono bg-slate-200 dark:bg-slate-700 p-1">{{ .Schematic
-                }}</span>
+        {{ t .Localizer "final.image" }}{{ template "copyable-text" .Schematic}}
 </div>
 
 <div class="mb-6 text-sm font-mono bg-slate-200 dark:bg-slate-700 p-1 whitespace-pre">{{ .Marshaled }}</div>

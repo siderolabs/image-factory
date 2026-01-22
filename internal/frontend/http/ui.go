@@ -482,6 +482,10 @@ func (f *Frontend) wizardExtensions(ctx context.Context, params WizardParams) (s
 func (f *Frontend) wizardCmdline(_ context.Context, params WizardParams) (string, any, url.Values, error) {
 	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
 
+	if params.SelectedBootloader == "" {
+		params.SelectedBootloader = "auto"
+	}
+
 	return "wizard-cmdline",
 		struct {
 			WizardParams

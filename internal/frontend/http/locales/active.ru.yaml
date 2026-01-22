@@ -181,32 +181,29 @@
 - id: customization.overlay.skip
   translation: "Если не уверены — можно пропустить."
 
-- id: customization.bootloader.title
-  translation: "Загрузчик"
-
 - id: customization.bootloader.auto.name
-  translation: "auto"
+  translation: "Авто"
 
 - id: customization.bootloader.auto.description
-  translation: "Автоматический выбор загрузчика."
+  translation: "Автоматически выбрать поддержку загрузчика на основе типа образа и архитектуры (рекомендуется)."
 
 - id: customization.bootloader.sd_boot.name
-  translation: "sd-boot"
+  translation: "Только UEFI"
 
 - id: customization.bootloader.sd_boot.description
-  translation: "Использовать systemd-boot в качестве загрузчика, если поддерживается."
+  translation: "Поддерживает современное оборудование с прошивкой UEFI (использует systemd-boot)."
 
 - id: customization.bootloader.grub.name
-  translation: "grub"
+  translation: "Только BIOS"
 
 - id: customization.bootloader.grub.description
-  translation: "Использовать GRUB в качестве загрузчика (не поддерживается с SecureBoot)."
+  translation: "Поддержка устаревшего оборудования, некоторые виртуальные машины (использует GRUB)."
 
 - id: customization.bootloader.dual_boot.name
-  translation: "dual-boot"
+  translation: "Двойная загрузка"
 
 - id: customization.bootloader.dual_boot.description
-  translation: "Использовать GRUB для BIOS и systemd-boot для систем UEFI."
+  translation: "Универсальный образ, включает поддержку систем BIOS и UEFI."
 
 - id: final.title
   translation: "Образ готов"
