@@ -1,0 +1,25 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: download-iso-step
+timeout: 300 # 5 minutes (ISO generation can be slow on the first hit)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: download-iso
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:latest
+          command: ["curl"]
+          args:
+            - "-f"              # Fail the job if HTTP status is > 400
+            - "-v"              # Verbose logging (useful for debugging KUTTL logs)
+            - "-o"              # Write output to /dev/null (we don't need to save the file, just verify it downloads)
+            - "/dev/null"
+            - "http://image-factory.image-factory-e2e.svc.cluster.local:8080/image/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.12.1/metal-amd64.iso"
+      restartPolicy: Never

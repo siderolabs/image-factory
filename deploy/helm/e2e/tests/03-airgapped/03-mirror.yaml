@@ -1,0 +1,73 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: prep-if
+timeout: 300 # 5 minutes (ISO generation can be slow on the first hit)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mirror-talos-images
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: shared-data
+          emptyDir: {}
+
+      initContainers:
+        - name: download-and-generate
+          image: alpine:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              apk add --no-cache curl > /dev/null
+
+              echo "Downloading talosctl..."
+              curl -sL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-amd64"
+              chmod +x /usr/local/bin/talosctl
+
+              talosctl image talos-bundle v1.12.1 > /data/images.txt
+          volumeMounts:
+            - name: shared-data
+              mountPath: /data
+
+      containers:
+        - name: download-crane-and-mirror
+          image: alpine:latest
+          env:
+            - name: INTERNAL_REG
+              value: "registry.image-factory-e2e.svc.cluster.local:5000"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # 1. Install prerequisites
+              apk add --no-cache curl tar > /dev/null
+
+              # 2. Download and extract crane
+              echo "Downloading crane"
+              curl -sL "https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz" | tar -xz -C /usr/local/bin/ crane
+              chmod +x /usr/local/bin/crane
+
+              # 3. Verify inputs
+              if [ ! -f /data/images.txt ]; then
+                echo "Error: images.txt missing"
+                exit 1
+              fi
+
+              # 4. Run the mirror loop
+              for SOURCE_IMAGE in $(cat /data/images.txt); do
+                IMAGE_WITHOUT_DIGEST=${SOURCE_IMAGE%%@*}
+                REPO_PATH=${IMAGE_WITHOUT_DIGEST#*/}
+                IMAGE_WITH_NEW_REG="${INTERNAL_REG}/${REPO_PATH}"
+
+                echo "Mirroring: $SOURCE_IMAGE -> $IMAGE_WITH_NEW_REG"
+                
+                # Add --insecure if needed
+                crane copy "$SOURCE_IMAGE" "$IMAGE_WITH_NEW_REG"
+              done
+          volumeMounts:
+            - name: shared-data
+              mountPath: /data

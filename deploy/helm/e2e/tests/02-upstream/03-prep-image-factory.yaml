@@ -1,0 +1,24 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: prep-if
+timeout: 300 # 5 minutes (ISO generation can be slow on the first hit)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: prep-if
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      containers:
+        - name: curl
+          image: curlimages/curl:latest
+          command: ["curl"]
+          args:
+            - "-s"              # Silent mode
+            - "-o"              # Write output to /dev/null (we don't need to save the file, just verify it downloads)
+            - "/dev/null"
+            - "http://image-factory.image-factory-e2e.svc.cluster.local:8080/?arch=amd64&bootloader=auto&cmdline-set=true&extensions=-&platform=metal&target=metal&version=1.12.1"
+      restartPolicy: Never

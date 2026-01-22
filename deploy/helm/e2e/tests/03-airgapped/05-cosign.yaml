@@ -1,0 +1,105 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: prep-if
+timeout: 300 # 5 minutes (ISO generation can be slow on the first hit)
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cosign-images
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: shared-data
+          emptyDir: {}
+        - name: cosign-keys
+          secret:
+            secretName: image-factory-cosign-keys
+
+      initContainers:
+        - name: download-and-generate
+          image: alpine:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              apk add --no-cache curl > /dev/null
+
+              echo "Downloading talosctl"
+              curl -sL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-amd64"
+              chmod +x /usr/local/bin/talosctl
+
+              talosctl image talos-bundle v1.12.1 > /data/images.txt
+          volumeMounts:
+            - name: shared-data
+              mountPath: /data
+
+      containers:
+        - name: download-cosign-and-sign
+          image: alpine:latest
+          env:
+            - name: INTERNAL_REG
+              value: "registry.image-factory-e2e.svc.cluster.local:5000"
+            - name: KEY_FILE
+              value: "cosign-key"
+            - name: COSIGN_PASSWORD
+              value: ""
+            - name: COSIGN_YES
+              value: "true"
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # 1. Install prerequisites
+              apk add --no-cache curl > /dev/null
+
+              # 2. Download and extract cosign
+              echo "Downloading cosign"
+              curl -sL -o /usr/local/bin/cosign "https://github.com/sigstore/cosign/releases/download/v2.6.1/cosign-linux-amd64"
+              chmod +x /usr/local/bin/cosign
+
+              echo "Downloading crane"
+              curl -sL "https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz" | tar -xz -C /usr/local/bin/ crane
+              chmod +x /usr/local/bin/crane
+
+              # 3. Verify inputs
+              if [ ! -f /data/images.txt ]; then
+                echo "Error: images.txt missing"
+                exit 1
+              fi
+
+              # 4. Run the mirror loop
+              for SOURCE_IMAGE in $(cat /data/images.txt); do
+                # 1. Strip registry to get path
+                IMAGE_WITHOUT_DIGEST=${SOURCE_IMAGE%%@*}
+                REPO_PATH=${IMAGE_WITHOUT_DIGEST#*/}
+                
+                # 2. Build new image string
+                NEW_IMAGE="${INTERNAL_REG}/${REPO_PATH}"
+
+                # 3. If digest is missing, fetch it using crane
+                # (Note: grep check logic replicated from your script)
+                if echo "$NEW_IMAGE" | grep -v -q "@sha256:"; then
+                  echo "Fetching digest for $NEW_IMAGE..."
+                  # We add --insecure here assuming internal registry is HTTP
+                  DIGEST=$(crane digest "$NEW_IMAGE" --insecure)
+                  NEW_IMAGE="${NEW_IMAGE}@${DIGEST}"
+                fi
+
+                echo "Signing $NEW_IMAGE..."
+
+                # 4. Run cosign
+                if ! cosign sign \
+                  --key "/keys/${KEY_FILE}" \
+                  "$NEW_IMAGE"; then
+                  echo "Warning: Failed to sign $NEW_IMAGE"
+                fi
+              done
+          volumeMounts:
+            - name: shared-data
+              mountPath: /data
+            - name: cosign-keys
+              mountPath: /keys
+              readOnly: true
