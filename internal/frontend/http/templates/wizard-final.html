@@ -43,7 +43,7 @@
         <h2>{{ t .Localizer "final.upgrading" }}</h2>
         <p>
                 {{ t .Localizer "final.upgrading.to" }}<a
-                        href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/upgrading-talos/"
+                        href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/configure-your-talos-cluster/lifecycle-management/upgrading-talos/"
                         target="_blank">{{ t
                         .Localizer "final.upgrading.name" }}</a>{{ t .Localizer "final.upgrading.description" }}<br>
                 {{ template "installer-image" . }}
@@ -68,51 +68,51 @@
         <h2>{{ t .Localizer "final.documentation" }}</h2>
         <ul>
                 <li><a target="_blank"
-                                href="https://www.talos.dev/{{ short_version .Version }}/introduction/what-is-new/">{{
+                                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/getting-started/what's-new-in-talos/">{{
                                 t
                                 .Localizer "final.documentation.new" }}{{ short_version .Version }}</a>
                 </li>
                 <li><a target="_blank"
-                                href="https://www.talos.dev/{{ short_version .Version }}/introduction/support-matrix/">{{
+                                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/getting-started/support-matrix/">{{
                                 t .Localizer "final.documentation.matrix" }}{{ short_version .Version
                                 }}</a></li>
                 <li><a target="_blank"
-                                href="https://www.talos.dev/{{ short_version .Version }}/introduction/getting-started/">{{
+                                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/getting-started/getting-started/">{{
                                 t .Localizer
                                 "final.documentation.getting_started" }}</a></li>
 
                 {{ if eq .Target "metal" }}
                 <li><a target="_blank"
-                                href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/network-config/">{{
+                                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/network-config/">{{
                                 t .Localizer "final.documentation.metal" }}</a></li>
                 {{ else if eq .Target "cloud" }}
                 <li><a target="_blank"
-                                href="https://www.talos.dev/{{ short_version .Version }}{{ .PlatformMeta.Documentation }}">{{
+                                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}{{ .PlatformMeta.Documentation }}">{{
                                 .PlatformMeta.Label }} {{ t .Localizer "final.documentation.cloud"
                                 }}</a></li>
                 {{ else if eq .Target "sbc" }}
                 <li><a target="_blank"
-                                href="https://www.talos.dev/{{ short_version .Version }}{{ .BoardMeta.Documentation }}">{{
+                                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}{{ .BoardMeta.Documentation }}">{{
                                 .BoardMeta.Label }} {{ t .Localizer "final.documentation.sbc" }}</a>
                 </li>
                 {{ end }}
 
                 {{ if eq .SecureBoot "true" }}
                 <li><a target="_blank"
-                                href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/">{{
+                                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/secureboot/">{{
                                 t .Localizer "final.documentation.secure_boot" }}</a></li>
                 {{ end }}
 
                 {{ if .ProductionGuideAvailable }}
                 <li><a target="_blank"
-                                href="https://www.talos.dev/{{ short_version .Version }}/introduction/prodnotes/">{{
+                                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/getting-started/prodnotes/">{{
                                 t
                                 .Localizer "final.documentation.production" }}</a></li>
                 {{ end }}
 
                 {{ if .TroubleshootingGuideAvailable }}
                 <li><a target="_blank"
-                                href="https://www.talos.dev/{{ short_version .Version }}/introduction/troubleshooting/">{{
+                                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/troubleshooting/troubleshooting/">{{
                                 t .Localizer
                                 "final.documentation.troubleshooting" }}</a></li>
                 {{ end }}
@@ -142,7 +142,7 @@
 <dt>SecureBoot ISO</dt>
 <dd><a href="{{ .PlatformMeta.SecureBootISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootISOPath
                 .Arch | $.ImageBaseURL.JoinPath }}</a>
-        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/"
+        (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/secureboot/"
                 target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
 </dd>
 {{ else}}
@@ -151,7 +151,7 @@
                 $.ImageBaseURL.JoinPath }}</a>
 
         {{ if eq .Target "metal" }}
-        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/iso/"
+        (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/iso/"
                 target="_blank">{{ t .Localizer "final.disk_image.iso_docs" }}</a>)
         {{ end }}
 </dd>
@@ -165,7 +165,7 @@
                 .PlatformMeta.SecureBootDiskImageDefaultPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ if eq .Target "metal" }}
-        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/"
+        (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/secureboot/"
                 target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
         {{ end }}
 </dd>
@@ -197,7 +197,7 @@
         {{ t .Localizer "final.pxe.secure_boot" }} (iPXE script)
 
         {{ if eq .Target "metal" }}
-        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/"
+        (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/pxe/"
                 target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
         {{ end }}
 </dt>
@@ -208,7 +208,7 @@
         {{ t .Localizer "final.pxe.boot" }} (iPXE script)
 
         {{ if eq .Target "metal" }}
-        (<a href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/pxe/"
+        (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/pxe/"
                 target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
         {{ end }}
 </dt>

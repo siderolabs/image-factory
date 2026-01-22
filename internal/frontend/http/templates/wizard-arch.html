@@ -12,7 +12,7 @@
                 <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">{{ t .Localizer "architecture.secure_boot.name" }}</span>
             </label>
             <div class="ms-2 text-sm">
-                <p class="text-xs font-normal text-gray-500 dark:text-gray-300">{{ t .Localizer "architecture.secure_boot.create" }}<a class="text-blue-600 dark:text-blue-500 underline" target="_blank" href="https://www.talos.dev/{{ short_version .Version }}/talos-guides/install/bare-metal-platforms/secureboot/">{{ t .Localizer "architecture.secure_boot.name" }}</a>{{ t .Localizer "architecture.secure_boot.description" }}</p>
+                <p class="text-xs font-normal text-gray-500 dark:text-gray-300">{{ t .Localizer "architecture.secure_boot.create" }}<a class="text-blue-600 dark:text-blue-500 underline" target="_blank" href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/secureboot/">{{ t .Localizer "architecture.secure_boot.name" }}</a>{{ t .Localizer "architecture.secure_boot.description" }}</p>
             </div>
         </div>
     {{ end }}
