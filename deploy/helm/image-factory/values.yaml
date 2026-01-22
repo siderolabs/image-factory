@@ -1,5 +1,7 @@
 # -- Provide a name in place of `image-factory`
 nameOverride: "image-factory"
+# -- Provide a namespace in place of the release namespace.
+namespaceOverride: ""
 # -- String to fully override `"image-factory.fullname"`
 fullnameOverride: ""
 
@@ -218,10 +220,6 @@ cacheSigningKey:
   # -- The ECDSA private key content (multiline string).
   # -- Generate using: openssl ecparam -name prime256v1 -genkey -noout -out cache-signing.key
   key: |-
-    -----BEGIN EC PRIVATE KEY-----
-    MHcCAQEEI... (your EC private key content here) ...
-    ...
-    -----END EC PRIVATE KEY-----
 
 # -- Ingress Configuration
 ## This section configures standard Kubernetes Ingress resources.
@@ -310,7 +308,7 @@ resources: {}
 # -- Pod Security Context
 ## Image Factory container-level security context
 securityContext:
-  privileged: true
+  privileged: false
 
 # -- Service Configuration
 ## Configures the Kubernetes Services to expose Image Factory's network endpoints.

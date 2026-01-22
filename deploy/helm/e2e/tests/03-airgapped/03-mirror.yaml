@@ -64,7 +64,7 @@ spec:
                 IMAGE_WITH_NEW_REG="${INTERNAL_REG}/${REPO_PATH}"
 
                 echo "Mirroring: $SOURCE_IMAGE -> $IMAGE_WITH_NEW_REG"
-                
+
                 # Add --insecure if needed
                 crane copy "$SOURCE_IMAGE" "$IMAGE_WITH_NEW_REG"
               done

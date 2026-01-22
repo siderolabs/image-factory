@@ -13,7 +13,15 @@ This directory contains KUTTL (Kubernetes Test Tool) integration tests for the I
 
 ## Running Tests
 
-KUTTL is configured to automatically create and tear down a KIND cluster for testing.
+Before running any tests, prepare your development cluster. You can do this by running:
+```bash
+make k8s-up
+```
+
+To tear down the cluster after testing, run:
+```bash
+make k8s-down
+```
 
 ### Run all tests:
 ```bash
@@ -103,41 +111,11 @@ The test suite runs a single comprehensive test (`01-image-factory`) with multip
 
 ### Test Suite Settings (kuttl-test.yaml)
 
-- **startKIND**: `true` - Automatically creates KIND cluster
+- **startKIND**: `false` - Does not start KIND automatically (handled by CI)
 - **namespace**: `image-factory-e2e` - Fixed namespace for tests
 - **crdDir**: `./_crds` - Prometheus Operator CRDs installed before tests
 - **timeout**: `300` - Each step has 300 second timeout
 - **parallel**: `1` - Tests run sequentially
-
-## CI/CD Integration
-
-### GitHub Actions Example:
-```yaml
-name: E2E Tests
-on: [push, pull_request]
-jobs:
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install KUTTL
-        run: |
-          VERSION=0.24.0
-          curl -LO https://github.com/kudobuilder/kuttl/releases/download/v${VERSION}/kubectl-kuttl_${VERSION}_linux_x86_64
-          chmod +x kubectl-kuttl_${VERSION}_linux_x86_64
-          sudo mv kubectl-kuttl_${VERSION}_linux_x86_64 /usr/local/bin/kubectl-kuttl
-      
-      - name: Install KIND
-        uses: helm/kind-action@v1
-        with:
-          install_only: true
-      
-      - name: Run E2E tests
-        run: |
-          cd deploy/helm/e2e
-          kubectl kuttl test
-```
 
 ## Debugging
 
@@ -171,4 +149,4 @@ kind delete cluster --name kind
 - Tests run in fixed namespace `image-factory-e2e`
 - Ingress tests require Kubernetes 1.19+ (KIND uses recent version)
 - Tests use `--reuse-values` for upgrades to maintain state
-- ECPARAM signing key is generated at test runtime
+- ECPARAM signing key is provided via a pre-generated key file in `testdata/`

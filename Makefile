@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-21T13:19:04Z by kres 1ffefb6.
+# Generated on 2026-01-26T09:38:32Z by kres 1ffefb6.
 
 # common variables
 
@@ -90,6 +90,10 @@ RUN_TESTS_S3 ?= TestIntegrationS3
 RUN_TESTS_CDN ?= TestIntegrationCDN
 RUN_TESTS_PROXY ?= TestIntegrationDirect
 RUN_TESTS_ENTERPRISE ?= TestIntegrationDirect
+GOOS ?= $(shell uname -s | tr "[:upper:]" "[:lower:]")
+TALOS_VERSION ?= 1.12.2
+K8S_VERSION ?= v1.35.0
+CHART_VERSION ?= 0.0.0-alpha.0
 
 # help menu
 
@@ -349,6 +353,63 @@ docker-compose-up:
 .PHONY: docker-compose-down
 docker-compose-down:
 	@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml down
+
+.PHONY: talosctl
+talosctl: $(ARTIFACTS)
+	curl -Lo $(ARTIFACTS)/talosctl https://github.com/siderolabs/talos/releases/download/v$(TALOS_VERSION)/talosctl-$(GOOS)-$(GOARCH)
+	chmod +x $(ARTIFACTS)/talosctl
+
+.PHONY: helm-unittest
+helm-unittest:
+	-helm plugin install https://github.com/helm-unittest/helm-unittest.git --verify=false
+
+.PHONY: kubectl-kuttl
+kubectl-kuttl: $(ARTIFACTS)
+	kubectl krew install kuttl
+
+.PHONY: tools
+tools: talosctl kubectl-kuttl helm-unittest
+
+.PHONY: chart-test
+chart-test:
+	helm unittest deploy/helm/image-factory
+
+.PHONY: k8s-up
+k8s-up: $(ARTIFACTS)
+	$(ARTIFACTS)/talosctl cluster create docker \
+	    --name=image-factory-env \
+	    --talosconfig-destination=$(ARTIFACTS)/talosconfig \
+	    --kubernetes-version=$(K8S_VERSION) \
+	    --mtu=1450
+	$(ARTIFACTS)/talosctl kubeconfig $(ARTIFACTS)/kubeconfig \
+	    --talosconfig=$(ARTIFACTS)/talosconfig \
+	    --nodes=10.5.0.2 \
+	    --force
+
+.PHONY: k8s-down
+k8s-down:
+	$(ARTIFACTS)/talosctl cluster destroy \
+	    --name=image-factory-env
+	rm -f $(ARTIFACTS)/talosconfig $(ARTIFACTS)/kubeconfig
+
+.PHONY: chart-e2e
+chart-e2e:
+	export KUBECONFIG=$(shell pwd)/$(ARTIFACTS)/kubeconfig \
+	&& cd deploy/helm/e2e \
+	&& kubectl kuttl test
+
+.PHONY: chart-e2e-ci
+chart-e2e-ci: tools
+	@$(MAKE) image-image-factory PUSH=true
+	@$(MAKE) chart-version CHART_VERSION=v1.0.0-test.1 REGISTRY=$(REGISTRY) USERNAME=$(USERNAME) TAG=$(TAG)
+	@$(MAKE) k8s-up
+	@$(MAKE) chart-e2e
+
+.PHONY: chart-version
+chart-version:
+	yq -i '.version = strenv(CHART_VERSION)' deploy/helm/image-factory/Chart.yaml
+	yq -i '.appVersion = strenv(TAG)' deploy/helm/image-factory/Chart.yaml
+	sed -i '/# -- Repository to use for Image Factory/{n; s|repository:.*|repository: '"$(REGISTRY)/$(USERNAME)/image-factory"'|}' deploy/helm/image-factory/values.yaml
 
 .PHONY: rekres
 rekres:

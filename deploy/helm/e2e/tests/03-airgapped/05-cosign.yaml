@@ -75,7 +75,7 @@ spec:
                 # 1. Strip registry to get path
                 IMAGE_WITHOUT_DIGEST=${SOURCE_IMAGE%%@*}
                 REPO_PATH=${IMAGE_WITHOUT_DIGEST#*/}
-                
+
                 # 2. Build new image string
                 NEW_IMAGE="${INTERNAL_REG}/${REPO_PATH}"
 

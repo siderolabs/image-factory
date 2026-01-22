@@ -177,12 +177,6 @@ tests:
       - contains:
           path: spec.template.spec.volumes
           content:
-            name: host-dev
-            hostPath:
-              path: /dev
-      - contains:
-          path: spec.template.spec.volumes
-          content:
             name: scratch
             emptyDir: {}
 
@@ -224,11 +218,6 @@ tests:
             name: config
             mountPath: /config.yaml
             subPath: config.yaml
-      - contains:
-          path: spec.template.spec.containers[0].volumeMounts
-          content:
-            name: host-dev
-            mountPath: /dev
       - contains:
           path: spec.template.spec.containers[0].volumeMounts
           content:
@@ -282,18 +271,18 @@ tests:
   # ========================================
   # Security Context Tests
   # ========================================
-  - it: Should set security context as privileged by default
+  - it: Should not set security context as privileged by default
     template: deployment.yaml
     asserts:
       - equal:
           path: spec.template.spec.containers[0].securityContext.privileged
-          value: true
+          value: false
 
   - it: Should allow custom security context
     template: deployment.yaml
     set:
       securityContext:
-        privileged: false
+        privileged: true
         runAsUser: 1000
         capabilities:
           add:
@@ -301,7 +290,7 @@ tests:
     asserts:
       - equal:
           path: spec.template.spec.containers[0].securityContext.privileged
-          value: false
+          value: true
       - equal:
           path: spec.template.spec.containers[0].securityContext.runAsUser
           value: 1000

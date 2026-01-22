@@ -2,13 +2,13 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
 metadata:
   name: image-factory-helm-chart
-startKIND: true
+startKIND: false
 namespace: image-factory-e2e
 crdDir: ./_crds
 manifestDirs:
-    - ./_manifests
+  - ./_manifests
 testDirs:
-    - ./tests
+  - ./tests
 timeout: 300
 parallel: 1
 commands:

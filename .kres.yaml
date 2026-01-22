@@ -105,6 +105,26 @@ spec:
       toplevel: true
     - name: docker-compose-down
       toplevel: true
+    - name: talosctl
+      toplevel: true
+    - name: helm-unittest
+      toplevel: true
+    - name: kubectl-kuttl
+      toplevel: true
+    - name: tools
+      toplevel: true
+    - name: chart-test
+      toplevel: true
+    - name: k8s-up
+      toplevel: true
+    - name: k8s-down
+      toplevel: true
+    - name: chart-e2e
+      toplevel: true
+    - name: chart-e2e-ci
+      toplevel: true
+    - name: chart-version
+      toplevel: true
 ---
 kind: custom.Step
 name: imager-base
@@ -747,12 +767,12 @@ spec:
       params:
         Licensor: Sidero Labs, Inc.
         LicensedWork: Image Factory
-        Copyright: (c) 2025 Sidero Labs, Inc.
+        Copyright: (c) 2026 Sidero Labs, Inc.
         ChangeDate: "2030-01-22"
         ChangeLicense: Mozilla Public License, version 2.0
         EnterpriseLink: https://www.siderolabs.com/contact/
       header: |
-        // Copyright (c) 2025 Sidero Labs, Inc.
+        // Copyright (c) 2026 Sidero Labs, Inc.
         //
         // Use of this software is governed by the Business Source License
         // included in the LICENSE file.
@@ -772,7 +792,7 @@ spec:
 
     - root: enterprise
       header: |
-        // Copyright (c) 2025 Sidero Labs, Inc.
+        // Copyright (c) 2026 Sidero Labs, Inc.
         //
         // Use of this software is governed by the Business Source License
         // included in the LICENSE file.
@@ -825,3 +845,166 @@ spec:
   ghaction:
     enabled: true
     condition: on-pull-request
+---
+kind: custom.Step
+name: talosctl
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - $(ARTIFACTS)
+    variables:
+      - name: GOOS
+        defaultValue: $(shell uname -s | tr "[:upper:]" "[:lower:]")
+      - name: TALOS_VERSION
+        defaultValue: 1.12.2
+    script:
+      - |
+        curl -Lo $(ARTIFACTS)/talosctl https://github.com/siderolabs/talos/releases/download/v$(TALOS_VERSION)/talosctl-$(GOOS)-$(GOARCH)
+        chmod +x $(ARTIFACTS)/talosctl
+---
+kind: custom.Step
+name: helm-unittest
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - |
+        -helm plugin install https://github.com/helm-unittest/helm-unittest.git --verify=false
+---
+kind: custom.Step
+name: kubectl-kuttl
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - $(ARTIFACTS)
+    script:
+      - |
+        kubectl krew install kuttl
+---
+kind: custom.Step
+name: tools
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - talosctl
+      - kubectl-kuttl
+      - helm-unittest
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+---
+kind: custom.Step
+name: k8s-up
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - $(ARTIFACTS)
+    variables:
+      - name: K8S_VERSION
+        defaultValue: v1.35.0
+    script:
+      - |
+        $(ARTIFACTS)/talosctl cluster create docker \
+            --name=image-factory-env \
+            --talosconfig-destination=$(ARTIFACTS)/talosconfig \
+            --kubernetes-version=$(K8S_VERSION) \
+            --mtu=1450
+        $(ARTIFACTS)/talosctl kubeconfig $(ARTIFACTS)/kubeconfig \
+            --talosconfig=$(ARTIFACTS)/talosconfig \
+            --nodes=10.5.0.2 \
+            --force
+---
+kind: custom.Step
+name: k8s-down
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - |
+        $(ARTIFACTS)/talosctl cluster destroy \
+            --name=image-factory-env
+        rm -f $(ARTIFACTS)/talosconfig $(ARTIFACTS)/kubeconfig
+---
+kind: custom.Step
+name: chart-test
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - |
+        helm unittest deploy/helm/image-factory
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+---
+kind: custom.Step
+name: k8s-down
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - |
+        $(ARTIFACTS)/talosctl cluster destroy \
+            --name=image-factory-env
+        rm -f $(ARTIFACTS)/talosconfig $(ARTIFACTS)/kubeconfig
+---
+kind: custom.Step
+name: chart-version
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    variables:
+      - name: CHART_VERSION
+        defaultValue: "0.0.0-alpha.0"
+    script:
+      - yq -i '.version = strenv(CHART_VERSION)' deploy/helm/image-factory/Chart.yaml
+      - yq -i '.appVersion = strenv(TAG)' deploy/helm/image-factory/Chart.yaml
+      - |
+        sed -i '/# -- Repository to use for Image Factory/{n; s|repository:.*|repository: '"$(REGISTRY)/$(USERNAME)/image-factory"'|}' deploy/helm/image-factory/values.yaml
+---
+kind: custom.Step
+name: chart-e2e
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    script:
+      - |
+        export KUBECONFIG=$(shell pwd)/$(ARTIFACTS)/kubeconfig \
+        && cd deploy/helm/e2e \
+        && kubectl kuttl test
+---
+kind: custom.Step
+name: chart-e2e-ci
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - tools
+    script:
+      - "@$(MAKE) image-image-factory PUSH=true"
+      - "@$(MAKE) chart-version CHART_VERSION=v1.0.0-test.1 REGISTRY=$(REGISTRY) USERNAME=$(USERNAME) TAG=$(TAG)"
+      - "@$(MAKE) k8s-up"
+      - "@$(MAKE) chart-e2e"
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+    parallelJob:
+      name: chart-e2e
+      runnerGroup: generic
+    environment:
+      REGISTRY: registry.dev.siderolabs.io

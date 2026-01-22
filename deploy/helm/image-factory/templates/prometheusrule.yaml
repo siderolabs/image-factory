@@ -18,7 +18,7 @@ metadata:
   {{- end }}
 spec:
   groups:
-  - name: image-factory
-    rules:
-      {{- toYaml .Values.service.metrics.rules.spec | nindent 4 }}
+    - name: image-factory
+      rules:
+        {{- toYaml .Values.service.metrics.rules.spec | nindent 8 }}
 {{- end }}

@@ -77,8 +77,6 @@ spec:
             - name: config
               mountPath: /config.yaml
               subPath: config.yaml
-            - name: host-dev
-              mountPath: /dev
             - name: scratch
               mountPath: /tmp
             - name: cache-signing-key
@@ -91,9 +89,6 @@ spec:
         - name: config
           configMap:
             name: {{ include "image-factory.fullname" . }}
-        - name: host-dev
-          hostPath:
-            path: /dev
         - name: scratch
           emptyDir: {}
         - name: cache-signing-key

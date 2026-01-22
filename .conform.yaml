@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2025-12-08T13:14:36Z by kres 9fb16fe.
+# Generated on 2026-01-23T17:48:08Z by kres 1ffefb6.
 
 policies:
   - type: commit
@@ -57,7 +57,7 @@ policies:
         - .pb.go
         - .pb.gw.go
       header: |
-        // Copyright (c) 2025 Sidero Labs, Inc.
+        // Copyright (c) 2026 Sidero Labs, Inc.
         //
         // Use of this software is governed by the Business Source License
         // included in the LICENSE file.
