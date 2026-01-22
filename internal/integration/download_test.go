@@ -170,7 +170,7 @@ func checkCors(ctx context.Context, t *testing.T, baseURL, schematicID, talosVer
 
 		if req.Method == http.MethodOptions {
 			req.Header.Set("Access-Control-Request-Method", http.MethodGet)
-			req.Header.Set("Access-Control-Request-Headers", "authentication")
+			req.Header.Set("Access-Control-Request-Headers", "cache-control")
 		}
 
 		req.Header.Set("Origin", "https://foo.com")
@@ -197,7 +197,7 @@ func checkCors(ctx context.Context, t *testing.T, baseURL, schematicID, talosVer
 
 			if method == http.MethodOptions {
 				assert.Equal(t, "GET", resp.Header.Get("Access-Control-Allow-Methods"))
-				assert.Equal(t, "authentication", resp.Header.Get("Access-Control-Allow-Headers"))
+				assert.Equal(t, "cache-control", resp.Header.Get("Access-Control-Allow-Headers"))
 			} else {
 				headers := xslices.Map(strings.Split(resp.Header.Get("Access-Control-Expose-Headers"), ","), func(s string) string {
 					return strings.TrimSpace(s)

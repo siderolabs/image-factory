@@ -175,7 +175,7 @@ func (f *Frontend) Handler() http.Handler {
 			http.MethodGet,
 			http.MethodOptions,
 		},
-		AllowedHeaders: []string{"Authentication"},
+		AllowedHeaders: []string{"Cache-Control"},
 		ExposedHeaders: []string{"Content-Disposition", "Content-Length", "Content-Type"},
 	}).Handler(f.router)
 }
