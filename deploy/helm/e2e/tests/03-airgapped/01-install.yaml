@@ -1,0 +1,37 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: install-image-factory
+commands:
+  - command: openssl ecparam -name prime256v1 -genkey -noout -out signing-key.key
+  - command: docker run --rm -v .:/keys -w /keys -e COSIGN_PASSWORD="" --user 1000:100 ghcr.io/sigstore/cosign/cosign:v2.6.1 generate-key-pair
+
+  - command: >-
+      helm install image-factory ../../../image-factory 
+        --wait --timeout=180s
+        --set config.artifacts.core.insecure=true
+        --set config.artifacts.core.registry=registry.image-factory-e2e.svc.cluster.local:5000
+        --set config.artifacts.installer.external.insecure=true
+        --set config.artifacts.installer.external.namespace=siderolabs
+        --set config.artifacts.installer.external.registry=registry.image-factory-e2e.svc.cluster.local:5000
+        --set config.artifacts.installer.internal.insecure=true
+        --set config.artifacts.installer.internal.namespace=siderolabs
+        --set config.artifacts.installer.internal.registry=registry.image-factory-e2e.svc.cluster.local:5000
+        --set config.artifacts.schematic.insecure=true
+        --set config.artifacts.schematic.registry=registry.image-factory-e2e.svc.cluster.local:5000
+        --set config.cache.oci.insecure=true
+        --set config.cache.oci.registry=registry.image-factory-e2e.svc.cluster.local:5000
+        --set config.containerSignature.publicKeyFile=/etc/image-factory/cosign/cosign-pub
+        --set config.containerSignature.disabled=false
+        --set-file cacheSigningKey.key=signing-key.key
+        --set extraVolumeMounts[0].name=cosign-keys
+        --set extraVolumeMounts[0].mountPath=/etc/image-factory/cosign
+        --set extraVolumes[0].name=cosign-keys
+        --set extraVolumes[0].secret.secretName=image-factory-cosign-keys
+        --set extraObjects[0].apiVersion=v1
+        --set extraObjects[0].kind=Secret
+        --set extraObjects[0].metadata.name=image-factory-cosign-keys
+        --set-file "extraObjects[0].stringData.cosign-pub=cosign.pub"
+        --set-file "extraObjects[0].stringData.cosign-key=cosign.key"
+    namespaced: true
+  
