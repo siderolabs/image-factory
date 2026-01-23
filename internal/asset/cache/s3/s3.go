@@ -73,6 +73,7 @@ func New(logger *zap.Logger, signingCache cache.Cache, options Options) (*Cache,
 	c.s3cli, err = minio.New(options.Endpoint, &minio.Options{
 		Secure: !options.Insecure,
 		Creds: credentials.NewChainCredentials([]credentials.Provider{
+			&EnvCloudflare{},
 			&credentials.EnvAWS{},
 			&credentials.FileAWSCredentials{},
 			&credentials.IAM{},
