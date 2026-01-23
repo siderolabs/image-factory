@@ -395,8 +395,8 @@ var DefaultOptions = Options{
 
 		Installer: InstallerOptions{
 			Internal: OCIRepositoryOptions{
-				Registry:   "ghcr.io",
-				Repository: "siderolabs",
+				Registry:  "ghcr.io",
+				Namespace: "siderolabs",
 			},
 		},
 

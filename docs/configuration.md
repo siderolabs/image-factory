@@ -621,9 +621,9 @@ artifacts:
             repository: ""
         internal:
             insecure: false
-            namespace: ""
+            namespace: siderolabs
             registry: ghcr.io
-            repository: siderolabs
+            repository: ""
     refreshInterval: 5m0s
     schematic:
         insecure: false
@@ -702,9 +702,9 @@ IF_ARTIFACTS_INSTALLER_EXTERNAL_NAMESPACE=
 IF_ARTIFACTS_INSTALLER_EXTERNAL_REGISTRY=
 IF_ARTIFACTS_INSTALLER_EXTERNAL_REPOSITORY=
 IF_ARTIFACTS_INSTALLER_INTERNAL_INSECURE=false
-IF_ARTIFACTS_INSTALLER_INTERNAL_NAMESPACE=
+IF_ARTIFACTS_INSTALLER_INTERNAL_NAMESPACE=siderolabs
 IF_ARTIFACTS_INSTALLER_INTERNAL_REGISTRY=ghcr.io
-IF_ARTIFACTS_INSTALLER_INTERNAL_REPOSITORY=siderolabs
+IF_ARTIFACTS_INSTALLER_INTERNAL_REPOSITORY=
 IF_ARTIFACTS_REFRESHINTERVAL=5m0s
 IF_ARTIFACTS_SCHEMATIC_INSECURE=false
 IF_ARTIFACTS_SCHEMATIC_NAMESPACE=siderolabs/image-factory
