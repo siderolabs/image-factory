@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-23T13:31:16Z by kres 1ffefb6.
+# Generated on 2026-01-26T12:25:53Z by kres b1ab497.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -175,10 +175,6 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           make tools
-      - name: chart-test
-        if: github.event_name == 'pull_request'
-        run: |
-          make chart-test
       - name: Generate Checksums
         if: startsWith(github.ref, 'refs/tags/')
         run: |

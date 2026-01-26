@@ -56,6 +56,14 @@ spec:
     - name: imager-tools
       stage: imager-tools
 ---
+kind: auto.Helm
+spec:
+  enabled: true
+  chartDir: deploy/helm/image-factory
+  template:
+    setFile:
+      - cacheSigningKey.key=deploy/helm/e2e/testdata/signing-key.key
+---
 kind: auto.CustomSteps
 spec:
   steps:
@@ -107,10 +115,6 @@ spec:
       toplevel: true
     - name: talosctl
       toplevel: true
-    - name: helm-unittest
-      toplevel: true
-    - name: kubectl-kuttl
-      toplevel: true
     - name: tools
       toplevel: true
     - name: chart-test
@@ -118,8 +122,6 @@ spec:
     - name: k8s-up
       toplevel: true
     - name: k8s-down
-      toplevel: true
-    - name: chart-e2e
       toplevel: true
     - name: chart-e2e-ci
       toplevel: true
@@ -865,28 +867,6 @@ spec:
         chmod +x $(ARTIFACTS)/talosctl
 ---
 kind: custom.Step
-name: helm-unittest
-spec:
-  makefile:
-    enabled: true
-    phony: true
-    script:
-      - |
-        -helm plugin install https://github.com/helm-unittest/helm-unittest.git --verify=false
----
-kind: custom.Step
-name: kubectl-kuttl
-spec:
-  makefile:
-    enabled: true
-    phony: true
-    depends:
-      - $(ARTIFACTS)
-    script:
-      - |
-        kubectl krew install kuttl
----
-kind: custom.Step
 name: tools
 spec:
   makefile:
@@ -894,8 +874,6 @@ spec:
     phony: true
     depends:
       - talosctl
-      - kubectl-kuttl
-      - helm-unittest
   ghaction:
     enabled: true
     condition: on-pull-request
@@ -936,19 +914,6 @@ spec:
         rm -f $(ARTIFACTS)/talosconfig $(ARTIFACTS)/kubeconfig
 ---
 kind: custom.Step
-name: chart-test
-spec:
-  makefile:
-    enabled: true
-    phony: true
-    script:
-      - |
-        helm unittest deploy/helm/image-factory
-  ghaction:
-    enabled: true
-    condition: on-pull-request
----
-kind: custom.Step
 name: k8s-down
 spec:
   makefile:
@@ -976,18 +941,6 @@ spec:
         sed -i '/# -- Repository to use for Image Factory/{n; s|repository:.*|repository: '"$(REGISTRY)/$(USERNAME)/image-factory"'|}' deploy/helm/image-factory/values.yaml
 ---
 kind: custom.Step
-name: chart-e2e
-spec:
-  makefile:
-    enabled: true
-    phony: true
-    script:
-      - |
-        export KUBECONFIG=$(shell pwd)/$(ARTIFACTS)/kubeconfig \
-        && cd deploy/helm/e2e \
-        && kubectl kuttl test
----
-kind: custom.Step
 name: chart-e2e-ci
 spec:
   makefile:
@@ -999,6 +952,7 @@ spec:
       - "@$(MAKE) image-image-factory PUSH=true"
       - "@$(MAKE) chart-version CHART_VERSION=v1.0.0-test.1 REGISTRY=$(REGISTRY) USERNAME=$(USERNAME) TAG=$(TAG)"
       - "@$(MAKE) k8s-up"
+      - "@$(MAKE) kuttl-plugin-install"
       - "@$(MAKE) chart-e2e"
   ghaction:
     enabled: true

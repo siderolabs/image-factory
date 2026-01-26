@@ -28,6 +28,7 @@ The official Image Factory is available at [https://factory.talos.dev](https://f
 * [Air-gapped Deployment](docs/air-gapped.md)
 * [Cache](docs/cache.md)
 * [Developing Image Factory](docs/developing.md)
+* [Helm Chart](docs/chart.md)
 
 ## License
 

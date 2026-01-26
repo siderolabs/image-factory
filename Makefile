@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-26T15:40:35Z by kres f189649.
+# Generated on 2026-01-26T16:14:47Z by kres f189649.
 
 # common variables
 
@@ -36,6 +36,8 @@ GOTOOLCHAIN ?= local
 GOEXPERIMENT ?=
 GO_BUILDFLAGS += -tags $(GO_BUILDTAGS)
 TESTPKGS ?= ./...
+HELMREPO ?= $(REGISTRY)/$(USERNAME)/charts
+COSIGN_ARGS ?=
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 CONFORMANCE_IMAGE ?= ghcr.io/siderolabs/conform:latest
 
@@ -165,7 +167,7 @@ ifneq (, $(filter $(WITH_ENTERPRISE), t true TRUE y yes 1))
 GO_BUILDTAGS := $(GO_BUILDTAGS)enterprise,
 endif
 
-all: unit-tests image-factory image-image-factory lint
+all: unit-tests image-factory image-image-factory helm lint
 
 $(ARTIFACTS):  ## Creates artifacts directory.
 	@mkdir -p $(ARTIFACTS)
@@ -194,6 +196,7 @@ local-%:  ## Builds the specified target defined in the Dockerfile using the loc
 
 generate:  ## Generate .proto definitions.
 	@$(MAKE) local-$@ DEST=./
+	@sed -i "s/appVersion: .*/appVersion: \"$$(cat internal/version/data/tag)\"/" deploy/helm/image-factory/Chart.yaml
 
 lint-golangci-lint:  ## Runs golangci-lint linter.
 	@$(MAKE) target-$@
@@ -303,6 +306,35 @@ lint-fmt: lint-golangci-lint-fmt  ## Run all linter formatters and fix up the so
 image-image-factory: tailwind  ## Builds image for image-factory.
 	@$(MAKE) registry-$@ IMAGE_NAME="image-factory"
 
+.PHONY: helm
+helm:  ## Package helm chart
+	@helm package deploy/helm/image-factory -d $(ARTIFACTS)
+
+.PHONY: helm-release
+helm-release: helm  ## Release helm chart
+	@helm push $(ARTIFACTS)/image-factory-*.tgz oci://$(HELMREPO) 2>&1 | tee $(ARTIFACTS)/.digest
+	@cosign sign --yes $(COSING_ARGS) $(HELMREPO)/image-factory@$$(cat $(ARTIFACTS)/.digest | awk -F "[, ]+" '/Digest/{print $$NF}')
+
+.PHONY: chart-lint
+chart-lint:  ## Lint helm chart
+	@helm lint deploy/helm/image-factory
+
+.PHONY: helm-plugin-install
+helm-plugin-install:  ## Install helm plugins
+	-helm plugin install https://github.com/helm-unittest/helm-unittest.git --verify=false --version=v1.0.3
+
+.PHONY: kuttl-plugin-install
+kuttl-plugin-install:  ## Install kubectl kuttl plugin
+	kubectl krew install kuttl
+
+.PHONY: chart-e2e
+chart-e2e:  ## Run helm chart e2e tests
+	export KUBECONFIG=$(shell pwd)/$(ARTIFACTS)/kubeconfig && cd deploy/helm/e2e && kubectl kuttl test
+
+.PHONY: chart-unittest
+chart-unittest:  ## Run helm chart unit tests
+	@helm unittest deploy/helm/image-factory --output-type junit --output-file $(ARTIFACTS)/helm-unittest-report.xml
+
 .PHONY: imager-base
 imager-base:
 
@@ -359,20 +391,8 @@ talosctl: $(ARTIFACTS)
 	curl -Lo $(ARTIFACTS)/talosctl https://github.com/siderolabs/talos/releases/download/v$(TALOS_VERSION)/talosctl-$(GOOS)-$(GOARCH)
 	chmod +x $(ARTIFACTS)/talosctl
 
-.PHONY: helm-unittest
-helm-unittest:
-	-helm plugin install https://github.com/helm-unittest/helm-unittest.git --verify=false
-
-.PHONY: kubectl-kuttl
-kubectl-kuttl: $(ARTIFACTS)
-	kubectl krew install kuttl
-
 .PHONY: tools
-tools: talosctl kubectl-kuttl helm-unittest
-
-.PHONY: chart-test
-chart-test:
-	helm unittest deploy/helm/image-factory
+tools: talosctl
 
 .PHONY: k8s-up
 k8s-up: $(ARTIFACTS)
@@ -392,17 +412,12 @@ k8s-down:
 	    --name=image-factory-env
 	rm -f $(ARTIFACTS)/talosconfig $(ARTIFACTS)/kubeconfig
 
-.PHONY: chart-e2e
-chart-e2e:
-	export KUBECONFIG=$(shell pwd)/$(ARTIFACTS)/kubeconfig \
-	&& cd deploy/helm/e2e \
-	&& kubectl kuttl test
-
 .PHONY: chart-e2e-ci
 chart-e2e-ci: tools
 	@$(MAKE) image-image-factory PUSH=true
 	@$(MAKE) chart-version CHART_VERSION=v1.0.0-test.1 REGISTRY=$(REGISTRY) USERNAME=$(USERNAME) TAG=$(TAG)
 	@$(MAKE) k8s-up
+	@$(MAKE) kuttl-plugin-install
 	@$(MAKE) chart-e2e
 
 .PHONY: chart-version
