@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-26T16:14:47Z by kres f189649.
+# Generated on 2026-01-27T19:18:19Z by kres 49ba5d2-dirty.
 
 # common variables
 
@@ -38,6 +38,7 @@ GO_BUILDFLAGS += -tags $(GO_BUILDTAGS)
 TESTPKGS ?= ./...
 HELMREPO ?= $(REGISTRY)/$(USERNAME)/charts
 COSIGN_ARGS ?=
+HELMDOCS_VERSION ?= v1.14.2
 KRES_IMAGE ?= ghcr.io/siderolabs/kres:latest
 CONFORMANCE_IMAGE ?= ghcr.io/siderolabs/conform:latest
 
@@ -78,6 +79,7 @@ COMMON_ARGS += --build-arg=DEEPCOPY_VERSION="$(DEEPCOPY_VERSION)"
 COMMON_ARGS += --build-arg=GOLANGCILINT_VERSION="$(GOLANGCILINT_VERSION)"
 COMMON_ARGS += --build-arg=GOFUMPT_VERSION="$(GOFUMPT_VERSION)"
 COMMON_ARGS += --build-arg=TESTPKGS="$(TESTPKGS)"
+COMMON_ARGS += --build-arg=HELMDOCS_VERSION="$(HELMDOCS_VERSION)"
 COMMON_ARGS += --build-arg=PKGS_PREFIX="$(PKGS_PREFIX)"
 COMMON_ARGS += --build-arg=PKGS="$(PKGS)"
 TOOLCHAIN ?= docker.io/golang:1.25-alpine
@@ -193,6 +195,9 @@ local-%:  ## Builds the specified target defined in the Dockerfile using the loc
 	      rmdir "$$DEST/$$directory/"; \
 	    fi; \
 	  done'
+
+check-dirty:
+	@if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; git diff; exit 1 ; fi
 
 generate:  ## Generate .proto definitions.
 	@$(MAKE) local-$@ DEST=./
@@ -322,6 +327,7 @@ chart-lint:  ## Lint helm chart
 .PHONY: helm-plugin-install
 helm-plugin-install:  ## Install helm plugins
 	-helm plugin install https://github.com/helm-unittest/helm-unittest.git --verify=false --version=v1.0.3
+	-helm plugin install https://github.com/losisin/helm-values-schema-json.git --verify=false --version=v2.3.1
 
 .PHONY: kuttl-plugin-install
 kuttl-plugin-install:  ## Install kubectl kuttl plugin
@@ -334,6 +340,13 @@ chart-e2e:  ## Run helm chart e2e tests
 .PHONY: chart-unittest
 chart-unittest:  ## Run helm chart unit tests
 	@helm unittest deploy/helm/image-factory --output-type junit --output-file $(ARTIFACTS)/helm-unittest-report.xml
+
+.PHONY: chart-gen-schema
+chart-gen-schema:  ## Generate helm chart schema
+	@helm schema --use-helm-docs --draft=7 --indent=2 --values=deploy/helm/image-factory/values.yaml --output=deploy/helm/image-factory/values.schema.json
+
+helm-docs:  ## Runs helm-docs and generates chart documentation
+	@$(MAKE) local-$@ DEST=.
 
 .PHONY: imager-base
 imager-base:
@@ -373,9 +386,8 @@ tailwind:
 docs:
 	@$(MAKE) local-$@ DEST=docs
 
-.PHONY: check-dirty
-check-dirty:
-	@if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; git diff; exit 1 ; fi
+.PHONY: check-dirty-ci
+check-dirty-ci: check-dirty
 
 .PHONY: docker-compose-up
 docker-compose-up:

@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-26T12:25:53Z by kres b1ab497.
+# Generated on 2026-01-27T13:25:25Z by kres f189649-dirty.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -167,10 +167,10 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           make docs
-      - name: check-dirty
+      - name: check-dirty-ci
         if: github.event_name == 'pull_request'
         run: |
-          make check-dirty
+          make check-dirty-ci
       - name: tools
         if: github.event_name == 'pull_request'
         run: |

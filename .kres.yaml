@@ -107,7 +107,7 @@ spec:
       toplevel: true
     - name: docs
       toplevel: true
-    - name: check-dirty
+    - name: check-dirty-ci
       toplevel: true
     - name: docker-compose-up
       toplevel: true
@@ -836,14 +836,13 @@ spec:
     condition: on-pull-request
 ---
 kind: custom.Step
-name: check-dirty
+name: check-dirty-ci
 spec:
   makefile:
     enabled: true
     phony: true
-    script:
-      - |
-        @if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; git diff; exit 1 ; fi
+    depends:
+      - check-dirty
   ghaction:
     enabled: true
     condition: on-pull-request

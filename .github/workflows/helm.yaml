@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-26T13:50:13Z by kres f189649.
+# Generated on 2026-01-27T14:45:52Z by kres 49ba5d2.
 
 concurrency:
   group: helm-${{ github.head_ref || github.run_id }}
@@ -85,6 +85,18 @@ jobs:
       - name: Unit test chart
         run: |
           make chart-unittest
+      - name: Generate schema
+        if: github.event_name == 'pull_request'
+        run: |
+          make chart-gen-schema
+      - name: Generate docs
+        if: github.event_name == 'pull_request'
+        run: |
+          make helm-docs
+      - name: Check dirty
+        if: github.event_name == 'pull_request'
+        run: |
+          make check-dirty
       - name: helm login
         if: startsWith(github.ref, 'refs/tags/')
         env:

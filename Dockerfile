@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-21T13:19:04Z by kres 1ffefb6.
+# Generated on 2026-01-27T19:20:28Z by kres 49ba5d2-dirty.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -186,6 +186,12 @@ RUN mkdir -p internal/version/data && \
 FROM base AS docgen
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go run ./tools/docgen ./cmd/image-factory/cmd/options.go docs/configuration.md
 
+# helm toolchain
+FROM base AS helm-toolchain
+ARG HELMDOCS_VERSION
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/norwoodj/helm-docs/cmd/helm-docs@${HELMDOCS_VERSION} \
+	&& mv /go/bin/helm-docs /bin/helm-docs
+
 # builds the integration test binary
 FROM base AS integration-build
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go test -c -covermode=atomic -coverpkg=./... -tags integration ./internal/integration
@@ -246,6 +252,11 @@ RUN echo -n 'undefined' > internal/version/data/sha && \
 FROM scratch AS docs
 COPY --from=docgen /src/docs/configuration.md /configuration.md
 
+# runs helm-docs
+FROM helm-toolchain AS helm-docs-run
+COPY deploy/helm/image-factory /src/deploy/helm/image-factory
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/root/.cache/helm-docs,id=image-factory/root/.cache/helm-docs,sharing=locked helm-docs --badge-style=flat --template-files=README.md.gotpl
+
 # copies out the integration test binary
 FROM scratch AS integration.test
 COPY --from=integration-build /src/integration.test /integration.test
@@ -269,6 +280,10 @@ COPY --from=update-to-talos-main /src/go.sum /go.sum
 # cleaned up specs and compiled versions
 FROM scratch AS generate
 COPY --from=embed-abbrev-generate /src/internal/version internal/version
+
+# clean helm-docs output
+FROM scratch AS helm-docs
+COPY --from=helm-docs-run /src/deploy/helm/image-factory deploy/helm/image-factory
 
 # builds image-factory-linux-amd64
 FROM base AS image-factory-linux-amd64-build

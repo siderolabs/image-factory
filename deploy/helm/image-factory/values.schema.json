@@ -1,0 +1,460 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "affinity": {
+      "type": "object"
+    },
+    "args": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cacheSigningKey": {
+      "description": "Image Cache Signing Key Configuration # This secret contains the ECDSA private key used to sign cached Talos image artifacts. # This ensures that nodes can verify the integrity of images served by the Image Factory. # If you are running a self-hosted Image Factory, this key is required.",
+      "type": "object",
+      "properties": {
+        "existingSecret": {
+          "description": "Name of an existing Secret containing the ECDSA private key. IMPORTANT: The existing secret MUST contain a data key named exactly \"cache-signing.key\". If your secret uses a different key, Image Factory will not find the file.",
+          "type": "string"
+        },
+        "key": {
+          "description": "If 'existingSecret' is empty, a new Secret will be created. The ECDSA private key content (multiline string). Generate using: openssl ecparam -name prime256v1 -genkey -noout -out cache-signing.key",
+          "type": "string"
+        }
+      }
+    },
+    "config": {
+      "description": "Sidero Image-Factory Configuration",
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "artifacts": {
+          "type": "object",
+          "properties": {
+            "schematic": {
+              "type": "object",
+              "properties": {
+                "insecure": {
+                  "type": "boolean"
+                },
+                "namespace": {
+                  "type": "string"
+                },
+                "registry": {
+                  "type": "string"
+                },
+                "repository": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "cache": {
+          "type": "object",
+          "properties": {
+            "signingKeyPath": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "env": {
+      "description": "Environment variables to pass to Image Factory",
+      "type": "array"
+    },
+    "envFrom": {
+      "description": "envFrom to pass to Image Factory",
+      "type": "array"
+    },
+    "extraObjects": {
+      "type": "array"
+    },
+    "extraVolumeMounts": {
+      "description": "List of additional mounts to add (normally used with extraVolumes)",
+      "type": "array"
+    },
+    "extraVolumes": {
+      "description": "List of extra volumes to add",
+      "type": "array"
+    },
+    "fullnameOverride": {
+      "description": "String to fully override `\"image-factory.fullname\"`",
+      "type": "string"
+    },
+    "gatewayApi": {
+      "description": "Gateway API Configuration. NOTE: Gateway API support is in EXPERIMENTAL status. Support depends on your Gateway controller implementation.",
+      "type": "object",
+      "properties": {
+        "pxe": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "description": "Additional Annotations",
+              "type": "object"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "hostnames": {
+              "description": "Image Factory PXE hostname",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "labels": {
+              "description": "Additional Labels",
+              "type": "object"
+            },
+            "parentRefs": {
+              "description": "The Gateway(s) to attach this route to. You MUST define at least one parentRef for the route to be active.",
+              "type": "array"
+            }
+          }
+        },
+        "ui": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "description": "Additional Annotations",
+              "type": "object"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "hostnames": {
+              "description": "Image Factory UI hostname",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "labels": {
+              "description": "Additional Labels",
+              "type": "object"
+            },
+            "parentRefs": {
+              "description": "The Gateway(s) to attach this route to. You MUST define at least one parentRef for the route to be active.",
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "pullPolicy": {
+          "description": "Image pull policy for Image Factory",
+          "type": "string"
+        },
+        "repository": {
+          "description": "Repository to use for Image Factory",
+          "type": "string"
+        },
+        "tag": {
+          "description": "Tag to use for Image Factory",
+          "type": "string"
+        }
+      }
+    },
+    "imagePullSecrets": {
+      "description": "Secrets with credentials to pull images from a private registry",
+      "type": "array"
+    },
+    "ingress": {
+      "description": "Ingress Configuration This section configures standard Kubernetes Ingress resources. Use this if you are using an Ingress Controller like NGINX, Traefik, or HAProxy.",
+      "type": "object",
+      "properties": {
+        "pxe": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "description": "Additional Annotations",
+              "type": "object"
+            },
+            "className": {
+              "description": "Ingress Class Name",
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "host": {
+              "description": "Image Factory PXE hostname",
+              "type": "string"
+            },
+            "labels": {
+              "description": "Additional Labels",
+              "type": "object"
+            },
+            "tls": {
+              "description": "TLS configuration",
+              "type": "array"
+            }
+          }
+        },
+        "ui": {
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "description": "Additional Annotations",
+              "type": "object"
+            },
+            "className": {
+              "description": "Ingress Class Name",
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "host": {
+              "description": "Image Factory UI hostname",
+              "type": "string"
+            },
+            "labels": {
+              "description": "Additional Labels",
+              "type": "object"
+            },
+            "tls": {
+              "description": "TLS configuration",
+              "type": "array"
+            }
+          }
+        }
+      }
+    },
+    "livenessProbe": {
+      "description": "Probes Configuration",
+      "type": "object"
+    },
+    "nameOverride": {
+      "title": "Image Factory Helm Values",
+      "description": "Provide a name in place of `image-factory`",
+      "type": "string",
+      "additionalProperties": false
+    },
+    "namespaceOverride": {
+      "description": "Provide a namespace in place of the release namespace.",
+      "type": "string"
+    },
+    "nodeSelector": {
+      "type": "object"
+    },
+    "podAnnotations": {
+      "type": "object"
+    },
+    "podLabels": {
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "type": "object"
+    },
+    "readinessProbe": {
+      "type": "object"
+    },
+    "replicaCount": {
+      "type": "integer"
+    },
+    "resources": {
+      "description": "Resources Configuration Set CPU and Memory resource requests and limits for the Image Factory pod.",
+      "type": "object"
+    },
+    "securityContext": {
+      "description": "Pod Security Context Image Factory container-level security context",
+      "type": "object",
+      "properties": {
+        "privileged": {
+          "type": "boolean"
+        }
+      }
+    },
+    "service": {
+      "description": "Service Configuration Configures the Kubernetes Services to expose Image Factory's network endpoints. - 'main': Exposes the UI and PXE services (ClusterIP by default). - 'metrics': Exposes Prometheus metrics endpoint (ClusterIP by default).",
+      "type": "object",
+      "properties": {
+        "main": {
+          "description": "Main Service (Image-Factory)",
+          "type": "object",
+          "properties": {
+            "annotations": {
+              "description": "Additional Annotations",
+              "type": "object"
+            },
+            "labels": {
+              "description": "Additional Labels",
+              "type": "object"
+            },
+            "loadBalancerIP": {
+              "description": "If type is Loadbalancer",
+              "type": "string"
+            },
+            "port": {
+              "description": "Web UI",
+              "type": "integer"
+            },
+            "type": {
+              "description": "Default: ClusterIP",
+              "type": "string"
+            }
+          }
+        },
+        "metrics": {
+          "description": "Image Factory metrics configuration",
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "description": "Deploy metrics service",
+              "type": "boolean"
+            },
+            "rules": {
+              "type": "object",
+              "properties": {
+                "annotations": {
+                  "description": "PrometheusRule annotations",
+                  "type": "object"
+                },
+                "enabled": {
+                  "description": "Deploy a PrometheusRule for Image Factory",
+                  "type": "boolean"
+                },
+                "labels": {
+                  "description": "PrometheusRule labels",
+                  "type": "object"
+                },
+                "namespace": {
+                  "description": "PrometheusRule namespace",
+                  "type": "string"
+                },
+                "selector": {
+                  "description": "PrometheusRule selector",
+                  "type": "object"
+                },
+                "spec": {
+                  "description": "PrometheusRule.Spec for Image Factory",
+                  "type": "array"
+                }
+              }
+            },
+            "service": {
+              "type": "object",
+              "properties": {
+                "annotations": {
+                  "description": "Metrics service annotations",
+                  "type": "object"
+                },
+                "clusterIP": {
+                  "description": "Metrics service clusterIP. `None` makes a \"headless service\" (no virtual IP)",
+                  "type": "string"
+                },
+                "labels": {
+                  "description": "Metrics service labels",
+                  "type": "object"
+                },
+                "servicePort": {
+                  "description": "Metrics service port",
+                  "type": "integer"
+                },
+                "type": {
+                  "description": "Metrics service type",
+                  "type": "string"
+                }
+              }
+            },
+            "serviceMonitor": {
+              "type": "object",
+              "properties": {
+                "annotations": {
+                  "description": "Prometheus ServiceMonitor annotations",
+                  "type": "object"
+                },
+                "enabled": {
+                  "description": "Enable a prometheus ServiceMonitor",
+                  "type": "boolean"
+                },
+                "honorLabels": {
+                  "description": "When true, honorLabels preserves the metric’s labels when they collide with the target’s labels.",
+                  "type": "boolean"
+                },
+                "interval": {
+                  "description": "Prometheus ServiceMonitor interval",
+                  "type": "string"
+                },
+                "labels": {
+                  "type": "object"
+                },
+                "metricRelabelings": {
+                  "description": "Prometheus [MetricRelabelConfigs] to apply to samples before ingestion",
+                  "type": "array"
+                },
+                "namespace": {
+                  "description": "Prometheus ServiceMonitor namespace",
+                  "type": "string"
+                },
+                "relabelings": {
+                  "description": "Prometheus [RelabelConfigs] to apply to samples before scraping",
+                  "type": "array"
+                },
+                "scheme": {
+                  "description": "Prometheus ServiceMonitor selector",
+                  "type": "string"
+                },
+                "scrapeTimeout": {
+                  "description": "Prometheus ServiceMonitor scrapeTimeout. If empty, Prometheus uses the global scrape timeout unless it is less than the target's scrape interval value in which the latter is used.",
+                  "type": "string"
+                },
+                "selector": {
+                  "description": "Prometheus ServiceMonitor labels",
+                  "type": "object"
+                },
+                "tlsConfig": {
+                  "description": "Prometheus ServiceMonitor tlsConfig",
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "type": "object"
+        },
+        "automount": {
+          "type": "boolean"
+        },
+        "create": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "strategy": {
+      "description": "Deployment strategy. Image Factory currently only supports Recreate strategy.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "tolerations": {
+      "type": "array"
+    }
+  }
+}
