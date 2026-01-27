@@ -362,7 +362,7 @@ var DefaultOptions = Options{
 	},
 
 	ContainerSignature: ContainerSignature{
-		SubjectRegExp:     `@siderolabs\.com$`,
+		SubjectRegExp:     `(@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)`,
 		IssuerRegExp:      "",
 		Issuer:            "https://accounts.google.com",
 		PublicKeyHashAlgo: "sha256",

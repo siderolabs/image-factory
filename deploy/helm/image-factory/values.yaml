@@ -151,7 +151,7 @@ config:
     # -- Hash algorithm for the public key (default: sha256)
     # publicKeyHashAlgo: sha256
     # -- Regex to validate the subject (e.g., matches siderolabs.com emails)
-    # subjectRegExp: '@siderolabs\.com$'
+    # subjectRegExp: '(@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)'
 
   ## HTTP Server Configuration
   # http:

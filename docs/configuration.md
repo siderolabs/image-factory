@@ -657,7 +657,7 @@ containerSignature:
     issuerRegExp: ""
     publicKeyFile: ""
     publicKeyHashAlgo: sha256
-    subjectRegExp: '@siderolabs\.com$'
+    subjectRegExp: (@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)
 http:
     allowedOrigins:
         - '*'
@@ -731,7 +731,7 @@ IF_CONTAINERSIGNATURE_ISSUER=https://accounts.google.com
 IF_CONTAINERSIGNATURE_ISSUERREGEXP=
 IF_CONTAINERSIGNATURE_PUBLICKEYFILE=
 IF_CONTAINERSIGNATURE_PUBLICKEYHASHALGO=sha256
-IF_CONTAINERSIGNATURE_SUBJECTREGEXP=@siderolabs\.com$
+IF_CONTAINERSIGNATURE_SUBJECTREGEXP=(@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)
 IF_HTTP_ALLOWEDORIGINS=[*]
 IF_HTTP_CERTFILE=
 IF_HTTP_EXTERNALPXEURL=

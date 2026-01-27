@@ -29,7 +29,7 @@ func siderolabsVerifyOptions(t *testing.T) image.VerifyOptions {
 				Identities: []cosign.Identity{
 					{
 						Issuer:        "https://accounts.google.com",
-						SubjectRegExp: `@siderolabs\.com$`,
+						SubjectRegExp: `(@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)`,
 					},
 				},
 			},
