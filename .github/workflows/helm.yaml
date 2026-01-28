@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-27T14:45:52Z by kres 49ba5d2.
+# Generated on 2026-01-28T15:13:10Z by kres edff623.
 
 concurrency:
   group: helm-${{ github.head_ref || github.run_id }}
@@ -75,7 +75,7 @@ jobs:
         run: |
           helm lint deploy/helm/image-factory
       - name: Template chart
-        if: github.event_name == 'pull_request' && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'
         run: |
           helm template -f deploy/helm/image-factory/values.yaml --set-file cacheSigningKey.key=deploy/helm/e2e/testdata/signing-key.key image-factory deploy/helm/image-factory
       - name: Install unit test plugin
@@ -83,6 +83,7 @@ jobs:
         run: |
           make helm-plugin-install
       - name: Unit test chart
+        if: github.event_name == 'pull_request'
         run: |
           make chart-unittest
       - name: Generate schema
