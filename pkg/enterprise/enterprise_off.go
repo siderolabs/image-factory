@@ -4,10 +4,16 @@
 
 //go:build !enterprise
 
-// Package enterprise provide glue to Enterprise code.
 package enterprise
+
+import "errors"
 
 // Enabled indicates whether Enterprise features are enabled.
 func Enabled() bool {
 	return false
+}
+
+// NewAuthProvider creates a new authentication provider.
+func NewAuthProvider(configPath string) (AuthProvider, error) {
+	return nil, errors.New("authentication is not supported in the non-enterprise version")
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 // handleSchematicCreate handles creation of the schematic.
@@ -28,12 +28,12 @@ func (f *Frontend) handleSchematicCreate(ctx context.Context, w http.ResponseWri
 		return err
 	}
 
-	cfg, err := schematic.Unmarshal(data)
+	schematic, err := schematicpkg.Unmarshal(data)
 	if err != nil {
 		return err
 	}
 
-	id, err := f.schematicFactory.Put(ctx, cfg)
+	id, err := f.schematicFactory.Put(ctx, schematic)
 	if err != nil {
 		return err
 	}

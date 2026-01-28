@@ -31,6 +31,8 @@ import (
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
+	"github.com/siderolabs/image-factory/pkg/client"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, string) {
@@ -56,6 +58,7 @@ func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, s
 
 	setupSecureBoot(t, &options)
 	setupCacheSigningKey(t, &options)
+	setupEnterprise(t, &options)
 
 	t.Cleanup(remotewrap.ShutdownTransport)
 
@@ -234,6 +237,44 @@ func setupSecureBoot(t *testing.T, options *cmd.Options) {
 	}
 }
 
+//go:embed "testdata/auth-config.yaml"
+var authConfigYAML []byte
+
+func setupEnterprise(t *testing.T, options *cmd.Options) {
+	t.Helper()
+
+	if !enterprise.Enabled() {
+		return
+	}
+
+	configDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "auth-config.yaml"), authConfigYAML, 0o600))
+
+	options.Authentication.Enabled = true
+	options.Authentication.ConfigPath = filepath.Join(configDir, "auth-config.yaml")
+}
+
+func authCredentials() (string, string) {
+	if !enterprise.Enabled() {
+		return "", ""
+	}
+
+	return "alice", "alicetopsecret"
+}
+
+func clientAuthCredentials() []client.Option {
+	username, password := authCredentials()
+
+	if username != "" && password != "" {
+		return []client.Option{
+			client.WithBasicAuth(username, password),
+		}
+	}
+
+	return nil
+}
+
 func findListenAddr(t *testing.T, host string) (string, string) {
 	t.Helper()
 
@@ -255,11 +296,7 @@ func commonTest(t *testing.T, options cmd.Options) {
 	baseURL := "http://" + listenAddr
 	pxeURL := "http://" + pxeAddr
 
-	t.Run("TestFrontend", func(t *testing.T) {
-		t.Parallel()
-
-		testFrontend(ctx, t, baseURL)
-	})
+	t.Run("TestFrontend", testFrontend(ctx, baseURL))
 
 	t.Run("TestSchematic", func(t *testing.T) {
 		// schematic should be created first, thus no t.Parallel

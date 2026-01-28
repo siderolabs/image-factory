@@ -17,6 +17,13 @@ import (
 
 // Schematic represents the requested image customization.
 type Schematic struct {
+	// Owner is the name (username) of the schematic owner.
+	//
+	// If owner is set, the schematic is only accessible to the owner and
+	// requires authentication to access.
+	//
+	// Note: this field is only supported in Enterprise edition.
+	Owner string `yaml:"owner,omitempty"`
 	// Overlay represents the overlay options for image generation.
 	Overlay Overlay `yaml:"overlay,omitempty"`
 	// Customization represents the Talos image customization.
@@ -68,6 +75,9 @@ type SecureBootCustomization struct {
 
 // InvalidErrorTag is a tag for invalid schematic errors.
 type InvalidErrorTag struct{}
+
+// RequiresAuthenticationTag is a tag for schematics that require authentication to access.
+type RequiresAuthenticationTag struct{}
 
 // Unmarshal the schematic from text representation.
 func Unmarshal(data []byte) (*Schematic, error) {

@@ -109,8 +109,18 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("failed to initialize SecureBoot service: %w", err)
 	}
 
+	var authProvider enterprise.AuthProvider
+
+	if opts.Authentication.Enabled {
+		authProvider, err = enterprise.NewAuthProvider(opts.Authentication.ConfigPath)
+		if err != nil {
+			return fmt.Errorf("failed to initialize authentication provider: %w", err)
+		}
+	}
+
 	var frontendOptions frontendhttp.Options
 
+	frontendOptions.AuthProvider = authProvider
 	frontendOptions.CacheSigningKey = cacheSigningKey
 
 	frontendOptions.ExternalURL, err = url.Parse(opts.HTTP.ExternalURL)
