@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-27T19:18:19Z by kres 49ba5d2-dirty.
+# Generated on 2026-01-28T15:13:10Z by kres edff623.
 
 # common variables
 
@@ -196,6 +196,7 @@ local-%:  ## Builds the specified target defined in the Dockerfile using the loc
 	    fi; \
 	  done'
 
+.PHONY: check-dirty
 check-dirty:
 	@if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; git diff; exit 1 ; fi
 
@@ -318,7 +319,7 @@ helm:  ## Package helm chart
 .PHONY: helm-release
 helm-release: helm  ## Release helm chart
 	@helm push $(ARTIFACTS)/image-factory-*.tgz oci://$(HELMREPO) 2>&1 | tee $(ARTIFACTS)/.digest
-	@cosign sign --yes $(COSING_ARGS) $(HELMREPO)/image-factory@$$(cat $(ARTIFACTS)/.digest | awk -F "[, ]+" '/Digest/{print $$NF}')
+	@cosign sign --yes $(COSIGN_ARGS) $(HELMREPO)/image-factory@$$(cat $(ARTIFACTS)/.digest | awk -F "[, ]+" '/Digest/{print $$NF}')
 
 .PHONY: chart-lint
 chart-lint:  ## Lint helm chart
@@ -338,13 +339,14 @@ chart-e2e:  ## Run helm chart e2e tests
 	export KUBECONFIG=$(shell pwd)/$(ARTIFACTS)/kubeconfig && cd deploy/helm/e2e && kubectl kuttl test
 
 .PHONY: chart-unittest
-chart-unittest:  ## Run helm chart unit tests
+chart-unittest: $(ARTIFACTS)  ## Run helm chart unit tests
 	@helm unittest deploy/helm/image-factory --output-type junit --output-file $(ARTIFACTS)/helm-unittest-report.xml
 
 .PHONY: chart-gen-schema
 chart-gen-schema:  ## Generate helm chart schema
 	@helm schema --use-helm-docs --draft=7 --indent=2 --values=deploy/helm/image-factory/values.yaml --output=deploy/helm/image-factory/values.schema.json
 
+.PHONY: helm-docs
 helm-docs:  ## Runs helm-docs and generates chart documentation
 	@$(MAKE) local-$@ DEST=.
 
