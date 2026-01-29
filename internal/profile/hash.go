@@ -83,6 +83,12 @@ func Hash(p profile.Profile) (string, error) {
 		hasher.Write([]byte("vmware arm64 kernel args fix #11735"))
 	}
 
+	// 10. Overlays were missing extra kernel args on UKI/Installer images
+	// - https://github.com/siderolabs/image-factory/issues/376
+	if p.Overlay != nil && (p.Output.Kind == profile.OutKindUKI || p.Output.Kind == profile.OutKindInstaller) {
+		hasher.Write([]byte("overlay extra kernel args fix #376"))
+	}
+
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 

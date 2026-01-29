@@ -738,6 +738,10 @@ func defaultExpectedProfileWithExtensionsKernelArgs(version, arch string, outKin
 func defaultExpectedProfileWithOverlayExtensionsKernelArgs(version, arch string, outKind profile.OutputKind, secureboot bool) profile.Profile {
 	prof := defaultExpectedProfile(version, arch, outKind, secureboot)
 
+	if quirks.New(version).SupportsUnifiedInstaller() {
+		prof.Customization.ExtraKernelArgs = []string{"noapic", "nolapic"}
+	}
+
 	prof.Input.OverlayInstaller = profile.ContainerAsset{
 		OCIPath: "arm64-sha256:sbc-raspberrypi.oci",
 	}
