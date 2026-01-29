@@ -3,7 +3,7 @@ name: image-factory
 description: A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 type: application
 version: v1.0.0
-appVersion: "v1.0.0-beta.0"
+appVersion: "v1.0.0"
 home: https://github.com/siderolabs/image-factory
 sources:
   - https://github.com/siderolabs/image-factory

@@ -6,7 +6,7 @@ github_repo = "siderolabs/image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
 previous = "v0.9.0"
-pre_release = true
+pre_release = false
 
 [notes]
 
