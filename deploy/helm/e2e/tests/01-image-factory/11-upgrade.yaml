@@ -5,7 +5,7 @@ metadata:
 commands:
   - command: >-
       helm upgrade --install image-factory ../../../image-factory
-        --wait --timeout=120s --reuse-values
+        --wait --timeout=600s --reuse-values
         --set ingress.ui.enabled=true
         --set ingress.pxe.enabled=true
     namespaced: true

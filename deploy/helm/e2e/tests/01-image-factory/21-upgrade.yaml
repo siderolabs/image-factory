@@ -5,7 +5,7 @@ metadata:
 commands:
   - command: >-
       helm upgrade --install image-factory ../../../image-factory
-        --wait --timeout=120s --reuse-values
+        --wait --timeout=600s --reuse-values
         --set service.metrics.enabled=true
         --set service.metrics.serviceMonitor.enabled=true
         --set ingress.ui.enabled=false

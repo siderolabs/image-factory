@@ -1,6 +1,6 @@
 # image-factory
 
-![Version: v1.0.0-alpha.0](https://img.shields.io/badge/Version-v1.0.0--alpha.0-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v1.0.0-beta.0](https://img.shields.io/badge/AppVersion-v1.0.0--beta.0-informational?style=flat)
+![Version: v1.0.0](https://img.shields.io/badge/Version-v1.0.0-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v1.0.0-beta.0](https://img.shields.io/badge/AppVersion-v1.0.0--beta.0-informational?style=flat)
 
 A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 
@@ -67,7 +67,7 @@ A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 | readinessProbe | object | `{}` |  |
 | replicaCount | int | `1` |  |
 | resources | object | `{}` | Resources Configuration Set CPU and Memory resource requests and limits for the Image Factory pod. |
-| securityContext | object | `{"privileged":false}` | Pod Security Context Image Factory container-level security context |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"runAsGroup":1000,"runAsNonRoot":true,"runAsUser":1000,"seccompProfile":{"type":"RuntimeDefault"}}` | Pod Security Context Image Factory container-level security context |
 | service | object | `{"main":{"annotations":{},"labels":{},"loadBalancerIP":"","port":8080,"type":"ClusterIP"},"metrics":{"enabled":false,"rules":{"annotations":{},"enabled":false,"labels":{},"namespace":"","selector":{},"spec":[]},"service":{"annotations":{},"clusterIP":"","labels":{},"servicePort":2122,"type":"ClusterIP"},"serviceMonitor":{"annotations":{},"enabled":false,"honorLabels":false,"interval":"30s","labels":{},"metricRelabelings":[],"namespace":"","relabelings":[],"scheme":"","scrapeTimeout":"","selector":{},"tlsConfig":{}}}}` | Service Configuration Configures the Kubernetes Services to expose Image Factory's network endpoints. - 'main': Exposes the UI and PXE services (ClusterIP by default). - 'metrics': Exposes Prometheus metrics endpoint (ClusterIP by default). |
 | service.main | object | `{"annotations":{},"labels":{},"loadBalancerIP":"","port":8080,"type":"ClusterIP"}` | Main Service (Image-Factory) |
 | service.main.annotations | object | `{}` | Additional Annotations |
