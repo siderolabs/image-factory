@@ -5,7 +5,7 @@ metadata:
 commands:
   - command: >-
       helm install image-factory ../../../image-factory
-        --wait --timeout=180s
+        --wait --timeout=600s
         --set config.artifacts.schematic.registry=registry.image-factory-e2e.svc.cluster.local:5000
         --set config.artifacts.schematic.insecure=true
         --set config.containerSignature.disabled=false
