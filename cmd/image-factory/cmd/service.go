@@ -583,6 +583,7 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 	artifactsManagerOpts := artifacts.Options{
 		MinVersion:                  minVersion,
 		BrokenVersions:              brokenVersions,
+		SkipVersionFilter:           opts.Artifacts.SkipVersionFilter,
 		ImageRegistry:               opts.Artifacts.Core.Registry,
 		ImageRegistryNamespace:      opts.Artifacts.Core.Namespace,
 		InsecureImageRegistry:       opts.Artifacts.Core.Insecure,
