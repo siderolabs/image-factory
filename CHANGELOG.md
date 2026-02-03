@@ -1,3 +1,56 @@
+## [image-factory 1.0.1](https://github.com/siderolabs/image-factory/releases/tag/v1.0.1) (2026-02-03)
+
+Welcome to the v1.0.1 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Noel Georgi
+* Dmitrii Sharshakov
+* Mateusz Urbanek
+* Orzelius
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`ec1c0a7`](https://github.com/siderolabs/image-factory/commit/ec1c0a790c99c55fcc3c315429f96e266bee7343) fix: pass insecure to the cosign new bundle verifier
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>13 commits</summary>
+<p>
+
+* [`055add7ae`](https://github.com/siderolabs/talos/commit/055add7aeb158b6f4e09ef06966de7622d1b3940) release(v1.13.0-alpha.1): prepare release
+* [`900516e68`](https://github.com/siderolabs/talos/commit/900516e68950e4b94696f6a9b481cefee44b3360) chore: update image signer
+* [`938de566e`](https://github.com/siderolabs/talos/commit/938de566eca30af3cc4355a94931186f19b682f2) feat: bump kernel
+* [`388cec727`](https://github.com/siderolabs/talos/commit/388cec72796d0ecd0c7103efcaab9066e9b62509) feat(overlays): add new overlays
+* [`9f2dd6312`](https://github.com/siderolabs/talos/commit/9f2dd6312f9d49e4d03347c98b100119f94cf807) refactor: api tests
+* [`a90783146`](https://github.com/siderolabs/talos/commit/a90783146fc2d475055bfce0f8b5120969f74dc7) feat: add a helper module to generate standard patches
+* [`1fec5b23d`](https://github.com/siderolabs/talos/commit/1fec5b23d0c10e53863a7c0f89f862708a7f4069) fix: implement merger for PercentageSize
+* [`8b245b8f2`](https://github.com/siderolabs/talos/commit/8b245b8f269b6c8cb463f2cf537d2ed2ab6924ec) feat: implement new image service APIs
+* [`d90c775b8`](https://github.com/siderolabs/talos/commit/d90c775b8441705003de3427b2e6831dcbfb449f) chore: rename internal `talosctl debug air-gapped`
+* [`2165280d0`](https://github.com/siderolabs/talos/commit/2165280d0eedf59899ad44e2f3289d81b3dab466) refactor: change the way one2many proxying is picked
+* [`b1b703dbe`](https://github.com/siderolabs/talos/commit/b1b703dbe2b25785ded0c77f23d674d9b9934975) chore: move sync logging code to go-kubernetes package
+* [`e48c6d7ab`](https://github.com/siderolabs/talos/commit/e48c6d7ab9c8a2e28ebe2115ac09f1557bbcca33) fix: allow to expose a port multiple times in Docker
+* [`410d8cb57`](https://github.com/siderolabs/talos/commit/410d8cb5727ccf054c9097f33bc916d87076a599) fix: undo CRLF on Windows (talosctl edit)
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/siderolabs/talos**                859d3f03c444 -> v1.13.0-alpha.1
+* **github.com/siderolabs/talos/pkg/machinery**  859d3f03c444 -> v1.13.0-alpha.1
+* **github.com/sigstore/sigstore**               v1.10.3 -> v1.10.4
+
+Previous release can be found at [v1.0.0](https://github.com/siderolabs/image-factory/releases/tag/v1.0.0)
+
 ## [image-factory 1.0.0](https://github.com/siderolabs/image-factory/releases/tag/v1.0.0) (2026-01-29)
 
 Welcome to the v1.0.0 release of image-factory!
