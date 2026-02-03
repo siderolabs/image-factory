@@ -22,7 +22,7 @@ type VerifyResult struct {
 //
 // Try to verify the image signature with the given verification options. Return the first option
 // that worked, if any. Only the last encountered error will be returned.
-func VerifySignatures(ctx context.Context, digestRef name.Reference, imageVerifyOptions VerifyOptions) (VerifyResult, error) {
+func VerifySignatures(ctx context.Context, digestRef name.Reference, imageVerifyOptions VerifyOptions, nameOpts ...name.Option) (VerifyResult, error) {
 	var multiErr error
 
 	if imageVerifyOptions.Disabled {
@@ -78,10 +78,10 @@ func verifyLegacySignature(ctx context.Context, digestRef name.Reference, ivo co
 	return VerifyResult{}, err
 }
 
-func verifyBundledSignature(ctx context.Context, digestRef name.Reference, ivo cosign.CheckOpts) (VerifyResult, error) {
+func verifyBundledSignature(ctx context.Context, digestRef name.Reference, ivo cosign.CheckOpts, nameOptions ...name.Option) (VerifyResult, error) {
 	ivo.NewBundleFormat = true
 
-	_, bundleVerified, err := cosign.VerifyImageAttestations(ctx, digestRef, &ivo)
+	_, bundleVerified, err := cosign.VerifyImageAttestations(ctx, digestRef, &ivo, nameOptions...)
 	if err == nil {
 		// determine verification method
 		var verificationMethod string

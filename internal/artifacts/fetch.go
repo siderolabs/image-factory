@@ -116,7 +116,13 @@ func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, i
 	// verify the image signature, we only accept properly signed images
 	logger.Debug("verifying image signature")
 
-	verifyResult, err := image.VerifySignatures(ctx, digestRef, m.options.ImageVerifyOptions)
+	var nameOptions []name.Option
+
+	if m.options.InsecureImageRegistry {
+		nameOptions = append(nameOptions, name.Insecure)
+	}
+
+	verifyResult, err := image.VerifySignatures(ctx, digestRef, m.options.ImageVerifyOptions, nameOptions...)
 	if err != nil {
 		return fmt.Errorf("failed to verify image signature for %s: %w", digestRef.Name(), err)
 	}

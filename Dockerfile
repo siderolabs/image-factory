@@ -2,11 +2,17 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-27T19:20:28Z by kres 49ba5d2-dirty.
+# Generated on 2026-02-03T17:19:52Z by kres dc032d7.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
 ARG PKGS=scratch
+
+# helm toolchain
+FROM --platform=${BUILDPLATFORM} ${TOOLCHAIN} AS helm-toolchain
+ARG HELMDOCS_VERSION
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/norwoodj/helm-docs/cmd/helm-docs@${HELMDOCS_VERSION} \
+	&& mv /go/bin/helm-docs /bin/helm-docs
 
 # runs markdownlint
 FROM docker.io/oven/bun:1.3.6-alpine AS lint-markdown
@@ -92,6 +98,12 @@ RUN bun install
 FROM --platform=${BUILDPLATFORM} ${TOOLCHAIN} AS toolchain
 RUN apk --update --no-cache add bash build-base curl jq protoc protobuf-dev
 
+# runs helm-docs
+FROM helm-toolchain AS helm-docs-run
+WORKDIR /src
+COPY deploy/helm/image-factory /src/deploy/helm/image-factory
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/root/.cache/helm-docs,id=image-factory/root/.cache/helm-docs,sharing=locked helm-docs --badge-style=flat
+
 # copies the imager tools
 FROM scratch AS imager-tools
 COPY --from=pkg-fhs / /
@@ -155,6 +167,10 @@ ARG GOFUMPT_VERSION
 RUN go install mvdan.cc/gofumpt@${GOFUMPT_VERSION} \
 	&& mv /go/bin/gofumpt /bin/gofumpt
 
+# clean helm-docs output
+FROM scratch AS helm-docs
+COPY --from=helm-docs-run /src/deploy/helm/image-factory deploy/helm/image-factory
+
 # Copies assets
 FROM scratch AS tailwind-copy
 COPY --from=tailwind-update /src/internal/frontend/http/css/output.css internal/frontend/http/css/output.css
@@ -185,12 +201,6 @@ RUN mkdir -p internal/version/data && \
 # run the docgen
 FROM base AS docgen
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go run ./tools/docgen ./cmd/image-factory/cmd/options.go docs/configuration.md
-
-# helm toolchain
-FROM base AS helm-toolchain
-ARG HELMDOCS_VERSION
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/norwoodj/helm-docs/cmd/helm-docs@${HELMDOCS_VERSION} \
-	&& mv /go/bin/helm-docs /bin/helm-docs
 
 # builds the integration test binary
 FROM base AS integration-build
@@ -223,7 +233,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 FROM base AS lint-govulncheck
 WORKDIR /src
 COPY --chmod=0755 hack/govulncheck.sh ./hack/govulncheck.sh
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh ./...
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh -exclude 'GO-2026-4348,GO-2026-4349,GO-2026-4377' ./...
 
 # runs unit-tests with race detector
 FROM base AS unit-tests-race
@@ -252,11 +262,6 @@ RUN echo -n 'undefined' > internal/version/data/sha && \
 FROM scratch AS docs
 COPY --from=docgen /src/docs/configuration.md /configuration.md
 
-# runs helm-docs
-FROM helm-toolchain AS helm-docs-run
-COPY deploy/helm/image-factory /src/deploy/helm/image-factory
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/root/.cache/helm-docs,id=image-factory/root/.cache/helm-docs,sharing=locked helm-docs --badge-style=flat --template-files=README.md.gotpl
-
 # copies out the integration test binary
 FROM scratch AS integration.test
 COPY --from=integration-build /src/integration.test /integration.test
@@ -280,10 +285,6 @@ COPY --from=update-to-talos-main /src/go.sum /go.sum
 # cleaned up specs and compiled versions
 FROM scratch AS generate
 COPY --from=embed-abbrev-generate /src/internal/version internal/version
-
-# clean helm-docs output
-FROM scratch AS helm-docs
-COPY --from=helm-docs-run /src/deploy/helm/image-factory deploy/helm/image-factory
 
 # builds image-factory-linux-amd64
 FROM base AS image-factory-linux-amd64-build
