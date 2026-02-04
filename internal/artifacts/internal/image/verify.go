@@ -40,7 +40,7 @@ func VerifySignatures(ctx context.Context, digestRef name.Reference, imageVerify
 			errLegacy    error
 		)
 
-		verifyResult, errBundled = verifyBundledSignature(ctx, digestRef, ivo)
+		verifyResult, errBundled = verifyBundledSignature(ctx, digestRef, ivo, nameOpts...)
 		if errBundled == nil {
 			return verifyResult, nil
 		}
