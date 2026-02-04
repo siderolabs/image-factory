@@ -1,3 +1,30 @@
+## [image-factory 1.0.2](https://github.com/siderolabs/image-factory/releases/tag/v1.0.2) (2026-02-04)
+
+Welcome to the v1.0.2 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Noel Georgi
+
+### Changes
+<details><summary>1 commit</summary>
+<p>
+
+* [`80d1ba3`](https://github.com/siderolabs/image-factory/commit/80d1ba3e0e2a94f86cd37f80786743d928eb2b24) fix: pass nameoptions to verify bundle too
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v1.0.1](https://github.com/siderolabs/image-factory/releases/tag/v1.0.1)
+
 ## [image-factory 1.0.1](https://github.com/siderolabs/image-factory/releases/tag/v1.0.1) (2026-02-03)
 
 Welcome to the v1.0.1 release of image-factory!
