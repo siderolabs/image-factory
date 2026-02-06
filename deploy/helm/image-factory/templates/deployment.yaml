@@ -1,3 +1,6 @@
+{{- if and (not .Values.hostUsers) (not (semverCompare ">=1.25.0" .Capabilities.KubeVersion.Version)) }}
+{{- fail "hostUsers: false requires Kubernetes 1.25 or higher for user namespace support" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,6 +36,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "image-factory.serviceAccountName" . }}
+      hostUsers: {{ .Values.hostUsers }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}

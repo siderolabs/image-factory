@@ -310,6 +310,11 @@ resources: {}
 #   cpu: 100m
 #   memory: 128Mi
 
+# -- Controls whether the pod uses the host's user namespace.
+# When true (default), the pod uses the host user namespace.
+# When false, the pod uses a separate user namespace for enhanced security isolation.
+hostUsers: true
+
 # -- Pod Security Context
 # Image Factory container-level security context
 securityContext:

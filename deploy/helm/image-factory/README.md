@@ -1,6 +1,6 @@
 # image-factory
 
-![Version: v1.0.2](https://img.shields.io/badge/Version-v1.0.2-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v1.0.2](https://img.shields.io/badge/AppVersion-v1.0.2-informational?style=flat)
+![Version: v1.0.2](https://img.shields.io/badge/Version-v1.0.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v1.0.2](https://img.shields.io/badge/AppVersion-v1.0.2-informational?style=flat-square)
 
 A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 
@@ -15,6 +15,304 @@ A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 ## Source Code
 
 * <https://github.com/siderolabs/image-factory>
+
+## Prerequisites
+
+- Kubernetes 1.23+
+- Helm 3.0+
+- For user namespace isolation (`hostUsers: false`): Kubernetes 1.25+ is required
+
+## Configuration
+
+### Cache Signing Key
+
+The Image Factory requires a signing key to sign cached artifacts. You can either provide an existing secret or let the chart create one for you.
+
+#### Using an Existing Secret
+
+```yaml
+cacheSigningKey:
+  existingSecret: "my-existing-secret"
+```
+
+> **Note:** The existing secret MUST contain a data key named exactly `cache-signing.key`.
+
+#### Generating a New Key
+
+Generate a new ECDSA private key:
+
+```bash
+openssl ecparam -name prime256v1 -genkey -noout -out cache-signing.key
+```
+
+Then create the secret:
+
+```bash
+kubectl create secret generic image-factory-cache-signing-key \
+  --from-file=cache-signing.key=./cache-signing.key
+```
+
+Or include the key directly in your values:
+
+```yaml
+cacheSigningKey:
+  key: |
+    -----BEGIN EC PRIVATE KEY-----
+    MHcCAQEEIK...
+    -----END EC PRIVATE KEY-----
+```
+
+### Registry Configuration
+
+Configure the schematic storage registry where Image Factory will store and retrieve schematics:
+
+```yaml
+config:
+  artifacts:
+    schematic:
+      registry: registry.example.com
+      namespace: siderolabs/image-factory
+      repository: schematics
+      insecure: false
+```
+
+### OCI Cache Configuration
+
+Enable OCI registry caching for built artifacts:
+
+```yaml
+config:
+  cache:
+    oci:
+      enabled: true
+      registry: ghcr.io
+      namespace: siderolabs/image-factory
+      repository: cache
+      insecure: false
+```
+
+### S3 Cache Configuration
+
+Enable S3 bucket caching for built artifacts:
+
+```yaml
+config:
+  cache:
+    s3:
+      enabled: true
+      bucket: image-factory
+      region: us-east-1
+      endpoint: ""
+      insecure: false
+```
+
+> **Note:** You'll need to configure AWS credentials via environment variables or IAM roles.
+
+## Ingress
+
+The chart supports both standard Kubernetes Ingress and Gateway API (experimental).
+
+### Standard Ingress
+
+#### UI Ingress
+
+```yaml
+ingress:
+  ui:
+    enabled: true
+    className: "nginx"
+    host: factory.example.com
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls:
+      - secretName: image-factory-ui-tls
+        hosts:
+          - factory.example.com
+```
+
+#### PXE Ingress
+
+```yaml
+ingress:
+  pxe:
+    enabled: true
+    className: "nginx"
+    host: pxe-factory.example.com
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls:
+      - secretName: image-factory-pxe-tls
+        hosts:
+          - pxe-factory.example.com
+```
+
+### Gateway API (Experimental)
+
+> **Warning:** Gateway API support is in EXPERIMENTAL status. Support depends on your Gateway controller implementation.
+
+```yaml
+gatewayApi:
+  ui:
+    enabled: true
+    hostnames:
+      - factory.example.com
+    parentRefs:
+      - name: my-gateway
+        namespace: gateway-system
+        sectionName: https-listener
+```
+
+## Security
+
+### User Namespaces
+
+The chart supports Kubernetes user namespace isolation for enhanced security. When enabled (`hostUsers: false`), the pod uses a separate user namespace instead of the host's user namespace.
+
+```yaml
+hostUsers: false
+```
+
+> **Note:** User namespace support requires Kubernetes 1.25 or higher. The feature became GA (enabled by default) in Kubernetes 1.33.
+
+> **Warning:** When set to `false` on Kubernetes versions below 1.25, the Helm deployment will fail with a validation error.
+
+#### Running on Talos Linux
+
+If you're running Image Factory on Talos Linux and want to use user namespaces, you need to enable user namespace support in your Talos machine configuration:
+
+```yaml
+cluster:
+  apiServer:
+    extraArgs:
+      feature-gates: UserNamespacesSupport=true
+  kubelet:
+    extraConfig:
+      featureGates:
+        UserNamespacesSupport: true
+machine:
+  sysctls:
+    user.max_user_namespaces: "11255"
+```
+
+For more details, see the [Talos Linux User Namespace documentation](https://docs.siderolabs.com/kubernetes-guides/security/usernamespace).
+
+### Security Context
+
+The chart includes a secure default security context:
+
+```yaml
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  privileged: false
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+```
+
+## Secure Boot
+
+The Image Factory can generate Unified Kernel Images (UKI) and sign them for Secure Boot.
+
+### Using Local Files
+
+```yaml
+config:
+  secureBoot:
+    enabled: true
+    file:
+      signingCertPath: /path/to/cert.pem
+      signingKeyPath: /path/to/key.pem
+      pcrKeyPath: /path/to/pcr-key.pem
+```
+
+### Using AWS KMS
+
+```yaml
+config:
+  secureBoot:
+    enabled: true
+    awsKMS:
+      region: us-east-1
+      keyID: "arn:aws:kms:us-east-1:123456789012:key/..."
+      pcrKeyID: "arn:aws:kms:us-east-1:123456789012:key/..."
+      certPath: /path/to/cert.pem
+```
+
+### Using Azure Key Vault
+
+```yaml
+config:
+  secureBoot:
+    enabled: true
+    azureKeyVault:
+      url: https://myvault.vault.azure.net
+      keyName: signing-key
+      certificateName: signing-cert
+```
+
+## Monitoring
+
+### Prometheus ServiceMonitor
+
+Enable Prometheus metrics collection:
+
+```yaml
+service:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      namespace: monitoring
+      selector:
+        prometheus: kube-prometheus
+```
+
+## Advanced Configuration
+
+### External URLs
+
+Configure external URLs for the HTTP and PXE frontends:
+
+```yaml
+config:
+  http:
+    externalURL: https://factory.example.com/
+    externalPXEURL: https://pxe-factory.example.com/
+    httpListenAddr: 0.0.0.0:8080
+```
+
+### Build Configuration
+
+Configure build concurrency and minimum Talos version:
+
+```yaml
+config:
+  build:
+    maxConcurrency: 6
+    minTalosVersion: 1.2.0
+```
+
+### Custom Volumes
+
+Add custom volumes and volume mounts:
+
+```yaml
+extraVolumes:
+  - name: custom-config
+    configMap:
+      name: my-config
+
+extraVolumeMounts:
+  - name: custom-config
+    mountPath: /custom
+    readOnly: true
+```
 
 ## Values
 
@@ -42,6 +340,7 @@ A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 | gatewayApi.ui.hostnames | list | `["factory.example.com"]` | Image Factory UI hostname |
 | gatewayApi.ui.labels | object | `{}` | Additional Labels |
 | gatewayApi.ui.parentRefs | list | `[]` | The Gateway(s) to attach this route to. You MUST define at least one parentRef for the route to be active. |
+| hostUsers | bool | `true` | Controls whether the pod uses the host's user namespace. When true (default), the pod uses the host user namespace. When false, the pod uses a separate user namespace for enhanced security isolation. |
 | image.pullPolicy | string | `"IfNotPresent"` | Image pull policy for Image Factory |
 | image.repository | string | `"ghcr.io/siderolabs/image-factory"` | Repository to use for Image Factory |
 | image.tag | string | `""` | Tag to use for Image Factory |
@@ -105,4 +404,3 @@ A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 | serviceAccount.name | string | `""` |  |
 | strategy | object | `{"type":"Recreate"}` | Deployment strategy. Image Factory currently only supports Recreate strategy. |
 | tolerations | list | `[]` |  |
-
