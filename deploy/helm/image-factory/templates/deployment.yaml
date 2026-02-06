@@ -37,15 +37,30 @@ spec:
       {{- end }}
       serviceAccountName: {{ include "image-factory.serviceAccountName" . }}
       hostUsers: {{ .Values.hostUsers }}
+      {{- if .Values.hostUsers }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
+          {{- if .Values.hostUsers }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- else }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - DAC_OVERRIDE
+              drop:
+                - ALL
+            privileged: false
+            seccompProfile:
+              type: RuntimeDefault
           {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           {{- with .Values.args }}
