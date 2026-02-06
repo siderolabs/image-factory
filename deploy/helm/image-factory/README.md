@@ -18,7 +18,6 @@ A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 
 ## Prerequisites
 
-- Kubernetes 1.23+
 - Helm 3.0+
 - For user namespace isolation (`hostUsers: false`): Kubernetes 1.25+ is required
 
