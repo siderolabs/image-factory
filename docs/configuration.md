@@ -24,6 +24,12 @@ Usage of image-factory:
 
 Documentation for basic configuration parameters.
 
+### `http`
+
+HTTP configuration for the image factory frontend.
+
+---
+
 ### `http.httpListenAddr`
 
 - **Type:** `string`
@@ -78,6 +84,12 @@ AllowedOrigins configures the frontend API CORS with custom origins list.
 
 ---
 
+### `build`
+
+Options for building assets used in images, including concurrency and Talos version constraints.
+
+---
+
 ### `build.minTalosVersion`
 
 - **Type:** `string`
@@ -96,12 +108,21 @@ MaxConcurrency sets the maximum number of simultaneous asset build operations.
 
 ---
 
+### `containerSignature`
+
+ContainerSignature holds configuration for verifying container image signatures.
+
+---
+
 ### `containerSignature.subjectRegExp`
 
 - **Type:** `string`
 - **Env:** `CONTAINERSIGNATURE_SUBJECTREGEXP`
 
 SubjectRegExp is a regular expression used to validate the subject in container signatures.
+
+Set explicitly to empty string to disable subject validation, otherwise it defaults to a regex that allows trusted Sidero Labs account identities.
+This keyless verification method will not work in air-gapped environments.
 
 ---
 
@@ -130,6 +151,9 @@ Issuer is the expected issuer for container signatures (overrides RegExp if set)
 
 PublicKeyFile is the path to the public key used for signature verification.
 
+Alternative to keyless verification using SubjectRegExp and Issuer/IssuerRegExp.
+If set, the image factory will use this public key to verify signatures instead of relying on keyless identities.
+
 ---
 
 ### `containerSignature.publicKeyHashAlgo`
@@ -147,6 +171,19 @@ PublicKeyHashAlgo specifies the hash algorithm used for verifying the public key
 - **Env:** `CONTAINERSIGNATURE_DISABLED`
 
 Disabled disables signature verification.
+
+---
+
+### `cache`
+
+Cache contains configuration for storing and retrieving boot assets.
+
+---
+
+### `cache.oci`
+
+OCI contains configuration for using OCI Registry to store cached assets.
+This configuration is required.
 
 ---
 
@@ -198,6 +235,12 @@ SigningKeyPath is the path to the ECDSA key used to sign cached assets.
 
 ---
 
+### `cache.cdn`
+
+CDN contains configuration for using a CDN to serve cached assets.
+
+---
+
 ### `cache.cdn.host`
 
 - **Type:** `string`
@@ -222,6 +265,12 @@ TrimPrefix removes a prefix from asset paths before redirecting to the CDN.
 - **Env:** `CACHE_CDN_ENABLED`
 
 Enabled enables the CDN cache.
+
+---
+
+### `cache.s3`
+
+S3 contains configuration for using S3 to store cached assets.
 
 ---
 
@@ -270,6 +319,12 @@ Enabled enables S3 cache.
 
 ---
 
+### `metrics`
+
+Metrics holds configuration for the Prometheus metrics endpoint.
+
+---
+
 ### `metrics.addr`
 
 - **Type:** `string`
@@ -277,6 +332,18 @@ Enabled enables S3 cache.
 
 Addr is the bind address for the metrics HTTP server.
 Leave empty to disable metrics.
+
+---
+
+### `secureBoot`
+
+SecureBoot contains configuration for generating SecureBoot-enabled assets.
+
+---
+
+### `secureBoot.file`
+
+File specifies file-based SecureBoot keys and certificates.
 
 ---
 
@@ -307,6 +374,12 @@ PCRKeyPath is the path to the key used for PCR measurement.
 
 ---
 
+### `secureBoot.azureKeyVault`
+
+AzureKeyVault configures SecureBoot using Azure Key Vault.
+
+---
+
 ### `secureBoot.azureKeyVault.url`
 
 - **Type:** `string`
@@ -331,6 +404,12 @@ CertificateName is the name of the certificate in Key Vault.
 - **Env:** `SECUREBOOT_AZUREKEYVAULT_KEYNAME`
 
 KeyName is the name of the key in Key Vault.
+
+---
+
+### `secureBoot.awsKMS`
+
+AWSKMS configures SecureBoot using AWS KMS.
 
 ---
 
@@ -388,6 +467,18 @@ Enabled enables SecureBoot asset generation.
 
 ---
 
+### `artifacts`
+
+Artifacts defines names and references for various images used by the factory.
+
+---
+
+### `artifacts.core`
+
+Core contains configuration for core images used by the image factory.
+
+---
+
 ### `artifacts.core.registry`
 
 - **Type:** `string`
@@ -395,6 +486,13 @@ Enabled enables SecureBoot asset generation.
 
 Registry specifies the OCI registry host for base images, extensions, and related artifacts.
 E.g., "ghcr.io".
+
+---
+
+### `artifacts.core.components`
+
+Components defines the names of images used by the image factory.
+This typically maps to repositories and tags for core components.
 
 ---
 
@@ -462,6 +560,12 @@ Use with caution, as this may expose security risks.
 
 ---
 
+### `artifacts.schematic`
+
+Schematic is the OCI repository used to store schematic blobs required by the image factory for building images.
+
+---
+
 ### `artifacts.schematic.registry`
 
 - **Type:** `string`
@@ -501,6 +605,18 @@ Insecure allows connections to registries over HTTP or with invalid TLS certific
 
 ---
 
+### `artifacts.installer`
+
+Installer contains configuration for storing and accessing installer images.
+
+---
+
+### `artifacts.installer.internal`
+
+Internal is the internal OCI registry used by the image factory to push installer images.
+
+---
+
 ### `artifacts.installer.internal.registry`
 
 - **Type:** `string`
@@ -537,6 +653,15 @@ Combined with Registry and Namespace, it forms the fully qualified repository pa
 - **Env:** `ARTIFACTS_INSTALLER_INTERNAL_INSECURE`
 
 Insecure allows connections to registries over HTTP or with invalid TLS certificates.
+
+---
+
+### `artifacts.installer.external`
+
+External is the public OCI registry used for redirects to installer images.
+
+If this field is not set, Image Factory will proxy requests to the internal registry
+through itself instead of issuing HTTP redirects to the external registry endpoint.
 
 ---
 

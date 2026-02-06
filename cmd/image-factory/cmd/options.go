@@ -69,6 +69,9 @@ type InstallerOptions struct {
 	Internal OCIRepositoryOptions `koanf:"internal"`
 
 	// External is the public OCI registry used for redirects to installer images.
+	//
+	// If this field is not set, Image Factory will proxy requests to the internal registry
+	// through itself instead of issuing HTTP redirects to the external registry endpoint.
 	External OCIRepositoryOptions `koanf:"external"`
 }
 
@@ -219,6 +222,9 @@ type S3CacheOptions struct {
 // ContainerSignature contains configuration for verifying container image signatures.
 type ContainerSignature struct {
 	// SubjectRegExp is a regular expression used to validate the subject in container signatures.
+	//
+	// Set explicitly to empty string to disable subject validation, otherwise it defaults to a regex that allows trusted Sidero Labs account identities.
+	// This keyless verification method will not work in air-gapped environments.
 	SubjectRegExp string `koanf:"subjectRegExp"`
 
 	// IssuerRegExp is a regular expression used to validate the issuer in container signatures.
@@ -228,6 +234,9 @@ type ContainerSignature struct {
 	Issuer string `koanf:"issuer"`
 
 	// PublicKeyFile is the path to the public key used for signature verification.
+	//
+	// Alternative to keyless verification using SubjectRegExp and Issuer/IssuerRegExp.
+	// If set, the image factory will use this public key to verify signatures instead of relying on keyless identities.
 	PublicKeyFile string `koanf:"publicKeyFile"`
 
 	// PublicKeyHashAlgo specifies the hash algorithm used for verifying the public key.

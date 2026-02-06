@@ -165,9 +165,20 @@ func walkStruct(
 		// Recurse into nested structs regardless of documenting current field
 		if ident, ok := field.Type.(*ast.Ident); ok {
 			if nested, exists := structDefs[ident.Name]; exists {
+				desc := ""
+
+				if field.Doc != nil {
+					desc = strings.TrimSpace(field.Doc.Text())
+				}
+
+				*out = append(*out, FieldDoc{
+					Path:        path,
+					Description: desc,
+				})
+
 				walkStruct(path, nested, structDefs, out)
 
-				continue // Do not document the struct itself
+				continue
 			}
 		}
 
@@ -236,8 +247,11 @@ func printMarkdown(docs []FieldDoc, help string, wr io.Writer) error {
 
 	for _, d := range docs {
 		fmt.Fprintf(&b, "### `%s`\n\n", d.Path)
-		fmt.Fprintf(&b, "- **Type:** `%s`\n", d.Type)
-		fmt.Fprintf(&b, "- **Env:** `%s`\n\n", strings.ReplaceAll(strings.ToUpper(d.Path), ".", "_"))
+
+		if d.Type != "" {
+			fmt.Fprintf(&b, "- **Type:** `%s`\n", d.Type)
+			fmt.Fprintf(&b, "- **Env:** `%s`\n\n", strings.ReplaceAll(strings.ToUpper(d.Path), ".", "_"))
+		}
 
 		if d.Description != "" {
 			b.WriteString(d.Description)

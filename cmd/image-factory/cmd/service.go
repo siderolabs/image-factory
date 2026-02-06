@@ -253,15 +253,8 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 	if opts.ContainerSignature.Disabled {
 		logger.Warn("container signature verification is disabled, this is not recommended")
 	} else {
-		trustedRoot, err := cosign.TrustedRoot()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get cosign trusted root: %w", err)
-		}
-
 		if len(strings.TrimSpace(opts.ContainerSignature.PublicKeyFile)) > 0 {
-			var keyVerifier sigstoresignature.Verifier
-
-			keyVerifier, err = getPublicKeyVerifier(opts)
+			keyVerifier, err := getPublicKeyVerifier(opts)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get signature verifier for key %s: %w", opts.ContainerSignature.PublicKeyFile, err)
 			}
@@ -273,23 +266,30 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 			})
 		}
 
-		// Prefer opts.ContainerSignatureIssuerRegExp if set as this is more flexible
-		cosignIdentities := []cosign.Identity{
-			{
-				SubjectRegExp: opts.ContainerSignature.SubjectRegExp,
-			},
-		}
+		if opts.ContainerSignature.SubjectRegExp != "" {
+			trustedRoot, err := cosign.TrustedRoot()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get cosign trusted root: %w", err)
+			}
 
-		if len(strings.TrimSpace(opts.ContainerSignature.IssuerRegExp)) > 0 {
-			cosignIdentities[0].IssuerRegExp = opts.ContainerSignature.IssuerRegExp
-		} else {
-			cosignIdentities[0].Issuer = opts.ContainerSignature.Issuer
-		}
+			// Prefer opts.ContainerSignatureIssuerRegExp if set as this is more flexible
+			cosignIdentities := []cosign.Identity{
+				{
+					SubjectRegExp: opts.ContainerSignature.SubjectRegExp,
+				},
+			}
 
-		checkOpts = append(checkOpts, cosign.CheckOpts{
-			TrustedMaterial: trustedRoot,
-			Identities:      cosignIdentities,
-		})
+			if len(strings.TrimSpace(opts.ContainerSignature.IssuerRegExp)) > 0 {
+				cosignIdentities[0].IssuerRegExp = opts.ContainerSignature.IssuerRegExp
+			} else {
+				cosignIdentities[0].Issuer = opts.ContainerSignature.Issuer
+			}
+
+			checkOpts = append(checkOpts, cosign.CheckOpts{
+				TrustedMaterial: trustedRoot,
+				Identities:      cosignIdentities,
+			})
+		}
 	}
 
 	imageVerifyOptions := artifacts.ImageVerifyOptions{
