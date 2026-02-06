@@ -88,6 +88,10 @@
       "description": "String to fully override `\"image-factory.fullname\"`",
       "type": "string"
     },
+    "hostUsers": {
+      "description": "Controls whether the pod uses the host's user namespace. When true (default), the pod uses the host user namespace. When false, the pod uses a separate user namespace for enhanced security isolation.",
+      "type": "boolean"
+    },
     "gatewayApi": {
       "description": "Gateway API Configuration. NOTE: Gateway API support is in EXPERIMENTAL status. Support depends on your Gateway controller implementation.",
       "type": "object",
