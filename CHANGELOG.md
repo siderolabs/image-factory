@@ -1,3 +1,58 @@
+## [image-factory 1.0.3](https://github.com/siderolabs/image-factory/releases/tag/v1.0.3) (2026-02-09)
+
+Welcome to the v1.0.3 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Kevin Tijssen
+* Andrey Smirnov
+* Mateusz Urbanek
+* Daddie0
+* Fritz Schaal
+* Laura Brehm
+* Pranav Patil
+
+### Changes
+<details><summary>8 commits</summary>
+<p>
+
+* [`dd92631`](https://github.com/siderolabs/image-factory/commit/dd926314f61e4bbd8797c0302e4a8a14b9d693fb) docs: correct path to hack/copy-artifacts.sh
+* [`ddc1a83`](https://github.com/siderolabs/image-factory/commit/ddc1a8389189e77e3f3679927ce550e9549a3e48) fix: update Talos to fix rpi_5 build
+* [`b3d07e5`](https://github.com/siderolabs/image-factory/commit/b3d07e5e38da475018493adb5106eca9348de517) docs: remove redundant Kubernetes version prerequisite
+* [`9666795`](https://github.com/siderolabs/image-factory/commit/96667959f60f6c4b6b670affdedc6ea898f6cfb2) fix: values.schema.json
+* [`8a8da46`](https://github.com/siderolabs/image-factory/commit/8a8da46331b9dcd6353e93879f63c6a422d8d035) feat: adjust security context for user namespace mode
+* [`bc631dc`](https://github.com/siderolabs/image-factory/commit/bc631dc3f9515bdbeabcb903190291805625ed9c) fix: values.schema.json
+* [`8ea6fe9`](https://github.com/siderolabs/image-factory/commit/8ea6fe9eccba498f761061a4842616f58566e68e) feat: add user namespace support with Kubernetes version validation
+* [`324c464`](https://github.com/siderolabs/image-factory/commit/324c464e22fff6ae13f4a199d7664229f628f07a) fix: skip initializing TUF if keyless signing is disabled
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>7 commits</summary>
+<p>
+
+* [`2628eb2ec`](https://github.com/siderolabs/talos/commit/2628eb2ece05d7f817fc42e12b979d3f8ca9710c) fix: typo with rpi_5 profile name
+* [`d5ebcd7ca`](https://github.com/siderolabs/talos/commit/d5ebcd7cae1a20c8000e2f4d5a02c81e4dbe5186) fix: stop building talosctl debug on Windows
+* [`8b85c7c63`](https://github.com/siderolabs/talos/commit/8b85c7c637cc08d35bbf6968abebb8c4cdfb82ad) chore: update deps
+* [`d905035b5`](https://github.com/siderolabs/talos/commit/d905035b5e5c7787a5171ba2e0127c89755e8774) fix: swap volume configuration for min/max size
+* [`d43a01ccb`](https://github.com/siderolabs/talos/commit/d43a01ccbdd318080b54e52d2f2fbec93042c458) feat: implement `talosctl debug`
+* [`34a31c979`](https://github.com/siderolabs/talos/commit/34a31c9797d5a7e1700c3d945a21367b81c79385) feat: add mount options support for existing volumes
+* [`1bf95eed1`](https://github.com/siderolabs/talos/commit/1bf95eed185152c38397cd3b43b6ff9d421678c5) feat: improve dashboard uptime display
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/siderolabs/talos**                v1.13.0-alpha.1 -> 2628eb2ece05
+* **github.com/siderolabs/talos/pkg/machinery**  v1.13.0-alpha.1 -> 2628eb2ece05
+
+Previous release can be found at [v1.0.2](https://github.com/siderolabs/image-factory/releases/tag/v1.0.2)
+
 ## [image-factory 1.0.2](https://github.com/siderolabs/image-factory/releases/tag/v1.0.2) (2026-02-04)
 
 Welcome to the v1.0.2 release of image-factory!
