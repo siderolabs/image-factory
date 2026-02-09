@@ -27,8 +27,8 @@ require (
 	github.com/siderolabs/go-blockdevice/v2 v2.0.23
 	github.com/siderolabs/go-debug v0.6.1
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/talos v1.13.0-alpha.1
-	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.1
+	github.com/siderolabs/talos v1.13.0-alpha.1.0.20260207193313-2628eb2ece05
+	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.1.0.20260207193313-2628eb2ece05
 	github.com/sigstore/cosign/v3 v3.0.4
 	github.com/sigstore/sigstore v1.10.4
 	github.com/slok/go-http-metrics v0.13.0
