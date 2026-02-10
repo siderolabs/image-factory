@@ -104,14 +104,14 @@
 {{ define "platform-description" }}
 {{ .Platform.Description }}
 (<a target="_blank" class="text-blue-600 dark:text-blue-500 underline"
-    href="https://www.talos.dev/{{ short_version .Version }}{{ .Platform.Documentation}}">{{ t .Localizer
+    href="https://docs.siderolabs.com/talos/{{ short_version .Version }}{{ .Platform.Documentation}}">{{ t .Localizer
     "common.documentation" }}</a>).
 {{ end }}
 
 {{ define "board-description" }}
 {{ t .Localizer "common.runs_on" }} {{ .Board.Label }}{{ if .Board.Documentation }} (<a target="_blank"
     class="text-blue-600 dark:text-blue-500 underline"
-    href="https://www.talos.dev/{{ short_version .Version }}{{ .Board.Documentation}}">{{ t .Localizer
+    href="https://docs.siderolabs.com/talos/{{ short_version .Version }}{{ .Board.Documentation}}">{{ t .Localizer
     "common.documentation" }}</a>){{ end }}.
 {{ end }}
 

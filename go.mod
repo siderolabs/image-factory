@@ -27,8 +27,8 @@ require (
 	github.com/siderolabs/go-blockdevice/v2 v2.0.23
 	github.com/siderolabs/go-debug v0.6.1
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/talos v1.13.0-alpha.1.0.20260207193313-2628eb2ece05
-	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.1.0.20260207193313-2628eb2ece05
+	github.com/siderolabs/talos v1.13.0-alpha.1.0.20260210134859-406b8c83c9b3
+	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.1.0.20260210134859-406b8c83c9b3
 	github.com/sigstore/cosign/v3 v3.0.4
 	github.com/sigstore/sigstore v1.10.4
 	github.com/slok/go-http-metrics v0.13.0
@@ -198,7 +198,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runc v1.3.0 // indirect
-	github.com/opencontainers/runtime-spec v1.2.1 // indirect
+	github.com/opencontainers/runtime-spec v1.3.0 // indirect
 	github.com/petermattis/goid v0.0.0-20250508124226-395b08cebbdb // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
