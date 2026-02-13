@@ -164,7 +164,7 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		assert.Equal(t, "yaml: unmarshal errors:\n  line 1: field something not found in type schematic.Schematic\n", createSchematicInvalid(ctx, t, baseURL, []byte(`something:`)))
+		assert.Equal(t, "yaml: construct errors:\n  line 1: field something not found in type schematic.Schematic\n", createSchematicInvalid(ctx, t, baseURL, []byte(`something:`)))
 	})
 
 	t.Run("nonexistent get", func(t *testing.T) {
