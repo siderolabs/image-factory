@@ -13,11 +13,11 @@ require (
 	github.com/knadh/koanf/parsers/json v1.0.0
 	github.com/knadh/koanf/parsers/yaml v1.1.0
 	github.com/knadh/koanf/providers/env/v2 v2.0.0
-	github.com/knadh/koanf/providers/file v1.2.0
+	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/structs v1.0.0
-	github.com/knadh/koanf/v2 v2.3.0
-	github.com/minio/minio-go/v7 v7.0.97
-	github.com/nicksnyder/go-i18n/v2 v2.6.0
+	github.com/knadh/koanf/v2 v2.3.2
+	github.com/minio/minio-go/v7 v7.0.98
+	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/prometheus/client_golang v1.23.2
@@ -25,7 +25,7 @@ require (
 	github.com/siderolabs/crypto v0.6.4
 	github.com/siderolabs/gen v0.8.6
 	github.com/siderolabs/go-blockdevice/v2 v2.0.23
-	github.com/siderolabs/go-debug v0.6.1
+	github.com/siderolabs/go-debug v0.6.2
 	github.com/siderolabs/go-pointer v1.0.1
 	github.com/siderolabs/talos v1.13.0-alpha.1.0.20260213140552-3bd3dd7ca924
 	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.1.0.20260213140552-3bd3dd7ca924
@@ -184,7 +184,7 @@ require (
 	github.com/mdlayher/socket v0.5.1 // indirect
 	github.com/mdp/qrterminal/v3 v3.2.1 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
-	github.com/minio/crc64nvme v1.1.0 // indirect
+	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -238,7 +238,7 @@ require (
 	github.com/thales-e-security/pool v0.0.2 // indirect
 	github.com/theupdateframework/go-tuf v0.7.0 // indirect
 	github.com/theupdateframework/go-tuf/v2 v2.4.1 // indirect
-	github.com/tinylib/msgp v1.3.0 // indirect
+	github.com/tinylib/msgp v1.6.1 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	github.com/transparency-dev/formats v0.0.0-20251017110053-404c0d5b696c // indirect
 	github.com/transparency-dev/merkle v0.0.2 // indirect
