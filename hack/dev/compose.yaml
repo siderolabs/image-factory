@@ -17,7 +17,7 @@ services:
       - REGISTRY_STORAGE_DELETE_ENABLED=true
     restart: unless-stopped
   registry.ghcr.io:
-    image: registry:2
+    image: registry:3
     volumes:
       - if-registry-ghcr-io-data:/var/lib/registry
     environment:
