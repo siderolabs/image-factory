@@ -134,7 +134,6 @@ func (m *Manager) fetchOfficialExtensions(tag string) error {
 		var extractErr error
 
 		extensions, extractErr = extractExtensionList(r)
-
 		if extractErr == nil {
 			m.logger.Info("extracted the image digests", zap.Int("count", len(extensions)))
 		}
@@ -164,7 +163,6 @@ func (m *Manager) fetchOfficialOverlays(tag string) error {
 		var extractErr error
 
 		overlays, extractErr = extractOverlayList(r)
-
 		if extractErr == nil {
 			m.logger.Info("extracted the image digests", zap.Int("count", len(overlays)))
 		}
@@ -194,7 +192,6 @@ func (m *Manager) fetchTalosctlTuples(tag string) error {
 		var extractErr error
 
 		talosctlTuples, extractErr = extractTalosctlTuples(r)
-
 		if extractErr == nil {
 			m.logger.Info("extracted the talosctl tuples", zap.Int("count", len(talosctlTuples)))
 		}

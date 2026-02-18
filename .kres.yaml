@@ -466,7 +466,7 @@ spec:
     condition: on-pull-request
     parallelJob:
       name: integration-direct
-      runnerGroup: generic
+      runnerGroup: large
     coverage:
       inputPaths:
         - coverage-integration-direct.txt
@@ -500,7 +500,7 @@ spec:
     condition: on-pull-request
     parallelJob:
       name: integration-s3
-      runnerGroup: generic
+      runnerGroup: large
     coverage:
       inputPaths:
         - coverage-integration-s3.txt
@@ -534,7 +534,7 @@ spec:
     condition: on-pull-request
     parallelJob:
       name: integration-cdn
-      runnerGroup: generic
+      runnerGroup: large
     coverage:
       inputPaths:
         - coverage-integration-cdn.txt
@@ -568,7 +568,7 @@ spec:
     condition: on-pull-request
     parallelJob:
       name: integration-proxy-installer
-      runnerGroup: generic
+      runnerGroup: large
     coverage:
       inputPaths:
         - coverage-integration-proxy-installer.txt
@@ -602,7 +602,7 @@ spec:
     condition: on-pull-request
     parallelJob:
       name: integration-enterprise
-      runnerGroup: generic
+      runnerGroup: large
     coverage:
       inputPaths:
         - coverage-integration-enterprise.txt
@@ -631,7 +631,7 @@ spec:
       TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
     jobs:
       - name: integration-direct-talos-main
-        runnerGroup: generic
+        runnerGroup: large
         triggerLabels:
           - integration/talos-main
         crons:
@@ -656,7 +656,7 @@ spec:
       TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
     jobs:
       - name: integration-s3-talos-main
-        runnerGroup: generic
+        runnerGroup: large
         triggerLabels:
           - integration/talos-main
         crons:
@@ -681,7 +681,7 @@ spec:
       TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
     jobs:
       - name: integration-cdn-talos-main
-        runnerGroup: generic
+        runnerGroup: large
         triggerLabels:
           - integration/talos-main
         crons:
@@ -961,6 +961,6 @@ spec:
     condition: on-pull-request
     parallelJob:
       name: chart-e2e
-      runnerGroup: generic
+      runnerGroup: large
     environment:
       REGISTRY: registry.dev.siderolabs.io

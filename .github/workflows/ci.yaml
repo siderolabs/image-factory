@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-01-27T13:25:25Z by kres f189649-dirty.
+# Generated on 2026-02-18T12:59:27Z by kres 6458cfd.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -20,7 +20,7 @@ name: default
 jobs:
   chart-e2e:
     runs-on:
-      group: generic
+      group: large
     if: github.event_name == 'pull_request'
     needs:
       - default
@@ -51,7 +51,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -107,7 +107,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -126,7 +126,7 @@ jobs:
           make image-factory
       - name: Login to registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # version: v3.6.0
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # version: v3.7.0
         with:
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
@@ -196,7 +196,7 @@ jobs:
             _out/sha*.txt
   integration-cdn:
     runs-on:
-      group: generic
+      group: large
     if: github.event_name == 'pull_request'
     needs:
       - default
@@ -227,7 +227,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -255,7 +255,7 @@ jobs:
         timeout-minutes: 3
   integration-cdn-talos-main:
     runs-on:
-      group: generic
+      group: large
     if: contains(fromJSON(needs.default.outputs.labels), 'integration/talos-main')
     needs:
       - default
@@ -286,7 +286,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -306,7 +306,7 @@ jobs:
           make integration-cdn-talos-main
   integration-direct:
     runs-on:
-      group: generic
+      group: large
     if: github.event_name == 'pull_request'
     needs:
       - default
@@ -337,7 +337,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -365,7 +365,7 @@ jobs:
         timeout-minutes: 3
   integration-direct-talos-main:
     runs-on:
-      group: generic
+      group: large
     if: contains(fromJSON(needs.default.outputs.labels), 'integration/talos-main')
     needs:
       - default
@@ -396,7 +396,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -416,7 +416,7 @@ jobs:
           make integration-direct-talos-main
   integration-enterprise:
     runs-on:
-      group: generic
+      group: large
     if: github.event_name == 'pull_request'
     needs:
       - default
@@ -447,7 +447,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -476,7 +476,7 @@ jobs:
         timeout-minutes: 3
   integration-proxy-installer:
     runs-on:
-      group: generic
+      group: large
     if: github.event_name == 'pull_request'
     needs:
       - default
@@ -507,7 +507,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -535,7 +535,7 @@ jobs:
         timeout-minutes: 3
   integration-s3:
     runs-on:
-      group: generic
+      group: large
     if: github.event_name == 'pull_request'
     needs:
       - default
@@ -566,7 +566,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -594,7 +594,7 @@ jobs:
         timeout-minutes: 3
   integration-s3-talos-main:
     runs-on:
-      group: generic
+      group: large
     if: contains(fromJSON(needs.default.outputs.labels), 'integration/talos-main')
     needs:
       - default
@@ -625,7 +625,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -676,7 +676,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow
@@ -723,7 +723,7 @@ jobs:
           done
         continue-on-error: true
       - name: checkout
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # version: v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # version: v6.0.2
       - name: Unshallow
         run: |
           git fetch --prune --unshallow

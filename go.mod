@@ -25,7 +25,7 @@ require (
 	github.com/siderolabs/crypto v0.6.4
 	github.com/siderolabs/gen v0.8.6
 	github.com/siderolabs/go-blockdevice/v2 v2.0.23
-	github.com/siderolabs/go-debug v0.6.1
+	github.com/siderolabs/go-debug v0.6.2
 	github.com/siderolabs/go-pointer v1.0.1
 	github.com/siderolabs/talos v1.13.0-alpha.1.0.20260218120223-5df10f2604b5
 	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.1.0.20260218120223-5df10f2604b5
