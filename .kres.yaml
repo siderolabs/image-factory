@@ -916,18 +916,6 @@ spec:
         rm -f $(ARTIFACTS)/talosconfig $(ARTIFACTS)/kubeconfig
 ---
 kind: custom.Step
-name: k8s-down
-spec:
-  makefile:
-    enabled: true
-    phony: true
-    script:
-      - |
-        $(ARTIFACTS)/talosctl cluster destroy \
-            --name=image-factory-env
-        rm -f $(ARTIFACTS)/talosconfig $(ARTIFACTS)/kubeconfig
----
-kind: custom.Step
 name: chart-version
 spec:
   makefile:

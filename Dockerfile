@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-02-18T12:59:27Z by kres 6458cfd.
+# Generated on 2026-02-19T02:54:54Z by kres 6458cfd.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -329,3 +329,4 @@ COPY --from=imager-tools / /
 LABEL org.opencontainers.image.source=https://github.com/siderolabs/image-factory
 ENV TUF_ROOT=/tmp
 ENTRYPOINT ["/usr/bin/image-factory"]
+
