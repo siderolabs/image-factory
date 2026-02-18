@@ -27,8 +27,8 @@ require (
 	github.com/siderolabs/go-blockdevice/v2 v2.0.23
 	github.com/siderolabs/go-debug v0.6.1
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/talos v1.13.0-alpha.1.0.20260213140552-3bd3dd7ca924
-	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.1.0.20260213140552-3bd3dd7ca924
+	github.com/siderolabs/talos v1.13.0-alpha.1.0.20260218120223-5df10f2604b5
+	github.com/siderolabs/talos/pkg/machinery v1.13.0-alpha.1.0.20260218120223-5df10f2604b5
 	github.com/sigstore/cosign/v3 v3.0.4
 	github.com/sigstore/sigstore v1.10.4
 	github.com/slok/go-http-metrics v0.13.0
@@ -61,7 +61,6 @@ require (
 	github.com/ProtonMail/gopenpgp/v2 v2.9.0 // indirect
 	github.com/ThalesIgnite/crypto11 v1.2.5 // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
-	github.com/anchore/go-lzo v0.1.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
@@ -98,15 +97,12 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 // indirect
-	github.com/diskfs/go-diskfs v1.7.1-0.20251223133332-fc569a00ea19 // indirect
-	github.com/djherbis/times v1.6.0 // indirect
 	github.com/docker/cli v29.2.1+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.4 // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/elliotwutingfeng/asciiset v0.0.0-20230602022725-51bbb787efab // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/equinix-ms/go-vmw-guestrpc v1.0.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
