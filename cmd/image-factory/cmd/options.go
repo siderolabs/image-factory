@@ -187,6 +187,9 @@ type CacheOptions struct {
 
 	// S3 contains configuration for using S3 to store cached assets.
 	S3 S3CacheOptions `koanf:"s3"`
+
+	// Schematic contains configuration for caching schematic blobs.
+	Schematic SchematicCacheOptions `koanf:"schematic"`
 }
 
 // CDNCacheOptions configures CDN-based cache for the image factory.
@@ -217,6 +220,15 @@ type S3CacheOptions struct {
 
 	// Enabled enables S3 cache.
 	Enabled bool `koanf:"enabled"`
+}
+
+// SchematicCacheOptions configures caching of schematic blobs.
+type SchematicCacheOptions struct {
+	// Capacity sets the maximum number of schematics to keep in the in-memory cache.
+	Capacity uint64 `koanf:"capacity"`
+
+	// NegativeTTL sets the time-to-live for negative cache entries (schematics not found in underlying storage).
+	NegativeTTL time.Duration `koanf:"negativeTTL"`
 }
 
 // ContainerSignature contains configuration for verifying container image signatures.
@@ -385,6 +397,10 @@ var DefaultOptions = Options{
 		},
 		S3: S3CacheOptions{
 			Bucket: "image-factory",
+		},
+		Schematic: SchematicCacheOptions{
+			Capacity:    100_000,
+			NegativeTTL: 30 * time.Second,
 		},
 	},
 

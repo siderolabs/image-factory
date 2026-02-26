@@ -7,10 +7,12 @@ package cache
 
 import (
 	"context"
-	"sync"
+	"time"
 
+	"github.com/jellydator/ttlcache/v3"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/gen/optional"
+	"github.com/siderolabs/gen/panicsafe"
 	"github.com/siderolabs/gen/xerrors"
 	"golang.org/x/sync/singleflight"
 
@@ -20,24 +22,31 @@ import (
 // Options configures the storage.
 type Options struct {
 	MetricsNamespace string
+	CacheCapacity    uint64
+	NegativeTTL      time.Duration
 }
 
 // Storage is a schematic storage in-memory cache.
 type Storage struct {
+	c          *ttlcache.Cache[string, optional.Optional[[]byte]]
 	underlying storage.Storage
 
 	metricCacheSize prometheus.Gauge
 
-	g  singleflight.Group
-	m  map[string]optional.Optional[[]byte]
-	mu sync.Mutex
+	g singleflight.Group
+
+	negativeTTL time.Duration
 }
 
 // NewCache returns a new cache storage.
 func NewCache(underlying storage.Storage, options Options) *Storage {
 	return &Storage{
-		underlying: underlying,
-		m:          map[string]optional.Optional[[]byte]{},
+		underlying:  underlying,
+		negativeTTL: options.NegativeTTL,
+		c: ttlcache.New[string, optional.Optional[[]byte]](
+			ttlcache.WithDisableTouchOnHit[string, optional.Optional[[]byte]](),
+			ttlcache.WithCapacity[string, optional.Optional[[]byte]](options.CacheCapacity),
+		),
 		metricCacheSize: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name:      "image_factory_schematic_cache_size",
 			Help:      "Number of schematics in in-memory cache.",
@@ -46,19 +55,27 @@ func NewCache(underlying storage.Storage, options Options) *Storage {
 	}
 }
 
+// Start the cache invalidation, should be run in a goroutine.
+func (s *Storage) Start() error {
+	return panicsafe.Run(s.c.Start)
+}
+
+// Stop the cache invalidation background goroutine.
+func (s *Storage) Stop() {
+	s.c.Stop()
+}
+
 // Check interface.
 var _ storage.Storage = (*Storage)(nil)
 
 // Head checks if the schematic exists.
 func (s *Storage) Head(ctx context.Context, id string) error {
 	// check cache
-	s.mu.Lock()
-	v, ok := s.m[id]
-	s.mu.Unlock()
+	item := s.c.Get(id)
 
 	// cache entry is there, return immediate response
-	if ok {
-		if v.IsPresent() {
+	if item != nil && !item.IsExpired() {
+		if item.Value().IsPresent() {
 			return nil
 		}
 
@@ -74,14 +91,12 @@ func (s *Storage) Head(ctx context.Context, id string) error {
 // Get returns the schematic.
 func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 	// check cache
-	s.mu.Lock()
-	v, ok := s.m[id]
-	s.mu.Unlock()
+	item := s.c.Get(id)
 
 	// cache entry is there, return immediate response
-	if ok {
-		if v.IsPresent() {
-			return v.ValueOrZero(), nil
+	if item != nil && !item.IsExpired() {
+		if item.Value().IsPresent() {
+			return item.Value().ValueOrZero(), nil
 		}
 
 		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("schematic ID %q not found", id)
@@ -91,29 +106,19 @@ func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 		data, err := s.underlying.Get(ctx, id)
 		if err != nil {
 			if xerrors.TagIs[storage.ErrNotFoundTag](err) {
-				s.mu.Lock()
-
 				// never overwrite a present value, as Put might have been called
-				if _, ok := s.m[id]; !ok {
-					s.m[id] = optional.None[[]byte]()
-				}
-
-				s.mu.Unlock()
+				s.c.GetOrSet(id, optional.None[[]byte](),
+					ttlcache.WithTTL[string, optional.Optional[[]byte]](s.negativeTTL),
+				)
 			}
 
 			return nil, err
 		}
 
-		s.mu.Lock()
-
 		// never overwrite a present value, as Put might have been called
-		if _, ok := s.m[id]; !ok {
-			s.m[id] = optional.Some(data)
-		}
+		item, _ := s.c.GetOrSet(id, optional.Some(data))
 
-		s.mu.Unlock()
-
-		return data, nil
+		return item.Value().ValueOr(data), nil
 	})
 
 	select {
@@ -135,9 +140,7 @@ func (s *Storage) Put(ctx context.Context, id string, data []byte) error {
 		return err
 	}
 
-	s.mu.Lock()
-	s.m[id] = optional.Some(data)
-	s.mu.Unlock()
+	s.c.Set(id, optional.Some(data), -1) // never expire, schematics are immutable
 
 	return nil
 }
@@ -149,9 +152,7 @@ func (s *Storage) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prom.Collector interface.
 func (s *Storage) Collect(ch chan<- prometheus.Metric) {
-	s.mu.Lock()
-	s.metricCacheSize.Set(float64(len(s.m)))
-	s.mu.Unlock()
+	s.metricCacheSize.Set(float64(s.c.Len()))
 
 	s.metricCacheSize.Collect(ch)
 }

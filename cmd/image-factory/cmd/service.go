@@ -76,7 +76,9 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	defer artifactsManager.Close() //nolint:errcheck
 
-	configFactory, err := buildSchematicFactory(logger, opts)
+	eg, ctx := errgroup.WithContext(ctx)
+
+	configFactory, err := buildSchematicFactory(ctx, logger, eg, opts)
 	if err != nil {
 		return err
 	}
@@ -165,8 +167,6 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	httpServer.Handler = frontendHTTP.Handler()
 
 	insecure := opts.HTTP.CertFile == "" && opts.HTTP.KeyFile == ""
-
-	eg, ctx := errgroup.WithContext(ctx)
 
 	if !insecure {
 		certLoader := cryptotls.NewDynamicCertificate(opts.HTTP.CertFile, opts.HTTP.KeyFile)
@@ -395,7 +395,7 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 	return builder, nil
 }
 
-func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory, error) {
+func buildSchematicFactory(ctx context.Context, logger *zap.Logger, eg *errgroup.Group, opts Options) (*schematic.Factory, error) {
 	var repoOpts []name.Option
 
 	if opts.Artifacts.Schematic.Insecure {
@@ -412,7 +412,23 @@ func buildSchematicFactory(logger *zap.Logger, opts Options) (*schematic.Factory
 		return nil, fmt.Errorf("failed to initialize registry storage: %w", err)
 	}
 
-	c := schematiccache.NewCache(storage, schematiccache.Options{MetricsNamespace: opts.Metrics.Namespace})
+	c := schematiccache.NewCache(storage, schematiccache.Options{
+		CacheCapacity:    opts.Cache.Schematic.Capacity,
+		NegativeTTL:      opts.Cache.Schematic.NegativeTTL,
+		MetricsNamespace: opts.Metrics.Namespace,
+	})
+
+	eg.Go(func() error {
+		return c.Start()
+	})
+
+	eg.Go(func() error {
+		<-ctx.Done()
+
+		c.Stop()
+
+		return nil
+	})
 
 	factory := schematic.NewFactory(logger, c, schematic.Options{MetricsNamespace: opts.Metrics.Namespace})
 

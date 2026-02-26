@@ -319,6 +319,30 @@ Enabled enables S3 cache.
 
 ---
 
+### `cache.schematic`
+
+Schematic contains configuration for caching schematic blobs.
+
+---
+
+### `cache.schematic.capacity`
+
+- **Type:** `uint64`
+- **Env:** `CACHE_SCHEMATIC_CAPACITY`
+
+Capacity sets the maximum number of schematics to keep in the in-memory cache.
+
+---
+
+### `cache.schematic.negativeTTL`
+
+- **Type:** `time.Duration`
+- **Env:** `CACHE_SCHEMATIC_NEGATIVETTL`
+
+NegativeTTL sets the time-to-live for negative cache entries (schematics not found in underlying storage).
+
+---
+
 ### `metrics`
 
 Metrics holds configuration for the Prometheus metrics endpoint.
@@ -775,6 +799,9 @@ cache:
         endpoint: ""
         insecure: false
         region: ""
+    schematic:
+        capacity: 100000
+        negativeTTL: 30s
     signingKeyPath: ""
 containerSignature:
     disabled: false
@@ -850,6 +877,8 @@ IF_CACHE_S3_ENABLED=false
 IF_CACHE_S3_ENDPOINT=
 IF_CACHE_S3_INSECURE=false
 IF_CACHE_S3_REGION=
+IF_CACHE_SCHEMATIC_CAPACITY=100000
+IF_CACHE_SCHEMATIC_NEGATIVETTL=30s
 IF_CACHE_SIGNINGKEYPATH=
 IF_CONTAINERSIGNATURE_DISABLED=false
 IF_CONTAINERSIGNATURE_ISSUER=https://accounts.google.com
