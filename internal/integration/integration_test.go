@@ -301,6 +301,12 @@ func commonTest(t *testing.T, options cmd.Options) {
 
 		testSecureBootFrontend(ctx, t, baseURL)
 	})
+
+	t.Run("TestSPDXFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testSPDXFrontend(ctx, t, baseURL)
+	})
 }
 
 type ociRepositoryFalg struct {

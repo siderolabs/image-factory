@@ -289,6 +289,12 @@
 - id: final.extra.talosctl
   translation: "Talosctl CLI"
 
+- id: final.extra.spdx
+  translation: "SBOM (SPDX)"
+
+- id: final.extra.spdx_enterprise_feature
+  translation: "SBOM (SPDX) bundle is only available through the Talos Linux Enterprise Image Factory."
+
 - id: final.disk_image.secure_boot
   translation: "SecureBoot Disk Image"
 

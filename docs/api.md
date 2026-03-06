@@ -1,5 +1,20 @@
 # API
 
+## Enterprise Frontend API
+
+### `GET /spdx/:schematic/:version/:arch`
+
+> **Enterprise only**
+
+Returns an SPDX 2.3 JSON document containing all packages from the Talos and extensions for the given schematic and version.
+The response is a JSON-encoded SPDX document which can be consumed directly by vulnerability scanners such as grype:
+
+```shell
+grype sbom:response.spdx.json
+```
+
+SPDX bundles are available for Talos versions **v1.11.0** and later.
+
 ## HTTP Frontend API
 
 ### `POST /schematics`
