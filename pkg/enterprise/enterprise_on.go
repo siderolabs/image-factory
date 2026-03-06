@@ -4,10 +4,86 @@
 
 //go:build enterprise
 
-// Package enterprise provide glue to Enterprise code.
 package enterprise
+
+import (
+	"crypto"
+	"fmt"
+	"time"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"go.uber.org/zap"
+
+	"github.com/siderolabs/image-factory/enterprise/spdx"
+	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
+	"github.com/siderolabs/image-factory/enterprise/spdx/storage/registry"
+)
 
 // Enabled indicates whether Enterprise features are enabled.
 func Enabled() bool {
 	return true
+}
+
+// NewSpdxStorage initializes and returns a new SPDX storage instance.
+func NewSpdxStorage(
+	logger *zap.Logger,
+	cacheSigningKey crypto.PrivateKey,
+	insecure bool,
+	repository string,
+	refreshInterval time.Duration,
+	remoteOptions func() []remote.Option,
+) (*registry.Storage, error) {
+	var repoOpts []name.Option
+
+	if insecure {
+		repoOpts = append(repoOpts, name.Insecure)
+	}
+
+	cacheRepository, err := name.NewRepository(repository, repoOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse cache repository: %w", err)
+	}
+
+	spdxStorage, err := registry.NewStorage(logger, registry.Options{
+		CacheRepository:         cacheRepository,
+		CacheSigningKey:         cacheSigningKey,
+		RemoteOptions:           remoteOptions(),
+		RegistryRefreshInterval: refreshInterval,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize SPDX storage: %w", err)
+	}
+
+	return spdxStorage, nil
+}
+
+// NewSpdxFrontend returns a new Spdx FrontendPlugin.
+func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, error) {
+	var repoOpts []name.Option
+
+	if opts.CacheInsecure {
+		repoOpts = append(repoOpts, name.Insecure)
+	}
+
+	cacheRepository, err := name.NewRepository(opts.CacheRepository, repoOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse cache repository: %w", err)
+	}
+
+	storage, err := registry.NewStorage(logger, registry.Options{
+		CacheRepository:         cacheRepository,
+		CacheSigningKey:         opts.CacheSigningKey,
+		RemoteOptions:           opts.RemoteOptions,
+		RegistryRefreshInterval: opts.RegistryRefreshInterval,
+	})
+
+	builder := builder.NewBuilder(logger, builder.Options{
+		Storage:          storage,
+		ArtifactsManager: opts.ArtifactsManager,
+		SchematicFactory: opts.SchematicFactory,
+		GeneratedAt:      opts.GeneratedAt,
+	})
+
+	return spdx.NewFrontend(opts.SchematicFactory, builder), nil
 }

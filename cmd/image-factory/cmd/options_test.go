@@ -6,11 +6,140 @@ package cmd_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 )
+
+func TestSPDXGeneratedTime(t *testing.T) {
+	t.Parallel()
+
+	parseTime := func(t *testing.T, value string) func() time.Time {
+		pt, err := time.Parse(time.RFC3339, value)
+		require.NoError(t, err)
+
+		return func() time.Time {
+			return pt
+		}
+	}
+
+	t.Run("UnmarshalText", func(t *testing.T) {
+		t.Parallel()
+
+		now := time.Now().UTC().Truncate(time.Second)
+
+		t.Run("now", func(t *testing.T) {
+			t.Parallel()
+
+			input := "now"
+
+			actual := cmd.SPDXGeneratedTime{
+				Time: func() time.Time { return now },
+			}
+
+			err := actual.UnmarshalText([]byte(input))
+			require.NoError(t, err)
+
+			t1 := actual.Time()
+
+			time.Sleep(time.Second)
+
+			t2 := actual.Time()
+
+			assert.NotEqual(t, t1, t2)
+		})
+
+		t.Run("time.Now()", func(t *testing.T) {
+			t.Parallel()
+
+			input := "time.Now()"
+
+			actual := cmd.SPDXGeneratedTime{
+				Time: func() time.Time { return now },
+			}
+
+			err := actual.UnmarshalText([]byte(input))
+			require.NoError(t, err)
+
+			t1 := actual.Time()
+
+			time.Sleep(time.Second)
+
+			t2 := actual.Time()
+
+			assert.NotEqual(t, t1, t2)
+		})
+
+		for _, tc := range []struct {
+			input         string
+			expectedError error
+			expected      cmd.SPDXGeneratedTime
+		}{
+			{
+				input:    "2024-01-01T00:00:00Z",
+				expected: cmd.SPDXGeneratedTime{Time: parseTime(t, "2024-01-01T00:00:00Z")},
+			},
+			{
+				input:    "2024-06-30T12:34:56Z",
+				expected: cmd.SPDXGeneratedTime{Time: parseTime(t, "2024-06-30T12:34:56Z")},
+			},
+			{
+				input: "invalid-time-format",
+				expectedError: &time.ParseError{
+					Layout: time.RFC3339, Value: "invalid-time-format",
+					LayoutElem: "2006", ValueElem: "invalid-time-format",
+				},
+				expected: cmd.SPDXGeneratedTime{
+					Time: func() time.Time { return now },
+				},
+			},
+		} {
+			t.Run(tc.input, func(t *testing.T) {
+				t.Parallel()
+
+				actual := cmd.SPDXGeneratedTime{
+					Time: func() time.Time { return now },
+				}
+
+				err := actual.UnmarshalText([]byte(tc.input))
+				if tc.expectedError != nil {
+					assert.ErrorContains(t, err, tc.expectedError.Error())
+				} else {
+					require.NoError(t, err)
+					assert.Equal(t, tc.expected.Time(), actual.Time())
+				}
+			})
+		}
+	})
+
+	t.Run("String", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range []struct {
+			expected string
+			input    cmd.SPDXGeneratedTime
+		}{
+			{
+				expected: "2024-01-01T00:00:00Z",
+				input:    cmd.SPDXGeneratedTime{Time: parseTime(t, "2024-01-01T00:00:00Z")},
+			},
+			{
+				expected: "2024-06-30T12:34:56Z",
+				input:    cmd.SPDXGeneratedTime{Time: parseTime(t, "2024-06-30T12:34:56Z")},
+			},
+		} {
+			t.Run(tc.expected, func(t *testing.T) {
+				t.Parallel()
+
+				actual := tc.input.String()
+				assert.Equal(t, tc.expected, actual)
+			})
+		}
+	})
+}
 
 func TestOCIRepositoryOptions(t *testing.T) {
 	t.Parallel()

@@ -4,10 +4,20 @@
 
 //go:build !enterprise
 
-// Package enterprise provide glue to Enterprise code.
 package enterprise
+
+import (
+	"errors"
+
+	"go.uber.org/zap"
+)
 
 // Enabled indicates whether Enterprise features are enabled.
 func Enabled() bool {
 	return false
+}
+
+// NewSpdxFrontend returns a new Spdx FrontendPlugin.
+func NewSpdxFrontend(_ *zap.Logger, _ SPDXOptions) (FrontendPlugin, error) {
+	return nil, errors.New("SPDX is not supported in the non-enterprise version")
 }

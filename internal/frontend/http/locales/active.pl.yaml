@@ -289,6 +289,9 @@
 - id: final.extra.talosctl
   translation: "CLI talosctl"
 
+- id: final.extra.spdx
+  translation: "SBOM (SPDX)"
+
 - id: final.disk_image.secure_boot
   translation: "Obraz dysku SecureBoot"
 

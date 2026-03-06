@@ -37,6 +37,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/internal/version"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -76,6 +77,7 @@ func NewFrontend(
 	assetBuilder *asset.Builder,
 	artifactsManager *artifacts.Manager,
 	secureBootService *secureboot.Service,
+	enterprisePlugins []enterprise.FrontendPlugin,
 	opts Options,
 ) (*Frontend, error) {
 	frontend := &Frontend{
@@ -114,6 +116,22 @@ func NewFrontend(
 
 	registerRoute := func(registrator func(string, httprouter.Handle), path string, handler func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error) {
 		registrator(path, httproutermiddleware.Handler(path, frontend.wrapper(handler), mdlw))
+	}
+
+	// enterprise
+	for _, enterpriseRoute := range enterprisePlugins {
+		for _, method := range enterpriseRoute.Methods() {
+			switch method {
+			case http.MethodGet:
+				registerRoute(frontend.router.GET, enterpriseRoute.Path(), enterpriseRoute.Handle)
+
+			case http.MethodHead:
+				registerRoute(frontend.router.HEAD, enterpriseRoute.Path(), enterpriseRoute.Handle)
+
+			case http.MethodPost:
+				registerRoute(frontend.router.POST, enterpriseRoute.Path(), enterpriseRoute.Handle)
+			}
+		}
 	}
 
 	// images
