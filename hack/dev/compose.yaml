@@ -30,8 +30,8 @@ services:
     image: ${IMAGE_FACTORY_IMAGE?}
     command:
       - /image-factory
-      - --config
-      - /etc/image-factory/config.yaml
+      - --log-level=debug
+      - --config=/etc/image-factory/config.yaml
     depends_on:
       - registry.local
       - registry.ghcr.io

@@ -128,6 +128,13 @@
                 {{ end }}
         </dl>
         {{ end }}
+
+        {{ if and .Enterprise .SBOMAvailable }}
+        <h2>{{ t .Localizer "final.extra.spdx" }}</h2>
+        <dl>
+                <dd><a href="{{ .SPDXBaseURL }}">{{ .SPDXBaseURL }}</a></dd>
+        </dl>
+        {{ end }}
 </div>
 
 <div class="flex gap-4">

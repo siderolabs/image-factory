@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-02-19T02:54:54Z by kres 6458cfd.
+# Generated on 2026-03-06T14:34:58Z by kres 1dd7316.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -15,9 +15,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 	&& mv /go/bin/helm-docs /bin/helm-docs
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.9-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.10-alpine AS lint-markdown
 WORKDIR /src
-RUN bun i markdownlint-cli@0.47.0 sentences-per-line@0.5.1
+RUN bun i markdownlint-cli@0.47.0 sentences-per-line@0.5.2
 COPY .markdownlint.json .
 COPY ./docs ./docs
 COPY ./CHANGELOG.md ./CHANGELOG.md
@@ -233,7 +233,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 FROM base AS lint-govulncheck
 WORKDIR /src
 COPY --chmod=0755 hack/govulncheck.sh ./hack/govulncheck.sh
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh -exclude 'GO-2026-4348,GO-2026-4349,GO-2026-4377' ./...
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh -exclude 'GO-2026-4348,GO-2026-4349,GO-2026-4377,GO-2026-4550' ./...
 
 # runs unit-tests with race detector
 FROM base AS unit-tests-race

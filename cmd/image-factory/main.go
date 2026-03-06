@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 func main() {
@@ -67,7 +68,7 @@ func runWithContext(ctx context.Context) error {
 		return fmt.Errorf("failed to initialize production logger: %w", err)
 	}
 
-	logger.Debug("starting factory", zap.String("level", logLevel.String()))
+	logger.Debug("starting factory", zap.String("level", logLevel.String()), zap.Bool("enterprise", enterprise.Enabled()))
 
 	return cmd.RunFactory(ctx, logger, opts)
 }
