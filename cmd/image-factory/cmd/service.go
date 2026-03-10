@@ -111,6 +111,28 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("failed to initialize SecureBoot service: %w", err)
 	}
 
+	var enterprisePlugins []enterprise.FrontendPlugin
+
+	if enterprise.Enabled() {
+		var spdxFrontend enterprise.FrontendPlugin
+
+		spdxFrontend, err = enterprise.NewSpdxFrontend(logger, enterprise.SPDXOptions{
+			SchematicFactory:        configFactory,
+			ArtifactsManager:        artifactsManager,
+			AssetBuilder:            assetBuilder,
+			CacheInsecure:           opts.Cache.OCI.Insecure,
+			CacheRepository:         opts.Cache.OCI.String(),
+			CacheSigningKey:         cacheSigningKey,
+			RemoteOptions:           remoteOptions(),
+			RegistryRefreshInterval: opts.Artifacts.RefreshInterval,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to initialize SPDX frontend: %w", err)
+		}
+
+		enterprisePlugins = append(enterprisePlugins, spdxFrontend)
+	}
+
 	var frontendOptions frontendhttp.Options
 
 	frontendOptions.CacheSigningKey = cacheSigningKey
@@ -154,7 +176,15 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	frontendOptions.MetricsNamespace = opts.Metrics.Namespace
 	frontendOptions.AllowedOrigins = opts.HTTP.AllowedOrigins
 
-	frontendHTTP, err := frontendhttp.NewFrontend(logger, configFactory, assetBuilder, artifactsManager, secureBootService, frontendOptions)
+	frontendHTTP, err := frontendhttp.NewFrontend(
+		logger,
+		configFactory,
+		assetBuilder,
+		artifactsManager,
+		secureBootService,
+		enterprisePlugins,
+		frontendOptions,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to initialize HTTP frontend: %w", err)
 	}

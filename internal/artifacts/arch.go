@@ -12,3 +12,13 @@ const (
 	ArchAmd64 Arch = "amd64"
 	ArchArm64 Arch = "arm64"
 )
+
+// ValidArch returns true if the given string is a supported architecture.
+func ValidArch(s string) bool {
+	switch Arch(s) {
+	case ArchAmd64, ArchArm64:
+		return true
+	default:
+		return false
+	}
+}

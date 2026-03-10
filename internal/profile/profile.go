@@ -290,7 +290,7 @@ func findExtension(availableExtensions []artifacts.ExtensionRef, extensionName s
 	return artifacts.ExtensionRef{}
 }
 
-func extensionNameAlias(extensionName string) (string, bool) {
+func ExtensionNameAlias(extensionName string) (string, bool) {
 	switch extensionName {
 	case "siderolabs/v4l-uvc": // wrong name in the extension manifest
 		return "siderolabs/v4l-uvc-drivers", true
@@ -376,7 +376,7 @@ func EnhanceFromSchematic(
 
 				if value.IsZero(extensionRef) {
 					// try with aliases if not found
-					if aliasedName, ok := extensionNameAlias(extensionName); ok {
+					if aliasedName, ok := ExtensionNameAlias(extensionName); ok {
 						extensionRef = findExtension(availableExtensions, aliasedName)
 					}
 				}
