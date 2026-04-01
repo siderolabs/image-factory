@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/internal/asset/cache"
+	"github.com/siderolabs/image-factory/internal/mime"
 )
 
 const (
@@ -173,6 +174,7 @@ func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset
 	}
 
 	stat, err := c.s3cli.PutObject(ctx, c.bucketName, key, data, asset.Size(), minio.PutObjectOptions{
+		ContentType:        mime.ContentType(filename),
 		ContentDisposition: fmt.Sprintf(`attachment; filename="%s"`, filename),
 	})
 	if err != nil {
@@ -212,6 +214,7 @@ func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset
 func hasRequiredMetadata(metadata http.Header) bool {
 	for _, key := range []string{
 		"Content-Disposition",
+		"Content-Type",
 	} {
 		if metadata.Get(key) == "" {
 			return false

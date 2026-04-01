@@ -8,9 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"mime"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -19,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/internal/asset/cache"
+	"github.com/siderolabs/image-factory/internal/mime"
 	"github.com/siderolabs/image-factory/internal/profile"
 )
 
@@ -83,11 +82,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 	}
 
 	w.Header().Set("Content-Length", strconv.FormatInt(asset.Size(), 10))
-
-	if ext := filepath.Ext(path); ext != "" {
-		w.Header().Set("Content-Type", mime.TypeByExtension(ext))
-	}
-
+	w.Header().Set("Content-Type", mime.ContentType(path))
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.WriteHeader(http.StatusOK)
 

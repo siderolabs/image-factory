@@ -24,6 +24,7 @@ import (
 	"github.com/siderolabs/gen/xtesting/must"
 	"github.com/siderolabs/go-blockdevice/v2/blkid"
 	"github.com/siderolabs/go-pointer"
+	"github.com/siderolabs/image-factory/internal/mime"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -157,6 +158,7 @@ func downloadAssetAndMatchSize(ctx context.Context, t *testing.T, baseURL string
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	require.Contains(t, resp.Header, "Content-Disposition")
+	assert.Equal(t, mime.ContentType(path), resp.Header.Get("Content-Type"))
 
 	size := matchSizeAndType(t, body, fileType, expectedSize)
 
