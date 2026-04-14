@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/siderolabs/gen/ensure"
-	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
@@ -88,7 +87,7 @@ func TestParseFromPath(t *testing.T) {
 			expectedProfile: profile.Profile{
 				Platform:   "aws",
 				Arch:       "amd64",
-				SecureBoot: pointer.To(true),
+				SecureBoot: new(true),
 				Output: profile.Output{
 					Kind:      profile.OutKindCmdline,
 					OutFormat: profile.OutFormatRaw,
@@ -115,7 +114,7 @@ func TestParseFromPath(t *testing.T) {
 			expectedProfile: profile.Profile{
 				Platform:   "metal",
 				Arch:       "arm64",
-				SecureBoot: pointer.To(true),
+				SecureBoot: new(true),
 				Output: profile.Output{
 					Kind:      profile.OutKindISO,
 					OutFormat: profile.OutFormatRaw,
@@ -129,7 +128,7 @@ func TestParseFromPath(t *testing.T) {
 			expectedProfile: profile.Profile{
 				Platform:   "metal",
 				Arch:       "amd64",
-				SecureBoot: pointer.To(true),
+				SecureBoot: new(true),
 				Output: profile.Output{
 					Kind:      profile.OutKindUKI,
 					OutFormat: profile.OutFormatRaw,
@@ -235,7 +234,7 @@ func TestParseFromPath(t *testing.T) {
 			expectedProfile: profile.Profile{
 				Platform:   "aws",
 				Arch:       "amd64",
-				SecureBoot: pointer.To(true),
+				SecureBoot: new(true),
 				Output: profile.Output{
 					Kind:      profile.OutKindImage,
 					OutFormat: profile.OutFormatTar,
@@ -641,7 +640,7 @@ func generateTestName(version, arch, outputKind, extraSuffix string, secureBoot 
 func defaultExpectedProfile(version, arch string, outKind profile.OutputKind, secureboot bool) profile.Profile {
 	prof := profile.Profile{
 		Platform:   constants.PlatformMetal,
-		SecureBoot: pointer.To(secureboot),
+		SecureBoot: new(secureboot),
 		Arch:       arch,
 		Version:    version,
 		Input: profile.Input{
@@ -859,7 +858,7 @@ func TestInstallerProfile(t *testing.T) {
 			expectedProfile: profile.Profile{
 				Platform:   "metal",
 				Arch:       "arm64",
-				SecureBoot: pointer.To(true),
+				SecureBoot: new(true),
 				Output: profile.Output{
 					Kind:      profile.OutKindInstaller,
 					OutFormat: profile.OutFormatRaw,

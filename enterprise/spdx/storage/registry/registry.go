@@ -11,7 +11,6 @@ package registry
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,7 +24,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/siderolabs/gen/xerrors"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
@@ -41,7 +39,7 @@ const SPDXBundleMediaType types.MediaType = "application/vnd.sidero.dev-image.sp
 // Options contains options for the registry storage.
 type Options struct {
 	CacheRepository         name.Repository
-	CacheSigningKey         crypto.PrivateKey
+	CacheImageSigner        signer.Signer
 	RemoteOptions           []remote.Option
 	RegistryRefreshInterval time.Duration
 }
@@ -50,7 +48,7 @@ type Options struct {
 type Storage struct {
 	puller          remotewrap.Puller
 	pusher          remotewrap.Pusher
-	imageSigner     *signer.Signer
+	imageSigner     signer.Signer
 	logger          *zap.Logger
 	cacheRepository name.Repository
 }
@@ -77,10 +75,7 @@ func NewStorage(logger *zap.Logger, options Options) (*Storage, error) {
 		return nil, fmt.Errorf("error creating pusher: %w", err)
 	}
 
-	s.imageSigner, err = signer.NewSigner(options.CacheSigningKey)
-	if err != nil {
-		return nil, fmt.Errorf("error creating signer: %w", err)
-	}
+	s.imageSigner = options.CacheImageSigner
 
 	return s, nil
 }
@@ -123,11 +118,7 @@ func (s *Storage) Get(ctx context.Context, schematicID, version, arch string) (s
 	digestRef := s.cacheRepository.Digest(desc.Digest.String())
 
 	// Verify signature
-	_, _, err = cosign.VerifyImageSignatures(
-		ctx,
-		digestRef,
-		s.imageSigner.GetCheckOpts(),
-	)
+	err = s.imageSigner.VerifyImage(ctx, digestRef)
 	if err != nil {
 		s.logger.Warn("SPDX bundle signature doesn't validate", zap.Error(err), zap.Stringer("ref", taggedRef))
 

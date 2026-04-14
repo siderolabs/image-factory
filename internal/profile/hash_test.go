@@ -7,7 +7,6 @@ package profile_test
 import (
 	"testing"
 
-	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +31,7 @@ func TestCleanProfile(t *testing.T) {
 			name: "installer profile",
 			in: profile.Profile{
 				Platform:   constants.PlatformMetal,
-				SecureBoot: pointer.To(false),
+				SecureBoot: new(false),
 				Arch:       "amd64",
 				Version:    "v1.5.3",
 				Customization: profile.CustomizationProfile{
@@ -66,7 +65,7 @@ func TestCleanProfile(t *testing.T) {
 
 			expected: profile.Profile{
 				Platform:   constants.PlatformMetal,
-				SecureBoot: pointer.To(false),
+				SecureBoot: new(false),
 				Arch:       "amd64",
 				Version:    "v1.5.3",
 				Customization: profile.CustomizationProfile{
@@ -127,7 +126,7 @@ func TestHashProfile(t *testing.T) {
 			name: "installer profile",
 			in: profile.Profile{
 				Platform:   constants.PlatformMetal,
-				SecureBoot: pointer.To(false),
+				SecureBoot: new(false),
 				Arch:       "amd64",
 				Version:    "v1.5.3",
 				Customization: profile.CustomizationProfile{
@@ -169,7 +168,7 @@ func TestHashProfile(t *testing.T) {
 			name: "installer profile 1.10",
 			in: profile.Profile{
 				Platform:   constants.PlatformMetal,
-				SecureBoot: pointer.To(false),
+				SecureBoot: new(false),
 				Arch:       "amd64",
 				Version:    "v1.10.0",
 				Customization: profile.CustomizationProfile{

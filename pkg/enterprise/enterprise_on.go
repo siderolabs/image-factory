@@ -7,7 +7,6 @@
 package enterprise
 
 import (
-	"crypto"
 	"fmt"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/spdx"
 	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx/storage/registry"
+	"github.com/siderolabs/image-factory/internal/image/signer"
 )
 
 // Enabled indicates whether Enterprise features are enabled.
@@ -28,7 +28,7 @@ func Enabled() bool {
 // NewSpdxStorage initializes and returns a new SPDX storage instance.
 func NewSpdxStorage(
 	logger *zap.Logger,
-	cacheSigningKey crypto.PrivateKey,
+	cacheImageSigner signer.Signer,
 	insecure bool,
 	repository string,
 	refreshInterval time.Duration,
@@ -47,7 +47,7 @@ func NewSpdxStorage(
 
 	spdxStorage, err := registry.NewStorage(logger, registry.Options{
 		CacheRepository:         cacheRepository,
-		CacheSigningKey:         cacheSigningKey,
+		CacheImageSigner:        cacheImageSigner,
 		RemoteOptions:           remoteOptions(),
 		RegistryRefreshInterval: refreshInterval,
 	})
@@ -73,7 +73,7 @@ func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, erro
 
 	storage, err := registry.NewStorage(logger, registry.Options{
 		CacheRepository:         cacheRepository,
-		CacheSigningKey:         opts.CacheSigningKey,
+		CacheImageSigner:        opts.CacheImageSigner,
 		RemoteOptions:           opts.RemoteOptions,
 		RegistryRefreshInterval: opts.RegistryRefreshInterval,
 	})

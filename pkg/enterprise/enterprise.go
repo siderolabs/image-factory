@@ -7,7 +7,6 @@ package enterprise
 
 import (
 	"context"
-	"crypto"
 	"net/http"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
+	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/schematic"
 )
 
@@ -28,7 +28,7 @@ type FrontendPlugin interface {
 
 // SPDXOptions holds configuration options for the SPDX frontend.
 type SPDXOptions struct {
-	CacheSigningKey         crypto.PrivateKey
+	CacheImageSigner        signer.Signer
 	SchematicFactory        *schematic.Factory
 	ArtifactsManager        *artifacts.Manager
 	AssetBuilder            *asset.Builder

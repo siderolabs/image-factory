@@ -40,6 +40,7 @@ import (
 	assetcachereg "github.com/siderolabs/image-factory/internal/asset/cache/registry"
 	assetcaches3 "github.com/siderolabs/image-factory/internal/asset/cache/s3"
 	frontendhttp "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic"
 	schematiccache "github.com/siderolabs/image-factory/internal/schematic/storage/cache"
@@ -83,12 +84,12 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	cacheSigningKey, err := loadPrivateKey(opts.Cache.SigningKeyPath)
+	cacheImageSigner, err := buildCacheSigner(opts)
 	if err != nil {
-		return fmt.Errorf("failed to load cache signing key: %w", err)
+		return fmt.Errorf("failed to build image signer: %w", err)
 	}
 
-	assetBuilder, err := buildAssetBuilder(logger, artifactsManager, cacheSigningKey, opts)
+	assetBuilder, err := buildAssetBuilder(logger, artifactsManager, cacheImageSigner, opts)
 	if err != nil {
 		return err
 	}
@@ -122,7 +123,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 			AssetBuilder:            assetBuilder,
 			CacheInsecure:           opts.Cache.OCI.Insecure,
 			CacheRepository:         opts.Cache.OCI.String(),
-			CacheSigningKey:         cacheSigningKey,
+			CacheImageSigner:        cacheImageSigner,
 			RemoteOptions:           remoteOptions(),
 			RegistryRefreshInterval: opts.Artifacts.RefreshInterval,
 		})
@@ -135,7 +136,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	var frontendOptions frontendhttp.Options
 
-	frontendOptions.CacheSigningKey = cacheSigningKey
+	frontendOptions.CacheImageSigner = cacheImageSigner
 
 	frontendOptions.ExternalURL, err = url.Parse(opts.HTTP.ExternalURL)
 	if err != nil {
@@ -355,14 +356,14 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 	return artifactsManager, nil
 }
 
-func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, cacheSigningKey crypto.PrivateKey, opts Options) (*asset.Builder, error) {
+func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, imageSigner signer.Signer, opts Options) (*asset.Builder, error) {
 	var (
 		cache assetcache.Cache
 		err   error
 	)
 
 	regOptions := assetcachereg.Options{
-		CacheSigningKey:         cacheSigningKey,
+		CacheImageSigner:        imageSigner,
 		RegistryRefreshInterval: opts.Artifacts.RefreshInterval,
 	}
 	regOptions.RemoteOptions = append(regOptions.RemoteOptions, remoteOptions()...)
@@ -480,6 +481,28 @@ func remoteOptions() []remote.Option {
 			),
 		),
 	}
+}
+
+// buildCacheSigner constructs the image signer from options.
+// If GSA options are configured (ServiceAccountEmail set), a keyless GSA signer is returned.
+// Otherwise, a static key signer is built from SigningKeyPath.
+func buildCacheSigner(opts Options) (signer.Signer, error) {
+	if opts.Cache.GSA.ServiceAccountEmail != "" {
+		return signer.NewGSASigner(signer.GSASignerOptions{
+			ServiceAccountEmail: opts.Cache.GSA.ServiceAccountEmail,
+			KeyFile:             opts.Cache.GSA.KeyFile,
+			FulcioURL:           opts.Cache.GSA.FulcioURL,
+			RekorURL:            opts.Cache.GSA.RekorURL,
+			RemoteOptions:       remoteOptions(),
+		})
+	}
+
+	key, err := loadPrivateKey(opts.Cache.SigningKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load cache signing key: %w", err)
+	}
+
+	return signer.NewSigner(key)
 }
 
 func loadPrivateKey(keyPath string) (crypto.PrivateKey, error) {

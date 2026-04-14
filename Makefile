@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-03-06T14:34:58Z by kres 1dd7316.
+# Generated on 2026-04-14T06:27:51Z by kres b6d29bf.
 
 # common variables
 
@@ -22,12 +22,13 @@ PROTOBUF_GO_VERSION ?= 1.36.11
 GRPC_GO_VERSION ?= 1.6.1
 GRPC_GATEWAY_VERSION ?= 2.28.0
 VTPROTOBUF_VERSION ?= 0.6.0
-GOIMPORTS_VERSION ?= 0.42.0
+GOIMPORTS_VERSION ?= 0.43.0
 GOMOCK_VERSION ?= 0.6.0
 DEEPCOPY_VERSION ?= v0.5.8
-GOLANGCILINT_VERSION ?= v2.10.1
+GOLANGCILINT_VERSION ?= v2.11.4
 GOFUMPT_VERSION ?= v0.9.2
-GO_VERSION ?= 1.26.0
+GO_VERSION ?= 1.26.2
+DIS_VULNCHECK_VERSION ?= v0.0.0-20260408104044-a7a2dc044240
 GO_BUILDFLAGS ?=
 GO_BUILDTAGS ?= ,
 GO_LDFLAGS ?=
@@ -78,6 +79,7 @@ COMMON_ARGS += --build-arg=GOMOCK_VERSION="$(GOMOCK_VERSION)"
 COMMON_ARGS += --build-arg=DEEPCOPY_VERSION="$(DEEPCOPY_VERSION)"
 COMMON_ARGS += --build-arg=GOLANGCILINT_VERSION="$(GOLANGCILINT_VERSION)"
 COMMON_ARGS += --build-arg=GOFUMPT_VERSION="$(GOFUMPT_VERSION)"
+COMMON_ARGS += --build-arg=DIS_VULNCHECK_VERSION="$(DIS_VULNCHECK_VERSION)"
 COMMON_ARGS += --build-arg=TESTPKGS="$(TESTPKGS)"
 COMMON_ARGS += --build-arg=HELMDOCS_VERSION="$(HELMDOCS_VERSION)"
 COMMON_ARGS += --build-arg=PKGS_PREFIX="$(PKGS_PREFIX)"
@@ -202,7 +204,12 @@ check-dirty:
 
 generate:  ## Generate .proto definitions.
 	@$(MAKE) local-$@ DEST=./
-	@sed -i "s/appVersion: .*/appVersion: \"$$(cat internal/version/data/tag)\"/" deploy/helm/image-factory/Chart.yaml
+	@TAG=$$(cat internal/version/data/tag); \
+	if echo "$$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$$'; then \
+	  sed -i "s/^appVersion: .*/appVersion: \"$$TAG\"/" deploy/helm/image-factory/Chart.yaml; \
+	fi
+	@$(MAKE) helm-docs
+	@$(MAKE) chart-gen-schema
 
 lint-golangci-lint:  ## Runs golangci-lint linter.
 	@$(MAKE) target-$@
@@ -242,7 +249,7 @@ integration-direct: integration.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS_DIRECT)
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS_DIRECT)
 	docker rm -f local-if
 
 .PHONY: integration-s3
@@ -251,7 +258,7 @@ integration-s3: integration.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS_S3)
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-s3.txt -test.run $(RUN_TESTS_S3)
 	docker rm -f local-if
 
 .PHONY: integration-cdn
@@ -260,7 +267,7 @@ integration-cdn: integration.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS_CDN)
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run $(RUN_TESTS_CDN)
 	docker rm -f local-if
 
 .PHONY: integration-proxy-installer
@@ -269,7 +276,7 @@ integration-proxy-installer: integration.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS_PROXY)
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS_PROXY)
 	docker rm -f local-if
 
 .PHONY: integration-enterprise
@@ -278,7 +285,7 @@ integration-enterprise: integration.enterprise.test
 	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
-	docker run --rm --net=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS_ENTERPRISE)
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS_ENTERPRISE)
 	docker rm -f local-if
 
 .PHONY: $(ARTIFACTS)/image-factory-linux-amd64

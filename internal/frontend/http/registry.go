@@ -19,7 +19,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xerrors"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
@@ -197,11 +196,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 			zap.Stringer("ref", imageRepository.Digest(extDesc.Digest.String())),
 		)
 
-		_, _, signatureErr := cosign.VerifyImageSignatures(
-			ctx,
-			imageRepository.Digest(extDesc.Digest.String()),
-			f.imageSigner.GetCheckOpts(),
-		)
+		signatureErr := f.imageSigner.VerifyImage(ctx, imageRepository.Digest(extDesc.Digest.String()))
 		if signatureErr == nil {
 			// redirect to the external registry, but use the digest directly to avoid tag changes
 			return f.handleExternalRegistry(w, req, img.Name(), schematicID, "manifests", extDesc.Digest.String())

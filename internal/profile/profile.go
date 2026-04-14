@@ -19,7 +19,6 @@ import (
 	"github.com/siderolabs/gen/value"
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/gen/xslices"
-	"github.com/siderolabs/go-pointer"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/config/merge"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
@@ -43,7 +42,7 @@ type InvalidErrorTag struct{}
 func parsePlatformArch(s string, prof *profile.Profile) error {
 	s, ok := strings.CutSuffix(s, "-secureboot")
 	if ok {
-		prof.SecureBoot = pointer.To(true)
+		prof.SecureBoot = new(true)
 	}
 
 	platform, rest, ok := strings.Cut(s, "-")
@@ -155,7 +154,7 @@ func ParseFromPath(path, version string) (profile.Profile, error) {
 
 			rest, ok = strings.CutSuffix(rest, "-secureboot")
 			if ok {
-				prof.SecureBoot = pointer.To(true)
+				prof.SecureBoot = new(true)
 			}
 
 			if err := parseArch(rest, &prof); err != nil {
@@ -261,7 +260,7 @@ func InstallerProfile(secureboot bool, arch artifacts.Arch, platform string) pro
 	prof.Platform = platform
 
 	if secureboot {
-		prof.SecureBoot = pointer.To(true)
+		prof.SecureBoot = new(true)
 	}
 
 	return prof

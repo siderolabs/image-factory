@@ -1,8 +1,8 @@
-# syntax = docker/dockerfile-upstream:1.21.0-labs
+# syntax = docker/dockerfile-upstream:1.23.0-labs
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-03-06T14:34:58Z by kres 1dd7316.
+# Generated on 2026-04-14T06:27:51Z by kres b6d29bf.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -15,9 +15,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 	&& mv /go/bin/helm-docs /bin/helm-docs
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.10-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.11-alpine AS lint-markdown
 WORKDIR /src
-RUN bun i markdownlint-cli@0.47.0 sentences-per-line@0.5.2
+RUN bun i markdownlint-cli@0.48.0 sentences-per-line@0.5.2
 COPY .markdownlint.json .
 COPY ./docs ./docs
 COPY ./CHANGELOG.md ./CHANGELOG.md
@@ -163,6 +163,9 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 	&& mv /go/bin/golangci-lint /bin/golangci-lint
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install golang.org/x/vuln/cmd/govulncheck@latest \
 	&& mv /go/bin/govulncheck /bin/govulncheck
+ARG DIS_VULNCHECK_VERSION
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go install github.com/shanduur/dis-vulncheck@${DIS_VULNCHECK_VERSION} \
+	&& mv /go/bin/dis-vulncheck /bin/dis-vulncheck
 ARG GOFUMPT_VERSION
 RUN go install mvdan.cc/gofumpt@${GOFUMPT_VERSION} \
 	&& mv /go/bin/gofumpt /bin/gofumpt
@@ -232,8 +235,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 # runs govulncheck
 FROM base AS lint-govulncheck
 WORKDIR /src
-COPY --chmod=0755 hack/govulncheck.sh ./hack/govulncheck.sh
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg ./hack/govulncheck.sh -exclude 'GO-2026-4348,GO-2026-4349,GO-2026-4377,GO-2026-4550' ./...
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg dis-vulncheck -tool=false ./...
 
 # runs unit-tests with race detector
 FROM base AS unit-tests-race

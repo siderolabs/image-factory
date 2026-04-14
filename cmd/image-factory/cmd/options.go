@@ -180,7 +180,13 @@ type CacheOptions struct {
 	OCI OCIRepositoryOptions `koanf:"oci"`
 
 	// SigningKeyPath is the path to the ECDSA key used to sign cached assets.
+	// Mutually exclusive with GSA signing.
 	SigningKeyPath string `koanf:"signingKeyPath"`
+
+	// GSA contains configuration for Google Service Account keyless signing via Sigstore.
+	// When set, GSA-based keyless signing is used instead of a static key.
+	// Mutually exclusive with SigningKeyPath.
+	GSA GSASigningOptions `koanf:"gsa"`
 
 	// CDN contains configuration for using a CDN to serve cached assets.
 	CDN CDNCacheOptions `koanf:"cdn"`
@@ -190,6 +196,26 @@ type CacheOptions struct {
 
 	// Schematic contains configuration for caching schematic blobs.
 	Schematic SchematicCacheOptions `koanf:"schematic"`
+}
+
+// GSASigningOptions configures Google Service Account keyless image signing via Sigstore Fulcio.
+type GSASigningOptions struct {
+	// ServiceAccountEmail is the GSA email embedded in the Fulcio certificate.
+	// Used for signature verification — callers must trust signatures issued for this identity.
+	ServiceAccountEmail string `koanf:"serviceAccountEmail"`
+
+	// KeyFile is the path to a service account JSON key file.
+	// If empty, Application Default Credentials are used (GOOGLE_APPLICATION_CREDENTIALS
+	// environment variable or the metadata server on GCE).
+	KeyFile string `koanf:"keyFile"`
+
+	// FulcioURL is the Fulcio CA endpoint.
+	// Defaults to the public Sigstore instance.
+	FulcioURL string `koanf:"fulcioURL"`
+
+	// RekorURL is the Rekor transparency log endpoint.
+	// Defaults to the public Sigstore instance.
+	RekorURL string `koanf:"rekorURL"`
 }
 
 // CDNCacheOptions configures CDN-based cache for the image factory.

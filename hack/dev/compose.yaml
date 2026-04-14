@@ -17,7 +17,7 @@ services:
       - REGISTRY_STORAGE_DELETE_ENABLED=true
     restart: unless-stopped
   registry.ghcr.io:
-    image: registry:2
+    image: registry:2.8
     volumes:
       - if-registry-ghcr-io-data:/var/lib/registry
     environment:
@@ -35,6 +35,11 @@ services:
     depends_on:
       - registry.local
       - registry.ghcr.io
+    userns_mode: "host"
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
     ports:
       - "8080:8080"
     configs:

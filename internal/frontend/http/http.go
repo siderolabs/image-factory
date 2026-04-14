@@ -7,7 +7,6 @@ package http
 
 import (
 	"context"
-	"crypto"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -51,14 +50,14 @@ type Frontend struct {
 	logger            *zap.Logger
 	puller            remotewrap.Puller
 	pusher            remotewrap.Pusher
-	imageSigner       *signer.Signer
+	imageSigner       signer.Signer
 	sf                singleflight.Group
 	options           Options
 }
 
 // Options configures the HTTP frontend.
 type Options struct {
-	CacheSigningKey                  crypto.PrivateKey
+	CacheImageSigner                 signer.Signer
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
 	InstallerInternalRepository      name.Repository
@@ -102,10 +101,7 @@ func NewFrontend(
 		return nil, fmt.Errorf("failed to create pusher: %w", err)
 	}
 
-	frontend.imageSigner, err = signer.NewSigner(opts.CacheSigningKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create image signer: %w", err)
-	}
+	frontend.imageSigner = opts.CacheImageSigner
 
 	// monitoring middleware
 	mdlw := middleware.New(middleware.Config{

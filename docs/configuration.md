@@ -232,6 +232,56 @@ Insecure allows connections to registries over HTTP or with invalid TLS certific
 - **Env:** `CACHE_SIGNINGKEYPATH`
 
 SigningKeyPath is the path to the ECDSA key used to sign cached assets.
+Mutually exclusive with GSA signing.
+
+---
+
+### `cache.gsa`
+
+GSA contains configuration for Google Service Account keyless signing via Sigstore.
+When set, GSA-based keyless signing is used instead of a static key.
+Mutually exclusive with SigningKeyPath.
+
+---
+
+### `cache.gsa.serviceAccountEmail`
+
+- **Type:** `string`
+- **Env:** `CACHE_GSA_SERVICEACCOUNTEMAIL`
+
+ServiceAccountEmail is the GSA email embedded in the Fulcio certificate.
+Used for signature verification — callers must trust signatures issued for this identity.
+
+---
+
+### `cache.gsa.keyFile`
+
+- **Type:** `string`
+- **Env:** `CACHE_GSA_KEYFILE`
+
+KeyFile is the path to a service account JSON key file.
+If empty, Application Default Credentials are used (GOOGLE_APPLICATION_CREDENTIALS
+environment variable or the metadata server on GCE).
+
+---
+
+### `cache.gsa.fulcioURL`
+
+- **Type:** `string`
+- **Env:** `CACHE_GSA_FULCIOURL`
+
+FulcioURL is the Fulcio CA endpoint.
+Defaults to the public Sigstore instance.
+
+---
+
+### `cache.gsa.rekorURL`
+
+- **Type:** `string`
+- **Env:** `CACHE_GSA_REKORURL`
+
+RekorURL is the Rekor transparency log endpoint.
+Defaults to the public Sigstore instance.
 
 ---
 
@@ -788,6 +838,11 @@ cache:
         enabled: false
         host: ""
         trimPrefix: ""
+    gsa:
+        fulcioURL: ""
+        keyFile: ""
+        rekorURL: ""
+        serviceAccountEmail: ""
     oci:
         insecure: false
         namespace: siderolabs/image-factory
@@ -868,6 +923,10 @@ IF_BUILD_MINTALOSVERSION=1.2.0
 IF_CACHE_CDN_ENABLED=false
 IF_CACHE_CDN_HOST=
 IF_CACHE_CDN_TRIMPREFIX=
+IF_CACHE_GSA_FULCIOURL=
+IF_CACHE_GSA_KEYFILE=
+IF_CACHE_GSA_REKORURL=
+IF_CACHE_GSA_SERVICEACCOUNTEMAIL=
 IF_CACHE_OCI_INSECURE=false
 IF_CACHE_OCI_NAMESPACE=siderolabs/image-factory
 IF_CACHE_OCI_REGISTRY=ghcr.io

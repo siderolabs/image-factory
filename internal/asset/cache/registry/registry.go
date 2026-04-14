@@ -7,7 +7,6 @@ package registry
 
 import (
 	"context"
-	"crypto"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,7 +16,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/internal/asset/cache"
@@ -29,7 +27,7 @@ import (
 // Options contains options for the registry cache.
 type Options struct {
 	CacheRepository         name.Repository
-	CacheSigningKey         crypto.PrivateKey
+	CacheImageSigner        signer.Signer
 	RemoteOptions           []remote.Option
 	RegistryRefreshInterval time.Duration
 }
@@ -38,7 +36,7 @@ type Options struct {
 type Cache struct {
 	puller          remotewrap.Puller
 	pusher          remotewrap.Pusher
-	imageSigner     *signer.Signer
+	imageSigner     signer.Signer
 	logger          *zap.Logger
 	cacheRepository name.Repository
 }
@@ -65,10 +63,7 @@ func New(logger *zap.Logger, options Options) (*Cache, error) {
 		return nil, fmt.Errorf("error creating pusher: %w", err)
 	}
 
-	c.imageSigner, err = signer.NewSigner(options.CacheSigningKey)
-	if err != nil {
-		return nil, fmt.Errorf("error creating signer: %w", err)
-	}
+	c.imageSigner = options.CacheImageSigner
 
 	return c, nil
 }
@@ -92,11 +87,7 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 
 	digestRef := c.cacheRepository.Digest(desc.Digest.String())
 
-	_, _, err = cosign.VerifyImageSignatures(
-		ctx,
-		digestRef,
-		c.imageSigner.GetCheckOpts(),
-	)
+	err = c.imageSigner.VerifyImage(ctx, digestRef)
 	if err != nil {
 		// signature doesn't validate, skip the cache, but keep building
 		c.logger.Info("cache image signature doesn't validate", zap.Error(err), zap.Stringer("ref", taggedRef))

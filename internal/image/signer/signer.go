@@ -23,17 +23,29 @@ import (
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
-// Signer holds a key used to sign the images.
+// Signer is the interface for image signers.
+type Signer interface {
+	// SignImage signs the image in the OCI repository.
+	SignImage(ctx context.Context, imageRef name.Digest, pusher remotewrap.Pusher) error
+	// VerifyImage verifies the signature of the image.
+	VerifyImage(ctx context.Context, imageRef name.Digest) error
+	// GetCheckOpts returns cosign compatible image signature verification options.
+	GetCheckOpts() *cosign.CheckOpts
+	// GetPublicKeyPEM returns the public key in PEM format, or nil for keyless signers.
+	GetPublicKeyPEM() []byte
+}
+
+// KeySigner holds a key used to sign the images.
 //
 // We are not using directly 'cosign' implementation here, as it's behind
 // series of internal/ packages.
-type Signer struct {
+type KeySigner struct {
 	sv           signature.SignerVerifier
 	publicKeyPEM []byte
 }
 
-// NewSigner creates a new signer.
-func NewSigner(key crypto.PrivateKey) (*Signer, error) {
+// NewSigner creates a new signer from a private key.
+func NewSigner(key crypto.PrivateKey) (*KeySigner, error) {
 	sv, err := signature.LoadSignerVerifier(key, crypto.SHA256)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create signer: %w", err)
@@ -49,24 +61,24 @@ func NewSigner(key crypto.PrivateKey) (*Signer, error) {
 		return nil, fmt.Errorf("failed to marshal public key to PEM: %w", err)
 	}
 
-	return &Signer{
+	return &KeySigner{
 		sv:           sv,
 		publicKeyPEM: pubKeyPEM,
 	}, nil
 }
 
 // GetVerifier returns the verifier for the signature.
-func (s *Signer) GetVerifier() signature.Verifier {
+func (s *KeySigner) GetVerifier() signature.Verifier {
 	return s.sv
 }
 
 // GetSigner returns the signer for the signature.
-func (s *Signer) GetSigner() signature.Signer {
+func (s *KeySigner) GetSigner() signature.Signer {
 	return s.sv
 }
 
 // GetCheckOpts returns cosign compatible image signature verification options.
-func (s *Signer) GetCheckOpts() *cosign.CheckOpts {
+func (s *KeySigner) GetCheckOpts() *cosign.CheckOpts {
 	return &cosign.CheckOpts{
 		SigVerifier: s.GetVerifier(),
 		IgnoreSCT:   true,
@@ -76,18 +88,25 @@ func (s *Signer) GetCheckOpts() *cosign.CheckOpts {
 }
 
 // GetPublicKeyPEM returns the public key in PEM format.
-func (s *Signer) GetPublicKeyPEM() []byte {
+func (s *KeySigner) GetPublicKeyPEM() []byte {
 	return s.publicKeyPEM
 }
 
+// VerifyImage verifies the image signature using the key-based cosign tag format.
+func (s *KeySigner) VerifyImage(ctx context.Context, imageRef name.Digest) error {
+	_, _, err := cosign.VerifyImageSignatures(ctx, imageRef, s.GetCheckOpts())
+
+	return err
+}
+
 // SignImage signs the image in the OCI repository.
-func (s *Signer) SignImage(ctx context.Context, imageRef name.Digest, pusher remotewrap.Pusher) error {
-	payload, signature, err := signature.SignImage(s.sv, imageRef, nil)
+func (s *KeySigner) SignImage(ctx context.Context, imageRef name.Digest, pusher remotewrap.Pusher) error {
+	payload, sig, err := signature.SignImage(s.sv, imageRef, nil)
 	if err != nil {
 		return fmt.Errorf("error generating signature: %w", err)
 	}
 
-	b64Signature := base64.StdEncoding.EncodeToString(signature)
+	b64Signature := base64.StdEncoding.EncodeToString(sig)
 
 	signatureTag, err := cosignremote.SignatureTag(imageRef)
 	if err != nil {
