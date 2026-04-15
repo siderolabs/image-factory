@@ -62,6 +62,8 @@ type GSASignerOptions struct {
 	// RemoteOptions are go-containerregistry remote options (auth, transport, etc.)
 	// used to push OCI referrer bundles and to look up referrers during verification.
 	RemoteOptions []gcremote.Option
+	// Insecure allows pushing/pulling bundles to registries over plain HTTP.
+	Insecure bool
 }
 
 // GSASigner signs images using Google Service Account OIDC tokens via Sigstore keyless signing.
@@ -111,13 +113,18 @@ func NewGSASigner(opts GSASignerOptions) (*GSASigner, error) {
 
 	remoteOpts := slices.Concat(opts.RemoteOptions, []gcremote.Option{gcremote.WithTransport(remotewrap.GetTransport())})
 
+	ociRemoteOpts := []ociremote.Option{ociremote.WithRemoteOptions(remoteOpts...)}
+	if opts.Insecure {
+		ociRemoteOpts = append(ociRemoteOpts, ociremote.WithNameOptions(name.Insecure))
+	}
+
 	return &GSASigner{
 		creds:          creds,
 		serviceAccount: opts.ServiceAccountEmail,
 		fulcio:         fulcio,
 		trustedRoot:    trustedRoot,
 		rekorURL:       rekorURL,
-		ociRemoteOpts:  []ociremote.Option{ociremote.WithRemoteOptions(remoteOpts...)},
+		ociRemoteOpts:  ociRemoteOpts,
 	}, nil
 }
 

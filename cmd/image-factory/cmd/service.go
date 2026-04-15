@@ -493,6 +493,7 @@ func buildCacheSigner(opts Options) (signer.Signer, error) {
 			KeyFile:             opts.Cache.GSA.KeyFile,
 			FulcioURL:           opts.Cache.GSA.FulcioURL,
 			RekorURL:            opts.Cache.GSA.RekorURL,
+			Insecure:            opts.Artifacts.Installer.Internal.Insecure,
 			RemoteOptions:       remoteOptions(),
 		})
 	}
