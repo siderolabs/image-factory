@@ -7,16 +7,12 @@ package version
 import (
 	"sync"
 
-	"github.com/siderolabs/image-factory/pkg/enterprise"
+	"github.com/siderolabs/image-factory/pkg/constants"
 )
 
-// ServerString returns the server string including enterprise info if enabled.
+// ServerString is the Server header string including enterprise info if enabled.
 var ServerString = sync.OnceValue(func() string {
-	server := "Image Factory"
-	if enterprise.Enabled() {
-		server = "Enterprise " + server
-	}
-
+	server := constants.ImageFactoryName
 	server += " " + Tag
 
 	return server

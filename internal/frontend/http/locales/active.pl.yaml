@@ -20,7 +20,7 @@
   translation: "Image Factory Talos Linux"
 
 - id: page.header.enterprise
-  translation: "Enterprise Image Factory Talos Linux"
+  translation: "Image Factory Enterprise Talos Linux"
 
 - id: info.developed_by
   translation: "Image Factory Talos Linux, opracowane przez "
@@ -293,7 +293,7 @@
   translation: "SBOM (SPDX)"
 
 - id: final.extra.spdx_enterprise_feature
-  translation: "Pakiet SBOM (SPDX) jest dostępny wyłącznie za pośrednictwem Talos Linux Enterprise Image Factory."
+  translation: "Pakiet SBOM (SPDX) jest dostępny wyłącznie za pośrednictwem Talos Linux Image Factory Enterprise."
 
 - id: final.disk_image.secure_boot
   translation: "Obraz dysku SecureBoot"

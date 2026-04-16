@@ -21,6 +21,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	imageprofile "github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/secureboot"
+	ifconstants "github.com/siderolabs/image-factory/pkg/constants"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -642,6 +643,7 @@ func defaultExpectedProfile(version, arch string, outKind profile.OutputKind, se
 		Platform:   constants.PlatformMetal,
 		SecureBoot: new(secureboot),
 		Arch:       arch,
+		Name:       ifconstants.TalosName,
 		Version:    version,
 		Input: profile.Input{
 			SystemExtensions: []profile.ContainerAsset{

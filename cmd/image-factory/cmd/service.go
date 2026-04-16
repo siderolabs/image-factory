@@ -348,6 +348,8 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 		ExtensionManifestImage: opts.Artifacts.Core.Components.ExtensionManifest,
 		OverlayManifestImage:   opts.Artifacts.Core.Components.OverlayManifest,
 		TalosctlImage:          opts.Artifacts.Core.Components.Talosctl,
+
+		ExternalURL: opts.HTTP.ExternalURL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize artifacts manager: %w", err)

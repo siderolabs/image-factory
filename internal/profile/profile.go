@@ -28,6 +28,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/secureboot"
+	ifconstants "github.com/siderolabs/image-factory/pkg/constants"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -487,6 +488,7 @@ func EnhanceFromSchematic(
 	}
 
 	prof.Version = versionTag
+	prof.Name = ifconstants.TalosName
 
 	return prof, nil
 }

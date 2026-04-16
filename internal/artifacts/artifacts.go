@@ -40,6 +40,9 @@ type Options struct { //nolint:govet
 	ExtensionManifestImage string
 	OverlayManifestImage   string
 	TalosctlImage          string
+
+	// External identification.
+	ExternalURL string
 }
 
 // ImageVerifyOptions are the options for verifying the image signature.

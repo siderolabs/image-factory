@@ -1,4 +1,4 @@
-# Enterprise Image Factory
+# Image Factory Enterprise
 
 The folder `enterprise/` contains proprietary code and is licensed under the
 [Business Source License 1.1](LICENSE).

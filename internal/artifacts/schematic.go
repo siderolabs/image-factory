@@ -62,14 +62,14 @@ func (m *Manager) GetSchematicExtension(ctx context.Context, versionTag string, 
 }
 
 // schematicExtension builds a "virtual" extension matching a specified schematic.
-func schematicExtension(schematicID string, schematicInfo []byte) (io.Reader, error) {
+func schematicExtension(schematicID string, schematicInfo []byte, baseURL string) (io.Reader, error) {
 	manifest := extensions.Manifest{
 		Version: "v1alpha1",
 		Metadata: extensions.Metadata{
 			Name:        constants.SchematicIDExtensionName,
 			Version:     schematicID,
-			Author:      "Image Factory",
-			Description: "Virtual extension which specifies the schematic of the image built with Image Factory.",
+			Author:      constants.ImageFactoryName + " (" + baseURL + ")",
+			Description: "Virtual extension which specifies the schematic of the image built with " + constants.SchematicIDExtensionName + ".",
 			Compatibility: extensions.Compatibility{
 				Talos: extensions.Constraint{
 					Version: ">= 1.0.0",
@@ -137,7 +137,7 @@ func schematicExtension(schematicID string, schematicInfo []byte) (io.Reader, er
 
 // buildSchematicExtension builds a schematic extension tarball.
 func (m *Manager) buildSchematicExtension(schematicID, extensionPath string, schematicInfo []byte) error {
-	tarball, err := schematicExtension(schematicID, schematicInfo)
+	tarball, err := schematicExtension(schematicID, schematicInfo, m.options.ExternalURL)
 	if err != nil {
 		return fmt.Errorf("failed to build schematic layer: %w", err)
 	}

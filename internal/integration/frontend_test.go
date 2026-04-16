@@ -32,7 +32,7 @@ func testFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	server := resp.Header.Get("Server")
 
 	if enterprise.Enabled() {
-		assert.Contains(t, server, "Enterprise Image Factory")
+		assert.Contains(t, server, "Image Factory Enterprise")
 	} else {
 		assert.Contains(t, server, "Image Factory")
 		assert.NotContains(t, server, "Enterprise")

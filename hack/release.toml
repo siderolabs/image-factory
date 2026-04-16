@@ -13,8 +13,8 @@ pre_release = false
     [notes.sbom]
         title = "SPDX SBOM viewer"
         description = """\
-Added a new SPDX SBOM section to the Enterprise Image Factory.
-Users can now request SBOMs for a specific Talos schematic directly from the Image Factory interface.
+Added a new SPDX SBOM section to the Image Factory Enterprise.
+Users can now request SBOMs for a specific Talos schematic directly from the Image Factory Enterprise interface.
 
 **Note:** This feature is enterprise-only and is subject to the BUSL-1.1 license.
 """
