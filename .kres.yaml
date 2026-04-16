@@ -730,7 +730,7 @@ spec:
     stages:
       - name: tailwind-base
         description: "Installs tailwindcss"
-        from: docker.io/oven/bun:1.2.4-alpine
+        from: docker.io/oven/bun:1.3.9-alpine
         platform: "${BUILDPLATFORM}"
         workdir: /src
         steps:

@@ -16,7 +16,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"slices"
 	"strings"
 
 	"cloud.google.com/go/auth"
@@ -59,9 +58,6 @@ type GSASignerOptions struct {
 	FulcioURL string
 	// RekorURL is the Rekor transparency log URL. Defaults to DefaultRekorURL.
 	RekorURL string
-	// RemoteOptions are go-containerregistry remote options (auth, transport, etc.)
-	// used to push OCI referrer bundles and to look up referrers during verification.
-	RemoteOptions []gcremote.Option
 	// Insecure allows pushing/pulling bundles to registries over plain HTTP.
 	Insecure bool
 }
@@ -74,7 +70,7 @@ type GSASigner struct {
 	fulcio         *sigsign.Fulcio
 	trustedRoot    sigstoreroot.TrustedMaterial
 	rekorURL       string
-	ociRemoteOpts  []ociremote.Option
+	nameOpts       []name.Option
 }
 
 // NewGSASigner creates a new GSA-based keyless signer.
@@ -111,11 +107,10 @@ func NewGSASigner(opts GSASignerOptions) (*GSASigner, error) {
 		Retries: 3,
 	})
 
-	remoteOpts := slices.Concat(opts.RemoteOptions, []gcremote.Option{gcremote.WithTransport(remotewrap.GetTransport())})
+	var nameOpts []name.Option
 
-	ociRemoteOpts := []ociremote.Option{ociremote.WithRemoteOptions(remoteOpts...)}
 	if opts.Insecure {
-		ociRemoteOpts = append(ociRemoteOpts, ociremote.WithNameOptions(name.Insecure))
+		nameOpts = append(nameOpts, name.Insecure)
 	}
 
 	return &GSASigner{
@@ -124,7 +119,7 @@ func NewGSASigner(opts GSASignerOptions) (*GSASigner, error) {
 		fulcio:         fulcio,
 		trustedRoot:    trustedRoot,
 		rekorURL:       rekorURL,
-		ociRemoteOpts:  ociRemoteOpts,
+		nameOpts:       nameOpts,
 	}, nil
 }
 
@@ -137,9 +132,8 @@ func (s *GSASigner) GetCheckOpts() *cosign.CheckOpts {
 				Subject: s.serviceAccount,
 			},
 		},
-		NewBundleFormat:    true,
-		TrustedMaterial:    s.trustedRoot,
-		RegistryClientOpts: s.ociRemoteOpts,
+		NewBundleFormat: true,
+		TrustedMaterial: s.trustedRoot,
 	}
 }
 
@@ -150,7 +144,7 @@ func (s *GSASigner) GetPublicKeyPEM() []byte {
 
 // SignImage signs the image using GSA OIDC token-based keyless signing and stores
 // the result as an OCI referrer bundle (new bundle format).
-func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, _ remotewrap.Pusher) error {
+func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, pusher remotewrap.Pusher) error {
 	tok, err := s.creds.Token(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get GSA OIDC token: %w", err)
@@ -210,10 +204,17 @@ func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, _ remot
 		return fmt.Errorf("failed to build sigstore bundle: %w", err)
 	}
 
-	// Push as an OCI 1.1 referrer of the signed image.
-	ociOpts := slices.Concat(s.ociRemoteOpts, []ociremote.Option{ociremote.WithRemoteOptions(gcremote.WithContext(ctx))})
+	// Get fresh remote options from the refreshing pusher to avoid stale auth tokens.
+	pushRemoteOpts, err := pusher.RemoteOptions()
+	if err != nil {
+		return fmt.Errorf("failed to get remote options for push: %w", err)
+	}
 
-	if err := ociremote.WriteAttestationNewBundleFormat(imageRef, bundleBytes, costypes.CosignSignPredicateType, ociOpts...); err != nil {
+	// Push as an OCI 1.1 referrer of the signed image.
+	if err := ociremote.WriteAttestationNewBundleFormat(imageRef, bundleBytes, costypes.CosignSignPredicateType,
+		ociremote.WithRemoteOptions(append(pushRemoteOpts, gcremote.WithContext(ctx))...),
+		ociremote.WithNameOptions(s.nameOpts...),
+	); err != nil {
 		return fmt.Errorf("failed to push bundle referrer: %w", err)
 	}
 
@@ -223,7 +224,7 @@ func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, _ remot
 // VerifyImage verifies the OCI referrer bundle for imageRef against the GSA identity.
 // Implements Signer.VerifyImage.
 func (s *GSASigner) VerifyImage(ctx context.Context, imageRef name.Digest) error {
-	_, _, err := cosign.VerifyImageAttestations(ctx, imageRef, s.GetCheckOpts())
+	_, _, err := cosign.VerifyImageAttestations(ctx, imageRef, s.GetCheckOpts(), s.nameOpts...)
 
 	return err
 }

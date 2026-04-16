@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-14T06:27:51Z by kres b6d29bf.
+# Generated on 2026-04-16T10:23:55Z by kres b6d29bf.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -89,7 +89,7 @@ FROM ${PKGS_PREFIX}/zlib:${PKGS} AS pkg-zlib
 FROM ${PKGS_PREFIX}/zstd:${PKGS} AS pkg-zstd
 
 # Installs tailwindcss
-FROM --platform=${BUILDPLATFORM} docker.io/oven/bun:1.2.4-alpine AS tailwind-base
+FROM --platform=${BUILDPLATFORM} docker.io/oven/bun:1.3.9-alpine AS tailwind-base
 WORKDIR /src
 COPY package.json package-lock.json .
 RUN bun install

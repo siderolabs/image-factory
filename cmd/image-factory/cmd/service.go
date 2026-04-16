@@ -494,7 +494,6 @@ func buildCacheSigner(opts Options) (signer.Signer, error) {
 			FulcioURL:           opts.Cache.GSA.FulcioURL,
 			RekorURL:            opts.Cache.GSA.RekorURL,
 			Insecure:            opts.Artifacts.Installer.Internal.Insecure,
-			RemoteOptions:       remoteOptions(),
 		})
 	}
 

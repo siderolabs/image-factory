@@ -40,6 +40,11 @@ func ShutdownTransport() {
 // Pusher is an interface which is implemented by go-containerregistry's *remote.Pusher.
 type Pusher interface {
 	Push(ctx context.Context, ref name.Reference, t remote.Taggable) error
+	// RemoteOptions returns a fresh set of go-containerregistry remote options backed by
+	// the current (possibly refreshed) *remote.Pusher instance. Use this when a library
+	// accepts []remote.Option directly (e.g. cosign's ociremote package) so that it
+	// benefits from the same credential-refresh guarantee as Push.
+	RemoteOptions() ([]remote.Option, error)
 }
 
 type pusherWrapper struct {
@@ -53,6 +58,15 @@ func (p *pusherWrapper) Push(ctx context.Context, ref name.Reference, t remote.T
 	}
 
 	return instance.Push(ctx, ref, t)
+}
+
+func (p *pusherWrapper) RemoteOptions() ([]remote.Option, error) {
+	instance, err := p.refresher.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	return []remote.Option{remote.Reuse(instance)}, nil
 }
 
 // NewPusher creates a new Pusher with the given options.
