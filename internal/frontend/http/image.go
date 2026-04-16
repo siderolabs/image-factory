@@ -14,12 +14,20 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
+	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/mime"
 	"github.com/siderolabs/image-factory/internal/profile"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
+
+// checksumSuffixes maps supported checksum file extensions to themselves.
+var checksumSuffixes = map[string]struct{}{
+	".sha512": {},
+	".sha256": {},
+}
 
 // handleImage handles downloading of boot assets.
 func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
@@ -27,6 +35,29 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 
 	// If the request is coming from the external PXE URL we disable redirects.
 	disableRedirect := r.Host == f.options.ExternalPXEURL.Host
+
+	path := p.ByName("path")
+
+	// Detect a checksum suffix early: strip it and record which algorithm was
+	// requested so we compute a checksum instead of streaming the asset bytes.
+	// This check must happen before schematic/version lookup so that
+	// non-enterprise builds return 402 regardless of schematic availability.
+	var checksumSuffix string
+
+	for suffix := range checksumSuffixes {
+		if strings.HasSuffix(path, suffix) {
+			checksumSuffix = suffix
+			path = strings.TrimSuffix(path, suffix)
+
+			break
+		}
+	}
+
+	wantChecksum := checksumSuffix != ""
+
+	if wantChecksum && f.checksummer == nil {
+		return xerrors.NewTaggedf[enterprise.ErrNotEnabledTag]("enterprise not enabled: checksum endpoint is not available")
+	}
 
 	schematic, err := f.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
@@ -42,8 +73,6 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 	if err != nil {
 		return fmt.Errorf("error parsing version: %w", err)
 	}
-
-	path := p.ByName("path")
 
 	prof, err := profile.ParseFromPath(path, version.String())
 	if err != nil {
@@ -66,6 +95,16 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 	asset, err := f.assetBuilder.Build(ctx, prof, version.String(), path, filename)
 	if err != nil {
 		return err
+	}
+
+	// Checksum path: delegate to the enterprise checksummer.
+	if wantChecksum {
+		reader, readerErr := asset.Reader()
+		if readerErr != nil {
+			return readerErr
+		}
+
+		return f.checksummer.WriteChecksum(ctx, w, r, reader, asset.Size(), filename, checksumSuffix)
 	}
 
 	if asset, ok := asset.(cache.RedirectableAsset); ok && !disableRedirect && r.Method != http.MethodHead {

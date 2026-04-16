@@ -35,4 +35,4 @@ type Bundle interface {
 }
 
 // ErrNotFoundTag tags the errors when the SPDX bundle is not found.
-type ErrNotFoundTag = struct{}
+type ErrNotFoundTag struct{}

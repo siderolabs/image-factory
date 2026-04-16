@@ -21,4 +21,4 @@ type Storage interface {
 }
 
 // ErrNotFoundTag tags the errors when the schematic is not found.
-type ErrNotFoundTag = struct{}
+type ErrNotFoundTag struct{}

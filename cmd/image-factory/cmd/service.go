@@ -51,8 +51,6 @@ import (
 )
 
 // RunFactory runs the image factory with specified options.
-//
-//nolint:gocyclo,cyclop
 func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	logger.Info("starting",
 		zap.String("name", version.Name),
@@ -94,7 +92,46 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	secureBootService, err := secureboot.NewService(secureboot.Options{
+	secureBootService, err := buildSecureBootService(opts)
+	if err != nil {
+		return err
+	}
+
+	enterprisePlugins, err := buildEnterprisePlugins(logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, opts)
+	if err != nil {
+		return err
+	}
+
+	frontendOptions, err := buildFrontendOptions(cacheImageSigner, opts)
+	if err != nil {
+		return err
+	}
+
+	frontendHTTP, err := frontendhttp.NewFrontend(
+		logger,
+		configFactory,
+		assetBuilder,
+		artifactsManager,
+		secureBootService,
+		enterprise.NewChecksummer(),
+		enterprisePlugins,
+		frontendOptions,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize HTTP frontend: %w", err)
+	}
+
+	runHTTPServer(ctx, logger, eg, frontendHTTP, opts)
+
+	if opts.Metrics.Addr != "" {
+		runMetricsServer(ctx, logger, eg, opts)
+	}
+
+	return eg.Wait()
+}
+
+func buildSecureBootService(opts Options) (*secureboot.Service, error) {
+	svc, err := secureboot.NewService(secureboot.Options{
 		Enabled:              opts.SecureBoot.Enabled,
 		SigningKeyPath:       opts.SecureBoot.File.SigningKeyPath,
 		SigningCertPath:      opts.SecureBoot.File.SigningCertPath,
@@ -109,44 +146,57 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		AwsRegion:            opts.SecureBoot.AWSKMS.Region,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to initialize SecureBoot service: %w", err)
+		return nil, fmt.Errorf("failed to initialize SecureBoot service: %w", err)
 	}
 
-	var enterprisePlugins []enterprise.FrontendPlugin
+	return svc, nil
+}
 
-	if enterprise.Enabled() {
-		var spdxFrontend enterprise.FrontendPlugin
-
-		spdxFrontend, err = enterprise.NewSpdxFrontend(logger, enterprise.SPDXOptions{
-			SchematicFactory:        configFactory,
-			ArtifactsManager:        artifactsManager,
-			AssetBuilder:            assetBuilder,
-			CacheInsecure:           opts.Cache.OCI.Insecure,
-			CacheRepository:         opts.Cache.OCI.String(),
-			CacheImageSigner:        cacheImageSigner,
-			RemoteOptions:           remoteOptions(),
-			RegistryRefreshInterval: opts.Artifacts.RefreshInterval,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to initialize SPDX frontend: %w", err)
-		}
-
-		enterprisePlugins = append(enterprisePlugins, spdxFrontend)
+func buildEnterprisePlugins(
+	logger *zap.Logger,
+	configFactory *schematic.Factory,
+	artifactsManager *artifacts.Manager,
+	assetBuilder *asset.Builder,
+	cacheImageSigner signer.Signer,
+	opts Options,
+) ([]enterprise.FrontendPlugin, error) {
+	if !enterprise.Enabled() {
+		return nil, nil
 	}
 
+	spdxFrontend, err := enterprise.NewSpdxFrontend(logger, enterprise.SPDXOptions{
+		SchematicFactory:        configFactory,
+		ArtifactsManager:        artifactsManager,
+		AssetBuilder:            assetBuilder,
+		CacheInsecure:           opts.Cache.OCI.Insecure,
+		CacheRepository:         opts.Cache.OCI.String(),
+		CacheImageSigner:        cacheImageSigner,
+		RemoteOptions:           remoteOptions(),
+		RegistryRefreshInterval: opts.Artifacts.RefreshInterval,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize SPDX frontend: %w", err)
+	}
+
+	return []enterprise.FrontendPlugin{spdxFrontend}, nil
+}
+
+func buildFrontendOptions(cacheImageSigner signer.Signer, opts Options) (frontendhttp.Options, error) {
 	var frontendOptions frontendhttp.Options
 
 	frontendOptions.CacheImageSigner = cacheImageSigner
 
+	var err error
+
 	frontendOptions.ExternalURL, err = url.Parse(opts.HTTP.ExternalURL)
 	if err != nil {
-		return fmt.Errorf("failed to parse self URL: %w", err)
+		return frontendhttp.Options{}, fmt.Errorf("failed to parse self URL: %w", err)
 	}
 
 	if opts.HTTP.ExternalPXEURL != "" {
 		frontendOptions.ExternalPXEURL, err = url.Parse(opts.HTTP.ExternalPXEURL)
 		if err != nil {
-			return fmt.Errorf("failed to parse self PXE URL: %w", err)
+			return frontendhttp.Options{}, fmt.Errorf("failed to parse self PXE URL: %w", err)
 		}
 	} else {
 		frontendOptions.ExternalPXEURL = frontendOptions.ExternalURL
@@ -160,7 +210,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	frontendOptions.InstallerInternalRepository, err = name.NewRepository(opts.Artifacts.Installer.Internal.String(), repoOpts...)
 	if err != nil {
-		return fmt.Errorf("failed to parse internal installer repository: %w", err)
+		return frontendhttp.Options{}, fmt.Errorf("failed to parse internal installer repository: %w", err)
 	}
 
 	if opts.Artifacts.Installer.External.String() == "" {
@@ -168,7 +218,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	} else {
 		frontendOptions.InstallerExternalRepository, err = name.NewRepository(opts.Artifacts.Installer.External.String())
 		if err != nil {
-			return fmt.Errorf("failed to parse external installer repository: %w", err)
+			return frontendhttp.Options{}, fmt.Errorf("failed to parse external installer repository: %w", err)
 		}
 	}
 
@@ -177,35 +227,25 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	frontendOptions.MetricsNamespace = opts.Metrics.Namespace
 	frontendOptions.AllowedOrigins = opts.HTTP.AllowedOrigins
 
-	frontendHTTP, err := frontendhttp.NewFrontend(
-		logger,
-		configFactory,
-		assetBuilder,
-		artifactsManager,
-		secureBootService,
-		enterprisePlugins,
-		frontendOptions,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to initialize HTTP frontend: %w", err)
-	}
+	return frontendOptions, nil
+}
 
+func runHTTPServer(ctx context.Context, logger *zap.Logger, eg *errgroup.Group, frontendHTTP *frontendhttp.Frontend, opts Options) {
 	httpServer := &http.Server{
 		Addr:    opts.HTTP.ListenAddr,
 		Handler: frontendHTTP.Handler(),
 	}
 
-	httpServer.Handler = frontendHTTP.Handler()
-
 	insecure := opts.HTTP.CertFile == "" && opts.HTTP.KeyFile == ""
 
 	if !insecure {
 		certLoader := cryptotls.NewDynamicCertificate(opts.HTTP.CertFile, opts.HTTP.KeyFile)
-		if err = certLoader.Load(); err != nil {
-			return fmt.Errorf("failed to load certificate: %w", err)
-		}
 
 		eg.Go(func() error {
+			if err := certLoader.Load(); err != nil {
+				return fmt.Errorf("failed to load certificate: %w", err)
+			}
+
 			return certLoader.WatchWithRestarts(ctx, logger)
 		})
 
@@ -239,12 +279,6 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 		return httpServer.Shutdown(shutdownCtx) //nolint:contextcheck
 	})
-
-	if opts.Metrics.Addr != "" {
-		runMetricsServer(ctx, logger, eg, opts)
-	}
-
-	return eg.Wait()
 }
 
 func runMetricsServer(ctx context.Context, logger *zap.Logger, eg *errgroup.Group, opts Options) {

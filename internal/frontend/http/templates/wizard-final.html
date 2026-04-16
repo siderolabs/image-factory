@@ -155,6 +155,7 @@
 <dt>SecureBoot ISO</dt>
 <dd><a href="{{ .PlatformMeta.SecureBootISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootISOPath
                 .Arch | $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.SecureBootISOPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
         (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/secureboot/"
                 target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
 </dd>
@@ -162,6 +163,7 @@
 <dt>ISO</dt>
 <dd><a href="{{ .PlatformMeta.ISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.ISOPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.ISOPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 
         {{ if eq .Target "metal" }}
         (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/iso/"
@@ -177,6 +179,7 @@
 <dd><a href="{{ .PlatformMeta.SecureBootDiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{
                 .PlatformMeta.SecureBootDiskImageDefaultPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.SecureBootDiskImageDefaultPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
         {{ if eq .Target "metal" }}
         (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/secureboot/"
                 target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
@@ -188,17 +191,20 @@
 <dd><a href="{{ .PlatformMeta.DiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{
                 .PlatformMeta.DiskImageDefaultPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.DiskImageDefaultPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 <dt>{{ t .Localizer "final.disk_image.all" }} (qcow2)</dt>
 <dd><a href="{{ .PlatformMeta.DiskImagePath .Arch "qcow2" | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.DiskImagePath
                 .Arch "qcow2" |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.DiskImagePath .Arch "qcow2") "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 {{ else }}
 <dt>{{ t .Localizer "final.disk_image.all" }}</dt>
 <dd><a href="{{ .PlatformMeta.DiskImageDefaultPath .Arch | $.ImageBaseURL.JoinPath }}">{{
                 .PlatformMeta.DiskImageDefaultPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.DiskImageDefaultPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 {{ end }}
 {{ end}}
@@ -236,6 +242,7 @@
 <dt>{{ t .Localizer "final.board_image" }}</dt>
 <dd><a href="{{ .BoardMeta.DiskImagePath .Version | $.ImageBaseURL.JoinPath }}">{{ .BoardMeta.DiskImagePath .Version |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.BoardMeta.DiskImagePath .Version) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 {{ end }}
 
@@ -259,18 +266,22 @@
 <dt>{{ t .Localizer "final.extra.kernel_image" }}</dt>
 <dd><a href="{{ .PlatformMeta.KernelPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.KernelPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.KernelPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 <dt>{{ t .Localizer "final.extra.cmdline" }}</dt>
 <dd><a href="{{ .PlatformMeta.CmdlinePath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.CmdlinePath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.CmdlinePath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 <dt>{{ t .Localizer "final.extra.initramfs" }}</dt>
 <dd><a href="{{ .PlatformMeta.InitramfsPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.InitramfsPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.InitramfsPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 <dt>UKI</dt>
 <dd><a href="{{ .PlatformMeta.UKIPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.UKIPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.UKIPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 
 {{ if .TalosctlAvailable }}
@@ -288,8 +299,11 @@
 <dd><a href="{{ .PlatformMeta.SecureBootUKIPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootUKIPath
                 .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
+        {{ template "checksum-link" (dict "Path" (.PlatformMeta.SecureBootUKIPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 {{ end }}
 
+
+{{ define "checksum-link" }}{{ if .Enterprise }}<a href="{{ printf "%s.sha256" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1">(sha256)</a><a href="{{ printf "%s.sha512" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1">(sha512)</a>{{ else }}<span class="text-xs ml-1 text-gray-400 cursor-not-allowed" title="{{ t .Localizer "final.extra.checksum_enterprise_feature" }}">(checksums)</span>{{ end }}{{ end }}
 
 {{ template "wizard-final" . }}

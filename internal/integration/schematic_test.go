@@ -15,12 +15,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/schematic"
-	"github.com/siderolabs/talos/pkg/imager/profile"
 )
 
 // well known schematic IDs, they will be created with the test run

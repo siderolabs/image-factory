@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-17T08:20:43Z by kres b6d29bf-dirty.
+# Generated on 2026-04-17T12:07:32Z by kres ae3e740.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -240,13 +240,13 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 FROM base AS unit-tests-race
 WORKDIR /src
 ARG TESTPKGS
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg --mount=type=cache,target=/tmp,id=image-factory/tmp CGO_ENABLED=1 go test -race ${TESTPKGS}
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg --mount=type=cache,target=/tmp,id=image-factory/tmp CGO_ENABLED=1 go test -race -tags=enterprise ${TESTPKGS}
 
 # runs unit-tests
 FROM base AS unit-tests-run
 WORKDIR /src
 ARG TESTPKGS
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg --mount=type=cache,target=/tmp,id=image-factory/tmp go test -covermode=atomic -coverprofile=coverage.txt -coverpkg=${TESTPKGS} ${TESTPKGS}
+RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg --mount=type=cache,target=/tmp,id=image-factory/tmp go test -covermode=atomic -coverprofile=coverage.txt -coverpkg=${TESTPKGS} -tags=enterprise ${TESTPKGS}
 
 # updates go.mod to use the latest talos main
 FROM base AS update-to-talos-main

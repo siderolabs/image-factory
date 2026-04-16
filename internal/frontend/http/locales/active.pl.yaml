@@ -295,6 +295,9 @@
 - id: final.extra.spdx_enterprise_feature
   translation: "Pakiet SBOM (SPDX) jest dostępny wyłącznie za pośrednictwem Talos Linux Image Factory Enterprise."
 
+- id: final.extra.checksum_enterprise_feature
+  translation: "Sumy kontrolne są dostępne wyłącznie za pośrednictwem Talos Linux Enterprise Image Factory."
+
 - id: final.disk_image.secure_boot
   translation: "Obraz dysku SecureBoot"
 

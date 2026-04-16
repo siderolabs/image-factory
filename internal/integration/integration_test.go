@@ -307,6 +307,12 @@ func commonTest(t *testing.T, options cmd.Options) {
 
 		testSPDXFrontend(ctx, t, baseURL)
 	})
+
+	t.Run("TestChecksumFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testChecksumFrontend(ctx, t, baseURL)
+	})
 }
 
 type ociRepositoryFalg struct {

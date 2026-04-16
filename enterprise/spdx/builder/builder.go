@@ -87,8 +87,8 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 	// Build the bundle using singleflight to prevent duplicate work
 	cacheKey := CacheTag(schematicID, versionTag, string(arch))
 
-	resultCh := b.sf.DoChan(cacheKey, func() (any, error) {
-		return b.buildBundle(schematicID, versionTag, arch) //nolint:contextcheck
+	resultCh := b.sf.DoChan(cacheKey, func() (any, error) { //nolint:contextcheck
+		return nil, b.buildBundle(schematicID, versionTag, arch)
 	})
 
 	select {
@@ -105,7 +105,7 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 }
 
 // buildBundle creates and stores an SPDX bundle for a single architecture.
-func (b *Builder) buildBundle(schematicID, versionTag string, arch artifacts.Arch) (any, error) {
+func (b *Builder) buildBundle(schematicID, versionTag string, arch artifacts.Arch) error {
 	// Use a fresh context since we're in singleflight
 	ctx := context.Background()
 
@@ -116,7 +116,7 @@ func (b *Builder) buildBundle(schematicID, versionTag string, arch artifacts.Arc
 	// Get the schematic to find extensions
 	schematicData, err := b.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get schematic: %w", err)
+		return fmt.Errorf("failed to get schematic: %w", err)
 	}
 
 	bundle := &Bundle{
@@ -132,8 +132,8 @@ func (b *Builder) buildBundle(schematicID, versionTag string, arch artifacts.Arc
 		zap.String("arch", string(arch)))
 
 	// Extract SPDX from Talos
-	if err := b.extractTalosSPDX(ctx, bundle, versionTag, arch); err != nil {
-		return nil, fmt.Errorf("failed to extract SPDX from Talos: %w", err)
+	if err = b.extractTalosSPDX(ctx, bundle, versionTag, arch); err != nil {
+		return fmt.Errorf("failed to extract SPDX from Talos: %w", err)
 	}
 
 	logger.Debug("building SPDX bundle from extensions",
@@ -141,7 +141,7 @@ func (b *Builder) buildBundle(schematicID, versionTag string, arch artifacts.Arc
 
 	// Extract SPDX from extensions
 	if len(schematicData.Customization.SystemExtensions.OfficialExtensions) > 0 {
-		if err := b.extractExtensionsSPDX(ctx, bundle, schematicData, versionTag, arch); err != nil {
+		if err = b.extractExtensionsSPDX(ctx, bundle, schematicData, versionTag, arch); err != nil {
 			logger.Warn("failed to extract SPDX from some extensions", zap.Error(err))
 		}
 	}
@@ -149,17 +149,17 @@ func (b *Builder) buildBundle(schematicID, versionTag string, arch artifacts.Arc
 	// Create merged SPDX JSON document
 	jsonReader, size, err := BundleToJSON(bundle)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create SPDX JSON document: %w", err)
+		return fmt.Errorf("failed to create SPDX JSON document: %w", err)
 	}
 
 	// Store the bundle
 	if err := b.storage.Put(ctx, schematicID, versionTag, string(arch), jsonReader, size); err != nil {
-		return nil, fmt.Errorf("failed to store SPDX bundle: %w", err)
+		return fmt.Errorf("failed to store SPDX bundle: %w", err)
 	}
 
 	logger.Info("SPDX bundle created", zap.Int("files", len(bundle.Files)))
 
-	return nil, nil
+	return nil
 }
 
 // extractTalosSPDX extracts SPDX from the Talos initramfs for a single architecture.
@@ -190,20 +190,22 @@ func (b *Builder) extractTalosSPDX(ctx context.Context, bundle *Bundle, versionT
 
 // extractSPDXFromInitramfs extracts SPDX files from the embedded SquashFS
 // inside the zstd-compressed CPIO initramfs asset, adding them to the bundle.
+//
+//nolint:gocognit
 func (b *Builder) extractSPDXFromInitramfs(bundle *Bundle, bootAsset asset.BootAsset) error {
 	// 1. Obtain an io.Reader from the BootAsset.
 	assetReader, err := bootAsset.Reader()
 	if err != nil {
 		return fmt.Errorf("failed to get reader for boot asset: %w", err)
 	}
-	defer assetReader.Close()
+	defer assetReader.Close() //nolint:errcheck
 
 	// 2. Initialize the zstd decompressor
 	zr, err := zstd.NewReader(assetReader)
 	if err != nil {
 		return fmt.Errorf("failed to create zstd reader: %w", err)
 	}
-	defer zr.Close()
+	defer zr.Close() //nolint:errcheck
 
 	// 3. Decompress the entire CPIO archive into memory.
 	// Since both u-root's cpio and standard squashfs parsers require io.ReaderAt
@@ -223,6 +225,7 @@ func (b *Builder) extractSPDXFromInitramfs(bundle *Bundle, bootAsset asset.BootA
 			if errors.Is(err, io.EOF) {
 				break
 			}
+
 			return fmt.Errorf("failed to read cpio record: %w", err)
 		}
 
@@ -253,6 +256,7 @@ func (b *Builder) extractSPDXFromInitramfs(bundle *Bundle, bootAsset asset.BootA
 				if err != nil {
 					return nil // Skip unreadable paths quietly
 				}
+
 				if d.IsDir() {
 					return nil
 				}
@@ -266,7 +270,7 @@ func (b *Builder) extractSPDXFromInitramfs(bundle *Bundle, bootAsset asset.BootA
 				if err != nil {
 					return fmt.Errorf("failed to open spdx file %q in squashfs: %w", path, err)
 				}
-				defer file.Close()
+				defer file.Close() //nolint:errcheck
 
 				content, err := io.ReadAll(file)
 				if err != nil {

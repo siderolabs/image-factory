@@ -24,12 +24,13 @@ import (
 	"github.com/siderolabs/gen/xtesting/must"
 	"github.com/siderolabs/go-blockdevice/v2/blkid"
 	"github.com/siderolabs/go-pointer"
-	"github.com/siderolabs/image-factory/internal/mime"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/ulikunitz/xz"
 	"go.uber.org/zap/zaptest"
+
+	"github.com/siderolabs/image-factory/internal/mime"
 )
 
 func downloadAsset(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string) *http.Response {

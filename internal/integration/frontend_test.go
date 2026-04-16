@@ -11,9 +11,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/siderolabs/image-factory/pkg/enterprise"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 func testFrontend(ctx context.Context, t *testing.T, baseURL string) {

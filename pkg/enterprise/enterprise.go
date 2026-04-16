@@ -7,6 +7,7 @@ package enterprise
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"time"
 
@@ -36,4 +37,19 @@ type SPDXOptions struct {
 	RemoteOptions           []remote.Option
 	RegistryRefreshInterval time.Duration
 	CacheInsecure           bool
+}
+
+// ErrNotEnabledTag tags errors that occur when an enterprise feature is
+// requested but the enterprise build tag is not active.
+type ErrNotEnabledTag struct{}
+
+// Checksummer computes a checksum for a boot asset and writes the result to
+// the HTTP response.  The implementation lives behind the enterprise build tag;
+// when enterprise is not enabled the Frontend receives a nil Checksummer and
+// returns 402 for checksum requests.
+//
+// suffix is the file-extension that triggered checksum mode (e.g. ".sha512",
+// ".sha256", ".md5") and determines both the algorithm and the output filename.
+type Checksummer interface {
+	WriteChecksum(ctx context.Context, w http.ResponseWriter, r *http.Request, reader io.ReadCloser, size int64, filename, suffix string) error
 }

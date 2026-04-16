@@ -73,4 +73,4 @@ const FetchTimeout = 20 * time.Minute
 const tmpSuffix = "-tmp"
 
 // ErrNotFoundTag tags the errors when the artifact is not found.
-type ErrNotFoundTag = struct{}
+type ErrNotFoundTag struct{}

@@ -25,6 +25,7 @@ import (
 	"github.com/slok/go-http-metrics/middleware"
 	httproutermiddleware "github.com/slok/go-http-metrics/middleware/httprouter"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
@@ -47,6 +48,7 @@ type Frontend struct {
 	assetBuilder      *asset.Builder
 	artifactsManager  *artifacts.Manager
 	secureBootService *secureboot.Service
+	checksummer       enterprise.Checksummer
 	logger            *zap.Logger
 	puller            remotewrap.Puller
 	pusher            remotewrap.Pusher
@@ -76,6 +78,7 @@ func NewFrontend(
 	assetBuilder *asset.Builder,
 	artifactsManager *artifacts.Manager,
 	secureBootService *secureboot.Service,
+	checksummer enterprise.Checksummer,
 	enterprisePlugins []enterprise.FrontendPlugin,
 	opts Options,
 ) (*Frontend, error) {
@@ -85,6 +88,7 @@ func NewFrontend(
 		assetBuilder:      assetBuilder,
 		artifactsManager:  artifactsManager,
 		secureBootService: secureBootService,
+		checksummer:       checksummer,
 		logger:            logger.With(zap.String("frontend", "http")),
 		options:           opts,
 	}
@@ -126,6 +130,9 @@ func NewFrontend(
 
 			case http.MethodPost:
 				registerRoute(frontend.router.POST, enterpriseRoute.Path(), enterpriseRoute.Handle)
+
+			default:
+				panic(fmt.Sprintf("unsupported method %s for enterprise route %s", method, enterpriseRoute.Path()))
 			}
 		}
 	}
@@ -205,33 +212,10 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 		err := h(ctx, w, r, p)
 
 		duration := time.Since(start)
-		status := http.StatusOK
-		level := zap.InfoLevel
 
-		switch {
-		case err == nil:
-			// happy case
-		case xerrors.TagIs[storage.ErrNotFoundTag](err):
-			level = zap.WarnLevel
-			status = http.StatusNotFound
-
-			http.Error(w, err.Error(), http.StatusNotFound)
-		case xerrors.TagIs[profile.InvalidErrorTag](err),
-			xerrors.TagIs[schematicpkg.InvalidErrorTag](err),
-			xerrors.TagIs[InvalidImageTag](err):
-			level = zap.WarnLevel
-			status = http.StatusBadRequest
-
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		case errors.Is(err, context.Canceled):
-			status = 499
-			// client closed connection
-		default:
-			status = http.StatusInternalServerError
-			level = zap.ErrorLevel
-
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-		}
+		level, status := MatchError(err, func(message string, code int) {
+			http.Error(w, message, code)
+		})
 
 		f.logger.Log(level, "request",
 			zap.String("method", r.Method),
@@ -241,6 +225,46 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 			zap.Error(err),
 		)
 	}
+}
+
+// MatchError matches the error and returns the appropriate HTTP status code and log level.
+// It also calls the callback with the message and code to write the response.
+func MatchError(err error, callback func(message string, code int)) (zapcore.Level, int) {
+	status := http.StatusOK
+	level := zap.InfoLevel
+
+	switch {
+	case err == nil:
+		// happy case
+	case xerrors.TagIs[enterprise.ErrNotEnabledTag](err):
+		level = zap.WarnLevel
+		status = http.StatusPaymentRequired
+
+		callback(err.Error(), http.StatusPaymentRequired)
+	case xerrors.TagIs[storage.ErrNotFoundTag](err),
+		xerrors.TagIs[artifacts.ErrNotFoundTag](err):
+		level = zap.WarnLevel
+		status = http.StatusNotFound
+
+		callback(err.Error(), http.StatusNotFound)
+	case xerrors.TagIs[profile.InvalidErrorTag](err),
+		xerrors.TagIs[schematicpkg.InvalidErrorTag](err),
+		xerrors.TagIs[InvalidImageTag](err):
+		level = zap.WarnLevel
+		status = http.StatusBadRequest
+
+		callback(err.Error(), http.StatusBadRequest)
+	case errors.Is(err, context.Canceled):
+		status = 499
+		// client closed connection
+	default:
+		status = http.StatusInternalServerError
+		level = zap.ErrorLevel
+
+		callback("internal server error", http.StatusInternalServerError)
+	}
+
+	return level, status
 }
 
 // Use several ways to detect language.

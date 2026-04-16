@@ -936,3 +936,12 @@ spec:
       runnerGroup: large
     environment:
       REGISTRY: registry.dev.siderolabs.io
+---
+kind: golang.UnitTests
+spec:
+  extraArgs: "-tags=enterprise"
+---
+kind: golang.GolangciLint
+spec:
+  buildTags:
+    - enterprise

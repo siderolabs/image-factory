@@ -4,7 +4,8 @@
 
 ### `GET /spdx/:schematic/:version/:arch`
 
-> **Enterprise only**
+> [!NOTE]
+> Enterprise feature: requires Talos Enterprise Image Factory.
 
 Returns an SPDX 2.3 JSON document containing all packages from the Talos and extensions for the given schematic and version.
 The response is a JSON-encoded SPDX document which can be consumed directly by vulnerability scanners such as grype:
@@ -92,6 +93,48 @@ Supported image paths:
   * `aws-<arch>.raw.xz` (e.g. `aws-amd64.raw.xz`) - raw disk image for AWS platform, that can be imported as an AMI
   * `gcp-<arch>.raw.tar.gz` (e.g. `gcp-amd64.raw.tar.gz`) - raw disk image for GCP platform, that can be imported as a GCE image
   * ... other support image types
+
+#### Checksums
+
+> [!NOTE]
+> Enterprise feature: requires Talos Enterprise Image Factory.
+
+Appending a checksum suffix to any `:path` returns a checksum file instead of the asset itself.
+
+| Suffix    | Algorithm | Verify with    |
+| --------- | --------- | -------------- |
+| `.sha256` | SHA-256   | `sha256sum -c` |
+| `.sha512` | SHA-512   | `sha512sum -c` |
+
+The response is a single line in the standard checksum tool format:
+
+```text
+<hexhash>  <filename>
+```
+
+Download an image and verify its integrity:
+
+```shell
+curl -LO https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz
+curl -LO https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz.sha256
+sha256sum -c metal-amd64.raw.xz.sha256
+```
+
+Using `curl -JLO` (filename from `Content-Disposition` header):
+
+```shell
+curl -JLO https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz
+curl -JLO https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz.sha256
+sha256sum -c metal-amd64.raw.xz.sha256
+```
+
+With `wget`:
+
+```shell
+wget https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz
+wget https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz.sha256
+sha256sum -c metal-amd64.raw.xz.sha256
+```
 
 ### `GET /versions`
 

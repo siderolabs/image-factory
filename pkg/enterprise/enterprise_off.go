@@ -21,3 +21,8 @@ func Enabled() bool {
 func NewSpdxFrontend(_ *zap.Logger, _ SPDXOptions) (FrontendPlugin, error) {
 	return nil, errors.New("SPDX is not supported in the non-enterprise version")
 }
+
+// NewChecksummer returns nil when enterprise is not enabled.
+func NewChecksummer() Checksummer {
+	return nil
+}

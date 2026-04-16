@@ -592,6 +592,7 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 			PXEBaseURL               *url.URL
 			TalosctlBaseURL          *url.URL
 			SPDXBaseURL              *url.URL
+			ChecksumBaseURL          *url.URL
 			InstallerImage           string
 			SecureBootInstallerImage string
 
@@ -622,8 +623,9 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 			TalosctlAvailable:             talosVersion.GTE(semver.MustParse("1.11.0-alpha.3")),
 			SBOMAvailable:                 talosVersion.GTE(semver.MustParse("1.11.0")),
 
-			Enterprise:  enterprise.Enabled(),
-			SPDXBaseURL: f.options.ExternalURL.JoinPath("spdx", schematicID, version, params.Arch),
+			Enterprise:      enterprise.Enabled(),
+			SPDXBaseURL:     f.options.ExternalURL.JoinPath("spdx", schematicID, version, params.Arch),
+			ChecksumBaseURL: f.options.ExternalURL.JoinPath("image", schematicID, version),
 		},
 		params.URLValues(),
 		nil

@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"go.uber.org/zap"
 
+	"github.com/siderolabs/image-factory/enterprise/checksum"
 	"github.com/siderolabs/image-factory/enterprise/spdx"
 	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx/storage/registry"
@@ -77,6 +78,9 @@ func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, erro
 		RemoteOptions:           opts.RemoteOptions,
 		RegistryRefreshInterval: opts.RegistryRefreshInterval,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize SPDX storage: %w", err)
+	}
 
 	builder := builder.NewBuilder(logger, builder.Options{
 		Storage:          storage,
@@ -86,4 +90,9 @@ func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, erro
 	})
 
 	return spdx.NewFrontend(opts.SchematicFactory, builder), nil
+}
+
+// NewChecksummer returns an enterprise Checksummer implementation.
+func NewChecksummer() Checksummer {
+	return checksum.NewChecksummer()
 }
