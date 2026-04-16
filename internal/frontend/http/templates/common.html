@@ -35,7 +35,7 @@
     <div class="flex items-center h-5">
         <input id="{{ .name }}-{{ .value }}" aria-describedby="{{ .name }}-{{ .value }}-text" type="radio"
             name="{{ .name }}" value="{{ .value }}" {{ if eq .value .current }}checked{{ end }}
-            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+            class="w-4 h-4 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 checked:bg-blue-600 checked:border-transparent dark:checked:bg-blue-600">
     </div>
     <div class="ps-2 text-sm">
         <label for="{{ .name }}-{{ .value }}"
@@ -51,7 +51,7 @@
     <div class="flex items-center h-5">
         <input id="{{ .name }}-{{ .value }}-checkbox" aria-describedby="{{ .name }}-{{ .value }}-checkbox-text"
             type="checkbox" name="{{ .name }}" value="{{ .value }}" {{ if .checked }}checked{{ end }}
-            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+            class="w-4 h-4 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 checked:bg-blue-600 checked:border-transparent dark:checked:bg-blue-600">
     </div>
     <div class="ps-2 text-sm">
         <label for="{{ .name }}-{{ .value }}-checkbox" class="font-medium text-gray-900 dark:text-gray-300">{{ .label

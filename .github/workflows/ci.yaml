@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-14T06:27:51Z by kres b6d29bf.
+# Generated on 2026-04-16T17:59:27Z by kres b6d29bf-dirty.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -118,6 +118,10 @@ jobs:
           driver: remote
           endpoint: tcp://buildkit-amd64.ci.svc.cluster.local:1234
         timeout-minutes: 10
+      - name: Check dirty
+        if: github.event_name == 'pull_request'
+        run: |
+          make check-dirty
       - name: base
         run: |
           make base
@@ -167,10 +171,6 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           make docs
-      - name: check-dirty-ci
-        if: github.event_name == 'pull_request'
-        run: |
-          make check-dirty-ci
       - name: tools
         if: github.event_name == 'pull_request'
         run: |

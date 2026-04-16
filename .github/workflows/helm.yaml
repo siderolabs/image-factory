@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-14T06:27:51Z by kres b6d29bf.
+# Generated on 2026-04-16T17:59:27Z by kres b6d29bf-dirty.
 
 concurrency:
   group: helm-${{ github.head_ref || github.run_id }}
@@ -65,11 +65,6 @@ jobs:
           driver: remote
           endpoint: tcp://buildkit-amd64.ci.svc.cluster.local:1234
         timeout-minutes: 10
-      - name: Install Helm
-        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # version: v5.0.0
-      - name: Install cosign
-        if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # version: v4.1.1
       - name: Login to registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # version: v4.1.0
@@ -101,18 +96,14 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           make helm-docs
-      - name: Check dirty
-        if: github.event_name == 'pull_request'
-        run: |
-          make check-dirty
       - name: helm login
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref_name, '-')
         env:
           HELM_CONFIG_HOME: /var/tmp/.config/helm
         run: |
           helm registry login -u ${{ github.repository_owner }} -p ${{ secrets.GITHUB_TOKEN }} ghcr.io
       - name: Release chart
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref_name, '-')
         env:
           HELM_CONFIG_HOME: /var/tmp/.config/helm
         run: |

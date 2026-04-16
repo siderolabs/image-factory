@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-14T06:27:51Z by kres b6d29bf.
+# Generated on 2026-04-17T08:20:43Z by kres b6d29bf-dirty.
 
 *
 !cmd
@@ -17,7 +17,6 @@
 !.markdownlint.json
 !hack/govulncheck.sh
 !.disvulncheck.yaml
-!tailwind.config.js
 !package.json
 !package-lock.json
 !deploy/helm/image-factory

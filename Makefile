@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-16T13:08:03Z by kres b6d29bf.
+# Generated on 2026-04-17T08:12:38Z by kres b6d29bf-dirty.
 
 # common variables
 
@@ -199,14 +199,16 @@ local-%:  ## Builds the specified target defined in the Dockerfile using the loc
 	  done'
 
 .PHONY: check-dirty
-check-dirty:
+check-dirty: generate
 	@if test -n "`git status --porcelain`"; then echo "Source tree is dirty"; git status; git diff; exit 1 ; fi
 
-generate:  ## Generate .proto definitions.
+generate: helm-plugin-install  ## Generate .proto definitions.
 	@$(MAKE) local-$@ DEST=./
 	@TAG=$$(cat internal/version/data/tag); \
 	if echo "$$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$$'; then \
 	  sed -i "s/^appVersion: .*/appVersion: \"$$TAG\"/" deploy/helm/image-factory/Chart.yaml; \
+	  MINOR_PATCH=$$(echo "$$TAG" | sed 's/^v[0-9]*\.//'); \
+	  sed -i "s/^version: .*/version: 1.$$MINOR_PATCH/" deploy/helm/image-factory/Chart.yaml; \
 	fi
 	@$(MAKE) helm-docs
 	@$(MAKE) chart-gen-schema
@@ -394,9 +396,6 @@ tailwind:
 .PHONY: docs
 docs:
 	@$(MAKE) local-$@ DEST=docs
-
-.PHONY: check-dirty-ci
-check-dirty-ci: check-dirty
 
 .PHONY: docker-compose-up
 docker-compose-up:
