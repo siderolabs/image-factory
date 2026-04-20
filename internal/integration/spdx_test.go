@@ -30,6 +30,8 @@ func downloadSPDX(ctx context.Context, t *testing.T, baseURL, schematicID, versi
 	req, err := http.NewRequestWithContext(ctx, method, baseURL+"/spdx/"+schematicID+"/"+version+"/"+arch, nil)
 	require.NoError(t, err)
 
+	addTestAuth(req)
+
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 

@@ -36,6 +36,8 @@ func downloadTalosctl(ctx context.Context, t *testing.T, baseURL string, talosVe
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/talosctl/"+talosVersion+"/"+path, nil)
 	require.NoError(t, err)
 
+	addTestAuth(req)
+
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 

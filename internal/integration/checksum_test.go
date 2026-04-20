@@ -32,6 +32,8 @@ func downloadChecksum(ctx context.Context, t *testing.T, baseURL, schematicID, v
 	req, err := http.NewRequestWithContext(ctx, method, baseURL+"/image/"+schematicID+"/"+version+"/"+path+suffix, nil)
 	require.NoError(t, err)
 
+	addTestAuth(req)
+
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 

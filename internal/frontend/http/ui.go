@@ -33,6 +33,35 @@ import (
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
+// placeholderURL wraps a *url.URL with an optional raw credential prefix for display.
+// When authInfo is non-empty (e.g. "user:<password>@"), String() injects it after "scheme://"
+// so that iPXE-context URLs show credential placeholders without URL-encoding angle brackets.
+type placeholderURL struct {
+	base     *url.URL
+	authInfo string
+}
+
+func newPlaceholderURL(base *url.URL, authInfo string) *placeholderURL {
+	return &placeholderURL{base: base, authInfo: authInfo}
+}
+
+func (p *placeholderURL) JoinPath(elem ...string) *placeholderURL {
+	return &placeholderURL{base: p.base.JoinPath(elem...), authInfo: p.authInfo}
+}
+
+func (p *placeholderURL) String() string {
+	s := p.base.String()
+	if p.authInfo == "" {
+		return s
+	}
+
+	if idx := strings.Index(s, "://"); idx != -1 {
+		return s[:idx+3] + p.authInfo + s[idx+3:]
+	}
+
+	return s
+}
+
 var templateFuncs template.FuncMap
 
 func init() {
@@ -544,6 +573,12 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 		},
 	}
 
+	if f.options.AuthProvider != nil {
+		if username, ok := f.options.AuthProvider.UsernameFromContext(ctx); ok {
+			requestedSchematic.Owner = username
+		}
+	}
+
 	if params.Bootloader != "" && params.Bootloader != "auto" {
 		bootloader, err := imageropts.BootloaderKindString(params.Bootloader)
 		if err != nil {
@@ -581,6 +616,18 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 		}
 	}
 
+	// Build PXE base URL with credential placeholder when auth is active,
+	// so the displayed URL shows the user they need to embed credentials for iPXE.
+	pxeBaseURL := newPlaceholderURL(f.options.ExternalPXEURL.JoinPath("pxe", schematicID, version), "")
+	if f.options.AuthProvider != nil {
+		if username, ok := f.options.AuthProvider.UsernameFromContext(ctx); ok {
+			pxeBaseURL = newPlaceholderURL(
+				f.options.ExternalPXEURL.JoinPath("pxe", schematicID, version),
+				username+":<password>@",
+			)
+		}
+	}
+
 	return "wizard-final",
 		struct {
 			WizardParams
@@ -589,7 +636,7 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 			Marshaled string
 
 			ImageBaseURL             *url.URL
-			PXEBaseURL               *url.URL
+			PXEBaseURL               *placeholderURL
 			TalosctlBaseURL          *url.URL
 			SPDXBaseURL              *url.URL
 			ChecksumBaseURL          *url.URL
@@ -610,7 +657,7 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 			Marshaled: string(marshaled),
 
 			ImageBaseURL:    f.options.ExternalURL.JoinPath("image", schematicID, version),
-			PXEBaseURL:      f.options.ExternalPXEURL.JoinPath("pxe", schematicID, version),
+			PXEBaseURL:      pxeBaseURL,
 			TalosctlBaseURL: f.options.ExternalURL.JoinPath("talosctl", version),
 
 			InstallerImage:           installerImage,

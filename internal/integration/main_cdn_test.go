@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 func TestIntegrationCDN(t *testing.T) {
@@ -37,4 +38,10 @@ func TestIntegrationCDN(t *testing.T) {
 
 		commonTest(t, options)
 	})
+
+	if enterprise.Enabled() {
+		t.Run("AuthCDNNoRedirect", func(t *testing.T) {
+			testAuthCDNNoRedirect(t, pool)
+		})
+	}
 }

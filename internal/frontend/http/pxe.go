@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"text/template"
 
@@ -27,11 +28,15 @@ var standardIPXE string
 var securebootIPXE string
 
 // handlePXE delivers a PXE script to boot Talos.
-func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http.Request, p httprouter.Params) error {
+func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 	schematicID := p.ByName("schematic")
 
 	schematic, err := f.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
+		return err
+	}
+
+	if err = f.checkOwnership(ctx, schematic); err != nil {
 		return err
 	}
 
@@ -76,6 +81,14 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 		return err
 	}
 
+	// Embed credentials in image asset URLs so iPXE can authenticate when fetching kernel/initramfs.
+	imageBaseURL := f.options.ExternalPXEURL
+	if username, password, ok := r.BasicAuth(); ok {
+		u := *f.options.ExternalPXEURL
+		u.User = url.UserPassword(username, password)
+		imageBaseURL = &u
+	}
+
 	if prof.SecureBootEnabled() {
 		return ensure.Value(template.New("secureboot.ipxe").
 			Parse(securebootIPXE)).
@@ -84,7 +97,7 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 					UKIURL  string
 					Cmdline string
 				}{
-					UKIURL:  f.options.ExternalPXEURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("%s-%s-secureboot-uki.efi", prof.Platform, prof.Arch)).String(),
+					UKIURL:  imageBaseURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("%s-%s-secureboot-uki.efi", prof.Platform, prof.Arch)).String(),
 					Cmdline: string(cmdline),
 				},
 			)
@@ -98,9 +111,9 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, _ *http
 				Cmdline      string
 				InitramfsURL string
 			}{
-				KernelURL:    f.options.ExternalPXEURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("kernel-%s", prof.Arch)).String(),
+				KernelURL:    imageBaseURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("kernel-%s", prof.Arch)).String(),
 				Cmdline:      string(cmdline),
-				InitramfsURL: f.options.ExternalPXEURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("initramfs-%s.xz", prof.Arch)).String(),
+				InitramfsURL: imageBaseURL.JoinPath("image", schematicID, versionTag, fmt.Sprintf("initramfs-%s.xz", prof.Arch)).String(),
 			},
 		)
 }

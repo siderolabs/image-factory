@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-17T12:07:32Z by kres ae3e740.
+# Generated on 2026-04-17T22:09:50Z by kres 15ff2fd.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch

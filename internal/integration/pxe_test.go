@@ -11,12 +11,15 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 func downloadPXE(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string) string {
@@ -24,6 +27,8 @@ func downloadPXE(ctx context.Context, t *testing.T, baseURL string, schematicID,
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/pxe/"+schematicID+"/"+talosVersion+"/"+path, nil)
 	require.NoError(t, err)
+
+	addTestAuth(req)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -94,6 +99,19 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 		securebootExpected      = "#!ipxe\n\nimgfree\nkernel ENDPOINT/image/CONFIG/VERSION/metal-amd64-secureboot-uki.efi talos.platform=metal console=ttyS0 console=tty0 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_template=ima-ng ima_appraise=fix ima_hash=sha512 lockdown=confidentiality\nboot\n"
 	)
 
+	// When enterprise auth is active the PXE handler embeds credentials into
+	// image asset URLs so iPXE can authenticate when fetching kernel/initramfs.
+	expectedPXEURL := pxeURL
+	if enterprise.Enabled() {
+		username, password := authCredentials()
+		if username != "" {
+			if u, err := url.Parse(pxeURL); err == nil {
+				u.User = url.UserPassword(username, password)
+				expectedPXEURL = u.String()
+			}
+		}
+	}
+
 	for _, talosVersion := range talosVersions {
 		t.Run(talosVersion, func(t *testing.T) {
 			t.Parallel()
@@ -106,7 +124,7 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", pxeURL),
+							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", expectedPXEURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
@@ -125,7 +143,7 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", pxeURL),
+							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", expectedPXEURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
@@ -144,7 +162,7 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(fixupCmdline(equinixInsecureExpected, talosVersion), "ENDPOINT", pxeURL),
+							strings.ReplaceAll(fixupCmdline(equinixInsecureExpected, talosVersion), "ENDPOINT", expectedPXEURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,
@@ -163,7 +181,7 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 				assert.Equal(t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
-							strings.ReplaceAll(fixupCmdline(securebootExpected, talosVersion), "ENDPOINT", pxeURL),
+							strings.ReplaceAll(fixupCmdline(securebootExpected, talosVersion), "ENDPOINT", expectedPXEURL),
 							"CONFIG", emptySchematicID,
 						),
 						"VERSION", talosVersion,

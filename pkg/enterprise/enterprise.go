@@ -33,6 +33,7 @@ type SPDXOptions struct {
 	SchematicFactory        *schematic.Factory
 	ArtifactsManager        *artifacts.Manager
 	AssetBuilder            *asset.Builder
+	AuthProvider            AuthProvider
 	CacheRepository         string
 	RemoteOptions           []remote.Option
 	RegistryRefreshInterval time.Duration
@@ -52,4 +53,22 @@ type ErrNotEnabledTag struct{}
 // ".sha256", ".md5") and determines both the algorithm and the output filename.
 type Checksummer interface {
 	WriteChecksum(ctx context.Context, w http.ResponseWriter, r *http.Request, reader io.ReadCloser, size int64, filename, suffix string) error
+}
+
+// Handler is the type of HTTP handlers used by the enterprise frontend.
+type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
+
+// AuthProvider defines an authentication provider.
+type AuthProvider interface {
+	// Run starts the background reload loop and blocks until ctx is canceled.
+	Run(ctx context.Context) error
+
+	// Middleware returns an HTTP middleware that enforces authentication on the provided handler.
+	Middleware(Handler) Handler
+
+	// VerifyCredentials checks if the username/password pair is valid.
+	VerifyCredentials(username, password string) bool
+
+	// UsernameFromContext retrieves the authenticated username stored by the middleware.
+	UsernameFromContext(ctx context.Context) (string, bool)
 }

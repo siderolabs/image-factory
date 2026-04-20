@@ -26,24 +26,26 @@ const (
 	// prefix for all asset IDs in the storage.
 	prefix = "assets"
 
-	// expires is the duration for which the presigned URL is valid.
-	expires = 24 * time.Hour
+	// defaultPresignedURLTTL is the fallback TTL for presigned URLs when none is configured.
+	defaultPresignedURLTTL = time.Hour
 )
 
 // Options contains options for the S3-compatible cache.
 type Options struct {
-	Bucket   string
-	Endpoint string
-	Region   string
-	Insecure bool
+	Bucket          string
+	Endpoint        string
+	Region          string
+	Insecure        bool
+	PresignedURLTTL time.Duration
 }
 
 // Cache is using S3-compatible storage to cache assets.
 type Cache struct {
-	signingCache cache.Cache
-	s3cli        *minio.Client
-	logger       *zap.Logger
-	bucketName   string
+	signingCache    cache.Cache
+	s3cli           *minio.Client
+	logger          *zap.Logger
+	bucketName      string
+	presignedURLTTL time.Duration
 }
 
 // Check interface.
@@ -58,6 +60,11 @@ func New(logger *zap.Logger, signingCache cache.Cache, options Options) (*Cache,
 		return nil, fmt.Errorf("registry cannot be nil")
 	}
 
+	ttl := options.PresignedURLTTL
+	if ttl <= 0 {
+		ttl = defaultPresignedURLTTL
+	}
+
 	c := &Cache{
 		logger: logger.With(
 			zap.String("component", "asset-cache-s3"),
@@ -65,8 +72,9 @@ func New(logger *zap.Logger, signingCache cache.Cache, options Options) (*Cache,
 			zap.String("s3.region", options.Region),
 			zap.String("s3.bucket", options.Bucket),
 		),
-		bucketName:   options.Bucket,
-		signingCache: signingCache,
+		bucketName:      options.Bucket,
+		signingCache:    signingCache,
+		presignedURLTTL: ttl,
 	}
 
 	var err error
@@ -137,7 +145,7 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 				reqParams.Set("response-content-disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 			}
 
-			redirect, err := c.s3cli.PresignedGetObject(ctx, c.bucketName, key, expires, reqParams)
+			redirect, err := c.s3cli.PresignedGetObject(ctx, c.bucketName, key, c.presignedURLTTL, reqParams)
 			if err != nil {
 				var minioErr minio.ErrorResponse
 				if errors.As(err, &minioErr) && minioErr.Code == minio.NoSuchKey {

@@ -26,3 +26,8 @@ func NewSpdxFrontend(_ *zap.Logger, _ SPDXOptions) (FrontendPlugin, error) {
 func NewChecksummer() Checksummer {
 	return nil
 }
+
+// NewAuthProvider creates a new authentication provider.
+func NewAuthProvider(_ *zap.Logger, _ string) (AuthProvider, error) {
+	return nil, errors.New("authentication is not supported in the non-enterprise version")
+}

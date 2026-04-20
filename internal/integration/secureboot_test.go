@@ -22,6 +22,8 @@ func getSecureBootCert(ctx context.Context, t *testing.T, baseURL string) []byte
 	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/secureboot/signing-cert.pem", nil)
 	require.NoError(t, err)
 
+	addTestAuth(req)
+
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 

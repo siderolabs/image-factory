@@ -88,8 +88,12 @@ func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, req *h
 	// verify that schematic exists
 	schematicID := p.ByName("schematic")
 
-	_, err := f.schematicFactory.Get(ctx, schematicID)
+	sc, err := f.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
+		return err
+	}
+
+	if err = f.checkOwnership(ctx, sc); err != nil {
 		return err
 	}
 
@@ -154,6 +158,10 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 
 	schematic, err := f.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
+		return err
+	}
+
+	if err = f.checkOwnership(ctx, schematic); err != nil {
 		return err
 	}
 

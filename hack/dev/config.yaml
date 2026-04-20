@@ -28,3 +28,7 @@ cache:
 http:
   # external URL the Image Factory is available at
   externalURL: http://localhost:8080
+
+# authentication:
+#   enabled: true
+#   htpasswdPath: /etc/image-factory/htpasswd

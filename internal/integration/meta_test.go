@@ -19,7 +19,7 @@ import (
 )
 
 func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
-	c, err := client.New(baseURL)
+	c, err := client.New(baseURL, clientAuthCredentials()...)
 	require.NoError(t, err)
 
 	t.Run("versions", func(t *testing.T) {

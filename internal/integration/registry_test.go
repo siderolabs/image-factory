@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -27,6 +28,7 @@ import (
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
@@ -36,6 +38,20 @@ import (
 	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
+
+func ociRemoteAuthOpts() []remote.Option {
+	username, password := authCredentials()
+	if username == "" {
+		return nil
+	}
+
+	return []remote.Option{
+		remote.WithAuth(authn.FromConfig(authn.AuthConfig{
+			Username: username,
+			Password: password,
+		})),
+	}
+}
 
 func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, talosVersion, schematic string, secureboot bool, platform v1.Platform, baseURL string, overlay bool) {
 	imageName := "installer"
@@ -47,10 +63,10 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 
 	q := quirks.New(talosVersion)
 
-	_, err := remote.Head(ref)
+	_, err := remote.Head(ref, ociRemoteAuthOpts()...)
 	require.NoError(t, err)
 
-	descriptor, err := remote.Get(ref, remote.WithPlatform(platform))
+	descriptor, err := remote.Get(ref, append(ociRemoteAuthOpts(), remote.WithPlatform(platform))...)
 	require.NoError(t, err)
 
 	index, err := descriptor.ImageIndex()
@@ -117,7 +133,7 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 	// try to get the image once again, it should be fast now, as the image got cached & signed
 	start := time.Now()
 
-	_, err = remote.Get(ref, remote.WithPlatform(platform))
+	_, err = remote.Get(ref, append(ociRemoteAuthOpts(), remote.WithPlatform(platform))...)
 	require.NoError(t, err)
 
 	assert.Less(t, time.Since(start), 1*time.Second)
@@ -172,6 +188,8 @@ func assertImageSignature(ctx context.Context, t *testing.T, ref name.Reference,
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/oci/cosign/signing-key.pub", nil)
 	require.NoError(t, err)
 
+	addTestAuth(req)
+
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
@@ -190,11 +208,17 @@ func assertImageSignature(ctx context.Context, t *testing.T, ref name.Reference,
 	verifier, err := signature.LoadVerifier(pubKey, crypto.SHA256)
 	require.NoError(t, err)
 
+	var registryClientOpts []ociremote.Option
+	if opts := ociRemoteAuthOpts(); len(opts) > 0 {
+		registryClientOpts = append(registryClientOpts, ociremote.WithRemoteOptions(opts...))
+	}
+
 	checkOpts := &cosign.CheckOpts{
-		SigVerifier: verifier,
-		IgnoreSCT:   true,
-		IgnoreTlog:  true,
-		Offline:     true,
+		SigVerifier:        verifier,
+		IgnoreSCT:          true,
+		IgnoreTlog:         true,
+		Offline:            true,
+		RegistryClientOpts: registryClientOpts,
 	}
 
 	_, _, err = cosign.VerifyImageSignatures(ctx, ref, checkOpts)
@@ -213,7 +237,7 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 	registry, err := name.NewRegistry(registryAddr)
 	require.NoError(t, err)
 
-	c, err := client.New("http://" + registryAddr)
+	c, err := client.New("http://"+registryAddr, clientAuthCredentials()...)
 	require.NoError(t, err)
 
 	// create a new random schematic, so that we can make sure new installer is generated

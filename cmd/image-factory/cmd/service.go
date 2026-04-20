@@ -97,12 +97,21 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	enterprisePlugins, err := buildEnterprisePlugins(logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, opts)
+	authProvider, err := buildAuthProvider(logger, opts)
 	if err != nil {
 		return err
 	}
 
-	frontendOptions, err := buildFrontendOptions(cacheImageSigner, opts)
+	if authProvider != nil {
+		eg.Go(func() error { return authProvider.Run(ctx) })
+	}
+
+	enterprisePlugins, err := buildEnterprisePlugins(logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, authProvider, opts)
+	if err != nil {
+		return err
+	}
+
+	frontendOptions, err := buildFrontendOptions(cacheImageSigner, authProvider, opts)
 	if err != nil {
 		return err
 	}
@@ -152,22 +161,41 @@ func buildSecureBootService(opts Options) (*secureboot.Service, error) {
 	return svc, nil
 }
 
+func buildAuthProvider(logger *zap.Logger, opts Options) (enterprise.AuthProvider, error) {
+	if !enterprise.Enabled() {
+		return nil, nil //nolint:nilnil
+	}
+
+	if !opts.Authentication.Enabled {
+		return nil, nil //nolint:nilnil
+	}
+
+	authProvider, err := enterprise.NewAuthProvider(logger, opts.Authentication.HTPasswdPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize authentication provider: %w", err)
+	}
+
+	return authProvider, nil
+}
+
 func buildEnterprisePlugins(
 	logger *zap.Logger,
 	configFactory *schematic.Factory,
 	artifactsManager *artifacts.Manager,
 	assetBuilder *asset.Builder,
 	cacheImageSigner signer.Signer,
+	authProvider enterprise.AuthProvider,
 	opts Options,
 ) ([]enterprise.FrontendPlugin, error) {
 	if !enterprise.Enabled() {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	}
 
 	spdxFrontend, err := enterprise.NewSpdxFrontend(logger, enterprise.SPDXOptions{
 		SchematicFactory:        configFactory,
 		ArtifactsManager:        artifactsManager,
 		AssetBuilder:            assetBuilder,
+		AuthProvider:            authProvider,
 		CacheInsecure:           opts.Cache.OCI.Insecure,
 		CacheRepository:         opts.Cache.OCI.String(),
 		CacheImageSigner:        cacheImageSigner,
@@ -181,12 +209,13 @@ func buildEnterprisePlugins(
 	return []enterprise.FrontendPlugin{spdxFrontend}, nil
 }
 
-func buildFrontendOptions(cacheImageSigner signer.Signer, opts Options) (frontendhttp.Options, error) {
+func buildFrontendOptions(cacheImageSigner signer.Signer, authProvider enterprise.AuthProvider, opts Options) (frontendhttp.Options, error) {
+	var err error
+
 	var frontendOptions frontendhttp.Options
 
 	frontendOptions.CacheImageSigner = cacheImageSigner
-
-	var err error
+	frontendOptions.AuthProvider = authProvider
 
 	frontendOptions.ExternalURL, err = url.Parse(opts.HTTP.ExternalURL)
 	if err != nil {
@@ -422,10 +451,11 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 
 	if opts.Cache.S3.Enabled {
 		s3Options := assetcaches3.Options{
-			Bucket:   opts.Cache.S3.Bucket,
-			Endpoint: opts.Cache.S3.Endpoint,
-			Region:   opts.Cache.S3.Region,
-			Insecure: opts.Cache.S3.Insecure,
+			Bucket:          opts.Cache.S3.Bucket,
+			Endpoint:        opts.Cache.S3.Endpoint,
+			Region:          opts.Cache.S3.Region,
+			Insecure:        opts.Cache.S3.Insecure,
+			PresignedURLTTL: opts.Cache.S3.PresignedURLTTL,
 		}
 
 		cache, err = assetcaches3.New(logger, cache, s3Options)

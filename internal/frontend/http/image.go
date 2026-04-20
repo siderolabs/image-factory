@@ -30,6 +30,8 @@ var checksumSuffixes = map[string]struct{}{
 }
 
 // handleImage handles downloading of boot assets.
+//
+//nolint:gocyclo,cyclop
 func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 	schematicID := p.ByName("schematic")
 
@@ -61,6 +63,10 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 
 	schematic, err := f.schematicFactory.Get(ctx, schematicID)
 	if err != nil {
+		return err
+	}
+
+	if err = f.checkOwnership(ctx, schematic); err != nil {
 		return err
 	}
 
@@ -107,7 +113,11 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return f.checksummer.WriteChecksum(ctx, w, r, reader, asset.Size(), filename, checksumSuffix)
 	}
 
-	if asset, ok := asset.(cache.RedirectableAsset); ok && !disableRedirect && r.Method != http.MethodHead {
+	// When auth is active, never redirect to S3/CDN - bytes must flow through the
+	// factory so the auth boundary is maintained. S3/CDN URLs carry no user identity.
+	authActive := f.options.AuthProvider != nil
+
+	if asset, ok := asset.(cache.RedirectableAsset); ok && !disableRedirect && r.Method != http.MethodHead && !authActive {
 		var url string
 
 		url, err = asset.Redirect(ctx, filename)

@@ -3,6 +3,8 @@ configs:
     file: config.yaml
   if_signing_key:
     file: ../../_out/cache-signing-key.key
+  # if_htpasswd:
+  #   file: htpasswd
 volumes:
   if-registry-ghcr-io-data:
   if-registry-local-data:
@@ -47,3 +49,5 @@ services:
         target: /etc/image-factory/config.yaml
       - source: if_signing_key
         target: /etc/image-factory/cache-signing-key.key
+      # - source: if_htpasswd
+      #   target: /etc/image-factory/htpasswd

@@ -39,6 +39,8 @@ func downloadAsset(ctx context.Context, t *testing.T, baseURL string, schematicI
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/image/"+schematicID+"/"+talosVersion+"/"+path, nil)
 	require.NoError(t, err)
 
+	addTestAuth(req)
+
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
@@ -61,6 +63,8 @@ func downloadAssetWithFilename(ctx context.Context, t *testing.T, baseURL string
 
 	req.URL.RawQuery = query.Encode()
 
+	addTestAuth(req)
+
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 
@@ -76,6 +80,8 @@ func downloadNoRedirect(ctx context.Context, t *testing.T, url string) *http.Res
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	require.NoError(t, err, url)
+
+	addTestAuth(req)
 
 	noRedirectClient := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -177,6 +183,8 @@ func checkCors(ctx context.Context, t *testing.T, baseURL, schematicID, talosVer
 		}
 
 		req.Header.Set("Origin", "https://foo.com")
+
+		addTestAuth(req)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -387,9 +395,7 @@ func schematicExtraInfo(t *testing.T, schematicID string, talosVersion string) s
 		return ""
 	}
 
-	schematic := must.Value(testSchematics[schematicID].Marshal())(t)
-
-	return string(schematic)
+	return string(must.Value(testSchematics[schematicID].Marshal())(t))
 }
 
 func sizePicker(talosVersion string, v ...any) int64 {
@@ -872,7 +878,7 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				initramfsSpec{
 					schematicID:        rpiGenericOverlaySchematicID,
 					skipMlxfw:          true,
-					schematicExtraInfo: string(must.Value(testSchematics[rpiGenericOverlaySchematicID].Marshal())(t)),
+					schematicExtraInfo: schematicExtraInfo(t, rpiGenericOverlaySchematicID, talosVersion),
 				},
 			)
 		})

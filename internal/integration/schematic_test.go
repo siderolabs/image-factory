@@ -23,70 +23,69 @@ import (
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
-// well known schematic IDs, they will be created with the test run
-const (
-	emptySchematicID                    = "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba"
-	nonexistentSchematicID              = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	extraArgsSchematicID                = "e0fb1129bbbdfb5d002e94af4cdce712a8370e850950a33a242d4c3f178c532d"
-	systemExtensionsSchematicID         = "51ff3e49313773332729a5c04e57af0dbe2e6d3f65ff638e6d4c3a05065fefff"
-	metaSchematicID                     = "fe866116408a5a13dab7d5003eb57a00954ea81ebeec3fbbcd1a6d4462a00036"
-	rpiGenericOverlaySchematicID        = "ee21ef4a5ef808a9b7484cc0dda0f25075021691c8c09a276591eedb638ea1f9"
-	securebootWellKnownSchematicID      = "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6"
-	grubBootloaderOverrideSchematicID   = "39d496b2cbdb6265d3b714514c5334bf010f1b4d31b23b9e38c80fb2f3ad7ecb"
-	sdBootBootloaderOverrideSchematicID = "9ed5fecdacb36b5c5427b87d409f1065cfb2df69b0f71c58b868d9d466d8dab3"
+// nonexistentSchematicID is a fixed ID that will never be created.
+const nonexistentSchematicID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+// Schematic IDs are computed at init time because in enterprise builds the owner
+// is embedded in the schematic YAML before hashing, changing the resulting ID.
+var (
+	emptySchematicID                    string
+	extraArgsSchematicID                string
+	systemExtensionsSchematicID         string
+	metaSchematicID                     string
+	rpiGenericOverlaySchematicID        string
+	securebootWellKnownSchematicID      string
+	grubBootloaderOverrideSchematicID   string
+	sdBootBootloaderOverrideSchematicID string
+
+	testSchematics map[string]*schematic.Schematic
 )
 
-var testSchematics = map[string]*schematic.Schematic{
-	emptySchematicID: {},
-	extraArgsSchematicID: {
-		Customization: schematic.Customization{
-			ExtraKernelArgs: []string{"nolapic", "nomodeset"},
-		},
-	},
-	systemExtensionsSchematicID: {
-		Customization: schematic.Customization{
-			SystemExtensions: schematic.SystemExtensions{
-				OfficialExtensions: []string{
-					"siderolabs/amd-ucode",
-					"siderolabs/gvisor",
-					"siderolabs/gasket-driver",
-				},
-			},
-		},
-	},
-	metaSchematicID: {
-		Customization: schematic.Customization{
-			Meta: []schematic.MetaValue{
-				{
-					Key:   0xa,
-					Value: `{"externalIPs":["1.2.3.4"]}`,
-				},
-			},
-		},
-	},
-	rpiGenericOverlaySchematicID: {
-		Overlay: schematic.Overlay{
-			Name:  "rpi_generic",
-			Image: "siderolabs/sbc-raspberrypi",
-		},
-	},
-	securebootWellKnownSchematicID: {
-		Customization: schematic.Customization{
-			SecureBoot: schematic.SecureBootCustomization{
-				IncludeWellKnownCertificates: true,
-			},
-		},
-	},
-	grubBootloaderOverrideSchematicID: {
-		Customization: schematic.Customization{
-			Bootloader: profile.BootLoaderKindGrub,
-		},
-	},
-	sdBootBootloaderOverrideSchematicID: {
-		Customization: schematic.Customization{
-			Bootloader: profile.BootLoaderKindSDBoot,
-		},
-	},
+func mustSchematicID(s *schematic.Schematic) string {
+	id, err := s.ID()
+	if err != nil {
+		panic("computing schematic ID: " + err.Error())
+	}
+
+	return id
+}
+
+func init() {
+	// In enterprise builds, schematics created via the authenticated API include the
+	// owner in their YAML, which changes the SHA-256 ID. Pre-set the owner here so
+	// the IDs computed in tests match what the server will return.
+	owner, _ := authCredentials()
+
+	raw := []*schematic.Schematic{
+		{Owner: owner},
+		{Owner: owner, Customization: schematic.Customization{ExtraKernelArgs: []string{"nolapic", "nomodeset"}}},
+		{Owner: owner, Customization: schematic.Customization{SystemExtensions: schematic.SystemExtensions{OfficialExtensions: []string{"siderolabs/amd-ucode", "siderolabs/gvisor", "siderolabs/gasket-driver"}}}},
+		{Owner: owner, Customization: schematic.Customization{Meta: []schematic.MetaValue{{Key: 0xa, Value: `{"externalIPs":["1.2.3.4"]}`}}}},
+		{Owner: owner, Overlay: schematic.Overlay{Name: "rpi_generic", Image: "siderolabs/sbc-raspberrypi"}},
+		{Owner: owner, Customization: schematic.Customization{SecureBoot: schematic.SecureBootCustomization{IncludeWellKnownCertificates: true}}},
+		{Owner: owner, Customization: schematic.Customization{Bootloader: profile.BootLoaderKindGrub}},
+		{Owner: owner, Customization: schematic.Customization{Bootloader: profile.BootLoaderKindSDBoot}},
+	}
+
+	testSchematics = make(map[string]*schematic.Schematic, len(raw))
+
+	emptySchematicID = mustSchematicID(raw[0])
+	extraArgsSchematicID = mustSchematicID(raw[1])
+	systemExtensionsSchematicID = mustSchematicID(raw[2])
+	metaSchematicID = mustSchematicID(raw[3])
+	rpiGenericOverlaySchematicID = mustSchematicID(raw[4])
+	securebootWellKnownSchematicID = mustSchematicID(raw[5])
+	grubBootloaderOverrideSchematicID = mustSchematicID(raw[6])
+	sdBootBootloaderOverrideSchematicID = mustSchematicID(raw[7])
+
+	testSchematics[emptySchematicID] = raw[0]
+	testSchematics[extraArgsSchematicID] = raw[1]
+	testSchematics[systemExtensionsSchematicID] = raw[2]
+	testSchematics[metaSchematicID] = raw[3]
+	testSchematics[rpiGenericOverlaySchematicID] = raw[4]
+	testSchematics[securebootWellKnownSchematicID] = raw[5]
+	testSchematics[grubBootloaderOverrideSchematicID] = raw[6]
+	testSchematics[sdBootBootloaderOverrideSchematicID] = raw[7]
 }
 
 func createSchematicGetID(ctx context.Context, t *testing.T, c *client.Client, schematic schematic.Schematic) string {
@@ -95,9 +94,10 @@ func createSchematicGetID(ctx context.Context, t *testing.T, c *client.Client, s
 	id, err := c.SchematicCreate(ctx, schematic)
 	require.NoError(t, err)
 
-	// get the shematic back and compare
+	// get the schematic back and compare
 	retrieved, err := c.SchematicGet(ctx, id)
 	require.NoError(t, err)
+	schematic.Owner, _ = authCredentials()
 	assert.Equal(t, &schematic, retrieved)
 
 	return id
@@ -109,6 +109,8 @@ func createSchematicInvalid(ctx context.Context, t *testing.T, baseURL string, m
 
 	req, err := http.NewRequestWithContext(ctx, "POST", baseURL+"/schematics", bytes.NewReader(marshalled))
 	require.NoError(t, err)
+
+	addTestAuth(req)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -124,7 +126,7 @@ func createSchematicInvalid(ctx context.Context, t *testing.T, baseURL string, m
 }
 
 func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
-	c, err := client.New(baseURL)
+	c, err := client.New(baseURL, clientAuthCredentials()...)
 	require.NoError(t, err)
 
 	t.Run("empty", func(t *testing.T) {

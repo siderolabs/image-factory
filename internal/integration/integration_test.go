@@ -31,6 +31,8 @@ import (
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
+	"github.com/siderolabs/image-factory/pkg/client"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, string) {
@@ -48,6 +50,10 @@ func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, s
 	options.HTTP.ListenAddr = net.JoinHostPort(host, port)
 	options.HTTP.ExternalURL = "http://" + defaultAddr + "/"
 	options.HTTP.ExternalPXEURL = "http://" + pxeAddr + "/"
+
+	_, metricsPort := findListenAddr(t, "127.0.0.1")
+	options.Metrics.Addr = net.JoinHostPort("127.0.0.1", metricsPort)
+
 	options.Artifacts.Core.Registry = imageRegistryFlag
 	options.Artifacts.Schematic = schematicFactoryRepositoryFlag.OCIRepositoryOptions
 	options.Artifacts.Installer.External = installerExternalRepository.OCIRepositoryOptions
@@ -56,6 +62,7 @@ func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, s
 
 	setupSecureBoot(t, &options)
 	setupCacheSigningKey(t, &options)
+	setupEnterprise(t, &options)
 
 	t.Cleanup(remotewrap.ShutdownTransport)
 
@@ -234,6 +241,58 @@ func setupSecureBoot(t *testing.T, options *cmd.Options) {
 	}
 }
 
+//go:embed "testdata/htpasswd"
+var htpasswdFile []byte
+
+func setupEnterprise(t *testing.T, options *cmd.Options) {
+	t.Helper()
+
+	if !enterprise.Enabled() {
+		return
+	}
+
+	// Skip if the caller already configured auth (e.g. reload tests that need
+	// explicit control over the htpasswd file path).
+	if options.Authentication.Enabled && options.Authentication.HTPasswdPath != "" {
+		return
+	}
+
+	configDir := t.TempDir()
+
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "htpasswd"), htpasswdFile, 0o600))
+
+	options.Authentication.Enabled = true
+	options.Authentication.HTPasswdPath = filepath.Join(configDir, "htpasswd")
+}
+
+func authCredentials() (string, string) {
+	if !enterprise.Enabled() {
+		return "", ""
+	}
+
+	return "alice", "alicetopsecret"
+}
+
+// addTestAuth sets BasicAuth on req when enterprise auth is active.
+func addTestAuth(req *http.Request) {
+	username, password := authCredentials()
+	if username != "" {
+		req.SetBasicAuth(username, password)
+	}
+}
+
+func clientAuthCredentials() []client.Option {
+	username, password := authCredentials()
+
+	if username != "" && password != "" {
+		return []client.Option{
+			client.WithBasicAuth(username, password),
+		}
+	}
+
+	return nil
+}
+
 func findListenAddr(t *testing.T, host string) (string, string) {
 	t.Helper()
 
@@ -255,11 +314,7 @@ func commonTest(t *testing.T, options cmd.Options) {
 	baseURL := "http://" + listenAddr
 	pxeURL := "http://" + pxeAddr
 
-	t.Run("TestFrontend", func(t *testing.T) {
-		t.Parallel()
-
-		testFrontend(ctx, t, baseURL)
-	})
+	t.Run("TestFrontend", testFrontend(ctx, baseURL))
 
 	t.Run("TestSchematic", func(t *testing.T) {
 		// schematic should be created first, thus no t.Parallel
@@ -312,6 +367,12 @@ func commonTest(t *testing.T, options cmd.Options) {
 		t.Parallel()
 
 		testChecksumFrontend(ctx, t, baseURL)
+	})
+
+	t.Run("TestAuthFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testAuthFrontend(ctx, t, baseURL)
 	})
 }
 

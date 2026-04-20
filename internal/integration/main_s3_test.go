@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 func TestIntegrationS3(t *testing.T) {
@@ -32,4 +33,10 @@ func TestIntegrationS3(t *testing.T) {
 
 		commonTest(t, options)
 	})
+
+	if enterprise.Enabled() {
+		t.Run("AuthS3NoRedirect", func(t *testing.T) {
+			testAuthS3NoRedirect(t, pool)
+		})
+	}
 }

@@ -39,7 +39,7 @@ func (m *Manager) GetSchematicExtension(ctx context.Context, versionTag string, 
 	var schematicInfo []byte
 
 	if quirks.New(versionTag).SupportsOverlay() {
-		schematicInfo, err = yaml.Marshal(schematic)
+		schematicInfo, err = schematic.Marshal()
 		if err != nil {
 			return "", fmt.Errorf("failed to marshal schematic overlay info: %w", err)
 		}

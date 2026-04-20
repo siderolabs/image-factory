@@ -8,55 +8,20 @@ package enterprise
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"go.uber.org/zap"
 
+	"github.com/siderolabs/image-factory/enterprise/auth"
 	"github.com/siderolabs/image-factory/enterprise/checksum"
 	"github.com/siderolabs/image-factory/enterprise/spdx"
 	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx/storage/registry"
-	"github.com/siderolabs/image-factory/internal/image/signer"
 )
 
 // Enabled indicates whether Enterprise features are enabled.
 func Enabled() bool {
 	return true
-}
-
-// NewSpdxStorage initializes and returns a new SPDX storage instance.
-func NewSpdxStorage(
-	logger *zap.Logger,
-	cacheImageSigner signer.Signer,
-	insecure bool,
-	repository string,
-	refreshInterval time.Duration,
-	remoteOptions func() []remote.Option,
-) (*registry.Storage, error) {
-	var repoOpts []name.Option
-
-	if insecure {
-		repoOpts = append(repoOpts, name.Insecure)
-	}
-
-	cacheRepository, err := name.NewRepository(repository, repoOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse cache repository: %w", err)
-	}
-
-	spdxStorage, err := registry.NewStorage(logger, registry.Options{
-		CacheRepository:         cacheRepository,
-		CacheImageSigner:        cacheImageSigner,
-		RemoteOptions:           remoteOptions(),
-		RegistryRefreshInterval: refreshInterval,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize SPDX storage: %w", err)
-	}
-
-	return spdxStorage, nil
 }
 
 // NewSpdxFrontend returns a new Spdx FrontendPlugin.
@@ -89,10 +54,15 @@ func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, erro
 		AssetBuilder:     opts.AssetBuilder,
 	})
 
-	return spdx.NewFrontend(opts.SchematicFactory, builder), nil
+	return spdx.NewFrontend(opts.SchematicFactory, builder, opts.AuthProvider), nil
 }
 
 // NewChecksummer returns an enterprise Checksummer implementation.
 func NewChecksummer() Checksummer {
 	return checksum.NewChecksummer()
+}
+
+// NewAuthProvider creates a new authentication provider.
+func NewAuthProvider(logger *zap.Logger, configPath string) (AuthProvider, error) {
+	return auth.NewProvider(configPath, logger)
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
-	"github.com/siderolabs/image-factory/pkg/schematic"
+	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 // handleSchematicCreate handles creation of the schematic.
@@ -28,12 +28,18 @@ func (f *Frontend) handleSchematicCreate(ctx context.Context, w http.ResponseWri
 		return err
 	}
 
-	cfg, err := schematic.Unmarshal(data)
+	schematic, err := schematicpkg.Unmarshal(data)
 	if err != nil {
 		return err
 	}
 
-	id, err := f.schematicFactory.Put(ctx, cfg)
+	if f.options.AuthProvider != nil {
+		if username, ok := f.options.AuthProvider.UsernameFromContext(ctx); ok {
+			schematic.Owner = username
+		}
+	}
+
+	id, err := f.schematicFactory.Put(ctx, schematic)
 	if err != nil {
 		return err
 	}
@@ -62,6 +68,10 @@ func (f *Frontend) handleSchematicGet(ctx context.Context, w http.ResponseWriter
 			return nil
 		}
 
+		return err
+	}
+
+	if err = f.checkOwnership(ctx, schematic); err != nil {
 		return err
 	}
 

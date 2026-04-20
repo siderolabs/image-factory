@@ -5,12 +5,15 @@
 package cmd
 
 import (
+	"errors"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 // Options configures the behavior of the image factory.
-type Options struct {
+type Options struct { //nolint:govet // keeping order for semantic clarity
 	// HTTP configuration for the image factory frontend.
 	HTTP HTTPOptions `koanf:"http"`
 
@@ -31,6 +34,11 @@ type Options struct {
 
 	// Artifacts defines names and references for various images used by the factory.
 	Artifacts ArtifactsOptions `koanf:"artifacts"`
+
+	// Authentication settings.
+	//
+	// Note: only available in the Enterprise edition.
+	Authentication AuthenticationOptions `koanf:"authentication"`
 }
 
 // AssetBuilderOptions contains settings for building assets.
@@ -246,6 +254,9 @@ type S3CacheOptions struct {
 
 	// Enabled enables S3 cache.
 	Enabled bool `koanf:"enabled"`
+
+	// PresignedURLTTL is the duration for which presigned URLs are valid.
+	PresignedURLTTL time.Duration `koanf:"presignedURLTTL"`
 }
 
 // SchematicCacheOptions configures caching of schematic blobs.
@@ -395,6 +406,34 @@ type ComponentsOptions struct {
 	Talosctl string `koanf:"talosctl"`
 }
 
+// AuthenticationOptions holds authentication settings.
+type AuthenticationOptions struct { //nolint:govet // keeping order for semantic clarity
+	// Enabled enables authentication.
+	Enabled bool `koanf:"enabled"`
+	// HTPasswdPath is the path to the htpasswd file containing user credentials.
+	//
+	// The file follows the standard htpasswd format (username:bcrypt_hash, one per line).
+	// Multiple entries with the same username are supported, allowing multiple API keys per user.
+	// Only bcrypt hashes ($2y$/$2a$/$2b$) are accepted.
+	//
+	// It is required if authentication is enabled.
+	HTPasswdPath string `koanf:"htpasswdPath"`
+}
+
+// Validate checks for invalid or conflicting configuration.
+func (o *Options) Validate() error {
+	var err error
+
+	if o.Authentication.Enabled && o.Cache.CDN.Enabled {
+		err = multierror.Append(err,
+			errors.New("CDN cache cannot be enabled when authentication is enabled: "+
+				"CDN would serve assets without authentication, effectively leaking secrets",
+			))
+	}
+
+	return err
+}
+
 // DefaultOptions are the default options.
 var DefaultOptions = Options{
 	HTTP: HTTPOptions{
@@ -422,7 +461,8 @@ var DefaultOptions = Options{
 			Repository: "cache",
 		},
 		S3: S3CacheOptions{
-			Bucket: "image-factory",
+			Bucket:          "image-factory",
+			PresignedURLTTL: time.Hour,
 		},
 		Schematic: SchematicCacheOptions{
 			Capacity:    100_000,

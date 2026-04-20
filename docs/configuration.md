@@ -360,6 +360,15 @@ Insecure allows connecting to S3 without TLS or with invalid certificates.
 
 ---
 
+### `cache.s3.presignedURLTTL`
+
+- **Type:** `time.Duration`
+- **Env:** `CACHE_S3_PRESIGNEDURLTTL`
+
+PresignedURLTTL is the duration for which presigned URLs are valid.
+
+---
+
 ### `cache.s3.enabled`
 
 - **Type:** `bool`
@@ -796,6 +805,38 @@ RefreshInterval specifies how often the image factory should refresh its connect
 
 ---
 
+### `authentication`
+
+Authentication settings.
+
+Note: only available in the Enterprise edition.
+
+---
+
+### `authentication.enabled`
+
+- **Type:** `bool`
+- **Env:** `AUTHENTICATION_ENABLED`
+
+Enabled enables authentication.
+
+---
+
+### `authentication.htpasswdPath`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_HTPASSWDPATH`
+
+HTPasswdPath is the path to the htpasswd file containing user credentials.
+
+The file follows the standard htpasswd format (username:bcrypt_hash, one per line).
+Multiple entries with the same username are supported, allowing multiple API keys per user.
+Only bcrypt hashes ($2y$/$2a$/$2b$) are accepted.
+
+It is required if authentication is enabled.
+
+---
+
 ## Default Configuration
 
 ### YAML
@@ -830,6 +871,9 @@ artifacts:
         registry: ghcr.io
         repository: schematics
     talosVersionRecheckInterval: 15m0s
+authentication:
+    enabled: false
+    htpasswdPath: ""
 build:
     maxConcurrency: 6
     minTalosVersion: 1.2.0
@@ -853,6 +897,7 @@ cache:
         enabled: false
         endpoint: ""
         insecure: false
+        presignedURLTTL: 1h0m0s
         region: ""
     schematic:
         capacity: 100000
@@ -918,6 +963,8 @@ IF_ARTIFACTS_SCHEMATIC_NAMESPACE=siderolabs/image-factory
 IF_ARTIFACTS_SCHEMATIC_REGISTRY=ghcr.io
 IF_ARTIFACTS_SCHEMATIC_REPOSITORY=schematics
 IF_ARTIFACTS_TALOSVERSIONRECHECKINTERVAL=15m0s
+IF_AUTHENTICATION_ENABLED=false
+IF_AUTHENTICATION_HTPASSWDPATH=
 IF_BUILD_MAXCONCURRENCY=6
 IF_BUILD_MINTALOSVERSION=1.2.0
 IF_CACHE_CDN_ENABLED=false
@@ -935,6 +982,7 @@ IF_CACHE_S3_BUCKET=image-factory
 IF_CACHE_S3_ENABLED=false
 IF_CACHE_S3_ENDPOINT=
 IF_CACHE_S3_INSECURE=false
+IF_CACHE_S3_PRESIGNEDURLTTL=1h0m0s
 IF_CACHE_S3_REGION=
 IF_CACHE_SCHEMATIC_CAPACITY=100000
 IF_CACHE_SCHEMATIC_NEGATIVETTL=30s

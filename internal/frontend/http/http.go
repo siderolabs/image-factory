@@ -62,6 +62,7 @@ type Options struct {
 	CacheImageSigner                 signer.Signer
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
+	AuthProvider                     enterprise.AuthProvider
 	InstallerInternalRepository      name.Repository
 	InstallerExternalRepository      name.Repository
 	MetricsNamespace                 string
@@ -70,6 +71,9 @@ type Options struct {
 	RegistryRefreshInterval          time.Duration
 	ProxyInstallerInternalRepository bool
 }
+
+// Handler is a custom handler type that includes the context and httprouter params, and returns an error.
+type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
 
 // NewFrontend creates a new HTTP frontend.
 func NewFrontend(
@@ -114,8 +118,12 @@ func NewFrontend(
 		}),
 	})
 
-	registerRoute := func(registrator func(string, httprouter.Handle), path string, handler func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error) {
+	registerRoute := func(registrator func(string, httprouter.Handle), path string, handler Handler) {
 		registrator(path, httproutermiddleware.Handler(path, frontend.wrapper(handler), mdlw))
+	}
+
+	registerPublicRoute := func(registrator func(string, httprouter.Handle), path string, handler Handler) {
+		registrator(path, httproutermiddleware.Handler(path, frontend.wrapperPublic(handler), mdlw))
 	}
 
 	// enterprise
@@ -137,43 +145,45 @@ func NewFrontend(
 		}
 	}
 
-	// images
+	// /healthz is always public (Kubernetes probes, monitoring)
+	registerPublicRoute(frontend.router.GET, "/healthz", frontend.handleHealth)
+	registerPublicRoute(frontend.router.HEAD, "/healthz", frontend.handleHealth)
+
+	// images - require auth
 	registerRoute(frontend.router.GET, "/image/:schematic/:version/:path", frontend.handleImage)
 	registerRoute(frontend.router.HEAD, "/image/:schematic/:version/:path", frontend.handleImage)
 
-	// PXE
+	// PXE - require auth
 	registerRoute(frontend.router.GET, "/pxe/:schematic/:version/:path", frontend.handlePXE)
 
-	// registry
+	// registry - /v2 requires auth (OCI spec: 401 challenge when auth enabled)
 	registerRoute(frontend.router.GET, "/v2", frontend.handleHealth)
 	registerRoute(frontend.router.GET, "/v2/", frontend.handleHealth)
 	registerRoute(frontend.router.HEAD, "/v2", frontend.handleHealth)
 	registerRoute(frontend.router.HEAD, "/v2/", frontend.handleHealth)
-	registerRoute(frontend.router.GET, "/healthz", frontend.handleHealth)
-	registerRoute(frontend.router.HEAD, "/healthz", frontend.handleHealth)
 	registerRoute(frontend.router.GET, "/v2/:image/:schematic/blobs/:digest", frontend.handleBlob)
 	registerRoute(frontend.router.HEAD, "/v2/:image/:schematic/blobs/:digest", frontend.handleBlob)
 	registerRoute(frontend.router.GET, "/v2/:image/:schematic/manifests/:tag", frontend.handleManifest)
 	registerRoute(frontend.router.HEAD, "/v2/:image/:schematic/manifests/:tag", frontend.handleManifest)
-	registerRoute(frontend.router.GET, "/oci/cosign/signing-key.pub", frontend.handleCosignSigningKeyPub)
+	registerPublicRoute(frontend.router.GET, "/oci/cosign/signing-key.pub", frontend.handleCosignSigningKeyPub)
 
-	// schematic
+	// schematic - both POST and GET require auth
 	registerRoute(frontend.router.POST, "/schematics", frontend.handleSchematicCreate)
 	registerRoute(frontend.router.GET, "/schematics/:schematic", frontend.handleSchematicGet)
 
-	// meta
-	registerRoute(frontend.router.GET, "/versions", frontend.handleVersions)
-	registerRoute(frontend.router.GET, "/version/:version/extensions/official", frontend.handleOfficialExtensions)
-	registerRoute(frontend.router.GET, "/version/:version/overlays/official", frontend.handleOfficialOverlays)
+	// meta - public
+	registerPublicRoute(frontend.router.GET, "/versions", frontend.handleVersions)
+	registerPublicRoute(frontend.router.GET, "/version/:version/extensions/official", frontend.handleOfficialExtensions)
+	registerPublicRoute(frontend.router.GET, "/version/:version/overlays/official", frontend.handleOfficialOverlays)
 
-	// secureboot
-	registerRoute(frontend.router.GET, "/secureboot/signing-cert.pem", frontend.handleSecureBootSigningCert)
+	// secureboot - public
+	registerPublicRoute(frontend.router.GET, "/secureboot/signing-cert.pem", frontend.handleSecureBootSigningCert)
 
-	// talosctl
-	registerRoute(frontend.router.HEAD, "/talosctl/:version/:path", frontend.handleTalosctl)
-	registerRoute(frontend.router.GET, "/talosctl/:version/:path", frontend.handleTalosctl)
+	// talosctl - public
+	registerPublicRoute(frontend.router.HEAD, "/talosctl/:version/:path", frontend.handleTalosctl)
+	registerPublicRoute(frontend.router.GET, "/talosctl/:version/:path", frontend.handleTalosctl)
 
-	// UI
+	// UI - require auth (consistent with all other schematic-creating endpoints)
 	registerRoute(frontend.router.GET, "/", frontend.handleUI)
 	registerRoute(frontend.router.HEAD, "/", frontend.handleUI)
 	registerRoute(frontend.router.POST, "/ui/wizard", frontend.handleUIWizard)
@@ -201,7 +211,19 @@ func (f *Frontend) Handler() http.Handler {
 	}).Handler(f.router)
 }
 
-func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error) httprouter.Handle {
+func (f *Frontend) wrapper(h Handler) httprouter.Handle {
+	return f.wrapHandler(h, true)
+}
+
+func (f *Frontend) wrapperPublic(h Handler) httprouter.Handle {
+	return f.wrapHandler(h, false)
+}
+
+func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
+	if requireAuth && f.options.AuthProvider != nil {
+		h = f.options.AuthProvider.Middleware(h)
+	}
+
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		ctx := r.Context()
 
@@ -214,6 +236,10 @@ func (f *Frontend) wrapper(h func(ctx context.Context, w http.ResponseWriter, r 
 		duration := time.Since(start)
 
 		level, status := MatchError(err, func(message string, code int) {
+			if code == http.StatusUnauthorized {
+				w.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise"`)
+			}
+
 			http.Error(w, message, code)
 		})
 
@@ -254,6 +280,16 @@ func MatchError(err error, callback func(message string, code int)) (zapcore.Lev
 		status = http.StatusBadRequest
 
 		callback(err.Error(), http.StatusBadRequest)
+	case xerrors.TagIs[schematicpkg.RequiresAuthenticationTag](err):
+		level = zap.WarnLevel
+		status = http.StatusUnauthorized
+
+		callback("authentication required to access this schematic", http.StatusUnauthorized)
+	case xerrors.TagIs[schematicpkg.ForbiddenTag](err):
+		level = zap.WarnLevel
+		status = http.StatusForbidden
+
+		callback("access denied", http.StatusForbidden)
 	case errors.Is(err, context.Canceled):
 		status = 499
 		// client closed connection
@@ -265,6 +301,29 @@ func MatchError(err error, callback func(message string, code int)) (zapcore.Lev
 	}
 
 	return level, status
+}
+
+// checkOwnership verifies the context user owns the schematic (for auth-protected routes).
+// Returns nil if schematic has no owner or the authenticated user matches the owner.
+func (f *Frontend) checkOwnership(ctx context.Context, s *schematicpkg.Schematic) error {
+	if s.Owner == "" {
+		return nil
+	}
+
+	if f.options.AuthProvider == nil {
+		return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New("authentication required"))
+	}
+
+	username, ok := f.options.AuthProvider.UsernameFromContext(ctx)
+	if !ok {
+		return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New("authentication required"))
+	}
+
+	if username != s.Owner {
+		return xerrors.NewTagged[schematicpkg.ForbiddenTag](errors.New("access denied"))
+	}
+
+	return nil
 }
 
 // Use several ways to detect language.
