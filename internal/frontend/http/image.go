@@ -61,12 +61,8 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return xerrors.NewTaggedf[enterprise.ErrNotEnabledTag]("enterprise not enabled: checksum endpoint is not available")
 	}
 
-	schematic, err := f.schematicFactory.Get(ctx, schematicID)
+	schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
 	if err != nil {
-		return err
-	}
-
-	if err = f.checkOwnership(ctx, schematic); err != nil {
 		return err
 	}
 
@@ -113,11 +109,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return f.checksummer.WriteChecksum(ctx, w, r, reader, asset.Size(), filename, checksumSuffix)
 	}
 
-	// When auth is active, never redirect to S3/CDN - bytes must flow through the
-	// factory so the auth boundary is maintained. S3/CDN URLs carry no user identity.
-	authActive := f.options.AuthProvider != nil
-
-	if asset, ok := asset.(cache.RedirectableAsset); ok && !disableRedirect && r.Method != http.MethodHead && !authActive {
+	if asset, ok := asset.(cache.RedirectableAsset); ok && !disableRedirect && r.Method != http.MethodHead {
 		var url string
 
 		url, err = asset.Redirect(ctx, filename)

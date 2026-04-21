@@ -31,12 +31,8 @@ var securebootIPXE string
 func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 	schematicID := p.ByName("schematic")
 
-	schematic, err := f.schematicFactory.Get(ctx, schematicID)
+	schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
 	if err != nil {
-		return err
-	}
-
-	if err = f.checkOwnership(ctx, schematic); err != nil {
 		return err
 	}
 
@@ -83,10 +79,12 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, r *http
 
 	// Embed credentials in image asset URLs so iPXE can authenticate when fetching kernel/initramfs.
 	imageBaseURL := f.options.ExternalPXEURL
-	if username, password, ok := r.BasicAuth(); ok {
-		u := *f.options.ExternalPXEURL
-		u.User = url.UserPassword(username, password)
-		imageBaseURL = &u
+	if f.options.AuthProvider != nil {
+		if username, password, ok := r.BasicAuth(); ok {
+			u := *f.options.ExternalPXEURL
+			u.User = url.UserPassword(username, password)
+			imageBaseURL = &u
+		}
 	}
 
 	if prof.SecureBootEnabled() {

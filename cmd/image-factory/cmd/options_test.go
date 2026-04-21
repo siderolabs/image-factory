@@ -12,50 +12,6 @@ import (
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 )
 
-func TestValidate(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		name        string
-		opts        cmd.Options
-		expectedErr string
-	}{
-		{
-			name: "default options",
-			opts: cmd.DefaultOptions,
-		},
-		{
-			name: "empty options",
-			opts: cmd.Options{},
-		},
-		{
-			name: "CDN cache enabled with authentication",
-			opts: cmd.Options{
-				Cache: cmd.CacheOptions{
-					CDN: cmd.CDNCacheOptions{
-						Enabled: true,
-					},
-				},
-				Authentication: cmd.AuthenticationOptions{
-					Enabled: true,
-				},
-			},
-			expectedErr: "CDN cache cannot be enabled when authentication is enabled",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			err := tc.opts.Validate()
-			if tc.expectedErr == "" {
-				assert.NoError(t, err)
-			} else {
-				assert.ErrorContains(t, err, tc.expectedErr)
-			}
-		})
-	}
-}
-
 func TestOCIRepositoryOptions(t *testing.T) {
 	t.Parallel()
 

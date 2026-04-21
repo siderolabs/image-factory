@@ -303,29 +303,6 @@ func MatchError(err error, callback func(message string, code int)) (zapcore.Lev
 	return level, status
 }
 
-// checkOwnership verifies the context user owns the schematic (for auth-protected routes).
-// Returns nil if schematic has no owner or the authenticated user matches the owner.
-func (f *Frontend) checkOwnership(ctx context.Context, s *schematicpkg.Schematic) error {
-	if s.Owner == "" {
-		return nil
-	}
-
-	if f.options.AuthProvider == nil {
-		return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New("authentication required"))
-	}
-
-	username, ok := f.options.AuthProvider.UsernameFromContext(ctx)
-	if !ok {
-		return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New("authentication required"))
-	}
-
-	if username != s.Owner {
-		return xerrors.NewTagged[schematicpkg.ForbiddenTag](errors.New("access denied"))
-	}
-
-	return nil
-}
-
 // Use several ways to detect language.
 func (f *Frontend) getLocalizer(r *http.Request) *i18n.Localizer {
 	lang := r.URL.Query().Get("lang")

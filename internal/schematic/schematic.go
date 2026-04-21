@@ -7,13 +7,20 @@ package schematic
 
 import (
 	"context"
+	"errors"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
+
+// OwnershipChecker resolves the authenticated user from a context.
+type OwnershipChecker interface {
+	UsernameFromContext(ctx context.Context) (string, bool)
+}
 
 // Factory is the schematic factory.
 type Factory struct {
@@ -88,7 +95,7 @@ func (s *Factory) Put(ctx context.Context, cfg *schematic.Schematic) (string, er
 }
 
 // Get retrieves the stored schematic.
-func (s *Factory) Get(ctx context.Context, id string) (*schematic.Schematic, error) {
+func (s *Factory) get(ctx context.Context, id string) (*schematic.Schematic, error) {
 	data, err := s.storage.Get(ctx, id)
 	if err != nil {
 		return nil, err
@@ -97,6 +104,42 @@ func (s *Factory) Get(ctx context.Context, id string) (*schematic.Schematic, err
 	s.metricGet.Inc()
 
 	return schematic.Unmarshal(data)
+}
+
+// Get retrieves the stored schematic and enforces ownership.
+//
+// If auth is non-nil and the caller is unauthenticated, RequiresAuthenticationTag is returned
+// even when the schematic is not found, to avoid leaking schematic existence to anonymous callers.
+func (s *Factory) Get(ctx context.Context, id string, auth OwnershipChecker) (*schematic.Schematic, error) {
+	sc, err := s.get(ctx, id)
+	if err != nil {
+		if auth != nil {
+			if _, ok := auth.UsernameFromContext(ctx); !ok {
+				return nil, xerrors.NewTagged[schematic.RequiresAuthenticationTag](err)
+			}
+		}
+
+		return nil, err
+	}
+
+	if sc.Owner == "" && auth == nil {
+		return sc, nil
+	}
+
+	if auth == nil {
+		return nil, xerrors.NewTagged[schematic.RequiresAuthenticationTag](errors.New("authentication required"))
+	}
+
+	username, ok := auth.UsernameFromContext(ctx)
+	if !ok {
+		return nil, xerrors.NewTagged[schematic.RequiresAuthenticationTag](errors.New("authentication required"))
+	}
+
+	if username != sc.Owner {
+		return nil, xerrors.NewTagged[schematic.ForbiddenTag](errors.New("access denied"))
+	}
+
+	return sc, nil
 }
 
 // Describe implements prom.Collector interface.

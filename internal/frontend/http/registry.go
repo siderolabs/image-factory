@@ -88,12 +88,8 @@ func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, req *h
 	// verify that schematic exists
 	schematicID := p.ByName("schematic")
 
-	sc, err := f.schematicFactory.Get(ctx, schematicID)
+	_, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
 	if err != nil {
-		return err
-	}
-
-	if err = f.checkOwnership(ctx, sc); err != nil {
 		return err
 	}
 
@@ -121,7 +117,8 @@ func (f *Frontend) handleExternalRegistry(w http.ResponseWriter, req *http.Reque
 
 	location := redirectURL.JoinPath("v2", repo.RepositoryStr(), imageName, schematicID, manifestsOrBlobs, tagOrDigest)
 
-	if f.options.ProxyInstallerInternalRepository {
+	// When auth is active, always proxy - redirecting to the backing registry would bypass the auth boundary.
+	if f.options.ProxyInstallerInternalRepository || f.options.AuthProvider != nil {
 		f.logger.Info("proxying manifest/blob", zap.Stringer("location", location))
 
 		proxy := &httputil.ReverseProxy{
@@ -156,12 +153,8 @@ func (f *Frontend) handleExternalRegistry(w http.ResponseWriter, req *http.Reque
 func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, req *http.Request, p httprouter.Params) error {
 	schematicID := p.ByName("schematic")
 
-	schematic, err := f.schematicFactory.Get(ctx, schematicID)
+	schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
 	if err != nil {
-		return err
-	}
-
-	if err = f.checkOwnership(ctx, schematic); err != nil {
 		return err
 	}
 

@@ -52,6 +52,7 @@ func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, erro
 		ArtifactsManager: opts.ArtifactsManager,
 		SchematicFactory: opts.SchematicFactory,
 		AssetBuilder:     opts.AssetBuilder,
+		AuthProvider:     opts.AuthProvider,
 	})
 
 	return spdx.NewFrontend(opts.SchematicFactory, builder, opts.AuthProvider), nil

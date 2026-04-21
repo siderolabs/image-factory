@@ -5,11 +5,8 @@
 package cmd
 
 import (
-	"errors"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/go-multierror"
 )
 
 // Options configures the behavior of the image factory.
@@ -418,20 +415,6 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 	//
 	// It is required if authentication is enabled.
 	HTPasswdPath string `koanf:"htpasswdPath"`
-}
-
-// Validate checks for invalid or conflicting configuration.
-func (o *Options) Validate() error {
-	var err error
-
-	if o.Authentication.Enabled && o.Cache.CDN.Enabled {
-		err = multierror.Append(err,
-			errors.New("CDN cache cannot be enabled when authentication is enabled: "+
-				"CDN would serve assets without authentication, effectively leaking secrets",
-			))
-	}
-
-	return err
 }
 
 // DefaultOptions are the default options.

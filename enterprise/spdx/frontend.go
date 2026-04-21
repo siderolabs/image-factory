@@ -10,7 +10,6 @@ package spdx
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,12 +24,11 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/schematic"
-	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
-// authProvider is a subset of enterprise.AuthProvider used for ownership checks.
+// AuthProvider is a subset of enterprise.AuthProvider used for ownership checks.
 // Defined locally to avoid an import cycle with pkg/enterprise.
-type authProvider interface {
+type AuthProvider interface {
 	UsernameFromContext(ctx context.Context) (string, bool)
 }
 
@@ -47,11 +45,11 @@ var availableFrom = semver.MustParse("1.11.0")
 type Frontend struct {
 	schematicFactory *schematic.Factory
 	spdxBuilder      *builder.Builder
-	authProvider     authProvider
+	authProvider     AuthProvider
 }
 
 // NewFrontend creates a new Frontend instance.
-func NewFrontend(schematicFactory *schematic.Factory, spdxBuilder *builder.Builder, auth authProvider) *Frontend {
+func NewFrontend(schematicFactory *schematic.Factory, spdxBuilder *builder.Builder, auth AuthProvider) *Frontend {
 	return &Frontend{
 		schematicFactory: schematicFactory,
 		spdxBuilder:      spdxBuilder,
@@ -69,29 +67,6 @@ func (f *Frontend) Methods() []string {
 	return []string{http.MethodGet, http.MethodHead}
 }
 
-// checkOwnership verifies the context user owns the schematic.
-// Returns nil if schematic has no owner or the authenticated user matches the owner.
-func (f *Frontend) checkOwnership(ctx context.Context, s *schematicpkg.Schematic) error {
-	if s.Owner == "" {
-		return nil
-	}
-
-	if f.authProvider == nil {
-		return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New("authentication required"))
-	}
-
-	username, ok := f.authProvider.UsernameFromContext(ctx)
-	if !ok {
-		return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New("authentication required"))
-	}
-
-	if username != s.Owner {
-		return xerrors.NewTagged[schematicpkg.ForbiddenTag](errors.New("access denied"))
-	}
-
-	return nil
-}
-
 // Handle implements enterprise.FrontendExtension.
 // It handles SPDX bundle download requests.
 //
@@ -103,13 +78,7 @@ func (f *Frontend) checkOwnership(ctx context.Context, s *schematicpkg.Schematic
 func (f *Frontend) Handle(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 	schematicID := p.ByName("schematic")
 
-	// Validate schematic exists and check ownership.
-	schematic, err := f.schematicFactory.Get(ctx, schematicID)
-	if err != nil {
-		return err
-	}
-
-	if err = f.checkOwnership(ctx, schematic); err != nil {
+	if _, err := f.schematicFactory.Get(ctx, schematicID, f.authProvider); err != nil {
 		return err
 	}
 

@@ -57,9 +57,5 @@ func initConfig() (cmd.Options, error) {
 		return opts, err
 	}
 
-	if err := opts.Validate(); err != nil {
-		return opts, fmt.Errorf("invalid configuration: %w", err)
-	}
-
 	return opts, nil
 }

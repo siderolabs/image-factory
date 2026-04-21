@@ -60,7 +60,7 @@ func (f *Frontend) handleSchematicCreate(ctx context.Context, w http.ResponseWri
 func (f *Frontend) handleSchematicGet(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 	schematicID := p.ByName("schematic")
 
-	schematic, err := f.schematicFactory.Get(ctx, schematicID)
+	schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
 	if err != nil {
 		if xerrors.TagIs[storage.ErrNotFoundTag](err) {
 			http.Error(w, "schematic not found", http.StatusNotFound)
@@ -68,10 +68,6 @@ func (f *Frontend) handleSchematicGet(ctx context.Context, w http.ResponseWriter
 			return nil
 		}
 
-		return err
-	}
-
-	if err = f.checkOwnership(ctx, schematic); err != nil {
 		return err
 	}
 

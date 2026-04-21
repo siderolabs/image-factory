@@ -33,6 +33,12 @@ import (
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
+// AuthProvider is a subset of enterprise.AuthProvider used for ownership checks.
+// Defined locally to avoid an import cycle with pkg/enterprise.
+type AuthProvider interface {
+	UsernameFromContext(ctx context.Context) (string, bool)
+}
+
 // Builder orchestrates SPDX extraction and caching.
 type Builder struct {
 	storage          storage.Storage
@@ -41,6 +47,7 @@ type Builder struct {
 	schematicFactory *schematic.Factory
 	logger           *zap.Logger
 	sf               singleflight.Group
+	authProvider     AuthProvider
 }
 
 // Options defines the dependencies for the SPDX builder.
@@ -49,6 +56,7 @@ type Options struct {
 	ArtifactsManager *artifacts.Manager
 	SchematicFactory *schematic.Factory
 	AssetBuilder     *asset.Builder
+	AuthProvider     AuthProvider
 }
 
 // NewBuilder creates a new SPDX bundle builder.
@@ -61,6 +69,7 @@ func NewBuilder(
 		artifactsManager: opts.ArtifactsManager,
 		schematicFactory: opts.SchematicFactory,
 		assetBuilder:     opts.AssetBuilder,
+		authProvider:     opts.AuthProvider,
 		logger:           logger.With(zap.String("component", "spdx-builder")),
 	}
 }
@@ -84,11 +93,19 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 		return b.storage.Get(ctx, schematicID, versionTag, string(arch))
 	}
 
+	// Verify access and fetch schematic data before entering singleflight.
+	// buildBundle runs with context.Background() (request context may be canceled),
+	// so ownership enforcement must happen here with the live request context.
+	sc, err := b.schematicFactory.Get(ctx, schematicID, b.authProvider)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get schematic: %w", err)
+	}
+
 	// Build the bundle using singleflight to prevent duplicate work
 	cacheKey := CacheTag(schematicID, versionTag, string(arch))
 
 	resultCh := b.sf.DoChan(cacheKey, func() (any, error) { //nolint:contextcheck
-		return nil, b.buildBundle(schematicID, versionTag, arch)
+		return nil, b.buildBundle(sc, schematicID, versionTag, arch)
 	})
 
 	select {
@@ -105,19 +122,15 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 }
 
 // buildBundle creates and stores an SPDX bundle for a single architecture.
-func (b *Builder) buildBundle(schematicID, versionTag string, arch artifacts.Arch) error {
+// sc must be pre-fetched by the caller (Build) using the live request context,
+// since this function runs inside singleflight with context.Background().
+func (b *Builder) buildBundle(sc *schematicpkg.Schematic, schematicID, versionTag string, arch artifacts.Arch) error {
 	// Use a fresh context since we're in singleflight
 	ctx := context.Background()
 
 	logger := b.logger.With(zap.String("schematic", schematicID), zap.String("version", versionTag), zap.String("arch", string(arch)))
 
 	logger.Info("building SPDX bundle")
-
-	// Get the schematic to find extensions
-	schematicData, err := b.schematicFactory.Get(ctx, schematicID)
-	if err != nil {
-		return fmt.Errorf("failed to get schematic: %w", err)
-	}
 
 	bundle := &Bundle{
 		SchematicID:  schematicID,
@@ -132,16 +145,17 @@ func (b *Builder) buildBundle(schematicID, versionTag string, arch artifacts.Arc
 		zap.String("arch", string(arch)))
 
 	// Extract SPDX from Talos
+	var err error
 	if err = b.extractTalosSPDX(ctx, bundle, versionTag, arch); err != nil {
 		return fmt.Errorf("failed to extract SPDX from Talos: %w", err)
 	}
 
 	logger.Debug("building SPDX bundle from extensions",
-		zap.Int("extensions", len(schematicData.Customization.SystemExtensions.OfficialExtensions)))
+		zap.Int("extensions", len(sc.Customization.SystemExtensions.OfficialExtensions)))
 
 	// Extract SPDX from extensions
-	if len(schematicData.Customization.SystemExtensions.OfficialExtensions) > 0 {
-		if err = b.extractExtensionsSPDX(ctx, bundle, schematicData, versionTag, arch); err != nil {
+	if len(sc.Customization.SystemExtensions.OfficialExtensions) > 0 {
+		if err = b.extractExtensionsSPDX(ctx, bundle, sc, versionTag, arch); err != nil {
 			logger.Warn("failed to extract SPDX from some extensions", zap.Error(err))
 		}
 	}
