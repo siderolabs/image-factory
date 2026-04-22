@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-17T22:09:50Z by kres 15ff2fd.
+# Generated on 2026-04-22T20:13:43Z by kres 8299790.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -248,11 +248,6 @@ WORKDIR /src
 ARG TESTPKGS
 RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg --mount=type=cache,target=/tmp,id=image-factory/tmp go test -covermode=atomic -coverprofile=coverage.txt -coverpkg=${TESTPKGS} -tags=enterprise ${TESTPKGS}
 
-# updates go.mod to use the latest talos main
-FROM base AS update-to-talos-main
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go get -u github.com/siderolabs/talos@main
-RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go get -u github.com/siderolabs/talos/pkg/machinery@main
-
 FROM embed-generate AS embed-abbrev-generate
 WORKDIR /src
 ARG ABBREV_TAG
@@ -277,11 +272,6 @@ COPY --from=lint-golangci-lint-fmt-run /src .
 
 FROM scratch AS unit-tests
 COPY --from=unit-tests-run /src/coverage.txt /coverage-unit-tests.txt
-
-# copies out the go.mod and go.sum
-FROM scratch AS copy-out-go-mod
-COPY --from=update-to-talos-main /src/go.mod /go.mod
-COPY --from=update-to-talos-main /src/go.sum /go.sum
 
 # cleaned up specs and compiled versions
 FROM scratch AS generate

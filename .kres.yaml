@@ -99,14 +99,6 @@ spec:
       toplevel: true
       dependants:
         - coverage
-    - name: update-to-talos-main
-      toplevel: true
-    - name: integration-cdn-talos-main
-      toplevel: true
-    - name: integration-direct-talos-main
-      toplevel: true
-    - name: integration-s3-talos-main
-      toplevel: true
     - name: tailwind
       toplevel: true
     - name: docs
@@ -404,43 +396,6 @@ spec:
       - "@$(MAKE) local-$@ DEST=$(ARTIFACTS)"
 ---
 kind: custom.Step
-name: update-to-talos-main
-spec:
-  docker:
-    enabled: true
-    stages:
-      - name: update-to-talos-main
-        description: updates go.mod to use the latest talos main
-        from: base
-        steps:
-          - script:
-              command: go get -u github.com/siderolabs/talos@main
-              cache:
-                - /root/.cache/go-build
-                - /go/pkg
-          - script:
-              command: go get -u github.com/siderolabs/talos/pkg/machinery@main
-              cache:
-                - /root/.cache/go-build
-                - /go/pkg
-      - name: copy-out-go-mod
-        description: copies out the go.mod and go.sum
-        steps:
-          - copy:
-              from: update-to-talos-main
-              src: /src/go.mod
-              dst: /go.mod
-          - copy:
-              from: update-to-talos-main
-              src: /src/go.sum
-              dst: /go.sum
-  makefile:
-    enabled: true
-    phony: true
-    script:
-      - '@$(MAKE) local-copy-out-go-mod DEST=. TARGET_ARGS="--no-cache-filter=update-to-talos-main"'
----
-kind: custom.Step
 name: integration-direct
 spec:
   makefile:
@@ -610,81 +565,6 @@ spec:
       RUN_TESTS_ENTERPRISE: TestIntegrationDirect
       TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
       TAG_SUFFIX: "-enterprise"
----
-kind: custom.Step
-name: integration-direct-talos-main
-spec:
-  makefile:
-    enabled: true
-    phony: true
-    depends:
-      - update-to-talos-main
-    script:
-      - "@$(MAKE) integration-direct"
-  ghaction:
-    enabled: true
-    cronOnly: true
-    environment:
-      REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS_DIRECT: TestIntegrationDirect
-      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
-    jobs:
-      - name: integration-direct-talos-main
-        runnerGroup: large
-        triggerLabels:
-          - integration/talos-main
-        crons:
-          - "30 7 * * *"
----
-kind: custom.Step
-name: integration-s3-talos-main
-spec:
-  makefile:
-    enabled: true
-    phony: true
-    depends:
-      - update-to-talos-main
-    script:
-      - "@$(MAKE) integration-s3"
-  ghaction:
-    enabled: true
-    cronOnly: true
-    environment:
-      REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS_S3: TestIntegrationS3
-      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
-    jobs:
-      - name: integration-s3-talos-main
-        runnerGroup: large
-        triggerLabels:
-          - integration/talos-main
-        crons:
-          - "30 7 * * *"
----
-kind: custom.Step
-name: integration-cdn-talos-main
-spec:
-  makefile:
-    enabled: true
-    phony: true
-    depends:
-      - update-to-talos-main
-    script:
-      - "@$(MAKE) integration-cdn"
-  ghaction:
-    enabled: true
-    cronOnly: true
-    environment:
-      REGISTRY: registry.dev.siderolabs.io
-      RUN_TESTS_CDN: TestIntegrationCDN
-      TEST_FLAGS: "-test.schematic-service-repository=registry.dev.siderolabs.io/image-factory/schematic -test.installer-external-repository=registry.dev.siderolabs.io/siderolabs -test.installer-internal-repository=registry.dev.siderolabs.io/siderolabs -test.cache-repository=registry.dev.siderolabs.io/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
-    jobs:
-      - name: integration-cdn-talos-main
-        runnerGroup: large
-        triggerLabels:
-          - integration/talos-main
-        crons:
-          - "30 7 * * *"
 ---
 kind: custom.Step
 name: docker-compose-up

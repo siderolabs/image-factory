@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-18T14:49:11Z by kres 4b58472.
+# Generated on 2026-04-22T20:13:43Z by kres 8299790.
 
 # common variables
 
@@ -381,22 +381,6 @@ integration.test:
 .PHONY: integration.enterprise.test
 integration.enterprise.test:
 	@$(MAKE) local-$@ DEST=$(ARTIFACTS)
-
-.PHONY: update-to-talos-main
-update-to-talos-main:
-	@$(MAKE) local-copy-out-go-mod DEST=. TARGET_ARGS="--no-cache-filter=update-to-talos-main"
-
-.PHONY: integration-cdn-talos-main
-integration-cdn-talos-main: update-to-talos-main
-	@$(MAKE) integration-cdn
-
-.PHONY: integration-direct-talos-main
-integration-direct-talos-main: update-to-talos-main
-	@$(MAKE) integration-direct
-
-.PHONY: integration-s3-talos-main
-integration-s3-talos-main: update-to-talos-main
-	@$(MAKE) integration-s3
 
 .PHONY: tailwind
 tailwind:
