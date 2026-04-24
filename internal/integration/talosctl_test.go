@@ -16,6 +16,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/siderolabs/image-factory/pkg/client"
 )
 
 func downloadTalosctlInvalid(ctx context.Context, t *testing.T, baseURL string, talosVersion, path string, expectedCode int) string {
@@ -44,7 +46,32 @@ func downloadTalosctl(ctx context.Context, t *testing.T, baseURL string, talosVe
 	return resp
 }
 
+func testTalosctlList(ctx context.Context, t *testing.T, baseURL string) {
+	c, err := client.New(baseURL, clientAuthCredentials()...)
+	require.NoError(t, err)
+
+	for _, version := range []string{"v1.11.0", "v1.12.0"} {
+		t.Run(version, func(t *testing.T) {
+			t.Parallel()
+
+			urls, err := c.TalosctlList(ctx, version)
+			require.NoError(t, err)
+			assert.NotEmpty(t, urls)
+
+			for _, u := range urls {
+				assert.Contains(t, u, "/talosctl/"+version+"/")
+			}
+		})
+	}
+}
+
 func testTalosctlFrontend(ctx context.Context, t *testing.T, baseURL string) {
+	t.Run("List", func(t *testing.T) {
+		t.Parallel()
+
+		testTalosctlList(ctx, t, baseURL)
+	})
+
 	talosVersions := map[string][]string{
 		"v1.11.0": {
 			"talosctl-linux-amd64", "talosctl-linux-arm64", "talosctl-linux-armv7",

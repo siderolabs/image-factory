@@ -608,12 +608,9 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 		secureBootInstallerImage = fmt.Sprintf("%s/%s-installer-secureboot/%s:%s", f.options.ExternalURL.Host, params.Platform, schematicID, version)
 	}
 
-	var talosctlTuples []artifacts.TalosctlTuple
-	if talosVersion.GTE(semver.MustParse("1.11.0-alpha.3")) {
-		talosctlTuples, err = f.getTalosctlTuples(ctx, params.Version)
-		if err != nil {
-			return "", nil, nil, err
-		}
+	talosctlTuples, err := f.artifactsManager.GetTalosctlTuples(ctx, params.Version)
+	if err != nil {
+		return "", nil, nil, err
 	}
 
 	// Build PXE base URL with credential placeholder when auth is active,
@@ -667,7 +664,7 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 
 			TroubleshootingGuideAvailable: talosVersion.GTE(semver.MustParse("1.6.0")),
 			ProductionGuideAvailable:      talosVersion.GTE(semver.MustParse("1.5.0")),
-			TalosctlAvailable:             talosVersion.GTE(semver.MustParse("1.11.0-alpha.3")),
+			TalosctlAvailable:             quirks.New(params.Version).SupportsFactoryTalosctlDownload(),
 			SBOMAvailable:                 talosVersion.GTE(semver.MustParse("1.11.0")),
 
 			Enterprise:      enterprise.Enabled(),
@@ -861,13 +858,4 @@ func (f *Frontend) getOfficialExtensions(ctx context.Context, version string) ([
 	return xslices.Filter(extensions, func(ext artifacts.ExtensionRef) bool {
 		return ext.TaggedReference.Context().RepositoryStr() != "siderolabs/metal-agent" // hide the internal metal-agent extension on the UI
 	}), nil
-}
-
-func (f *Frontend) getTalosctlTuples(ctx context.Context, version string) ([]artifacts.TalosctlTuple, error) {
-	talosctlTuples, err := f.artifactsManager.GetTalosctlTuples(ctx, version)
-	if err != nil {
-		return nil, err
-	}
-
-	return talosctlTuples, nil
 }
