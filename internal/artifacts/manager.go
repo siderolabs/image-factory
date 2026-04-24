@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/siderolabs/gen/xerrors"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
@@ -431,6 +432,10 @@ func (m *Manager) GetTalosctlTuples(ctx context.Context, versionString string) (
 	m.talosctlTuplesMu.Unlock()
 
 	if ok {
+		return tuples, nil
+	}
+
+	if !quirks.New(versionString).SupportsFactoryTalosctlDownload() {
 		return tuples, nil
 	}
 

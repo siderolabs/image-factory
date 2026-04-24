@@ -178,6 +178,35 @@ Returns a list of official overlays available for the specified Talos Linux vers
 ]
 ```
 
+### `GET /talosctl/:version`
+
+Returns a list of download URLs for `talosctl` binaries for the specified Talos Linux version.
+
+* `:version` is a Talos Linux version, e.g. `v1.11.0`
+
+`talosctl` downloads are available for Talos versions **v1.11.0** and later.
+
+```json
+[
+  "https://factory.talos.dev/talosctl/v1.11.0/talosctl-darwin-amd64",
+  "https://factory.talos.dev/talosctl/v1.11.0/talosctl-darwin-arm64",
+  "https://factory.talos.dev/talosctl/v1.11.0/talosctl-freebsd-amd64",
+  "https://factory.talos.dev/talosctl/v1.11.0/talosctl-freebsd-arm64",
+  "https://factory.talos.dev/talosctl/v1.11.0/talosctl-linux-amd64",
+  "https://factory.talos.dev/talosctl/v1.11.0/talosctl-linux-arm64",
+  "https://factory.talos.dev/talosctl/v1.11.0/talosctl-linux-armv7",
+  "https://factory.talos.dev/talosctl/v1.11.0/talosctl-windows-amd64.exe",
+  "https://factory.talos.dev/talosctl/v1.11.0/talosctl-windows-arm64.exe"
+]
+```
+
+### `GET /talosctl/:version/:path`
+
+Download a `talosctl` binary for the specified Talos Linux version and platform/architecture.
+
+* `:version` is a Talos Linux version, e.g. `v1.11.0`
+* `:path` is a binary name, e.g. `talosctl-linux-amd64` (use `GET /talosctl/:version` to list available paths)
+
 ### `GET /secureboot/signing-cert.pem`
 
 Returns PEM-encoded SecureBoot signing certificate used by the Image Factory.
