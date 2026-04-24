@@ -244,6 +244,14 @@ Examples:
 Pulls the Talos Linux `installer` image with the specified schematic and Talos Linux version.
 The image platform (architecture) will be determined by the architecture of the Talos Linux Linux machine.
 
+#### `latest` Tag Resolution
+
+The `latest` tag automatically resolves to the latest stable (non-prerelease) Talos Linux version available:
+
+* `docker pull factory.talos.dev/metal-installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:latest`
+
+This is equivalent to pulling with an explicit stable version, ensuring that prerelease versions (e.g. `v1.5.0-alpha.1`) are not used.
+
 ### `GET /oci/cosign/signing-key.pub`
 
 Returns PEM-encoded public key used to sign the Talos Linux `installer` images.

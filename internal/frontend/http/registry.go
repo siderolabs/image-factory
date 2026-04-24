@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/blang/semver/v4"
@@ -165,6 +166,14 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 		return err
 	}
 
+	// if the tag is "latest", replace it with latest known stable version to the factory.
+	if versionTag == "latest" {
+		versionTag, err = f.resolveLatest(ctx, schematicID)
+		if err != nil {
+			return fmt.Errorf("error resolving latest version: %w", err)
+		}
+	}
+
 	// if the tag is the digest, or it doesn't look like the version, we just redirect to the external registry
 	if strings.HasPrefix(versionTag, "sha256:") || !strings.HasPrefix(versionTag, "v") {
 		return f.handleExternalRegistry(w, req, img.Name(), schematicID, "manifests", versionTag)
@@ -250,6 +259,30 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 
 	// now we can redirect to the external registry
 	return f.handleExternalRegistry(w, req, img.Name(), schematicID, "manifests", manifestHash.String())
+}
+
+func (f *Frontend) resolveLatest(ctx context.Context, schematicID string) (string, error) {
+	ver, err := f.artifactsManager.GetTalosVersions(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	semver.Sort(ver)
+	slices.Reverse(ver)
+
+	var versionTag string
+
+	for _, v := range ver {
+		if len(v.Pre) == 0 {
+			versionTag = "v" + v.String()
+
+			break
+		}
+	}
+
+	f.logger.Info("resolving latest tag to version", zap.String("schematic", schematicID), zap.String("version", versionTag))
+
+	return versionTag, nil
 }
 
 func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, schematic *schematic.Schematic, version semver.Version, schematicID, versionTag string) (v1.Hash, error) {

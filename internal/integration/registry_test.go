@@ -225,6 +225,32 @@ func assertImageSignature(ctx context.Context, t *testing.T, ref name.Reference,
 	assert.NoError(t, err)
 }
 
+func testLatestTagResolution(ctx context.Context, t *testing.T, registryAddr string, baseURL string) {
+	registry, err := name.NewRegistry(registryAddr)
+	require.NoError(t, err)
+
+	// pull installer with 'latest' tag
+	ref := registry.Repo("installer", emptySchematicID).Tag("latest")
+
+	_, err = remote.Head(ref, ociRemoteAuthOpts()...)
+	require.NoError(t, err, "failed to pull latest tag")
+
+	// verify the image exists and is valid
+	descriptor, err := remote.Get(ref, append(ociRemoteAuthOpts(), remote.WithPlatform(v1.Platform{
+		Architecture: "amd64",
+		OS:           "linux",
+	}))...)
+	require.NoError(t, err)
+
+	img, err := descriptor.Image()
+	require.NoError(t, err)
+
+	layers, err := img.Layers()
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, layers, "latest tag should resolve to a valid installer image with layers")
+}
+
 func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string, baseURL string) {
 	talosVersions := []string{
 		"v1.3.7",
