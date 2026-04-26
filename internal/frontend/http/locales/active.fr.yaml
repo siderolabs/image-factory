@@ -1,0 +1,344 @@
+- id: lang.name
+  translation: Langue
+
+- id: lang.en
+  translation: English
+
+- id: lang.pl
+  translation: Polski
+
+- id: lang.ru
+  translation: Русский
+
+- id: lang.fr
+  translation: Français
+
+- id: app.name
+  translation: "Image Factory"
+
+- id: distro.name
+  translation: "Talos Linux"
+
+- id: page.header
+  translation: "Talos Linux Image Factory"
+
+- id: page.header.enterprise
+  translation: "Talos Linux Image Factory Enterprise"
+
+- id: info.developed_by
+  translation: "La Talos Linux Image Factory, développée par "
+
+- id: info.offers
+  translation: ", propose une méthode pour télécharger divers supports de démarrage pour "
+
+- id: info.more
+  translation: "Pour plus d'informations sur l'API Image Factory et les formats d'image disponibles, veuillez consulter "
+
+- id: info.github
+  translation: "le dépôt GitHub"
+
+- id: info.version
+  translation: "Version"
+
+- id: interface.loading
+  translation: "Chargement..."
+
+- id: button.next
+  translation: "Suivant"
+
+- id: button.search
+  translation: "Rechercher"
+
+- id: button.back
+  translation: "Retour"
+
+- id: hardware.title
+  translation: "Type de matériel"
+
+- id: hardware.bmm.name
+  translation: "Machine physique"
+
+- id: hardware.cs.name
+  translation: "Serveur Cloud"
+
+- id: hardware.sbc.name
+  translation: "Ordinateur monocarte"
+
+- id: hardware.bmm.description
+  translation: "Convient aux machines physiques x86-64 et arm64, ainsi qu'aux machines virtuelles génériques. En cas de doute, choisissez cette option."
+
+- id: hardware.cs.description
+  translation: "Compatible avec AWS, GCP, Azure, VMWare, Equinix Metal et d'autres plateformes, y compris les environnements homelab comme Proxmox."
+
+- id: hardware.sbc.description
+  translation: "Prend en charge le Raspberry Pi, Pine64, Jetson Nano et autres appareils similaires."
+
+- id: versions.title
+  translation: "Choisir la version de Talos Linux"
+
+- id: versions.recommendation
+  translation: "Nous recommandons vivement d'utiliser la dernière version stable de Talos Linux"
+
+- id: versions.recommendation.pre_release
+  translation: "Les versions pré-stables conviennent à des fins de test mais ne sont pas conseillées pour les environnements de production."
+
+- id: docs.title
+  translation: "Documentation pour Talos Linux"
+
+- id: docs.new
+  translation: "Nouveautés"
+
+- id: docs.matrix
+  translation: "Matrice de compatibilité"
+
+- id: architecture.title
+  translation: "Architecture de la machine"
+
+- id: architecture.amd64
+  translation: "Compatible avec les processeurs Intel et AMD, également appelé x86_64. En cas de doute, sélectionnez cette option."
+
+- id: architecture.arm64
+  translation: "Convient aux processeurs Ampere Computing et autres arm64. Pour les ordinateurs monocartes, choisissez l'option « SBC » sur le premier écran. Pour les machines virtuelles AWS et GCP arm64, utilisez les images Cloud."
+
+- id: architecture.other
+  translation: "Compatible avec divers fabricants ARM64, également connu sous le nom aarch64."
+
+- id: architecture.secure_boot.name
+  translation: "SecureBoot"
+
+- id: architecture.secure_boot.create
+  translation: "Créer une image "
+
+- id: architecture.secure_boot.description
+  translation: " signée avec la clé de signature officielle de Sidero Labs. Cela nécessite un démarrage UEFI et un matériel préconfiguré."
+
+- id: cloud.title
+  translation: "Cloud"
+
+- id: singleboard.title
+  translation: "Ordinateur monocarte"
+
+- id: common.runs_on
+  translation: "Fonctionne sur"
+
+- id: common.documentation
+  translation: "documentation"
+
+- id: extensions.title
+  translation: "Extensions système"
+
+- id: extensions.description
+  translation: " améliorent l'image de base Talos Linux avec des fonctionnalités supplémentaires telles que des pilotes additionnels, des micrologiciels matériels, des environnements d'exécution de conteneurs, des agents invités, et plus encore."
+
+- id: extensions.select
+  translation: "Sélectionnez les extensions nécessaires pour votre environnement. En cas de doute, vous pouvez ignorer cette étape."
+
+- id: customization.title
+  translation: "Personnalisation"
+
+- id: customization.cmdline
+  translation: "Arguments supplémentaires de la ligne de commande du noyau :"
+
+- id: customization.cmdline.description
+  translation: "Cette étape vous permet de personnaliser les "
+
+- id: customization.cmdline.arguments
+  translation: "arguments par défaut de la ligne de commande du noyau"
+
+- id: customization.cmdline.example
+  translation: "La syntaxe acceptée est identique à celle de la ligne de commande du noyau, par ex., "
+
+- id: customization.cmdline.prefix
+  translation: ". Préfixer un argument avec "
+
+- id: customization.cmdline.removes
+  translation: " le supprime de la ligne de commande par défaut (par ex., "
+
+- id: customization.cmdline.secure_boot
+  translation: "Avec SecureBoot, la ligne de commande du noyau est signée et ne peut pas être modifiée, c'est donc la seule occasion de la personnaliser."
+
+- id: customization.cmdline.note
+  translation: "Veuillez noter que la personnalisation de la ligne de commande du noyau est uniquement acceptée pour les images de démarrage initial (ISO, PXE, image disque) et est ignorée pour les images "
+
+- id: customization.cmdline.upgrade
+  translation: " . Pour la personnalisation de la ligne de commande lors d'une mise à niveau ou d'une installation, utilisez le champ "
+
+- id: customization.cmdline.configuration
+  translation: " de configuration de la machine."
+
+- id: customization.cmdline.skip
+  translation: "Ignorez cette étape en cas de doute."
+
+- id: customization.overlay
+  translation: "Options d'overlay supplémentaires (avancé) :"
+
+- id: customization.overlay.description
+  translation: "Cette étape vous permet de personnaliser les options d'overlay pour "
+
+- id: customization.overlay.name
+  translation: "overlay"
+
+- id: customization.overlay.syntax
+  translation: "La syntaxe acceptée est YAML (JSON) sous forme de paires clé-valeur. Les options disponibles sont spécifiques à l'image overlay et peuvent être trouvées dans sa documentation."
+
+- id: customization.overlay.skip
+  translation: "En cas de doute, vous pouvez ignorer cette étape."
+
+- id: customization.bootloader.title
+  translation: "Chargeur d'amorçage"
+
+- id: customization.bootloader.auto.name
+  translation: "automatique"
+
+- id: customization.bootloader.auto.description
+  translation: "Sélectionne automatiquement la prise en charge du chargeur d'amorçage selon le type d'image et l'architecture (recommandé)."
+
+- id: customization.bootloader.sd_boot.name
+  translation: "UEFI uniquement"
+
+- id: customization.bootloader.sd_boot.description
+  translation: "Prend en charge le matériel moderne avec un micrologiciel UEFI (utilise systemd-boot)."
+
+- id: customization.bootloader.grub.name
+  translation: "BIOS uniquement"
+
+- id: customization.bootloader.grub.description
+  translation: "Prise en charge du matériel ancien, certaines machines virtuelles (utilise GRUB)."
+
+- id: customization.bootloader.dual_boot.name
+  translation: "Double démarrage"
+
+- id: customization.bootloader.dual_boot.description
+  translation: "Image universelle, comprend la prise en charge des systèmes BIOS et UEFI."
+
+- id: final.title
+  translation: "Schéma prêt"
+
+- id: final.image
+  translation: "L'identifiant de votre schéma d'image est : "
+
+- id: final.first_boot
+  translation: "Premier démarrage"
+
+- id: final.first_boot.metal
+  translation: "Voici les options pour le démarrage initial de Talos Linux sur une machine physique ou une machine virtuelle générique :"
+
+- id: final.first_boot.cloud
+  translation: "Voici les options pour le démarrage initial de Talos Linux sur"
+
+- id: final.first_boot.sbc
+  translation: "Utilisez l'image disque suivante pour"
+
+- id: final.initial_installation
+  translation: "Installation initiale"
+
+- id: final.initial_installation.description
+  translation: "Pour l'installation initiale de Talos Linux (non applicable pour le démarrage depuis une image disque), ajoutez l'image d'installation suivante à la configuration de la machine :"
+
+- id: final.upgrading
+  translation: "Mise à niveau de Talos Linux"
+
+- id: final.upgrading.name
+  translation: "mettre à niveau"
+
+- id: final.upgrading.to
+  translation: "Pour "
+
+- id: final.upgrading.description
+  translation: " Talos Linux sur la machine, utilisez l'image suivante :"
+
+- id: final.documentation
+  translation: "Documentation"
+
+- id: final.documentation.new
+  translation: "Nouveautés de Talos "
+
+- id: final.documentation.matrix
+  translation: "Matrice de compatibilité pour "
+
+- id: final.documentation.getting_started
+  translation: "Guide de démarrage rapide"
+
+- id: final.documentation.metal
+  translation: "Configuration réseau physique"
+
+- id: final.documentation.cloud
+  translation: "Guide"
+
+- id: final.documentation.sbc
+  translation: "Guide"
+
+- id: final.documentation.secure_boot
+  translation: "Guide SecureBoot"
+
+- id: final.documentation.production
+  translation: "Guide de cluster de production"
+
+- id: final.documentation.troubleshooting
+  translation: "Guide de dépannage"
+
+- id: final.extra
+  translation: "Ressources supplémentaires"
+
+- id: final.extra.kernel_image
+  translation: "Image du noyau"
+
+- id: final.extra.cmdline
+  translation: "Ligne de commande du noyau"
+
+- id: final.extra.initramfs
+  translation: "Image Initramfs"
+
+- id: final.extra.talosctl
+  translation: "CLI Talosctl"
+
+- id: final.extra.spdx
+  translation: "SBOM (SPDX)"
+
+- id: final.extra.spdx_enterprise_feature
+  translation: "Le bundle SBOM (SPDX) est uniquement disponible via la Talos Linux Image Factory Enterprise."
+
+- id: final.extra.checksum_enterprise_feature
+  translation: "Les sommes de contrôle sont uniquement disponibles via la Talos Linux Enterprise Image Factory."
+
+- id: final.disk_image.secure_boot
+  translation: "Image disque SecureBoot"
+
+- id: final.disk_image.secure_boot_docs
+  translation: "Documentation SecureBoot"
+
+- id: final.disk_image.iso_docs
+  translation: "Documentation ISO"
+
+- id: final.disk_image.all
+  translation: "Image disque"
+
+- id: final.pxe.secure_boot
+  translation: "PXE SecureBoot"
+
+- id: final.pxe.boot
+  translation: "Démarrage PXE"
+
+- id: final.pxe.docs
+  translation: "Documentation PXE"
+
+- id: final.board_image
+  translation: "Image disque"
+
+- id: final.local_test_cluster
+  translation: "Cluster de test local"
+
+- id: final.local_test_cluster.prompt
+  translation: "Pour créer un cluster de test Talos Linux local à partir de ce schéma sur macOS (Apple Silicon) ou Linux, exécutez :"
+
+- id: final.booter
+  translation: "Démarrage PXE avec booter"
+
+- id: final.booter.name
+  translation: "booter"
+
+- id: final.booter.command_pre
+  translation: "Pour démarrer facilement des machines physiques en PXE avec "
+
+- id: final.booter.command_post
+  translation: " avec ce schéma, exécutez la commande suivante sur un hôte dans le même sous-réseau :"

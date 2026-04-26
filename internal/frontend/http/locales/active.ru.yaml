@@ -10,6 +10,9 @@
 - id: lang.ru
   translation: Русский
 
+- id: lang.fr
+  translation: Français
+
 - id: app.name
   translation: "Генератор Образов"
 
