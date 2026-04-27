@@ -232,6 +232,110 @@ type WizardParams struct { //nolint:govet
 	Localizer *i18n.Localizer
 }
 
+// SetURLValuesFromSchematic reverses ToSchematic, populating the schematic-derived fields
+// of WizardParams from a schematic.
+//
+// Target is set to TargetSBC when the schematic carries an overlay, otherwise it is left
+// empty since the schematic alone cannot distinguish between metal and cloud targets.
+func SetURLValuesFromSchematic(params *WizardParams, s *schematic.Schematic) {
+	if len(s.Customization.ExtraKernelArgs) > 0 {
+		params.Cmdline = strings.Join(s.Customization.ExtraKernelArgs, " ")
+	}
+
+	params.CmdlineSet = true
+
+	if len(s.Customization.SystemExtensions.OfficialExtensions) > 0 {
+		params.Extensions = slices.Clone(s.Customization.SystemExtensions.OfficialExtensions)
+	} else {
+		// "-" is used when the user selects no extensions
+		params.Extensions = []string{"-"}
+	}
+
+	if s.Overlay.Name != "" || s.Overlay.Image != "" || len(s.Overlay.Options) > 0 {
+		params.Target = TargetSBC
+		params.BoardMeta = platforms.SBC{
+			OverlayName:  s.Overlay.Name,
+			OverlayImage: s.Overlay.Image,
+		}
+
+		for _, sbc := range platforms.SBCs() {
+			if sbc.OverlayName == s.Overlay.Name && sbc.OverlayImage == s.Overlay.Image {
+				params.BoardMeta = sbc
+				params.Board = sbc.Name
+
+				break
+			}
+		}
+
+		if len(s.Overlay.Options) > 0 {
+			optsBytes, _ := yaml.Marshal(s.Overlay.Options) //nolint:errcheck // marshaling a map decoded from YAML cannot fail
+			params.OverlayOptions = strings.TrimRight(string(optsBytes), "\n")
+		}
+	}
+
+	// BootloaderKind's zero value is "none", which is also what an unset/"auto"
+	// Bootloader maps to in ToSchematic. We treat zero as unset to avoid
+	// fabricating a "none" selection on the way back.
+	if s.Customization.Bootloader != 0 {
+		params.Bootloader = s.Customization.Bootloader.String()
+	}
+}
+
+// ToSchematic creates a schematic.Schematic out of the params.
+func (params WizardParams) ToSchematic(ctx context.Context, owner *string) (schematic.Schematic, error) {
+	var extraArgs []string
+
+	if params.Cmdline != "" {
+		extraArgs = strings.Split(params.Cmdline, " ")
+	}
+
+	extensions := xslices.Filter(params.Extensions, func(ext string) bool {
+		return ext != "-"
+	})
+
+	slices.Sort(extensions)
+
+	var overlay schematic.Overlay
+
+	if params.Target == TargetSBC && quirks.New(params.Version).SupportsOverlay() {
+		overlay.Name = params.BoardMeta.OverlayName
+		overlay.Image = params.BoardMeta.OverlayImage
+
+		var overlayOptsParsed map[string]any
+
+		if err := yaml.Unmarshal([]byte(params.OverlayOptions), &overlayOptsParsed); err != nil {
+			return schematic.Schematic{}, fmt.Errorf("error parsing overlay options: %w", err)
+		}
+
+		overlay.Options = overlayOptsParsed
+	}
+
+	requestedSchematic := schematic.Schematic{
+		Overlay: overlay,
+		Customization: schematic.Customization{
+			ExtraKernelArgs: extraArgs,
+			SystemExtensions: schematic.SystemExtensions{
+				OfficialExtensions: extensions,
+			},
+		},
+	}
+
+	if owner != nil {
+		requestedSchematic.Owner = *owner
+	}
+
+	if params.Bootloader != "" && params.Bootloader != "auto" {
+		bootloader, err := imageropts.BootloaderKindString(params.Bootloader)
+		if err != nil {
+			return schematic.Schematic{}, fmt.Errorf("invalid bootloader %q: %w", params.Bootloader, err)
+		}
+
+		requestedSchematic.Customization.Bootloader = bootloader
+	}
+
+	return requestedSchematic, nil
+}
+
 // Talosctl provides methods to generate paths for talosctl binaries.
 type Talosctl struct{}
 
@@ -334,8 +438,8 @@ func WizardParamsFromRequest(r *http.Request) WizardParams {
 	return params
 }
 
-// URLValues returns the URL values of the wizard parameters.
-func (p WizardParams) URLValues() url.Values {
+// NonSchematicURLValues returns the URL values of the wizard parameters that don't have any effect on the schematic.
+func (p WizardParams) NonSchematicURLValues() url.Values {
 	values := url.Values{}
 
 	if p.Target != "" {
@@ -354,12 +458,23 @@ func (p WizardParams) URLValues() url.Values {
 		values.Set("platform", p.Platform)
 	}
 
-	if p.Board != "" {
-		values.Set("board", p.Board)
-	}
-
 	if p.SecureBoot != "" {
 		values.Set("secureboot", p.SecureBoot)
+	}
+
+	if len(values) == 0 {
+		return nil
+	}
+
+	return values
+}
+
+// URLValues returns the URL values of the wizard parameters.
+func (p WizardParams) URLValues() url.Values {
+	values := p.NonSchematicURLValues()
+
+	if p.Board != "" {
+		values.Set("board", p.Board)
 	}
 
 	if p.Bootloader != "" {
@@ -535,57 +650,17 @@ func (f *Frontend) wizardCmdline(_ context.Context, params WizardParams) (string
 func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
 	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
 
-	// every parameter is set now, create the schematic
-	var extraArgs []string
-
-	if params.Cmdline != "" {
-		extraArgs = strings.Split(params.Cmdline, " ")
-	}
-
-	extensions := xslices.Filter(params.Extensions, func(ext string) bool {
-		return ext != "-"
-	})
-
-	slices.Sort(extensions)
-
-	var overlay schematic.Overlay
-
-	if params.Target == TargetSBC && quirks.New(params.Version).SupportsOverlay() {
-		overlay.Name = params.BoardMeta.OverlayName
-		overlay.Image = params.BoardMeta.OverlayImage
-
-		var overlayOptsParsed map[string]any
-
-		if err := yaml.Unmarshal([]byte(params.OverlayOptions), &overlayOptsParsed); err != nil {
-			return "", nil, nil, fmt.Errorf("error parsing overlay options: %w", err)
-		}
-
-		overlay.Options = overlayOptsParsed
-	}
-
-	requestedSchematic := schematic.Schematic{
-		Overlay: overlay,
-		Customization: schematic.Customization{
-			ExtraKernelArgs: extraArgs,
-			SystemExtensions: schematic.SystemExtensions{
-				OfficialExtensions: extensions,
-			},
-		},
-	}
+	var owner *string
 
 	if f.options.AuthProvider != nil {
 		if username, ok := f.options.AuthProvider.UsernameFromContext(ctx); ok {
-			requestedSchematic.Owner = username
+			owner = &username
 		}
 	}
 
-	if params.Bootloader != "" && params.Bootloader != "auto" {
-		bootloader, err := imageropts.BootloaderKindString(params.Bootloader)
-		if err != nil {
-			return "", nil, nil, fmt.Errorf("invalid bootloader %q: %w", params.Bootloader, err)
-		}
-
-		requestedSchematic.Customization.Bootloader = bootloader
+	requestedSchematic, err := params.ToSchematic(ctx, owner)
+	if err != nil {
+		return "", nil, nil, err
 	}
 
 	schematicID, err := f.schematicFactory.Put(ctx, &requestedSchematic)
@@ -624,6 +699,9 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 			)
 		}
 	}
+
+	urlValues := params.NonSchematicURLValues()
+	urlValues.Set("schematic-id", schematicID)
 
 	return "wizard-final",
 		struct {
@@ -671,12 +749,23 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 			SPDXBaseURL:     f.options.ExternalURL.JoinPath("spdx", schematicID, version, params.Arch),
 			ChecksumBaseURL: f.options.ExternalURL.JoinPath("image", schematicID, version),
 		},
-		params.URLValues(),
+		urlValues,
 		nil
 }
 
 func (f *Frontend) wizard(ctx context.Context, r *http.Request, localizer *i18n.Localizer) (string, any, url.Values, error) {
 	params := WizardParamsFromRequest(r)
+
+	schematicID := r.FormValue("schematic-id")
+	if schematicID != "" {
+		schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("error retrieving schematic: %w", err)
+		}
+
+		SetURLValuesFromSchematic(&params, schematic)
+	}
+
 	params.Localizer = localizer
 
 	switch {
