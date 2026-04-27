@@ -6,6 +6,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime"
@@ -17,6 +18,32 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 )
+
+// handleTalosctlList returns a list of Talosctl downloads for a given version.
+func (f *Frontend) handleTalosctlList(ctx context.Context, w http.ResponseWriter, _ *http.Request, p httprouter.Params) error {
+	versionTag := p.ByName("version")
+	if !strings.HasPrefix(versionTag, "v") {
+		versionTag = "v" + versionTag
+	}
+
+	tuples, err := f.artifactsManager.GetTalosctlTuples(ctx, versionTag)
+	if err != nil {
+		return err
+	}
+
+	baseURL := f.options.ExternalURL.JoinPath("talosctl", versionTag)
+	filenames := Talosctl{}.TalosctlPaths(tuples)
+
+	paths := make([]string, 0, len(filenames))
+
+	for _, filename := range filenames {
+		paths = append(paths, baseURL.JoinPath(filename).String())
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	return json.NewEncoder(w).Encode(paths)
+}
 
 // handleTalosctl handles serving talosctl binaries.
 func (f *Frontend) handleTalosctl(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {

@@ -180,6 +180,7 @@ func NewFrontend(
 	registerPublicRoute(frontend.router.GET, "/secureboot/signing-cert.pem", frontend.handleSecureBootSigningCert)
 
 	// talosctl - public
+	registerPublicRoute(frontend.router.GET, "/talosctl/:version", frontend.handleTalosctlList)
 	registerPublicRoute(frontend.router.HEAD, "/talosctl/:version/:path", frontend.handleTalosctl)
 	registerPublicRoute(frontend.router.GET, "/talosctl/:version/:path", frontend.handleTalosctl)
 

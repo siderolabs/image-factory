@@ -117,6 +117,17 @@ func (c *Client) ExtensionsVersions(ctx context.Context, talosVersion string) ([
 	return versions, nil
 }
 
+// TalosctlList gets the list of talosctl download URLs for a Talos version.
+func (c *Client) TalosctlList(ctx context.Context, talosVersion string) ([]string, error) {
+	var urls []string
+
+	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/talosctl/%s", talosVersion), nil, &urls, nil); err != nil {
+		return nil, err
+	}
+
+	return urls, nil
+}
+
 // OverlaysVersions gets the version of the extension for a Talos version.
 func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]OverlayInfo, error) {
 	var versions []OverlayInfo
