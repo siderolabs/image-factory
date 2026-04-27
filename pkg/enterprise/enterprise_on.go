@@ -17,11 +17,17 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/spdx"
 	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx/storage/registry"
+	"github.com/siderolabs/image-factory/enterprise/vex"
 )
 
 // Enabled indicates whether Enterprise features are enabled.
 func Enabled() bool {
 	return true
+}
+
+// NewVEXFrontend returns a new VEX FrontendPlugin.
+func NewVEXFrontend() (FrontendPlugin, error) {
+	return vex.NewFrontend(), nil
 }
 
 // NewSpdxFrontend returns a new Spdx FrontendPlugin.

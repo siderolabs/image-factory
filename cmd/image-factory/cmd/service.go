@@ -206,7 +206,12 @@ func buildEnterprisePlugins(
 		return nil, fmt.Errorf("failed to initialize SPDX frontend: %w", err)
 	}
 
-	return []enterprise.FrontendPlugin{spdxFrontend}, nil
+	vexFrontend, err := enterprise.NewVEXFrontend()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize VEX frontend: %w", err)
+	}
+
+	return []enterprise.FrontendPlugin{spdxFrontend, vexFrontend}, nil
 }
 
 func buildFrontendOptions(cacheImageSigner signer.Signer, authProvider enterprise.AuthProvider, opts Options) (frontendhttp.Options, error) {
