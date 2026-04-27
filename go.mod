@@ -5,7 +5,7 @@ go 1.26.1
 // downgrade the go-containerregistry to workaround the security changes in
 // https://github.com/google/go-containerregistry/pull/2227/changes: it breaks
 // our extensions
-replace github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.21.2
+replace github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.21.5
 
 require (
 	cloud.google.com/go/auth v0.20.0
@@ -27,7 +27,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.3.4
-	github.com/minio/minio-go/v7 v7.0.100
+	github.com/minio/minio-go/v7 v7.1.0
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/ory/dockertest v3.3.5+incompatible
@@ -261,6 +261,7 @@ require (
 	github.com/vbatts/tar-split v0.12.2 // indirect
 	github.com/vultr/metadata v1.1.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/zeebo/xxh3 v1.1.0 // indirect
 	gitlab.com/gitlab-org/api/client-go v1.46.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect
