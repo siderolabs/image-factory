@@ -5,18 +5,38 @@ project_name = "image-factory"
 github_repo = "siderolabs/image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v1.0.3"
+previous = "v1.1.0"
 pre_release = false
 
 [notes]
 
-    [notes.sbom]
-        title = "SPDX SBOM viewer"
+    [notes.authentication]
+        title = "Authentication Support (Enterprise)"
         description = """\
-Added a new SPDX SBOM section to the Image Factory Enterprise.
-Users can now request SBOMs for a specific Talos schematic directly from the Image Factory Enterprise interface.
+Image Factory Enterprise now supports API key-based authentication.
+When enabled, all schematic access requires the caller to be authenticated.
+Each schematic records its owner at creation time, making schematics private to the user who created them.
+Authentication is configured via a set of usernames and associated API keys.
 
 **Note:** This feature is enterprise-only and is subject to the BUSL-1.1 license.
+"""
+
+    [notes.talosctl_endpoint]
+        title = "New /talosctl/:version Endpoint"
+        description = """\
+A new `/talosctl/:version` endpoint has been added that lists all downloadable talosctl binaries for a given Talos version.
+"""
+
+    [notes.french_locale]
+        title = "French Locale"
+        description = """\
+The Image Factory frontend now includes a French (fr) locale, adding translations for the web interface.
+"""
+
+    [notes.latest_tag]
+        title = "Stable Resolution for 'latest' Tag"
+        description = """\
+The `latest` tag in the registry frontend now resolves to the latest non-prerelease (stable) version instead of being passed through to the upstream registry.
 """
 
 [make_deps]

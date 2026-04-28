@@ -1,3 +1,101 @@
+## [image-factory 1.2.0](https://github.com/siderolabs/image-factory/releases/tag/v1.2.0) (2026-04-28)
+
+Welcome to the v1.2.0 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Authentication Support (Enterprise)
+
+Image Factory Enterprise now supports API key-based authentication.
+When enabled, all schematic access requires the caller to be authenticated.
+Each schematic records its owner at creation time, making schematics private to the user who created them.
+Authentication is configured via a set of usernames and associated API keys.
+
+**Note:** This feature is enterprise-only and is subject to the BUSL-1.1 license.
+
+
+### French Locale
+
+The Image Factory frontend now includes a French (fr) locale, adding translations for the web interface.
+
+
+### Stable Resolution for 'latest' Tag
+
+The `latest` tag in the registry frontend now resolves to the latest non-prerelease (stable) version instead of being passed through to the upstream registry.
+
+
+### New /talosctl/:version Endpoint
+
+A new `/talosctl/:version` endpoint has been added that lists all downloadable talosctl binaries for a given Talos version.
+
+
+### Contributors
+
+* Andrey Smirnov
+* Mateusz Urbanek
+* Noel Georgi
+* Edward Sammut Alessi
+* Quentin Joly
+* Utku Ozdemir
+
+### Changes
+<details><summary>6 commits</summary>
+<p>
+
+* [`4abeff4`](https://github.com/siderolabs/image-factory/commit/4abeff4f1ac21e810f45e739c3be91eab68278a9) feat: add /talosctl/:version endpoint to list downloadable talosctls
+* [`405b488`](https://github.com/siderolabs/image-factory/commit/405b488070a54541dbc8f416f261cc660b744f30) feat(i18n): add french locale
+* [`c6ad082`](https://github.com/siderolabs/image-factory/commit/c6ad082dbbf9a084ad609f73788b1500ab8b0e08) feat(registry): resolve latest tag to stable version
+* [`471706d`](https://github.com/siderolabs/image-factory/commit/471706d29414e6349840ad2afc5e922add416edb) chore: drop update to talos main tests
+* [`403cd5a`](https://github.com/siderolabs/image-factory/commit/403cd5a563a9b8aa08a328c026ad0303c7438429) fix: centralize schematic ownership enforcement
+* [`f1cceee`](https://github.com/siderolabs/image-factory/commit/f1cceee8cd394f377dd7910dfe7478a68ab36013) feat: implement authentication support
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>26 commits</summary>
+<p>
+
+* [`b9e9c6579`](https://github.com/siderolabs/talos/commit/b9e9c657963363da73b897c27ef3d407ba5e91c0) release(v1.13.0): prepare release
+* [`5e2fc260a`](https://github.com/siderolabs/talos/commit/5e2fc260a8c189e1ab77553dfa7c96b12db4a7db) fix: revert add extraArgs from service-account-issuer
+* [`17448fcd2`](https://github.com/siderolabs/talos/commit/17448fcd29d5b09f99225767d9c678e05f278d69) fix: revert use append instead of prepend in service-account-issuer
+* [`4b9fe000f`](https://github.com/siderolabs/talos/commit/4b9fe000f491766618edacd5719d5c415a04b38f) feat: add quirk for talosctl factory downloads
+* [`f62c33113`](https://github.com/siderolabs/talos/commit/f62c331130fc8a6bf3c2ee17c85b209811cc8956) refactor: make all controller unit-test follow modern patterns
+* [`cd317d533`](https://github.com/siderolabs/talos/commit/cd317d53306d09074d2cc222219e520c18f8057d) feat: support auth for Image Factory in cluster create
+* [`92ca9e16f`](https://github.com/siderolabs/talos/commit/92ca9e16f95c58fc8a1e4afca6dbe8d3c42b67ba) feat: update Kubernetes to v1.36.0
+* [`e9afea74d`](https://github.com/siderolabs/talos/commit/e9afea74d6fe57b4d611d24c75f42a196a7d690c) test: fix OOM test flake
+* [`d34a61c8d`](https://github.com/siderolabs/talos/commit/d34a61c8d1fd837477c0a8d42b02ce48dde9f971) fix(talosctl): ensure uncordon runs after reboot/upgrade errors
+* [`f9531d352`](https://github.com/siderolabs/talos/commit/f9531d35291c42bcfa594fbec283cfc48e540c3e) test: fix a flake in the manifest sync test
+* [`9f04f2c4e`](https://github.com/siderolabs/talos/commit/9f04f2c4ef3a8ace0c07c50fa633da40dda83835) fix: watch kubelet's kubeconfig and time out for cache sync
+* [`f3bab2baf`](https://github.com/siderolabs/talos/commit/f3bab2baf2172c40190270d96c73ec5dc42b9833) chore(ci): nvidia update helm values
+* [`d4d018b54`](https://github.com/siderolabs/talos/commit/d4d018b546fd6a6e48585ff88f610d20076cdc7a) fix: propagate route table down to the resource
+* [`ffa0bcf61`](https://github.com/siderolabs/talos/commit/ffa0bcf61a6f5cb388a7ecaadabb974b6570b385) chore(ci): bump gpu operator version
+* [`8035e6e49`](https://github.com/siderolabs/talos/commit/8035e6e49b4b5b5ac1f7f2526df48cd272f04d40) fix: do not flip machine stage to rebooting during shutdown
+* [`10606bdfe`](https://github.com/siderolabs/talos/commit/10606bdfe897bc4279fa5e6d1d038fefa0fefab4) fix: boot entry detection
+* [`23393a5ea`](https://github.com/siderolabs/talos/commit/23393a5ea3a4644f1a2c1f18c17c4a69b58c7f92) fix: zfs extensions test
+* [`a922d1540`](https://github.com/siderolabs/talos/commit/a922d1540cf462f7fccb5e97e7ff1d7d9456334f) fix: return failed precondition on upgrade when not installed
+* [`252799a00`](https://github.com/siderolabs/talos/commit/252799a00bdb7a0cdb7f05226593841999a8c45b) fix: reduce memory dashboard usage
+* [`8180cb11c`](https://github.com/siderolabs/talos/commit/8180cb11c946844169595236bc40332985a7421d) fix: wrong slot of encryption key was logged
+* [`b6bcd47e6`](https://github.com/siderolabs/talos/commit/b6bcd47e6c87df15e8b08f8e27ecc2ae7c53ecd3) feat: update Flannel to 0.28.4
+* [`370c035ab`](https://github.com/siderolabs/talos/commit/370c035ab6e5995987e27d3308daae07a683a8fb) fix: audit trustd code for security
+* [`3e1c6fd84`](https://github.com/siderolabs/talos/commit/3e1c6fd84ba907fdf255cbc0706251e36cb73816) chore: bump container registry library
+* [`dacd73313`](https://github.com/siderolabs/talos/commit/dacd733137d5b564b38adf62e44915ff19636de8) chore: update sign images to support image name suffix
+* [`1a519a410`](https://github.com/siderolabs/talos/commit/1a519a4108f01b0c9981c53ef8de8192963b26ed) test: allow more tests to run in FIPS strict mode
+* [`cb969aa9f`](https://github.com/siderolabs/talos/commit/cb969aa9f8d641056bb7ee360023eb5ec88fb91c) feat: update Linux to 6.18.24
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/fsnotify/fsnotify**               v1.9.0 **_new_**
+* **github.com/siderolabs/talos**                v1.13.0-rc.0 -> v1.13.0
+* **github.com/siderolabs/talos/pkg/machinery**  v1.13.0-rc.0 -> v1.13.0
+* **golang.org/x/crypto**                        v0.50.0 **_new_**
+
+Previous release can be found at [v1.1.0](https://github.com/siderolabs/image-factory/releases/tag/v1.1.0)
+
 ## [image-factory 1.1.0](https://github.com/siderolabs/image-factory/releases/tag/v1.1.0) (2026-04-17)
 
 Welcome to the v1.1.0 release of image-factory!
