@@ -42,21 +42,23 @@ type AuthProvider interface {
 // Builder orchestrates SPDX extraction and caching.
 type Builder struct {
 	storage          storage.Storage
+	sf               singleflight.Group
+	authProvider     AuthProvider
 	artifactsManager *artifacts.Manager
 	assetBuilder     *asset.Builder
 	schematicFactory *schematic.Factory
 	logger           *zap.Logger
-	sf               singleflight.Group
-	authProvider     AuthProvider
+	externalURL      string
 }
 
 // Options defines the dependencies for the SPDX builder.
 type Options struct {
 	Storage          storage.Storage
+	AuthProvider     AuthProvider
 	ArtifactsManager *artifacts.Manager
 	SchematicFactory *schematic.Factory
 	AssetBuilder     *asset.Builder
-	AuthProvider     AuthProvider
+	ExternalURL      string
 }
 
 // NewBuilder creates a new SPDX bundle builder.
@@ -65,6 +67,7 @@ func NewBuilder(
 	opts Options,
 ) *Builder {
 	return &Builder{
+		externalURL:      opts.ExternalURL,
 		storage:          opts.Storage,
 		artifactsManager: opts.ArtifactsManager,
 		schematicFactory: opts.SchematicFactory,
@@ -136,6 +139,7 @@ func (b *Builder) buildBundle(sc *schematicpkg.Schematic, schematicID, versionTa
 		SchematicID:  schematicID,
 		TalosVersion: versionTag,
 		Arch:         string(arch),
+		ExternalURL:  b.externalURL,
 		Files:        []File{},
 	}
 

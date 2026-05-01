@@ -29,6 +29,7 @@ type FrontendPlugin interface {
 
 // SPDXOptions holds configuration options for the SPDX frontend.
 type SPDXOptions struct {
+	ExternalURL             string
 	CacheImageSigner        signer.Signer
 	SchematicFactory        *schematic.Factory
 	ArtifactsManager        *artifacts.Manager

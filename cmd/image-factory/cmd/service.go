@@ -192,6 +192,7 @@ func buildEnterprisePlugins(
 	}
 
 	spdxFrontend, err := enterprise.NewSpdxFrontend(logger, enterprise.SPDXOptions{
+		ExternalURL:             opts.HTTP.ExternalURL,
 		SchematicFactory:        configFactory,
 		ArtifactsManager:        artifactsManager,
 		AssetBuilder:            assetBuilder,

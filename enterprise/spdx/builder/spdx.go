@@ -41,6 +41,9 @@ type Bundle struct {
 	// Arch is the target architecture (e.g., "amd64").
 	Arch string
 
+	// ExternalURL is the host used in the document namespace (e.g., "factory.sidero.dev").
+	ExternalURL string
+
 	// Files contains the extracted SPDX files.
 	Files []File
 }
@@ -60,7 +63,8 @@ func BundleToJSON(bundle *Bundle) (io.Reader, int64, error) {
 		SPDXIdentifier: common.ElementID("DOCUMENT"),
 		DocumentName:   fmt.Sprintf("talos-%s-%s-%s", bundle.SchematicID, bundle.TalosVersion, bundle.Arch),
 		DocumentNamespace: fmt.Sprintf(
-			"https://factory.talos.dev/spdx/%s/%s/%s",
+			"https://%s/spdx/%s/%s/%s",
+			bundle.ExternalURL,
 			bundle.SchematicID,
 			bundle.TalosVersion,
 			bundle.Arch,

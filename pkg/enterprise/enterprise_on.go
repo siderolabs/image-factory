@@ -48,6 +48,7 @@ func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, erro
 	}
 
 	builder := builder.NewBuilder(logger, builder.Options{
+		ExternalURL:      opts.ExternalURL,
 		Storage:          storage,
 		ArtifactsManager: opts.ArtifactsManager,
 		SchematicFactory: opts.SchematicFactory,
