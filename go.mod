@@ -37,6 +37,7 @@ require (
 	github.com/siderolabs/go-blockdevice/v2 v2.0.28
 	github.com/siderolabs/go-debug v0.6.2
 	github.com/siderolabs/go-pointer v1.0.1
+	github.com/siderolabs/go-vex v0.0.0-20260430094145-fd0fd5ea1e79
 	github.com/siderolabs/talos v1.13.0
 	github.com/siderolabs/talos/pkg/machinery v1.13.0
 	github.com/sigstore/cosign/v3 v3.0.6
@@ -216,6 +217,8 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runc v1.3.0 // indirect
 	github.com/opencontainers/runtime-spec v1.3.0 // indirect
+	github.com/openvex/go-vex v0.2.7 // indirect
+	github.com/package-url/packageurl-go v0.1.3 // indirect
 	github.com/petermattis/goid v0.0.0-20260226131333-17d1149c6ac6 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect

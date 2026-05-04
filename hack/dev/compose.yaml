@@ -17,6 +17,8 @@ services:
       - OTEL_TRACES_EXPORTER=none
       - REGISTRY_LOG_LEVEL=info
       - REGISTRY_STORAGE_DELETE_ENABLED=true
+    ports:
+      - "5100:5000"
     restart: unless-stopped
   registry.ghcr.io:
     image: ghcr.io/distribution/distribution:edge

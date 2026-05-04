@@ -36,6 +36,9 @@ type Options struct { //nolint:govet // keeping order for semantic clarity
 	//
 	// Note: only available in the Enterprise edition.
 	Authentication AuthenticationOptions `koanf:"authentication"`
+
+	// Enterprise contains configuration for enterprise-specific features.
+	Enterprise EnterpriseOptions `koanf:"enterprise"`
 }
 
 // AssetBuilderOptions contains settings for building assets.
@@ -417,6 +420,21 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 	HTPasswdPath string `koanf:"htpasswdPath"`
 }
 
+// EnterpriseOptions contains configuration for enterprise-specific features.
+type EnterpriseOptions struct {
+	// VEX contains configuration for VEX data fetching.
+	VEX VEXOptions `koanf:"vex"`
+}
+
+// VEXOptions configures VEX data caching.
+type VEXOptions struct {
+	// Data specifies the OCI repository where VEX documents are stored.
+	Data OCIRepositoryOptions `koanf:"data"`
+
+	// CacheTTL is the duration for caching generated VEX documents.
+	CacheTTL time.Duration `koanf:"cacheTTL"`
+}
+
 // DefaultOptions are the default options.
 var DefaultOptions = Options{
 	HTTP: HTTPOptions{
@@ -484,6 +502,17 @@ var DefaultOptions = Options{
 				OverlayManifest:   "siderolabs/overlays",
 				Talosctl:          "siderolabs/talosctl-all",
 			},
+		},
+	},
+
+	Enterprise: EnterpriseOptions{
+		VEX: VEXOptions{
+			Data: OCIRepositoryOptions{
+				Registry:   "ghcr.io",
+				Namespace:  "siderolabs/talos-vex",
+				Repository: "talos-vex-data",
+			},
+			CacheTTL: 15 * time.Minute,
 		},
 	},
 }

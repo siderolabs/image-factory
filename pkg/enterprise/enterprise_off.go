@@ -17,6 +17,11 @@ func Enabled() bool {
 	return false
 }
 
+// NewVEXFrontend returns a new VEX FrontendPlugin.
+func NewVEXFrontend(_ *zap.Logger, _ VEXOptions) (FrontendPlugin, error) {
+	return nil, errors.New("VEX is not supported in the non-enterprise version")
+}
+
 // NewSpdxFrontend returns a new Spdx FrontendPlugin.
 func NewSpdxFrontend(_ *zap.Logger, _ SPDXOptions) (FrontendPlugin, error) {
 	return nil, errors.New("SPDX is not supported in the non-enterprise version")

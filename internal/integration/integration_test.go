@@ -251,6 +251,8 @@ func setupEnterprise(t *testing.T, options *cmd.Options) {
 		return
 	}
 
+	options.Enterprise.VEX.Data = vexDataRepositoryFlag.OCIRepositoryOptions
+
 	// Skip if the caller already configured auth (e.g. reload tests that need
 	// explicit control over the htpasswd file path).
 	if options.Authentication.Enabled && options.Authentication.HTPasswdPath != "" {
@@ -380,6 +382,12 @@ func commonTest(t *testing.T, options cmd.Options) {
 
 		testAuthFrontend(ctx, t, baseURL)
 	})
+
+	t.Run("TestVEXFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testVEXFrontend(ctx, t, baseURL)
+	})
 }
 
 type ociRepositoryFalg struct {
@@ -407,6 +415,7 @@ var (
 	installerInternalRepository    = mustNewDefaultOCIRepository(cmd.DefaultOptions.Artifacts.Installer.Internal.String())
 	cacheRepository                = mustNewDefaultOCIRepository(cmd.DefaultOptions.Cache.OCI.String())
 	signingCacheRepository         = mustNewDefaultOCIRepository(cmd.DefaultOptions.Cache.OCI.String() + "sign")
+	vexDataRepositoryFlag          = mustNewDefaultOCIRepository(cmd.DefaultOptions.Enterprise.VEX.Data.String())
 )
 
 func init() {
@@ -416,4 +425,5 @@ func init() {
 	flag.Var(&installerInternalRepository, "test.installer-internal-repository", "image repository for the installer (internal)")
 	flag.Var(&cacheRepository, "test.cache-repository", "image repository for cached boot assets")
 	flag.Var(&signingCacheRepository, "test.signing-cache-repository", "image repository for signatures of cached boot assets (used for S3+CDN tests)")
+	flag.Var(&vexDataRepositoryFlag, "test.vex-data-repository", "OCI repository for VEX data")
 }

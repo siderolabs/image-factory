@@ -2,7 +2,7 @@
 
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-22T20:13:43Z by kres 8299790.
+# Generated on 2026-05-04T15:24:07Z by kres 1762ab2.
 
 ARG TOOLCHAIN=scratch
 ARG PKGS_PREFIX=scratch
@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build,id=image-factory/root/.cache
 	&& mv /go/bin/helm-docs /bin/helm-docs
 
 # runs markdownlint
-FROM docker.io/oven/bun:1.3.11-alpine AS lint-markdown
+FROM docker.io/oven/bun:1.3.13-alpine AS lint-markdown
 WORKDIR /src
 RUN bun i markdownlint-cli@0.48.0 sentences-per-line@0.5.2
 COPY .markdownlint.json .

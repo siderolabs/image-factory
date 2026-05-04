@@ -360,21 +360,21 @@ Insecure allows connecting to S3 without TLS or with invalid certificates.
 
 ---
 
-### `cache.s3.presignedURLTTL`
-
-- **Type:** `time.Duration`
-- **Env:** `CACHE_S3_PRESIGNEDURLTTL`
-
-PresignedURLTTL is the duration for which presigned URLs are valid.
-
----
-
 ### `cache.s3.enabled`
 
 - **Type:** `bool`
 - **Env:** `CACHE_S3_ENABLED`
 
 Enabled enables S3 cache.
+
+---
+
+### `cache.s3.presignedURLTTL`
+
+- **Type:** `time.Duration`
+- **Env:** `CACHE_S3_PRESIGNEDURLTTL`
+
+PresignedURLTTL is the duration for which presigned URLs are valid.
 
 ---
 
@@ -837,6 +837,72 @@ It is required if authentication is enabled.
 
 ---
 
+### `enterprise`
+
+Enterprise contains configuration for enterprise-specific features.
+
+---
+
+### `enterprise.vex`
+
+VEX contains configuration for VEX data fetching.
+
+---
+
+### `enterprise.vex.data`
+
+Data specifies the OCI repository where VEX documents are stored.
+
+---
+
+### `enterprise.vex.data.registry`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_VEX_DATA_REGISTRY`
+
+Registry is the hostname of the container registry, e.g., `ghcr.io`.
+This is where images are stored.
+
+---
+
+### `enterprise.vex.data.namespace`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_VEX_DATA_NAMESPACE`
+
+Namespace is the repository namespace or organization within the registry, e.g., `sidero-labs`.
+Some registries allow repositories without a namespace.
+
+---
+
+### `enterprise.vex.data.repository`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_VEX_DATA_REPOSITORY`
+
+Repository is the name of the repository inside the namespace, e.g., `talos`.
+Combined with Registry and Namespace, it forms the fully qualified repository path.
+
+---
+
+### `enterprise.vex.data.insecure`
+
+- **Type:** `bool`
+- **Env:** `ENTERPRISE_VEX_DATA_INSECURE`
+
+Insecure allows connections to registries over HTTP or with invalid TLS certificates.
+
+---
+
+### `enterprise.vex.cacheTTL`
+
+- **Type:** `time.Duration`
+- **Env:** `ENTERPRISE_VEX_CACHETTL`
+
+CacheTTL is the duration for caching generated VEX documents.
+
+---
+
 ## Default Configuration
 
 ### YAML
@@ -910,6 +976,14 @@ containerSignature:
     publicKeyFile: ""
     publicKeyHashAlgo: sha256
     subjectRegExp: (@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)
+enterprise:
+    vex:
+        cacheTTL: 15m0s
+        data:
+            insecure: false
+            namespace: siderolabs/talos-vex
+            registry: ghcr.io
+            repository: talos-vex-data
 http:
     allowedOrigins:
         - '*'
@@ -993,6 +1067,11 @@ IF_CONTAINERSIGNATURE_ISSUERREGEXP=
 IF_CONTAINERSIGNATURE_PUBLICKEYFILE=
 IF_CONTAINERSIGNATURE_PUBLICKEYHASHALGO=sha256
 IF_CONTAINERSIGNATURE_SUBJECTREGEXP=(@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)
+IF_ENTERPRISE_VEX_CACHETTL=15m0s
+IF_ENTERPRISE_VEX_DATA_INSECURE=false
+IF_ENTERPRISE_VEX_DATA_NAMESPACE=siderolabs/talos-vex
+IF_ENTERPRISE_VEX_DATA_REGISTRY=ghcr.io
+IF_ENTERPRISE_VEX_DATA_REPOSITORY=talos-vex-data
 IF_HTTP_ALLOWEDORIGINS=[*]
 IF_HTTP_CERTFILE=
 IF_HTTP_EXTERNALPXEURL=
