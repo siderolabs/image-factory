@@ -41,6 +41,14 @@ type SPDXOptions struct {
 	CacheInsecure           bool
 }
 
+// VEXOptions holds configuration options for the VEX frontend.
+type VEXOptions struct {
+	Data            string
+	DataInsecure    bool
+	RefreshInterval time.Duration
+	CacheTTL        time.Duration
+}
+
 // ErrNotEnabledTag tags errors that occur when an enterprise feature is
 // requested but the enterprise build tag is not active.
 type ErrNotEnabledTag struct{}

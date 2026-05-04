@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-04-22T20:13:43Z by kres 8299790.
+# Generated on 2026-05-04T15:24:43Z by kres 1762ab2.
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}
@@ -174,7 +174,7 @@ jobs:
           make release-notes
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # version: v2.6.1
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # version: v3.0.0
         with:
           body_path: _out/RELEASE_NOTES.md
           draft: "true"
@@ -349,7 +349,7 @@ jobs:
           REGISTRY: registry.dev.siderolabs.io
           RUN_TESTS_ENTERPRISE: TestIntegrationDirect
           TAG_SUFFIX: -enterprise
-          TEST_FLAGS: -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache
+          TEST_FLAGS: -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache -test.vex-data-repository=registry-ghcr-io.ci.svc.cluster.local:5000/siderolabs/talos-vex/talos-vex-data
         run: |
           make integration-enterprise
       - name: coverage

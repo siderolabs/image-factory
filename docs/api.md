@@ -16,6 +16,18 @@ grype sbom:response.spdx.json
 
 SPDX bundles are available for Talos versions **v1.11.0** and later.
 
+### `GET /vex/:version/vex.json`
+
+> [!NOTE]
+> Enterprise feature: requires Talos Enterprise Image Factory.
+
+Returns a VEX JSON document containing vulnerability information for all packages in the Talos Linux release.
+The response is a JSON-encoded VEX document which can be consumed directly by vulnerability scanners such as grype:
+
+```shell
+grype sbom:talos.spdx.json --vex response.vex.json
+```
+
 ## HTTP Frontend API
 
 ### `POST /schematics`

@@ -32,3 +32,9 @@ http:
 # authentication:
 #   enabled: true
 #   htpasswdPath: /etc/image-factory/htpasswd
+
+enterprise:
+  vex:
+    data:
+      registry: registry.local:5000
+    cacheTTL: 15s

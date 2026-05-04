@@ -298,6 +298,12 @@
 - id: final.extra.spdx_enterprise_feature
   translation: "Pakiet SBOM (SPDX) jest dostępny wyłącznie za pośrednictwem Talos Linux Image Factory Enterprise."
 
+- id: final.extra.vex
+  translation: "VEX (Vulnerability Exploitability eXchange)"
+
+- id: final.extra.vex_enterprise_feature
+  translation: "Dokument VEX jest dostępny wyłącznie za pośrednictwem Talos Linux Image Factory Enterprise."
+
 - id: final.extra.checksum_enterprise_feature
   translation: "Sumy kontrolne są dostępne wyłącznie za pośrednictwem Talos Linux Enterprise Image Factory."
 

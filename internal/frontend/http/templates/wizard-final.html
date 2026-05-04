@@ -141,6 +141,19 @@
         </dl>
         {{ end }}
         {{ end }}
+
+        {{ if .VEXAvailable }}
+        <h2>{{ t .Localizer "final.extra.vex" }}</h2>
+        {{ if .Enterprise }}
+        <dl>
+                <dd><a target="_blank" href="{{ .VEXBaseURL }}">{{ .VEXBaseURL }}</a></dd>
+        </dl>
+        {{ else }}
+        <dl>
+                <dd>{{ t .Localizer "final.extra.vex_enterprise_feature" }}</dd>
+        </dl>
+        {{ end }}
+        {{ end }}
 </div>
 
 <div class="flex gap-4">

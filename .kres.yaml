@@ -563,7 +563,7 @@ spec:
     environment:
       REGISTRY: registry.dev.siderolabs.io
       RUN_TESTS_ENTERPRISE: TestIntegrationDirect
-      TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache"
+      TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache -test.vex-data-repository=registry-ghcr-io.ci.svc.cluster.local:5000/siderolabs/talos-vex/talos-vex-data"
       TAG_SUFFIX: "-enterprise"
 ---
 kind: custom.Step
