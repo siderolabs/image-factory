@@ -5,20 +5,20 @@ go 1.26.1
 // downgrade the go-containerregistry to workaround the security changes in
 // https://github.com/google/go-containerregistry/pull/2227/changes: it breaks
 // our extensions
-replace github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.21.2
+replace github.com/google/go-containerregistry => github.com/google/go-containerregistry v0.21.5
 
 require (
 	cloud.google.com/go/auth v0.20.0
 	github.com/CalebQ42/squashfs v1.4.1
 	github.com/blang/semver/v4 v4.0.0
-	github.com/fsnotify/fsnotify v1.9.0
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/google/go-containerregistry v0.21.5
 	github.com/h2non/filetype v1.1.3
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/in-toto/attestation v1.2.0
 	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/klauspost/compress v1.18.5
+	github.com/klauspost/compress v1.18.6
 	github.com/knadh/koanf/parsers/dotenv v1.1.1
 	github.com/knadh/koanf/parsers/json v1.0.0
 	github.com/knadh/koanf/parsers/yaml v1.1.0
@@ -26,7 +26,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.3.4
-	github.com/minio/minio-go/v7 v7.0.100
+	github.com/minio/minio-go/v7 v7.1.0
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/ory/dockertest v3.3.5+incompatible
@@ -51,7 +51,7 @@ require (
 	github.com/u-root/u-root v0.16.0
 	github.com/ulikunitz/xz v0.5.15
 	go.uber.org/goleak v1.3.0
-	go.uber.org/zap v1.27.1
+	go.uber.org/zap v1.28.0
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	golang.org/x/crypto v0.50.0
 	golang.org/x/sync v0.20.0
@@ -261,6 +261,7 @@ require (
 	github.com/vbatts/tar-split v0.12.2 // indirect
 	github.com/vultr/metadata v1.1.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/zeebo/xxh3 v1.1.0 // indirect
 	gitlab.com/gitlab-org/api/client-go v1.46.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect
