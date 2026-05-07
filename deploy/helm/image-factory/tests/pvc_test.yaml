@@ -1,0 +1,151 @@
+suite: Grype DB PVC Logic
+templates:
+  - pvc-grype-db.yaml
+
+tests:
+  # ========================================
+  # Gating Tests
+  # ========================================
+  - it: Should not render when grypeDB.enabled is false
+    template: pvc-grype-db.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Should not render when type is emptyDir
+    template: pvc-grype-db.yaml
+    set:
+      grypeDB:
+        type: emptyDir
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: Should render PVC when type is pvc
+    template: pvc-grype-db.yaml
+    set:
+      grypeDB:
+        type: pvc
+    asserts:
+      - hasDocuments:
+          count: 1
+      - isKind:
+          of: PersistentVolumeClaim
+      - equal:
+          path: metadata.name
+          value: RELEASE-NAME-image-factory-grype-db
+      - contains:
+          path: spec.accessModes
+          content: ReadWriteOnce
+      - equal:
+          path: spec.resources.requests.storage
+          value: 10Gi
+
+  # ========================================
+  # Configuration Pass-through Tests
+  # ========================================
+  - it: Should honor storageClassName when set
+    template: pvc-grype-db.yaml
+    set:
+      grypeDB:
+        type: pvc
+        pvc:
+          storageClassName: fast-ssd
+          accessModes:
+            - ReadWriteOnce
+          size: 10Gi
+    asserts:
+      - equal:
+          path: spec.storageClassName
+          value: fast-ssd
+
+  - it: Should omit storageClassName when empty
+    template: pvc-grype-db.yaml
+    set:
+      grypeDB:
+        type: pvc
+    asserts:
+      - isNull:
+          path: spec.storageClassName
+
+  - it: Should pass custom accessModes through
+    template: pvc-grype-db.yaml
+    set:
+      grypeDB:
+        type: pvc
+        pvc:
+          storageClassName: ""
+          accessModes:
+            - ReadWriteMany
+          size: 10Gi
+    asserts:
+      - contains:
+          path: spec.accessModes
+          content: ReadWriteMany
+
+  - it: Should pass custom size through
+    template: pvc-grype-db.yaml
+    set:
+      grypeDB:
+        type: pvc
+        pvc:
+          storageClassName: ""
+          accessModes:
+            - ReadWriteOnce
+          size: 50Gi
+    asserts:
+      - equal:
+          path: spec.resources.requests.storage
+          value: 50Gi
+
+  - it: Should pass annotations and labels through
+    template: pvc-grype-db.yaml
+    set:
+      grypeDB:
+        type: pvc
+        pvc:
+          storageClassName: ""
+          accessModes:
+            - ReadWriteOnce
+          size: 10Gi
+          annotations:
+            volume.kubernetes.io/foo: bar
+          labels:
+            tier: storage
+    asserts:
+      - equal:
+          path: metadata.annotations["volume.kubernetes.io/foo"]
+          value: bar
+      - equal:
+          path: metadata.labels.tier
+          value: storage
+
+  # ========================================
+  # Metadata Tests
+  # ========================================
+  - it: Should include standard Helm labels
+    template: pvc-grype-db.yaml
+    set:
+      grypeDB:
+        type: pvc
+    asserts:
+      - equal:
+          path: metadata.labels["app.kubernetes.io/name"]
+          value: image-factory
+      - equal:
+          path: metadata.labels["app.kubernetes.io/instance"]
+          value: RELEASE-NAME
+      - isNotNull:
+          path: metadata.labels["helm.sh/chart"]
+
+  - it: Should be created in correct namespace
+    template: pvc-grype-db.yaml
+    release:
+      namespace: custom-namespace
+    set:
+      grypeDB:
+        type: pvc
+    asserts:
+      - equal:
+          path: metadata.namespace
+          value: custom-namespace

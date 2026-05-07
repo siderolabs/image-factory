@@ -101,6 +101,13 @@ spec:
             - name: cache-signing-key
               mountPath: /etc/image-factory/keys
               readOnly: true
+            - name: grype-db
+              mountPath: /var/lib/grype
+            {{- if .Values.config.authentication.enabled }}
+            - name: htpasswd
+              mountPath: {{ dir .Values.config.authentication.htpasswdPath }}
+              readOnly: true
+            {{- end }}
           {{- with .Values.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -116,6 +123,24 @@ spec:
             items:
               - key: cache-signing.key
                 path: cache-signing.key
+        - name: grype-db
+          {{- if eq .Values.grypeDB.type "emptyDir" }}
+          emptyDir:
+          {{- if .Values.grypeDB.emptyDir.sizeLimit }}
+            sizeLimit: {{ .Values.grypeDB.emptyDir.sizeLimit }}
+          {{- end }}
+          {{- else if eq .Values.grypeDB.type "pvc" }}
+          persistentVolumeClaim:
+            claimName: {{ include "image-factory.grypeDBClaim" . }}
+          {{- end }}
+        {{- if .Values.config.authentication.enabled }}
+        - name: htpasswd
+          secret:
+            secretName: {{ include "image-factory.htpasswdSecret" . }}
+            items:
+              - key: htpasswd
+                path: {{ base .Values.config.authentication.htpasswdPath }}
+        {{- end }}
       {{- with .Values.extraVolumes }}
         {{- toYaml . | nindent 8 }}
       {{- end }}

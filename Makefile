@@ -1,6 +1,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED, PLEASE DO NOT EDIT.
 #
-# Generated on 2026-05-05T13:49:12Z by kres 1762ab2.
+# Generated on 2026-05-07T13:45:16Z by kres 1762ab2.
 
 # common variables
 
@@ -103,6 +103,8 @@ K8S_VERSION ?= v1.35.0
 CHART_VERSION ?= 0.0.0-alpha.0
 GO_TOOLS_RELEASE ?= v0.3.1
 TALOS_VEX_DATA_IMAGE_REF ?= $(REGISTRY_AND_USERNAME)/image-factory/test-vex-data:latest
+LOCAL_PATH_PROVISIONER_VERSION ?= v0.0.35
+LOCAL_PATH_PROVISIONER_URL ?= https://raw.githubusercontent.com/rancher/local-path-provisioner/$(LOCAL_PATH_PROVISIONER_VERSION)/deploy/local-path-storage.yaml
 
 # help menu
 
@@ -455,6 +457,12 @@ sign-images: $(ARTIFACTS)/image-signer
 push-talos-vex-data:
 	@tar -C $(PWD)/internal/integration/testdata/vex-data -cvf $(PWD)/$(ARTIFACTS)/test-vulnerability-data.tar .
 	@crane append -f $(PWD)/$(ARTIFACTS)/test-vulnerability-data.tar -t $(TALOS_VEX_DATA_IMAGE_REF)
+
+.PHONY: update-local-path-provisioner
+update-local-path-provisioner:
+	@curl -sSL $(LOCAL_PATH_PROVISIONER_URL) -o ./deploy/helm/e2e/_manifests/local-path-storage.yaml
+	@yq -i 'with(select(.kind == "StorageClass"); .metadata.annotations."storageclass.kubernetes.io/is-default-class" = "true")' ./deploy/helm/e2e/_manifests/local-path-storage.yaml
+	@yq -i 'with(select(.kind == "Namespace"); .metadata.labels."pod-security.kubernetes.io/enforce" = "privileged")' ./deploy/helm/e2e/_manifests/local-path-storage.yaml
 
 .PHONY: rekres
 rekres:

@@ -199,6 +199,44 @@ config:
       ## Path to the private key used for signing boot assets
       # signingKeyPath: ""
 
+  ## Configuration for Enterprise Authentication (htpasswd)
+  authentication:
+    ## Enable Enterprise Authentication
+    enabled: false
+    ## Path to the htpasswd file containing user credentials (bcrypt hashes only)
+    htpasswdPath: /etc/image-factory/auth/htpasswd
+
+  ## Enterprise features configuration
+  # enterprise:
+    ## Scanner configuration for vulnerability scanning of base images and built artifacts
+    # scanner:
+      ## Cache configuration for the scan results
+      # cache:
+        ## Capacity of the scanner cache (number of entries)
+        # capacity: 4096
+        ## Time-to-live for cache entries
+        # ttl: 15m0s
+      ## URL of the vulnerability database to use for scanning
+      # databaseURL: https://grype.anchore.io/databases
+    ## Vulnerability Exploitability eXchange (VEX) configuration
+    # vex:
+      ## Cache configuration for VEX data
+      # cache:
+        ## Capacity of the VEX cache (number of entries)
+        # capacity: 65536
+        ## Time-to-live for VEX cache entries
+        # ttl: 15m0s
+      ## Data source configuration for VEX data
+      # data:
+        ## Allow insecure connections to the VEX data source
+        # insecure: false
+        ## Namespace for VEX data repository
+        # namespace: siderolabs/talos-vex
+        ## Registry for VEX data
+        # registry: ghcr.io
+        ## Repository name for VEX data
+        # repository: talos-vex-data
+
 # -- Environment variables to pass to Image Factory
 env: []
 
@@ -224,6 +262,45 @@ cacheSigningKey:
   # The ECDSA private key content (multiline string).
   # Generate using: openssl ecparam -name prime256v1 -genkey -noout -out cache-signing.key
   key: |-
+
+# -- Enterprise Authentication (htpasswd)
+# Requires the Enterprise image-factory build. The chart cannot verify image identity;
+# enabling this on a non-Enterprise image causes the app to ignore the configuration.
+auth:
+  # -- Name of an existing Secret containing an "htpasswd" data key (bcrypt hashes only).
+  # Example: kubectl create secret generic my-htpasswd --from-file=htpasswd=./users.htpasswd
+  existingSecret: ""
+  # @schema type:string
+  # -- If 'existingSecret' is empty and config.authentication.enabled=true, a Secret is created from this content.
+  # Multiline htpasswd content. Bcrypt hashes only ($2y$/$2a$/$2b$).
+  # Generate using: htpasswd -bnB user password >> users.htpasswd
+  htpasswd: |-
+
+# -- Grype Vulnerability DB Volume (Enterprise scanner)
+# This block lets you choose how that volume is provided.
+grypeDB:
+  # @schema enum:[emptyDir, pvc]
+  # -- Volume backing type: emptyDir | pvc
+  type: emptyDir
+  # -- emptyDir options (used when type=emptyDir). Disk-backed by design (no Memory medium).
+  emptyDir:
+    # @schema type:string
+    # -- Optional sizeLimit for the emptyDir volume.
+    sizeLimit: ""
+  # -- PVC options (used when type=pvc). The chart creates a PersistentVolumeClaim.
+  pvc:
+    # @schema type:string
+    # -- StorageClassName for the PVC.
+    storageClassName: ""
+    # -- Access modes for the PVC.
+    accessModes:
+      - ReadWriteOnce
+    # -- Requested storage size for the PVC.
+    size: 10Gi
+    # -- Additional annotations for the PVC.
+    annotations: {}
+    # -- Additional labels for the PVC.
+    labels: {}
 
 # -- Ingress Configuration
 # This section configures standard Kubernetes Ingress resources.

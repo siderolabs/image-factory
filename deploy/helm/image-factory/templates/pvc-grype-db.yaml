@@ -1,0 +1,25 @@
+{{- if eq .Values.grypeDB.type "pvc" }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "image-factory.grypeDBClaim" . }}
+  namespace: {{ include "image-factory.namespace" . }}
+  labels:
+    {{- include "image-factory.labels" . | nindent 4 }}
+    {{- with .Values.grypeDB.pvc.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.grypeDB.pvc.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.grypeDB.pvc.accessModes | nindent 4 }}
+  {{- with .Values.grypeDB.pvc.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.grypeDB.pvc.size | quote }}
+{{- end }}

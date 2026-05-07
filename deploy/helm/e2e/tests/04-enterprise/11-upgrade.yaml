@@ -1,0 +1,11 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+metadata:
+  name: upgrade-grypeDB-pvc
+commands:
+  - command: >-
+      helm upgrade --install image-factory ../../../image-factory
+        --wait --timeout=600s --reuse-values
+        --set grypeDB.type=pvc
+        --set grypeDB.pvc.size=1Gi
+    namespaced: true

@@ -127,6 +127,8 @@ spec:
       toplevel: true
     - name: push-talos-vex-data
       toplevel: true
+    - name: update-local-path-provisioner
+      toplevel: true
 ---
 kind: custom.Step
 name: imager-base
@@ -865,6 +867,23 @@ spec:
       - |
         @tar -C $(PWD)/internal/integration/testdata/vex-data -cvf $(PWD)/$(ARTIFACTS)/test-vulnerability-data.tar .
         @crane append -f $(PWD)/$(ARTIFACTS)/test-vulnerability-data.tar -t $(TALOS_VEX_DATA_IMAGE_REF)
+---
+kind: custom.Step
+name: update-local-path-provisioner
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    variables:
+      - name: LOCAL_PATH_PROVISIONER_VERSION
+        defaultValue: v0.0.35
+      - name: LOCAL_PATH_PROVISIONER_URL
+        defaultValue: "https://raw.githubusercontent.com/rancher/local-path-provisioner/$(LOCAL_PATH_PROVISIONER_VERSION)/deploy/local-path-storage.yaml"
+    script:
+      - |
+        @curl -sSL $(LOCAL_PATH_PROVISIONER_URL) -o ./deploy/helm/e2e/_manifests/local-path-storage.yaml
+        @yq -i 'with(select(.kind == "StorageClass"); .metadata.annotations."storageclass.kubernetes.io/is-default-class" = "true")' ./deploy/helm/e2e/_manifests/local-path-storage.yaml
+        @yq -i 'with(select(.kind == "Namespace"); .metadata.labels."pod-security.kubernetes.io/enforce" = "privileged")' ./deploy/helm/e2e/_manifests/local-path-storage.yaml
 ---
 kind: golang.UnitTests
 spec:

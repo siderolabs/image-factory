@@ -81,3 +81,23 @@ Otherwise, use the chart's fullname with a '-cache-signing-key' suffix.
     {{- include "image-factory.fullname" . -}}-cache-signing-key
 {{- end -}}
 {{- end -}}
+
+{{/*
+Return the name of the htpasswd Secret to use.
+If 'auth.existingSecret' is set, use it.
+Otherwise, use the chart's fullname with a '-htpasswd' suffix.
+*/}}
+{{- define "image-factory.htpasswdSecret" -}}
+{{- if .Values.auth.existingSecret -}}
+    {{- .Values.auth.existingSecret -}}
+{{- else -}}
+    {{- include "image-factory.fullname" . -}}-htpasswd
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the name of the Grype DB PersistentVolumeClaim to use.
+*/}}
+{{- define "image-factory.grypeDBClaim" -}}
+    {{- include "image-factory.fullname" . -}}-grype-db
+{{- end -}}

@@ -68,3 +68,59 @@ tests:
       - equal:
           path: metadata.namespace
           value: custom-namespace
+
+  # ========================================
+  # Enterprise Auth Injection Tests
+  # ========================================
+  - it: Should not enable authentication by default
+    template: configmap.yaml
+    asserts:
+      - notMatchRegex:
+          path: data["config.yaml"]
+          pattern: "enabled: true"
+
+  - it: Should inject authentication block when config.authentication.enabled
+    template: configmap.yaml
+    set:
+      config:
+        authentication:
+          enabled: true
+          htpasswdPath: /etc/image-factory/auth/htpasswd
+    asserts:
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "authentication:"
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "enabled: true"
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "htpasswdPath: /etc/image-factory/auth/htpasswd"
+
+  - it: Should honor custom htpasswdPath in injected config
+    template: configmap.yaml
+    set:
+      config:
+        authentication:
+          enabled: true
+          htpasswdPath: /custom/dir/creds
+    asserts:
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "htpasswdPath: /custom/dir/creds"
+
+  - it: Should pass enterprise.scanner config through unchanged
+    template: configmap.yaml
+    set:
+      config:
+        enterprise:
+          scanner:
+            databaseURL: https://mirror.example.com/grype
+            cacheTTL: 30m
+    asserts:
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "databaseURL: https://mirror.example.com/grype"
+      - matchRegex:
+          path: data["config.yaml"]
+          pattern: "cacheTTL: 30m"

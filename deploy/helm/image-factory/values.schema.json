@@ -11,6 +11,20 @@
         "type": "string"
       }
     },
+    "auth": {
+      "description": "Enterprise Authentication (htpasswd) Requires the Enterprise image-factory build. The chart cannot verify image identity; enabling this on a non-Enterprise image causes the app to ignore the configuration.",
+      "type": "object",
+      "properties": {
+        "existingSecret": {
+          "description": "Name of an existing Secret containing an \"htpasswd\" data key (bcrypt hashes only).",
+          "type": "string"
+        },
+        "htpasswd": {
+          "description": "If 'existingSecret' is empty and config.authentication.enabled=true, a Secret is created from this content. Multiline htpasswd content. Bcrypt hashes only ($2y$/$2a$/$2b$). Generate using: htpasswd -bnB user password \u003e\u003e users.htpasswd",
+          "type": "string"
+        }
+      }
+    },
     "cacheSigningKey": {
       "description": "Image Cache Signing Key Configuration # This secret contains the ECDSA private key used to sign cached Talos image artifacts. # This ensures that nodes can verify the integrity of images served by the Image Factory. # If you are running a self-hosted Image Factory, this key is required.",
       "type": "object",
@@ -51,6 +65,17 @@
                   "type": "string"
                 }
               }
+            }
+          }
+        },
+        "authentication": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "htpasswdPath": {
+              "type": "string"
             }
           }
         },
@@ -148,6 +173,59 @@
               ]
             }
           }
+        }
+      }
+    },
+    "grypeDB": {
+      "description": "Grype Vulnerability DB Volume (Enterprise scanner) This block lets you choose how that volume is provided.",
+      "type": "object",
+      "properties": {
+        "emptyDir": {
+          "description": "emptyDir options (used when type=emptyDir). Disk-backed by design (no Memory medium).",
+          "type": "object",
+          "properties": {
+            "sizeLimit": {
+              "description": "Optional sizeLimit for the emptyDir volume.",
+              "type": "string"
+            }
+          }
+        },
+        "pvc": {
+          "description": "PVC options (used when type=pvc). The chart creates a PersistentVolumeClaim.",
+          "type": "object",
+          "properties": {
+            "accessModes": {
+              "description": "Access modes for the PVC.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "annotations": {
+              "description": "Additional annotations for the PVC.",
+              "type": "object"
+            },
+            "labels": {
+              "description": "Additional labels for the PVC.",
+              "type": "object"
+            },
+            "size": {
+              "description": "Requested storage size for the PVC.",
+              "type": "string"
+            },
+            "storageClassName": {
+              "description": "StorageClassName for the PVC.",
+              "type": "string"
+            }
+          }
+        },
+        "type": {
+          "description": "Volume backing type: emptyDir | pvc",
+          "type": "string",
+          "enum": [
+            "emptyDir",
+            "pvc"
+          ]
         }
       }
     },
