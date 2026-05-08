@@ -1,3 +1,66 @@
+## [image-factory 1.3.0](https://github.com/siderolabs/image-factory/releases/tag/v1.3.0) (2026-05-08)
+
+Welcome to the v1.3.0 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Vulnerability Scanner
+
+Image Factory now includes a built-in vulnerability scanner that automatically scans the images for known vulnerabilities after the build process.
+This feature helps users identify and address security issues in their images before deployment.
+
+**Note:** This feature is enterprise-only and is subject to the BUSL-1.1 license.
+
+
+### VEX Support
+
+Image Factory now supports VEX (Vulnerability Exploitability eXchange) documents, allowing users to associate vulnerability information with their schematics.
+This feature enables better tracking and management of vulnerabilities in the images created with Image Factory.
+
+**Note:** This feature is enterprise-only and is subject to the BUSL-1.1 license.
+
+
+### Contributors
+
+* Mateusz Urbanek
+* Orzelius
+* Utku Ozdemir
+
+### Changes
+<details><summary>6 commits</summary>
+<p>
+
+* [`ae3ed04`](https://github.com/siderolabs/image-factory/commit/ae3ed04c72ade3576647cf85cfe4d0a206b5cebe) feat: add enterprise features with Helm chart support
+* [`3fb0f96`](https://github.com/siderolabs/image-factory/commit/3fb0f96a1acf9ec5920bb0c848ac2ee311d2efde) feat(enterprise): add vulnerability scanning endpoint
+* [`92209b6`](https://github.com/siderolabs/image-factory/commit/92209b6d5e3f53320dedc61ca51b0261b10b9f0c) feat: return normalized schematic on creation
+* [`ba2a46d`](https://github.com/siderolabs/image-factory/commit/ba2a46de4940e5f732029a47a9e18b65b2689716) feat(enterprise): implement VEX endpoint
+* [`9b40156`](https://github.com/siderolabs/image-factory/commit/9b40156959e2d659daa6c89af43c1382829b528b) feat: show schematic-id url parameter on the final wizard step
+* [`114bb60`](https://github.com/siderolabs/image-factory/commit/114bb60b13dec500e1f07ddb3c2f85e699a2f4d6) fix(spdx): use configured external URL in document namespace
+</p>
+</details>
+
+### Changes from siderolabs/go-vex
+<details><summary>3 commits</summary>
+<p>
+
+* [`7076424`](https://github.com/siderolabs/go-vex/commit/70764247d873c774f5118cd1fff6c683f1e9de9d) feat: add vulnerability scanning with Grype
+* [`cb3a5bc`](https://github.com/siderolabs/go-vex/commit/cb3a5bc9386e9556e5e25df4026ac8d8d8162a9d) docs: add go-vex library documentation
+* [`fd0fd5e`](https://github.com/siderolabs/go-vex/commit/fd0fd5ea1e799bf78e4a3b9ab1d37bb20dcd76ef) feat: initial implementation of go-vex library
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/anchore/clio**       v0.1.0 **_new_**
+* **github.com/anchore/grype**      v0.112.0 **_new_**
+* **github.com/anchore/syft**       v1.44.0 **_new_**
+* **github.com/siderolabs/go-vex**  70764247d873 **_new_**
+
+Previous release can be found at [v1.2.0](https://github.com/siderolabs/image-factory/releases/tag/v1.2.0)
+
 ## [image-factory 1.2.0](https://github.com/siderolabs/image-factory/releases/tag/v1.2.0) (2026-04-28)
 
 Welcome to the v1.2.0 release of image-factory!
