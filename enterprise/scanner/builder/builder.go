@@ -26,16 +26,18 @@ import (
 	"github.com/anchore/syft/syft/sbom"
 	"github.com/blang/semver/v4"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/siderolabs/gen/xerrors"
 	govexscanner "github.com/siderolabs/go-vex/pkg/scanner"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/enterprise/auth"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/cache"
+	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 )
 
 // ErrNotReady is returned when the Grype DB has not finished initializing.
-var ErrNotReady = errors.New("scanner not ready")
+var ErrNotReady = xerrors.NewTagged[enterrors.NotReadyTag](errors.New("scanner not ready"))
 
 // scannerID is the identifier embedded in scan reports.
 const scannerID = "image-factory"

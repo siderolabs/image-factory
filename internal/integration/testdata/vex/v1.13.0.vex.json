@@ -12,7 +12,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -27,7 +27,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -42,7 +42,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -57,7 +57,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -72,7 +72,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -88,7 +88,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -103,7 +103,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -118,7 +118,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -133,7 +133,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -148,7 +148,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -163,7 +163,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -178,7 +178,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -193,7 +193,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -209,7 +209,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -225,7 +225,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -240,7 +240,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -255,7 +255,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -270,7 +270,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -285,7 +285,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -300,7 +300,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -315,7 +315,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -330,7 +330,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -345,7 +345,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -360,7 +360,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],
@@ -375,7 +375,7 @@
       "products": [
         {
           "identifiers": {
-            "purl": "pkg:generic/talos@v1.13.0"
+            "purl": "pkg:generic/talos-enterprise@v1.13.0"
           }
         }
       ],

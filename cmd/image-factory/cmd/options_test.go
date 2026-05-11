@@ -136,3 +136,97 @@ func TestOCIRepositoryOptions(t *testing.T) {
 		}
 	})
 }
+
+func TestOptionsValidate(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name        string
+		expectError string
+		opts        cmd.Options
+	}{
+		{
+			name: "valid http",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "http://factory.example.com:8080"},
+			},
+		},
+		{
+			name: "valid https with path",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+			},
+		},
+		{
+			name:        "missing externalURL",
+			opts:        cmd.Options{},
+			expectError: "http.externalURL is required",
+		},
+		{
+			name: "missing scheme",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "factory.sidero.dev"},
+			},
+			expectError: "http.externalURL must have http or https scheme",
+		},
+		{
+			name: "non-http scheme",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "ftp://factory.sidero.dev"},
+			},
+			expectError: "http.externalURL must have http or https scheme",
+		},
+		{
+			name: "valid with pxe url",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{
+					ExternalURL:    "https://factory.sidero.dev/",
+					ExternalPXEURL: "http://pxe.sidero.dev/",
+				},
+			},
+		},
+		{
+			name: "pxe url relative (no scheme)",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{
+					ExternalURL:    "https://factory.sidero.dev/",
+					ExternalPXEURL: "pxe.sidero.dev",
+				},
+			},
+			expectError: "http.externalPXEURL must have http or https scheme",
+		},
+		{
+			name: "pxe url non-http scheme",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{
+					ExternalURL:    "https://factory.sidero.dev/",
+					ExternalPXEURL: "ftp://pxe.sidero.dev",
+				},
+			},
+			expectError: "http.externalPXEURL must have http or https scheme",
+		},
+		{
+			name: "pxe url no host",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{
+					ExternalURL:    "https://factory.sidero.dev/",
+					ExternalPXEURL: "http:///path",
+				},
+			},
+			expectError: "http.externalPXEURL must have a host",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := tc.opts.Validate()
+			if tc.expectError == "" {
+				assert.NoError(t, err)
+
+				return
+			}
+
+			assert.ErrorContains(t, err, tc.expectError)
+		})
+	}
+}

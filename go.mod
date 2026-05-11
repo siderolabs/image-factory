@@ -40,7 +40,7 @@ require (
 	github.com/siderolabs/go-blockdevice/v2 v2.0.28
 	github.com/siderolabs/go-debug v0.6.2
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/go-vex v0.0.0-20260505172425-70764247d873
+	github.com/siderolabs/go-vex v0.0.0-20260511103453-59abb9af79f6
 	github.com/siderolabs/talos v1.13.0
 	github.com/siderolabs/talos/pkg/machinery v1.13.0
 	github.com/sigstore/cosign/v3 v3.0.6

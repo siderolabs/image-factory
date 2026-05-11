@@ -311,7 +311,7 @@
   translation: "Skan podatności"
 
 - id: final.scan.loading
-  translation: "Trwa skanowanie podatności…"
+  translation: "Trwa skanowanie podatności..."
 
 - id: final.scan.download
   translation: "Pobierz raport:"

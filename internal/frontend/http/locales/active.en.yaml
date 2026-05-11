@@ -311,7 +311,7 @@
   translation: "Vulnerability Scan"
 
 - id: final.scan.loading
-  translation: "Running vulnerability scan…"
+  translation: "Running vulnerability scan..."
 
 - id: final.scan.download
   translation: "Download report:"

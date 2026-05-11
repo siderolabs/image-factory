@@ -15,30 +15,30 @@
         <p data-scan-state="error" class="hidden mb-2 text-red-600 dark:text-red-400"></p>
         <p class="text-xs">
                 {{ t .Localizer "final.scan.download" }}
-                <a class="ml-1 underline" data-scan-link="json" target="_blank">JSON</a>
-                <a class="ml-1 underline" data-scan-link="sarif" target="_blank">SARIF</a>
-                <a class="ml-1 underline" data-scan-link="cdx" target="_blank">CycloneDX</a>
-                <a class="ml-1 underline" data-scan-link="table" target="_blank">Table</a>
+                <a class="ml-1 underline" data-scan-link="json">JSON</a>
+                <a class="ml-1 underline" data-scan-link="sarif">SARIF</a>
+                <a class="ml-1 underline" data-scan-link="cdx">CycloneDX</a>
+                <a class="ml-1 underline" data-scan-link="table">Table</a>
         </p>
         {{ else }}
         <p>{{ t .Localizer "final.scan.enterprise_feature" }}</p>
         {{ end }}
 </section>
 {{ if .Enterprise }}
-<div id="scan-detail-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background-color:rgba(0,0,0,0.5);" data-scan-modal>
-        <div class="relative w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg flex flex-col" data-scan-modal-card>
-                <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-4 py-2">
+<div id="scan-detail-modal" data-scan-modal style="position:fixed;inset:0;z-index:50;background-color:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;padding:1rem;">
+        <div data-scan-modal-card class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg" style="position:relative;width:100%;max-width:64rem;height:85vh;display:flex;flex-direction:column;overflow:hidden;">
+                <div class="border-b border-slate-200 dark:border-slate-700" style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0.5rem 1rem;">
                         <h3 class="text-base font-semibold" data-scan-modal-title></h3>
-                        <button type="button" class="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 text-xl leading-none" data-scan-modal-close aria-label="Close">&times;</button>
+                        <button type="button" class="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100" data-scan-modal-close aria-label="Close" style="font-size:1.5rem;line-height:1;background:none;border:0;cursor:pointer;">&times;</button>
                 </div>
-                <div class="overflow-SideroTesto p-4">
-                        <table class="w-full text-xs border-collapse table-fixed">
+                <div data-scan-modal-body style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:1rem;">
+                        <table class="text-xs border-collapse" style="width:100%;table-layout:fixed;">
                                 <thead>
                                         <tr class="text-left border-b border-slate-200 dark:border-slate-700">
-                                                <th class="py-1 pr-3 w-[10rem]">CVE</th>
-                                                <th class="py-1 pr-3 w-[18%]">Package</th>
-                                                <th class="py-1 pr-3 w-[7rem]">Version</th>
-                                                <th class="py-1 pr-3 w-[16%]">Fix</th>
+                                                <th class="py-1 pr-3" style="width:10rem;">CVE</th>
+                                                <th class="py-1 pr-3" style="width:18%;">Package</th>
+                                                <th class="py-1 pr-3" style="width:7rem;">Version</th>
+                                                <th class="py-1 pr-3" style="width:16%;">Fix</th>
                                                 <th class="py-1">Description</th>
                                         </tr>
                                 </thead>
@@ -131,7 +131,7 @@
                                 var cveID = preferredCveID(v);
                                 var url = bestURL(v);
                                 var cveCell = document.createElement('td');
-                                cveCell.className = 'py-1 pr-3 font-mono whitespace-nowrap';
+                                cveCell.className = 'py-1 pr-3 font-mono whitespace-nowrap underline';
                                 if (url) {
                                         var link = document.createElement('a');
                                         link.href = url;
@@ -164,17 +164,19 @@
                                 tr.appendChild(descCell);
                                 modalRows.appendChild(tr);
                         });
-                        modal.classList.remove('hidden');
+                        modal.style.display = 'flex';
+                        document.body.style.overflow = 'hidden';
                 }
                 function hideModal() {
-                        modal.classList.add('hidden');
+                        modal.style.display = 'none';
+                        document.body.style.overflow = '';
                 }
                 modal.addEventListener('click', function(e) {
                         if (e.target === modal) hideModal();
                 });
                 modal.querySelector('[data-scan-modal-close]').addEventListener('click', hideModal);
                 document.addEventListener('keydown', function(e) {
-                        if (e.key === 'Escape' && !modal.classList.contains('hidden')) hideModal();
+                        if (e.key === 'Escape' && modal.style.display !== 'none') hideModal();
                 });
                 fetch(base + '/' + formats.json, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                         .then(function(r) {
@@ -354,7 +356,7 @@
         <h2>{{ t .Localizer "final.extra.spdx" }}</h2>
         {{ if .Enterprise }}
         <dl>
-                <dd><a target="_blank" href="{{ .SPDXBaseURL }}">{{ .SPDXBaseURL }}</a></dd>
+                <dd><a href="{{ .SPDXBaseURL }}">{{ .SPDXBaseURL }}</a></dd>
         </dl>
         {{ else }}
         <dl>
@@ -367,7 +369,7 @@
         <h2>{{ t .Localizer "final.extra.vex" }}</h2>
         {{ if .Enterprise }}
         <dl>
-                <dd><a target="_blank" href="{{ .VEXBaseURL }}">{{ .VEXBaseURL }}</a></dd>
+                <dd><a href="{{ .VEXBaseURL }}">{{ .VEXBaseURL }}</a></dd>
         </dl>
         {{ else }}
         <dl>

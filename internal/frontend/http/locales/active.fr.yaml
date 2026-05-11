@@ -311,7 +311,7 @@
   translation: "Analyse des vulnérabilités"
 
 - id: final.scan.loading
-  translation: "Analyse des vulnérabilités en cours…"
+  translation: "Analyse des vulnérabilités en cours..."
 
 - id: final.scan.download
   translation: "Télécharger le rapport :"

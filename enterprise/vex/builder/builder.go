@@ -26,6 +26,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/cache"
 	"github.com/siderolabs/image-factory/internal/image/verify"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
+	"github.com/siderolabs/image-factory/pkg/constants"
 )
 
 // FetchTimeout caps an OCI fetch + signature verification.
@@ -241,7 +242,7 @@ func (b *Builder) fetchExploitabilityData(ctx context.Context) (*v1alpha1.Exploi
 		}
 
 		if header.Typeflag == tar.TypeReg {
-			return v1alpha1.LoadExploitabilityData(tarReader)
+			return v1alpha1.LoadExploitabilityData(tarReader, v1alpha1.WithPURLOverride(constants.TalosPURL))
 		}
 	}
 

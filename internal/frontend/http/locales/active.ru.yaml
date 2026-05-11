@@ -308,7 +308,7 @@
   translation: "Сканирование уязвимостей"
 
 - id: final.scan.loading
-  translation: "Выполняется сканирование уязвимостей…"
+  translation: "Выполняется сканирование уязвимостей..."
 
 - id: final.scan.download
   translation: "Скачать отчёт:"

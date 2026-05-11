@@ -5,9 +5,49 @@
 package cmd
 
 import (
+	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
+
+// Validate checks Options for inconsistencies that would otherwise produce
+// invalid artifacts at runtime (e.g. malformed SPDX documentNamespace).
+func (o *Options) Validate() error {
+	if o.HTTP.ExternalURL == "" {
+		return fmt.Errorf("http.externalURL is required")
+	}
+
+	u, err := url.Parse(o.HTTP.ExternalURL)
+	if err != nil {
+		return fmt.Errorf("http.externalURL is not a valid URL: %w", err)
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("http.externalURL must have http or https scheme, got %q", u.Scheme)
+	}
+
+	if u.Host == "" {
+		return fmt.Errorf("http.externalURL must have a host, got %q", o.HTTP.ExternalURL)
+	}
+
+	if o.HTTP.ExternalPXEURL != "" {
+		pu, err := url.Parse(o.HTTP.ExternalPXEURL)
+		if err != nil {
+			return fmt.Errorf("http.externalPXEURL is not a valid URL: %w", err)
+		}
+
+		if pu.Scheme != "http" && pu.Scheme != "https" {
+			return fmt.Errorf("http.externalPXEURL must have http or https scheme, got %q", pu.Scheme)
+		}
+
+		if pu.Host == "" {
+			return fmt.Errorf("http.externalPXEURL must have a host, got %q", o.HTTP.ExternalPXEURL)
+		}
+	}
+
+	return nil
+}
 
 // Options configures the behavior of the image factory.
 type Options struct { //nolint:govet // keeping order for semantic clarity

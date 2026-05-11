@@ -11,3 +11,6 @@ const TalosName = "Talos"
 
 // ImageFactoryName is the name of the image factory.
 const ImageFactoryName = "Image Factory"
+
+// TalosPURL is the purl for Talos.
+const TalosPURL = "pkg:generic/talos"

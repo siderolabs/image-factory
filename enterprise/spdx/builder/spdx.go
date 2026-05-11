@@ -11,6 +11,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/url"
+	"sort"
 	"strings"
 
 	spdxjson "github.com/spdx/tools-golang/json"
@@ -57,18 +59,17 @@ type Bundle struct {
 // The merged document's DESCRIBES relationships point from the new document
 // to every top-level package from the source documents.
 func BundleToJSON(bundle *Bundle) (io.Reader, int64, error) {
+	namespace, err := buildDocumentNamespace(bundle.ExternalURL, bundle.SchematicID, bundle.TalosVersion, bundle.Arch)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to build document namespace: %w", err)
+	}
+
 	merged := &spdx.Document{
-		SPDXVersion:    spdx.Version,
-		DataLicense:    spdx.DataLicense,
-		SPDXIdentifier: common.ElementID("DOCUMENT"),
-		DocumentName:   fmt.Sprintf("talos-%s-%s-%s", bundle.SchematicID, bundle.TalosVersion, bundle.Arch),
-		DocumentNamespace: fmt.Sprintf(
-			"https://%s/spdx/%s/%s/%s",
-			bundle.ExternalURL,
-			bundle.SchematicID,
-			bundle.TalosVersion,
-			bundle.Arch,
-		),
+		SPDXVersion:       spdx.Version,
+		DataLicense:       spdx.DataLicense,
+		SPDXIdentifier:    common.ElementID("DOCUMENT"),
+		DocumentName:      fmt.Sprintf("talos-%s-%s-%s", bundle.SchematicID, bundle.TalosVersion, bundle.Arch),
+		DocumentNamespace: namespace,
 		CreationInfo: &spdx.CreationInfo{
 			Creators: []common.Creator{
 				{CreatorType: "Organization", Creator: "Sidero Labs, Inc."},
@@ -76,6 +77,17 @@ func BundleToJSON(bundle *Bundle) (io.Reader, int64, error) {
 			},
 		},
 	}
+
+	// Sort files for deterministic merge output. Without this, map-derived
+	// iteration order in the file extraction path can flip layer digests
+	// across rebuilds even when inputs are identical.
+	sort.Slice(bundle.Files, func(i, j int) bool {
+		if bundle.Files[i].Source != bundle.Files[j].Source {
+			return bundle.Files[i].Source < bundle.Files[j].Source
+		}
+
+		return bundle.Files[i].Filename < bundle.Files[j].Filename
+	})
 
 	// Read and merge each extension document, prefixing element IDs to avoid collisions.
 	for _, file := range bundle.Files {
@@ -177,11 +189,40 @@ func prefixDocElementID(prefix string, id common.DocElementID) common.DocElement
 
 // CacheTag returns the cache tag for an SPDX bundle.
 //
-// The format is: spdx-<schematic_id>-<version>-<arch>
+// Format: spdx-<schematic_id>-<version>-<arch>
+//
+// Operators are expected to use distinct cache repositories for OSS vs
+// Enterprise deployments since the bundle content differs by build flavor.
+//
 // Version is sanitized to replace characters that are invalid in OCI tags.
 func CacheTag(schematicID, version, arch string) string {
 	// OCI tags cannot contain '+', replace with '-'
 	sanitizedVersion := strings.ReplaceAll(version, "+", "-")
 
 	return fmt.Sprintf("spdx-%s-%s-%s", schematicID, sanitizedVersion, arch)
+}
+
+// buildDocumentNamespace assembles the SPDX DocumentNamespace from the
+// configured external URL plus the schematic / version / arch path. It uses
+// url.URL.JoinPath rather than string concatenation to avoid producing
+// double-scheme URIs when ExternalURL already includes a scheme (the bug
+// fixed by removing the hardcoded `https://` prefix that had been there
+// before).
+func buildDocumentNamespace(externalURL, schematicID, talosVersion, arch string) (string, error) {
+	// Reject doubled-scheme inputs like "https://http://host" which url.Parse
+	// otherwise accepts silently (treating the second scheme as the host).
+	if strings.Count(externalURL, "://") != 1 {
+		return "", fmt.Errorf("external URL %q must include scheme and host", externalURL)
+	}
+
+	u, err := url.Parse(externalURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid external URL %q: %w", externalURL, err)
+	}
+
+	if u.Scheme == "" || u.Host == "" {
+		return "", fmt.Errorf("external URL %q must include scheme and host", externalURL)
+	}
+
+	return u.JoinPath("spdx", schematicID, talosVersion, arch).String(), nil
 }

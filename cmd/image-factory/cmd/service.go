@@ -27,6 +27,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	cryptotls "github.com/siderolabs/crypto/tls"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	"github.com/sigstore/cosign/v3/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigstoresignature "github.com/sigstore/sigstore/pkg/signature"
@@ -52,6 +53,10 @@ import (
 
 // RunFactory runs the image factory with specified options.
 func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
+	if err := opts.Validate(); err != nil {
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
+
 	logger.Info("starting",
 		zap.String("name", version.Name),
 		zap.String("version", version.Tag),
@@ -380,6 +385,8 @@ func runMetricsServer(ctx context.Context, logger *zap.Logger, eg *errgroup.Grou
 func buildImageVerifyOptions(logger *zap.Logger, opts Options) (artifacts.ImageVerifyOptions, error) {
 	var checkOpts []cosign.CheckOpts
 
+	registryClientOpts := []ociremote.Option{ociremote.WithRemoteOptions(remoteOptions()...)}
+
 	if opts.ContainerSignature.Disabled {
 		logger.Warn("container signature verification is disabled, this is not recommended")
 	} else {
@@ -390,9 +397,10 @@ func buildImageVerifyOptions(logger *zap.Logger, opts Options) (artifacts.ImageV
 			}
 
 			checkOpts = append(checkOpts, cosign.CheckOpts{
-				SigVerifier: keyVerifier,
-				Offline:     true,
-				IgnoreTlog:  true,
+				RegistryClientOpts: registryClientOpts,
+				SigVerifier:        keyVerifier,
+				Offline:            true,
+				IgnoreTlog:         true,
 			})
 		}
 
@@ -416,8 +424,9 @@ func buildImageVerifyOptions(logger *zap.Logger, opts Options) (artifacts.ImageV
 			}
 
 			checkOpts = append(checkOpts, cosign.CheckOpts{
-				TrustedMaterial: trustedRoot,
-				Identities:      cosignIdentities,
+				RegistryClientOpts: registryClientOpts,
+				TrustedMaterial:    trustedRoot,
+				Identities:         cosignIdentities,
 			})
 		}
 	}

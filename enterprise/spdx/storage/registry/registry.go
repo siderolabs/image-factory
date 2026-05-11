@@ -38,8 +38,8 @@ const SPDXBundleMediaType types.MediaType = "application/vnd.sidero.dev-image.sp
 
 // Options contains options for the registry storage.
 type Options struct {
-	CacheRepository         name.Repository
 	CacheImageSigner        signer.Signer
+	CacheRepository         name.Repository
 	RemoteOptions           []remote.Option
 	RegistryRefreshInterval time.Duration
 }

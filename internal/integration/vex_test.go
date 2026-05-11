@@ -22,7 +22,7 @@ import (
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
-//go:embed "testdata/vex/v1.13.0.vex.json"
+//go:embed testdata/vex/v1.13.0.vex.json
 var vexFile []byte
 
 const vexTestTalosVersion = "v1.13.0"
