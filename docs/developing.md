@@ -35,7 +35,7 @@ artifacts:
   # registry mirror for ghcr.io
   core:
     registry: 127.0.0.1:5004
-  
+
   # private registry repository for schematics
   #
   # resolves to 127.0.0.1:5005/image-factory/schematic
@@ -43,13 +43,13 @@ artifacts:
     registry: 127.0.0.1:5005
     namespace: image-factory
     repository: schematic
-  
+
   installer:
     # internal registry namespace to push installer images to
     internal:
       registry: 127.0.0.1:5005
       namespace: siderolabs
-    
+
     # external registry namespace to redirect users to pull installer
     external:
       registry: 127.0.0.1:5005
@@ -80,8 +80,23 @@ Integration tests can be run with specific targets:
 - `integration-proxy-installer`
 - `integration-enterprise`
 
-Example running direct integration tests with registry mirrors:
+Example running direct integration tests with registry mirrors
+(`127.0.0.1:5004` is a registry mirror for `ghcr.io`, `127.0.0.1:5100` is an ephemeral local registry brought up by `make` automatically, and `127.0.0.1:5005` is a local registry for pushing images):
 
 ```bash
-make integration-direct TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5005/image-factory/schematic -test.installer-external-repository=127.0.0.1:5005/test -test.installer-internal-repository=127.0.0.1:5005/test -test.cache-repository=127.0.0.1:5005/image-factory/cache" REGISTRY=127.0.0.1:5005
+make integration-direct TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/test -test.installer-internal-repository=127.0.0.1:5100/test -test.cache-repository=127.0.0.1:5100/image-factory/cache" REGISTRY=127.0.0.1:5005
 ```
+
+A test focus can be set with:
+
+```bash
+...  RUN_TESTS_DIRECT='TestIntegration/Schematic'
+```
+
+For Enterprise tests, use the following command:
+
+```bash
+make integration-enterprise TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/test -test.installer-internal-repository=127.0.0.1:5100/test -test.cache-repository=127.0.0.1:5100/image-factory/cache" REGISTRY=127.0.0.1:5005
+```
+
+(The only change is `s/integration-direct/integration-enterprise/` in the target name, and the test focus variable will be `RUN_TESTS_ENTERPRISE` instead of `RUN_TESTS_DIRECT`.)
