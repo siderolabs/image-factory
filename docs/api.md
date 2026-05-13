@@ -48,7 +48,7 @@ Supported report formats:
 
 Create a new image schematic.
 
-The request body is a YAML (JSON) encoded schematic description:
+The request body is a **JSON-encoded** schematic description. To better explain the individual fields, here's a YAML example:
 
 ```yaml
 customization:
@@ -70,6 +70,11 @@ overlay: # optional
   name: rpi_generic # overlay name
   options: # optional, any valid yaml, depends on the overlay implementation
     data: "mydata"
+```
+
+You can easily convert from YAML to JSON with [yq](https://github.com/mikefarah/yq):
+```sh
+yq --input-format yaml --output-format json schematic.yaml 
 ```
 
 Output is a JSON object containing the schematic ID and the canonical schematic body as YAML:
