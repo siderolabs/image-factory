@@ -5,28 +5,10 @@ project_name = "image-factory"
 github_repo = "siderolabs/image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v1.2.0"
+previous = "v1.3.0"
 pre_release = false
 
 [notes]
-
-    [notes.scanner]
-        title = "Vulnerability Scanner"
-        description = """\
-Image Factory now includes a built-in vulnerability scanner that automatically scans the images for known vulnerabilities after the build process.
-This feature helps users identify and address security issues in their images before deployment.
-
-**Note:** This feature is enterprise-only and is subject to the BUSL-1.1 license.
-"""
-
-    [notes.vex]
-        title = "VEX Support"
-        description = """\
-Image Factory now supports VEX (Vulnerability Exploitability eXchange) documents, allowing users to associate vulnerability information with their schematics.
-This feature enables better tracking and management of vulnerabilities in the images created with Image Factory.
-
-**Note:** This feature is enterprise-only and is subject to the BUSL-1.1 license.
-"""
 
 [make_deps]
 

@@ -1,3 +1,40 @@
+## [image-factory 1.3.1](https://github.com/siderolabs/image-factory/releases/tag/v1.3.1) (2026-05-14)
+
+Welcome to the v1.3.1 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Mateusz Urbanek
+* Andrey Smirnov
+
+### Changes
+<details><summary>2 commits</summary>
+<p>
+
+* [`1d216c7`](https://github.com/siderolabs/image-factory/commit/1d216c743a5739c3524a74df193b9153d8fd6934) docs: update the developing documentation
+* [`4a60270`](https://github.com/siderolabs/image-factory/commit/4a60270218f1934e94376c662ee8d5b5ad8416ab) fix(config): validate early and sort SPDX deterministically
+</p>
+</details>
+
+### Changes from siderolabs/go-vex
+<details><summary>1 commit</summary>
+<p>
+
+* [`59abb9a`](https://github.com/siderolabs/go-vex/commit/59abb9af79f61fd346263f9840abd501bd01b8d7) feat(loader): add functional options for VEX data manipulation
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/siderolabs/go-vex**  70764247d873 -> 59abb9af79f6
+
+Previous release can be found at [v1.3.0](https://github.com/siderolabs/image-factory/releases/tag/v1.3.0)
+
 ## [image-factory 1.3.0](https://github.com/siderolabs/image-factory/releases/tag/v1.3.0) (2026-05-08)
 
 Welcome to the v1.3.0 release of image-factory!
