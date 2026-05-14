@@ -36,6 +36,8 @@ authentication:
 enterprise:
   vex:
     data:
+      registry: registry.ghcr.io:5000
       namespace: siderolabs/image-factory
       repository: test-vex-data
+      insecure: true
     cacheTTL: 15s

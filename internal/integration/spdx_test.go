@@ -24,6 +24,15 @@ import (
 
 const spdxTestTalosVersion = "v1.12.4"
 
+// Two patch releases used to assert that the SPDX bundle reflects the
+// requested Talos version. A previous bug cached the initramfs by a profile
+// hash that did not include the version, so different versions returned the
+// same package set.
+const (
+	spdxRegressionVersionA = "v1.13.0"
+	spdxRegressionVersionB = "v1.13.2"
+)
+
 func downloadSPDX(ctx context.Context, t *testing.T, baseURL, schematicID, version, arch, method string) *http.Response {
 	t.Helper()
 
@@ -156,6 +165,65 @@ func testSPDXFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 		resp := downloadSPDX(ctx, t, baseURL, emptySchematicID, spdxTestTalosVersion, "invalid-arch", http.MethodGet)
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("differs across talos versions", func(t *testing.T) {
+		t.Parallel()
+
+		fetchPackages := func(version string) []*spdx.Package {
+			resp := downloadSPDX(ctx, t, baseURL, emptySchematicID, version, "amd64", http.MethodGet)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			doc, err := spdxjson.Read(resp.Body)
+			require.NoError(t, err)
+
+			return doc.Packages
+		}
+
+		pkgsA := fetchPackages(spdxRegressionVersionA)
+		pkgsB := fetchPackages(spdxRegressionVersionB)
+
+		require.NotEmpty(t, pkgsA, "no packages extracted for %s", spdxRegressionVersionA)
+		require.NotEmpty(t, pkgsB, "no packages extracted for %s", spdxRegressionVersionB)
+
+		type pkgKey struct {
+			name    string
+			version string
+		}
+
+		toSet := func(pkgs []*spdx.Package) map[pkgKey]struct{} {
+			out := make(map[pkgKey]struct{}, len(pkgs))
+			for _, p := range pkgs {
+				out[pkgKey{name: p.PackageName, version: p.PackageVersion}] = struct{}{}
+			}
+
+			return out
+		}
+
+		setA := toSet(pkgsA)
+		setB := toSet(pkgsB)
+
+		diff := 0
+
+		for k := range setA {
+			if _, ok := setB[k]; !ok {
+				diff++
+			}
+		}
+
+		for k := range setB {
+			if _, ok := setA[k]; !ok {
+				diff++
+			}
+		}
+
+		// Regression guard: the prior bug caused both versions to extract SPDX
+		// from the same cached initramfs, so the (name, version) sets were
+		// identical (diff == 0). Two adjacent patch releases must yield several
+		// differing entries (kernel/userspace package bumps).
+		assert.Greater(t, diff, 3,
+			"SPDX package set differs across Talos versions %s vs %s by %d (name, version) entries; expected > 3 (was 0 under the cache-collision bug)",
+			spdxRegressionVersionA, spdxRegressionVersionB, diff)
 	})
 
 	t.Run("cached response", func(t *testing.T) {

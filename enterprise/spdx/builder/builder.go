@@ -30,6 +30,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/schematic"
+	ifconstants "github.com/siderolabs/image-factory/pkg/constants"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -143,10 +144,7 @@ func (b *Builder) buildBundle(sc *schematicpkg.Schematic, schematicID, versionTa
 		Files:        []File{},
 	}
 
-	logger.Debug("extracting SPDX from Talos",
-		zap.String("schematic", schematicID),
-		zap.String("version", versionTag),
-		zap.String("arch", string(arch)))
+	logger.Debug("extracting SPDX from Talos")
 
 	// Extract SPDX from Talos
 	var err error
@@ -194,6 +192,14 @@ func (b *Builder) extractTalosSPDX(ctx context.Context, bundle *Bundle, versionT
 	if err != nil {
 		return fmt.Errorf("invalid version: %w", err)
 	}
+
+	// We are manually setting the profile version and name here because after enhancing the profile
+	// the produced initramfs' magic number does not match what's expected by the decompression
+	// library, causing it to fail to decompress and preventing us from extracting the embedded SPDX files.
+	// That's why we are getting SBOM from each extension individually instead of relying on the
+	// one embedded in the initramfs.
+	prof.Version = talosVersion.String()
+	prof.Name = ifconstants.TalosName
 
 	asset, err := b.assetBuilder.Build(ctx, prof, talosVersion.String(), path, path)
 	if err != nil {
