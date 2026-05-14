@@ -12,6 +12,9 @@ openssl ecparam -name prime256v1 -genkey -noout -out _out/cache-signing-key.key
 
 # Build and run
 make docker-compose-up REGISTRY=127.0.0.1:5005
+
+# Build and run (enterprise)
+make docker-compose-up REGISTRY=127.0.0.1:5005 WITH_ENTERPRISE=true
 ```
 
 To stop:
@@ -19,6 +22,9 @@ To stop:
 ```bash
 make docker-compose-down
 ```
+
+By default, authentication is disabled for local development, enable it by setting `authentication.enabled` to `true` in the config file (`hack/dev/config.yaml`), and providing a valid `htpasswd` file at the path specified by `authentication.htpasswdPath`.
+Optionally use the existing htpasswd file at `hack/dev/htpasswd` for testing.
 
 ## Running Image Factory Manually
 

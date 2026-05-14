@@ -30,7 +30,7 @@ http:
   externalURL: http://localhost:8080
 
 authentication:
-  enabled: true
+  enabled: false
   htpasswdPath: /etc/image-factory/htpasswd
 
 enterprise:
