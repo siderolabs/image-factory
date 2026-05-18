@@ -65,6 +65,16 @@ customization:
        # optional, include well-known UEFI certificates into auto-enrollment database (SecureBoot ISO only)
       includeWellKnownCertificates: true
     bootloader: sd-boot # optional, defaults to auto (bootloader chosen by imager), other options: dual-boot, grub
+    embeddedMachineConfiguration: | # optional, embedded machine configuration (YAML-encoded)
+      apiVersion: v1alpha1
+      kind: HostnameConfig
+      hostname: my-custom-hostname
+      auto: off
+      ---
+      apiVersion: v1alpha1
+      kind: KmsgLogConfig
+      name: remote-log
+      url: tcp://10.0.0.50:5044/
 overlay: # optional
   image: ghcr.io/siderolabs/sbc-raspberry-pi # overlay image
   name: rpi_generic # overlay name

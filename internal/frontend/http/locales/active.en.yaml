@@ -184,6 +184,18 @@
 - id: customization.overlay.skip
   translation: "If unsure, you can skip this step."
 
+- id: customization.embedded_config
+  translation: "Embedded machine configuration:"
+
+- id: customization.embedded_config.description
+  translation: "This configuration will be embedded into the image. For more details see the  "
+
+- id: customization.embedded_config.reference
+  translation: "documentation"
+
+- id: customization.embedded_config.skip
+  translation: "Skip this step if unsure."
+
 - id: customization.bootloader.title
   translation: "Bootloader"
 

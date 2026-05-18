@@ -98,6 +98,8 @@
 <input type="hidden" name="selected-bootloader" value="{{ .Bootloader }}">
 <input type="hidden" name="overlay-options" value="{{ .OverlayOptions }}">
 <input type="hidden" name="selected-overlay-options" value="{{ .OverlayOptions }}">
+<input type="hidden" name="embedded-config" value="{{ .EmbeddedConfig }}">
+<input type="hidden" name="selected-embedded-config" value="{{ .EmbeddedConfig }}">
 {{- end -}}
 {{ end }}
 
@@ -107,7 +109,7 @@
     href="https://docs.siderolabs.com/talos/{{ short_version .Version }}{{ .Platform.Documentation}}">{{ t .Localizer
     "common.documentation" }}</a>).
 {{ end }}
-
+        
 {{ define "board-description" }}
 {{ t .Localizer "common.runs_on" }} {{ .Board.Label }}{{ if .Board.Documentation }} (<a target="_blank"
     class="text-blue-600 dark:text-blue-500 underline"

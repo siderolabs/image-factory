@@ -184,6 +184,18 @@
 - id: customization.overlay.skip
   translation: "En cas de doute, vous pouvez ignorer cette étape."
 
+- id: customization.embedded_config
+  translation: "Configuration machine intégrée :"
+
+- id: customization.embedded_config.description
+  translation: "Cette configuration sera intégrée à l'image. Pour plus de détails, consultez la "
+
+- id: customization.embedded_config.reference
+  translation: "documentation"
+
+- id: customization.embedded_config.skip
+  translation: "Ignorez cette étape en cas de doute."
+
 - id: customization.bootloader.title
   translation: "Chargeur d'amorçage"
 

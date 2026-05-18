@@ -184,6 +184,18 @@
 - id: customization.overlay.skip
   translation: "Jeśli nie masz pewności - możesz pominąć ten krok."
 
+- id: customization.embedded_config
+  translation: "Wbudowana konfiguracja maszyny:"
+
+- id: customization.embedded_config.description
+  translation: "Ta konfiguracja zostanie wbudowana w obraz. Aby uzyskać więcej informacji, zobacz "
+
+- id: customization.embedded_config.reference
+  translation: "dokumentację"
+
+- id: customization.embedded_config.skip
+  translation: "Pomiń ten krok, jeśli nie masz pewności."
+
 - id: customization.bootloader.title
   translation: "Program rozruchowy"
 

@@ -210,6 +210,7 @@ type WizardParams struct { //nolint:govet
 	Extensions     []string
 	Cmdline        string
 	CmdlineSet     bool
+	EmbeddedConfig string
 	OverlayOptions string
 
 	SelectedTarget         string
@@ -221,6 +222,7 @@ type WizardParams struct { //nolint:govet
 	SelectedBootloader     string
 	SelectedExtensions     []string
 	SelectedCmdline        string
+	SelectedEmbeddedConfig string
 	SelectedOverlayOptions string
 
 	// Dynamically set fields.
@@ -249,6 +251,10 @@ func SetURLValuesFromSchematic(params *WizardParams, s *schematic.Schematic) {
 	} else {
 		// "-" is used when the user selects no extensions
 		params.Extensions = []string{"-"}
+	}
+
+	if s.Customization.EmbeddedMachineConfiguration != "" {
+		params.EmbeddedConfig = s.Customization.EmbeddedMachineConfiguration
 	}
 
 	if s.Overlay.Name != "" || s.Overlay.Image != "" || len(s.Overlay.Options) > 0 {
@@ -382,6 +388,7 @@ func WizardParamsFromRequest(r *http.Request) WizardParams {
 		Extensions:     r.Form["extensions"],
 		Cmdline:        strings.TrimSpace(r.FormValue("cmdline")),
 		CmdlineSet:     r.FormValue("cmdline-set") != "",
+		EmbeddedConfig: r.FormValue("embedded-config"),
 		OverlayOptions: strings.TrimSpace(r.FormValue("overlay-options")),
 
 		SelectedTarget:         r.FormValue("selected-target"),
@@ -393,6 +400,7 @@ func WizardParamsFromRequest(r *http.Request) WizardParams {
 		SelectedBootloader:     r.FormValue("selected-bootloader"),
 		SelectedExtensions:     r.Form["selected-extensions"],
 		SelectedCmdline:        r.FormValue("selected-cmdline"),
+		SelectedEmbeddedConfig: r.FormValue("selected-embedded-config"),
 		SelectedOverlayOptions: r.FormValue("selected-overlay-options"),
 	}
 
@@ -492,6 +500,8 @@ func (p WizardParams) URLValues() url.Values {
 	if p.CmdlineSet {
 		values.Set("cmdline-set", "true")
 	}
+
+	// Skip adding the embedded config to url avalues to avoid exposing secrets through the url and browser history.
 
 	if p.OverlayOptions != "" {
 		values.Set("overlay-options", p.OverlayOptions)
@@ -636,10 +646,12 @@ func (f *Frontend) wizardCmdline(_ context.Context, params WizardParams) (string
 
 			OverlayOptionsEnabled       bool
 			SupportsBootloaderSelection bool
+			EmbeddedConfigEnabled       bool
 		}{
 			WizardParams: params,
 
 			OverlayOptionsEnabled:       params.Target == TargetSBC && quirks.New(params.Version).SupportsOverlay(),
+			EmbeddedConfigEnabled:       quirks.New(params.Version).SupportsEmbeddedConfig(),
 			SupportsBootloaderSelection: talosVersion.GTE(semver.MustParse("1.12.0-alpha.2")),
 		},
 		params.URLValues(),
@@ -661,6 +673,10 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 	requestedSchematic, err := params.ToSchematic(ctx, owner)
 	if err != nil {
 		return "", nil, nil, err
+	}
+
+	if params.EmbeddedConfig != "" {
+		requestedSchematic.Customization.EmbeddedMachineConfiguration = params.EmbeddedConfig
 	}
 
 	schematicID, err := f.schematicFactory.Put(ctx, &requestedSchematic)

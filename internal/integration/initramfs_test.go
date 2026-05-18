@@ -209,11 +209,20 @@ func assertInitramfs(t *testing.T, path, talosVersion string, expected initramfs
 		expectedNames = append(expectedNames, "modules.dep")
 	}
 
-	assert.Equal(t, expectedNames, actualNames)
+	assert.ElementsMatch(t, expectedNames, actualNames)
 
-	// assert on schematic
-	schematicIdx := slices.Index(expectedNames, "schematic")
-	assert.Equal(t, expected.schematicID, extensionConfig.Layers[schematicIdx].Metadata.Version)
+	schematicAsserted := false
+
+	for _, layer := range extensionConfig.Layers {
+		if layer.Metadata.Name == "schematic" {
+			assert.Equal(t, expected.schematicID, layer.Metadata.Version)
+			schematicAsserted = true
+
+			continue
+		}
+	}
+
+	assert.True(t, schematicAsserted, "schematic extension not found")
 
 	// assert on modules.dep being rebuilt
 	if expected.modulesDepMatch.IsPresent() {

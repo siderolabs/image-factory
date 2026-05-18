@@ -444,7 +444,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 	tests := []testCase{} //nolint:prealloc
 
 	// Generate systematic test cases
-	versions := []string{"v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.9.0", "v1.10.0", "v1.11.0"}
+	versions := []string{"v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.9.0", "v1.10.0", "v1.11.0", "v1.12.0", "v1.13.0"}
 	archs := []string{"amd64", "arm64"}
 	secureBootStates := []bool{false, true}
 	outputKinds := []profile.OutputKind{profile.OutKindISO, profile.OutKindImage, profile.OutKindInstaller}
@@ -599,6 +599,36 @@ func TestEnhanceFromSchematic(t *testing.T) {
 				},
 
 				expectedProfile: defaultExpectedProfileSecurebootWellKnownKeysIncluded(version, arch, profile.OutKindISO),
+			}
+
+			tests = append(tests, tc)
+		}
+	}
+
+	// Special case: with embedded machine configuration
+	for _, version := range versions {
+		if !quirks.New(version).SupportsEmbeddedConfig() {
+			continue
+		}
+
+		config := `apiVersion: v1alpha1
+kind: HostnameConfig
+hostname: worker-33`
+		for _, arch := range archs {
+			tc := testCase{
+				version:     version,
+				arch:        arch,
+				secureBoot:  false,
+				extraSuffix: "embedded_machine_configuration",
+				outputKind:  profile.OutKindImage,
+				baseProfile: getBaseProfile(profile.OutKindImage, arch, false),
+				schematic: schematic.Schematic{
+					Customization: schematic.Customization{
+						EmbeddedMachineConfiguration: config,
+					},
+				},
+
+				expectedProfile: defaultExpectedProfileWithEmbeddedMachineConfiguration(version, arch, profile.OutKindImage, config),
 			}
 
 			tests = append(tests, tc)
@@ -824,6 +854,20 @@ func defaultExpectedProfileSecurebootWellKnownKeysIncluded(version, arch string,
 	}
 
 	prof.Input.SecureBoot.IncludeWellKnownCerts = true
+
+	return prof
+}
+
+func defaultExpectedProfileWithEmbeddedMachineConfiguration(version, arch string, outKind profile.OutputKind, config string) profile.Profile {
+	prof := defaultExpectedProfile(version, arch, outKind, false)
+
+	prof.Input.SystemExtensions = []profile.ContainerAsset{
+		{
+			TarballPath: "02f29f9a702fceec4fc2e2e51314d63710fc1b192ebb1629ac12301949d49c8c.tar",
+		},
+	}
+
+	prof.Customization.EmbeddedMachineConfiguration = config
 
 	return prof
 }

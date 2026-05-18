@@ -10,6 +10,12 @@ pre_release = false
 
 [notes]
 
+    [notes.scanner]
+        title = "Machine configuration embedding"
+        description = """\
+Image Factory now supports embedding machine configuration into generated images starting with Talos version 1.2.0 onwards.
+"""
+
 [make_deps]
 
     [make_deps.pkgs]

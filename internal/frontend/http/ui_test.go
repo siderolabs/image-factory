@@ -15,6 +15,8 @@ import (
 	"github.com/siderolabs/image-factory/internal/frontend/http"
 )
 
+const testEmbdeddedMachineConfiguration = "apiVersion: v1alpha1/nkind: HostnameConfig/nhostname: my-custom-hostname/nauto: off"
+
 func TestSetValuesFromSchematic(t *testing.T) {
 	ctx := t.Context()
 
@@ -33,7 +35,8 @@ func TestSetValuesFromSchematic(t *testing.T) {
 			"siderolabs/iscsi-tools",
 			"-",
 		},
-		Bootloader: "grub",
+		Bootloader:     "grub",
+		EmbeddedConfig: testEmbdeddedMachineConfiguration,
 	}
 
 	s, err := input.ToSchematic(ctx, nil)
@@ -68,4 +71,15 @@ func TestSetValuesFromSchematic(t *testing.T) {
 	s2, err := got.ToSchematic(ctx, nil)
 	require.NoError(t, err)
 	assert.Equal(t, s, s2)
+}
+
+func TestURLValuesOmitsEmbeddedConfig(t *testing.T) {
+	values := http.WizardParams{
+		Cmdline:        "console=tty0",
+		EmbeddedConfig: testEmbdeddedMachineConfiguration,
+		Version:        "v1.13.2",
+	}.URLValues()
+
+	assert.Equal(t, "console=tty0", values.Get("cmdline"))
+	assert.NotContains(t, values, "embedded-config")
 }

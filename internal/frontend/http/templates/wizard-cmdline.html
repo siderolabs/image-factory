@@ -12,7 +12,7 @@
         <input name="cmdline-set" type="hidden" value="1">
     </div>
 
-    <div class="ms-2 prose dark:prose-invert prose-sm">
+    <div class="ms-2 prose dark:prose-invert prose-sm mb-6">
         <p>
             {{ t .Localizer "customization.cmdline.description" }}<a target="_blank"
                 href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/reference/kernel/">{{ t .Localizer
@@ -36,6 +36,30 @@
             {{ t .Localizer "customization.cmdline.skip" }}
         </p>
     </div>
+
+    {{ if .EmbeddedConfigEnabled }}
+    <div class="mb-6">
+        <label for="embedded-config" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+            {{ t .Localizer "customization.embedded_config" }}
+        </label>
+        <textarea id="embedded-config" name="embedded-config"
+            class="bg-gray-50 border min-h-24 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full h-16 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            placeholder="apiVersion: v1alpha1
+kind: HostnameConfig
+hostname: my-custom-hostname
+auto: off">{{ .SelectedEmbeddedConfig }}</textarea>
+    </div>
+
+    <div class="ms-2 prose dark:prose-invert prose-sm mb-6">
+        <p>
+            {{ t .Localizer "customization.embedded_config.description" }}<a target="_blank"
+                href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/configure-your-talos-cluster/system-configuration/acquire#embedded-configuration"> {{ t .Localizer "customization.embedded_config.reference" }}</a>.
+        </p>
+        <p>
+            {{ t .Localizer "customization.embedded_config.skip" }}
+        </p>
+    </div>
+    {{ end }}
 
     {{ if .OverlayOptionsEnabled }}
     <div class="mb-6 mt-6">

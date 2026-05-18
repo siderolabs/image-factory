@@ -26,6 +26,8 @@ import (
 // nonexistentSchematicID is a fixed ID that will never be created.
 const nonexistentSchematicID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
+const testEmbdeddedMachineConfiguration = "apiVersion: v1alpha1/nkind: HostnameConfig/nhostname: my-custom-hostname/nauto: off"
+
 // Schematic IDs are computed at init time because in enterprise builds the owner
 // is embedded in the schematic YAML before hashing, changing the resulting ID.
 var (
@@ -37,6 +39,7 @@ var (
 	securebootWellKnownSchematicID      string
 	grubBootloaderOverrideSchematicID   string
 	sdBootBootloaderOverrideSchematicID string
+	embeddedConfigSchematicID           string
 
 	testSchematics map[string]*schematic.Schematic
 )
@@ -65,6 +68,7 @@ func init() {
 		{Owner: owner, Customization: schematic.Customization{SecureBoot: schematic.SecureBootCustomization{IncludeWellKnownCertificates: true}}},
 		{Owner: owner, Customization: schematic.Customization{Bootloader: profile.BootLoaderKindGrub}},
 		{Owner: owner, Customization: schematic.Customization{Bootloader: profile.BootLoaderKindSDBoot}},
+		{Owner: owner, Customization: schematic.Customization{EmbeddedMachineConfiguration: testEmbdeddedMachineConfiguration}},
 	}
 
 	testSchematics = make(map[string]*schematic.Schematic, len(raw))
@@ -77,6 +81,7 @@ func init() {
 	securebootWellKnownSchematicID = mustSchematicID(raw[5])
 	grubBootloaderOverrideSchematicID = mustSchematicID(raw[6])
 	sdBootBootloaderOverrideSchematicID = mustSchematicID(raw[7])
+	embeddedConfigSchematicID = mustSchematicID(raw[8])
 
 	testSchematics[emptySchematicID] = raw[0]
 	testSchematics[extraArgsSchematicID] = raw[1]
@@ -86,6 +91,7 @@ func init() {
 	testSchematics[securebootWellKnownSchematicID] = raw[5]
 	testSchematics[grubBootloaderOverrideSchematicID] = raw[6]
 	testSchematics[sdBootBootloaderOverrideSchematicID] = raw[7]
+	testSchematics[embeddedConfigSchematicID] = raw[8]
 }
 
 func createSchematicGetID(ctx context.Context, t *testing.T, c *client.Client, schematic schematic.Schematic) string {
@@ -153,6 +159,10 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 
 	t.Run("bootloader_override_sd-boot", func(t *testing.T) {
 		assert.Equal(t, sdBootBootloaderOverrideSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[sdBootBootloaderOverrideSchematicID]))
+	})
+
+	t.Run("embedded config", func(t *testing.T) {
+		assert.Equal(t, embeddedConfigSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[embeddedConfigSchematicID]))
 	})
 
 	t.Run("secureboot well-known certs", func(t *testing.T) {

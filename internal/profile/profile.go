@@ -332,6 +332,16 @@ func EnhanceFromSchematic(
 ) (profile.Profile, error) {
 	metricsOnce.Do(initMetrics)
 
+	if prof.Output.Kind != profile.OutKindCmdline && prof.Output.Kind != profile.OutKindKernel {
+		if schematic.Customization.EmbeddedMachineConfiguration != "" {
+			if !quirks.New(versionTag).SupportsEmbeddedConfig() {
+				return prof, xerrors.NewTaggedf[InvalidErrorTag]("embedding configuration is not supported for Talos version %s", versionTag)
+			}
+
+			prof.Customization.EmbeddedMachineConfiguration = schematic.Customization.EmbeddedMachineConfiguration
+		}
+	}
+
 	if prof.SecureBootEnabled() {
 		secureBootAssets, err := secureBootService.GetSecureBootAssets()
 		if err != nil {

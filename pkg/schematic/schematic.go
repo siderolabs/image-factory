@@ -32,6 +32,8 @@ type Schematic struct {
 
 // Customization represents the Talos image customization.
 type Customization struct {
+	// EmbeddedMachineConfiguration is the initial embedded machine configuration.
+	EmbeddedMachineConfiguration string `yaml:"embeddedMachineConfiguration,omitempty"`
 	// Extra kernel arguments to be passed to the kernel.
 	ExtraKernelArgs []string `yaml:"extraKernelArgs,omitempty"`
 	// Meta provides initial META contents for the image.
