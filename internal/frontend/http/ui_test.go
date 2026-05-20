@@ -46,7 +46,8 @@ func TestSetValuesFromSchematic(t *testing.T) {
 	assert.Equal(t, input.BoardMeta.OverlayName, got.BoardMeta.OverlayName)
 	assert.Equal(t, input.BoardMeta.OverlayImage, got.BoardMeta.OverlayImage)
 	assert.Equal(t, input.Cmdline, got.Cmdline)
-	assert.Equal(t,
+	assert.Equal(
+		t,
 		[]string{"siderolabs/iscsi-tools", "siderolabs/util-linux-tools"},
 		got.Extensions,
 	)

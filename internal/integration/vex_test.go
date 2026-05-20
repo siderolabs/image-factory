@@ -64,7 +64,8 @@ func testVEXFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
-		assert.Equal(t,
+		assert.Equal(
+			t,
 			`attachment; filename="`+vexTestTalosVersion+`.vex.json"`,
 			resp.Header.Get("Content-Disposition"),
 		)
@@ -91,7 +92,8 @@ func testVEXFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
-		assert.Equal(t,
+		assert.Equal(
+			t,
 			`attachment; filename="`+vexTestTalosVersion+`.vex.json"`,
 			resp.Header.Get("Content-Disposition"),
 		)
@@ -115,7 +117,8 @@ func testVEXFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		// handler adds the v prefix
-		assert.Equal(t,
+		assert.Equal(
+			t,
 			`attachment; filename="v1.13.0.vex.json"`,
 			resp.Header.Get("Content-Disposition"),
 		)

@@ -465,8 +465,16 @@ type EnterpriseOptions struct {
 	// Scanner contains configuration for the vulnerability scanner.
 	Scanner ScannerOptions `koanf:"scanner"`
 
+	// SPDX contains configuration for SPDX document generation.
+	SPDX SPDXOptions `koanf:"spdx"`
+
 	// VEX contains configuration for VEX data fetching.
 	VEX VEXOptions `koanf:"vex"`
+}
+
+// SPDXOptions configures SPDX document generation and caching.
+type SPDXOptions struct {
+	Cache OCIRepositoryOptions `koanf:"cache"`
 }
 
 // VEXOptions configures VEX data caching.
@@ -577,6 +585,13 @@ var DefaultOptions = Options{
 			Cache: LRUCacheOptions{
 				TTL:      15 * time.Minute,
 				Capacity: 65536,
+			},
+		},
+		SPDX: SPDXOptions{
+			Cache: OCIRepositoryOptions{
+				Registry:   "ghcr.io",
+				Namespace:  "siderolabs/image-factory",
+				Repository: "spdx-cache",
 			},
 		},
 		Scanner: ScannerOptions{

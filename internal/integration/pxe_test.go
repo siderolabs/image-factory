@@ -121,7 +121,8 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 
 				pxe := downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64")
 
-				assert.Equal(t,
+				assert.Equal(
+					t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
 							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", expectedPXEURL),
@@ -140,7 +141,8 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 
 				pxe := downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-x86_64")
 
-				assert.Equal(t,
+				assert.Equal(
+					t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
 							strings.ReplaceAll(fixupCmdline(metalInsecureExpected, talosVersion), "ENDPOINT", expectedPXEURL),
@@ -159,7 +161,8 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 
 				pxe := downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "equinixMetal-amd64")
 
-				assert.Equal(t,
+				assert.Equal(
+					t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
 							strings.ReplaceAll(fixupCmdline(equinixInsecureExpected, talosVersion), "ENDPOINT", expectedPXEURL),
@@ -178,7 +181,8 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 
 				pxe := downloadPXE(ctx, t, baseURL, emptySchematicID, talosVersion, "metal-amd64-secureboot")
 
-				assert.Equal(t,
+				assert.Equal(
+					t,
 					strings.ReplaceAll(
 						strings.ReplaceAll(
 							strings.ReplaceAll(fixupCmdline(securebootExpected, talosVersion), "ENDPOINT", expectedPXEURL),

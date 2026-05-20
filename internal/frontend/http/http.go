@@ -254,7 +254,8 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 			http.Error(w, message, code)
 		})
 
-		f.logger.Log(level, "request",
+		f.logger.Log(
+			level, "request",
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),
 			zap.Int("status", status),

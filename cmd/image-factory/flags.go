@@ -23,7 +23,8 @@ func initFlags(args []string) error {
 	fs := pflag.NewFlagSet("image-factory", pflag.ExitOnError)
 
 	fs.Var(logLevel, "log-level", fmt.Sprintf("Log level %v", flags.LevelValues))
-	fs.Var(config, "config",
+	fs.Var(
+		config, "config",
 		"Configuration source(s). Can be specified multiple times or as a comma-separated list.\n"+
 			"Supported forms:\n"+
 			"  env=[PREFIX]        Load configuration from environment variables (optional prefix).\n"+

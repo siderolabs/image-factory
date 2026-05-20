@@ -211,7 +211,8 @@ func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, pusher 
 	}
 
 	// Push as an OCI 1.1 referrer of the signed image.
-	if err := ociremote.WriteAttestationNewBundleFormat(imageRef, bundleBytes, costypes.CosignSignPredicateType,
+	if err := ociremote.WriteAttestationNewBundleFormat(
+		imageRef, bundleBytes, costypes.CosignSignPredicateType,
 		ociremote.WithRemoteOptions(append(pushRemoteOpts, gcremote.WithContext(ctx))...),
 		ociremote.WithNameOptions(s.nameOpts...),
 	); err != nil {

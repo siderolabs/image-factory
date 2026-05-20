@@ -181,7 +181,8 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 		// create a new random schematic, as the schematic is persisted, and we want to test uploading new config
 		randomKernelArg := hex.EncodeToString(randomBytes(t, 32))
 
-		assert.Len(t, createSchematicGetID(ctx, t, c,
+		assert.Len(t, createSchematicGetID(
+			ctx, t, c,
 			schematic.Schematic{
 				Customization: schematic.Customization{
 					ExtraKernelArgs: []string{randomKernelArg},

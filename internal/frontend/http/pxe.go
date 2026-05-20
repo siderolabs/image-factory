@@ -90,7 +90,8 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, r *http
 	if prof.SecureBootEnabled() {
 		return ensure.Value(template.New("secureboot.ipxe").
 			Parse(securebootIPXE)).
-			Execute(w,
+			Execute(
+				w,
 				struct {
 					UKIURL  string
 					Cmdline string
@@ -103,7 +104,8 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, r *http
 
 	return ensure.Value(template.New("standard.ipxe").
 		Parse(standardIPXE)).
-		Execute(w,
+		Execute(
+			w,
 			struct {
 				KernelURL    string
 				Cmdline      string

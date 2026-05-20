@@ -496,8 +496,10 @@ func EnhanceFromSchematic(
 func setKernelArgsAndMeta(prof *profile.Profile, schematic *schematicpkg.Schematic) {
 	prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, schematic.Customization.ExtraKernelArgs...)
 
-	prof.Customization.MetaContents = append(prof.Customization.MetaContents,
-		xslices.Map(schematic.Customization.Meta,
+	prof.Customization.MetaContents = append(
+		prof.Customization.MetaContents,
+		xslices.Map(
+			schematic.Customization.Meta,
 			func(mv schematicpkg.MetaValue) meta.Value {
 				return meta.Value{
 					Key:   mv.Key,

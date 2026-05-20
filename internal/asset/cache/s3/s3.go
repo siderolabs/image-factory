@@ -153,7 +153,8 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 				}
 
 				// ignore the error, as we can still return the object without a presigned URL
-				c.logger.Warn("error generating presigned URL for object", zap.Error(err), zap.String("object.key", key),
+				c.logger.Warn(
+					"error generating presigned URL for object", zap.Error(err), zap.String("object.key", key),
 					zap.Int("minio.error.statusCode", minioErr.StatusCode),
 					zap.String("minio.error.code", minioErr.Code),
 					zap.String("minio.error.message", minioErr.Message),
@@ -188,7 +189,8 @@ func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset
 	if err != nil {
 		var minioErr minio.ErrorResponse
 		if errors.As(err, &minioErr) {
-			c.logger.Debug("PUT failed", zap.String("object.key", key),
+			c.logger.Debug(
+				"PUT failed", zap.String("object.key", key),
 				zap.Int("minio.error.statusCode", minioErr.StatusCode),
 				zap.String("minio.error.code", minioErr.Code),
 				zap.String("minio.error.message", minioErr.Message),

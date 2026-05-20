@@ -111,7 +111,8 @@ func testTalosctlFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				t.Run(bin, func(t *testing.T) {
 					t.Parallel()
 
-					assert.Equal(t, fmt.Sprintf("version %s is not available\n", strings.TrimPrefix(talosVersion, "v")),
+					assert.Equal(
+						t, fmt.Sprintf("version %s is not available\n", strings.TrimPrefix(talosVersion, "v")),
 						downloadTalosctlInvalid(ctx, t, baseURL, talosVersion, bin, http.StatusNotFound),
 					)
 				})

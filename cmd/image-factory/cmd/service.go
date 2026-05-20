@@ -57,7 +57,8 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	logger.Info("starting",
+	logger.Info(
+		"starting",
 		zap.String("name", version.Name),
 		zap.String("version", version.Tag),
 		zap.String("sha", version.SHA),
@@ -204,8 +205,8 @@ func buildEnterprisePlugins(
 		ArtifactsManager:        artifactsManager,
 		AssetBuilder:            assetBuilder,
 		AuthProvider:            authProvider,
-		CacheInsecure:           opts.Cache.OCI.Insecure,
-		CacheRepository:         opts.Cache.OCI.String(),
+		CacheInsecure:           opts.Enterprise.SPDX.Cache.Insecure,
+		CacheRepository:         opts.Enterprise.SPDX.Cache.String(),
 		CacheImageSigner:        cacheImageSigner,
 		RemoteOptions:           remoteOptions(),
 		RegistryRefreshInterval: opts.Artifacts.RefreshInterval,

@@ -94,7 +94,8 @@ func TestMatchError(t *testing.T) {
 		// --- wrapped tagged errors ---
 		{
 			name: "wrapped enterprise not enabled",
-			err: fmt.Errorf("wrap: %w",
+			err: fmt.Errorf(
+				"wrap: %w",
 				xerrors.NewTagged[enterrors.NotEnabledTag](errors.New("not enabled")),
 			),
 			expectedLevel:  zap.WarnLevel,
@@ -105,8 +106,10 @@ func TestMatchError(t *testing.T) {
 		},
 		{
 			name: "double wrapped storage not found",
-			err: fmt.Errorf("outer: %w",
-				fmt.Errorf("inner: %w",
+			err: fmt.Errorf(
+				"outer: %w",
+				fmt.Errorf(
+					"inner: %w",
 					xerrors.NewTagged[storage.ErrNotFoundTag](errors.New("missing")),
 				),
 			),
@@ -118,7 +121,8 @@ func TestMatchError(t *testing.T) {
 		},
 		{
 			name: "wrapped invalid profile",
-			err: fmt.Errorf("validation failed: %w",
+			err: fmt.Errorf(
+				"validation failed: %w",
 				xerrors.NewTagged[profile.InvalidErrorTag](errors.New("bad profile")),
 			),
 			expectedLevel:  zap.WarnLevel,
@@ -129,7 +133,8 @@ func TestMatchError(t *testing.T) {
 		},
 		{
 			name: "wrapped invalid schematic",
-			err: fmt.Errorf("oops: %w",
+			err: fmt.Errorf(
+				"oops: %w",
 				xerrors.NewTagged[schematicpkg.InvalidErrorTag](errors.New("bad schematic")),
 			),
 			expectedLevel:  zap.WarnLevel,
@@ -149,7 +154,8 @@ func TestMatchError(t *testing.T) {
 		},
 		{
 			name: "double wrapped context canceled",
-			err: fmt.Errorf("outer: %w",
+			err: fmt.Errorf(
+				"outer: %w",
 				fmt.Errorf("inner: %w", context.Canceled),
 			),
 			expectedLevel:  zap.InfoLevel,

@@ -186,7 +186,8 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 	)
 
 	// check if the asset has already been built
-	f.logger.Info("heading installer image",
+	f.logger.Info(
+		"heading installer image",
 		zap.String("image", img.Name()),
 		zap.String("schematic", schematicID),
 		zap.String("version", versionTag),
@@ -199,7 +200,8 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 	)
 	if err == nil {
 		// the asset has already been built, so check the signature
-		f.logger.Info("verifying cached installer image signature",
+		f.logger.Info(
+			"verifying cached installer image signature",
 			zap.String("image", img.Name()),
 			zap.String("schematic", schematicID),
 			zap.String("version", versionTag),

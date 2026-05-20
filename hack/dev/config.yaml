@@ -34,6 +34,12 @@ authentication:
   htpasswdPath: /etc/image-factory/htpasswd
 
 enterprise:
+  spdx:
+    cache:
+      # private registry repository for cached spdx
+      registry: registry.local:5000
+      namespace: image-factory
+      repository: spdx-cache
   vex:
     data:
       registry: registry.ghcr.io:5000

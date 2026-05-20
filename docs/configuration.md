@@ -883,6 +883,55 @@ Capacity caps the number of cached objects before LRU eviction.
 
 ---
 
+### `enterprise.spdx`
+
+SPDX contains configuration for SPDX document generation.
+
+---
+
+### `enterprise.spdx.cache`
+
+---
+
+### `enterprise.spdx.cache.registry`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_SPDX_CACHE_REGISTRY`
+
+Registry is the hostname of the container registry, e.g., `ghcr.io`.
+This is where images are stored.
+
+---
+
+### `enterprise.spdx.cache.namespace`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_SPDX_CACHE_NAMESPACE`
+
+Namespace is the repository namespace or organization within the registry, e.g., `sidero-labs`.
+Some registries allow repositories without a namespace.
+
+---
+
+### `enterprise.spdx.cache.repository`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_SPDX_CACHE_REPOSITORY`
+
+Repository is the name of the repository inside the namespace, e.g., `talos`.
+Combined with Registry and Namespace, it forms the fully qualified repository path.
+
+---
+
+### `enterprise.spdx.cache.insecure`
+
+- **Type:** `bool`
+- **Env:** `ENTERPRISE_SPDX_CACHE_INSECURE`
+
+Insecure allows connections to registries over HTTP or with invalid TLS certificates.
+
+---
+
 ### `enterprise.vex`
 
 VEX contains configuration for VEX data fetching.
@@ -1037,6 +1086,12 @@ enterprise:
             capacity: 4096
             ttl: 15m0s
         databaseURL: https://grype.anchore.io/databases
+    spdx:
+        cache:
+            insecure: false
+            namespace: siderolabs/image-factory
+            registry: ghcr.io
+            repository: spdx-cache
     vex:
         cache:
             capacity: 65536
@@ -1132,6 +1187,10 @@ IF_CONTAINERSIGNATURE_SUBJECTREGEXP=(@siderolabs\.com$|^releasemgr-svc@talos-pro
 IF_ENTERPRISE_SCANNER_CACHE_CAPACITY=4096
 IF_ENTERPRISE_SCANNER_CACHE_TTL=15m0s
 IF_ENTERPRISE_SCANNER_DATABASEURL=https://grype.anchore.io/databases
+IF_ENTERPRISE_SPDX_CACHE_INSECURE=false
+IF_ENTERPRISE_SPDX_CACHE_NAMESPACE=siderolabs/image-factory
+IF_ENTERPRISE_SPDX_CACHE_REGISTRY=ghcr.io
+IF_ENTERPRISE_SPDX_CACHE_REPOSITORY=spdx-cache
 IF_ENTERPRISE_VEX_CACHE_CAPACITY=65536
 IF_ENTERPRISE_VEX_CACHE_TTL=15m0s
 IF_ENTERPRISE_VEX_DATA_INSECURE=false

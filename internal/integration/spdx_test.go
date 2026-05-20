@@ -70,7 +70,8 @@ func testSPDXFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		assert.Equal(t, "application/spdx+json", resp.Header.Get("Content-Type"))
-		assert.Equal(t,
+		assert.Equal(
+			t,
 			`attachment; filename="`+emptySchematicID+`-`+spdxTestTalosVersion+`-amd64.spdx.json"`,
 			resp.Header.Get("Content-Disposition"),
 		)
@@ -100,7 +101,8 @@ func testSPDXFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 
 		assert.Equal(t, "application/spdx+json", resp.Header.Get("Content-Type"))
-		assert.Equal(t,
+		assert.Equal(
+			t,
 			`attachment; filename="`+emptySchematicID+`-`+spdxTestTalosVersion+`-amd64.spdx.json"`,
 			resp.Header.Get("Content-Disposition"),
 		)

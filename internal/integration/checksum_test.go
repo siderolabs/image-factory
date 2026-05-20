@@ -78,7 +78,8 @@ func testChecksumFrontend(ctx context.Context, t *testing.T, baseURL string) {
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
 			assert.Equal(t, "text/plain; charset=utf-8", resp.Header.Get("Content-Type"))
-			assert.Equal(t,
+			assert.Equal(
+				t,
 				`attachment; filename="`+assetPath+algo.suffix+`"`,
 				resp.Header.Get("Content-Disposition"),
 			)
@@ -109,7 +110,8 @@ func testChecksumFrontend(ctx context.Context, t *testing.T, baseURL string) {
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
 			assert.Equal(t, "text/plain; charset=utf-8", resp.Header.Get("Content-Type"))
-			assert.Equal(t,
+			assert.Equal(
+				t,
 				`attachment; filename="`+assetPath+algo.suffix+`"`,
 				resp.Header.Get("Content-Disposition"),
 			)

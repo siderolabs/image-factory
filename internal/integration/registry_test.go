@@ -269,7 +269,8 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 	// create a new random schematic, so that we can make sure new installer is generated
 	randomKernelArg := hex.EncodeToString(randomBytes(t, 32))
 
-	randomSchematicID := createSchematicGetID(ctx, t, c,
+	randomSchematicID := createSchematicGetID(
+		ctx, t, c,
 		schematic.Schematic{
 			Customization: schematic.Customization{
 				ExtraKernelArgs: []string{randomKernelArg},
@@ -320,7 +321,8 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 		})
 	}
 
-	overlaySchematicID := createSchematicGetID(ctx, t, c,
+	overlaySchematicID := createSchematicGetID(
+		ctx, t, c,
 		schematic.Schematic{
 			Overlay: schematic.Overlay{
 				Image: "siderolabs/sbc-raspberrypi",

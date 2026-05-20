@@ -39,7 +39,8 @@ func TestConfigsFlag_AccumulatesAndRequests(t *testing.T) {
 				assert.IsType(t, configs[0].Provider, new(file.File))
 				assert.IsType(t, configs[0].Parser, new(json.JSON))
 
-				assert.Equal(t,
+				assert.Equal(
+					t,
 					"config.json",
 					flag.String(),
 				)
@@ -57,7 +58,8 @@ func TestConfigsFlag_AccumulatesAndRequests(t *testing.T) {
 				assert.IsType(t, configs[0].Provider, new(env.Env))
 				assert.Nil(t, configs[0].Parser)
 
-				assert.Equal(t,
+				assert.Equal(
+					t,
 					"env=PREFIX_",
 					flag.String(),
 				)
@@ -94,7 +96,8 @@ func TestConfigsFlag_AccumulatesAndRequests(t *testing.T) {
 				assert.IsType(t, configs[7].Provider, new(file.File))
 				assert.IsType(t, configs[7].Parser, new(yaml.YAML))
 
-				assert.Equal(t,
+				assert.Equal(
+					t,
 					"env=,file.json,file.yaml,file.yml,file.env,file=.env,file=new.json,file=foo/bar/baz.yaml",
 					flag.String(),
 				)
@@ -115,7 +118,8 @@ func TestConfigsFlag_AccumulatesAndRequests(t *testing.T) {
 				assert.IsType(t, configs[1].Provider, new(file.File))
 				assert.IsType(t, configs[1].Parser, new(json.JSON))
 
-				assert.Equal(t,
+				assert.Equal(
+					t,
 					"env=,config.json",
 					flag.String(),
 				)

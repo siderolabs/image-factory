@@ -99,7 +99,8 @@ func (s *Storage) Get(ctx context.Context, id string) ([]byte, error) {
 		if err != nil {
 			if xerrors.TagIs[storage.ErrNotFoundTag](err) {
 				// never overwrite a present value, as Put might have been called
-				s.c.TTL.GetOrSet(id, optional.None[[]byte](),
+				s.c.TTL.GetOrSet(
+					id, optional.None[[]byte](),
 					ttlcache.WithTTL[string, optional.Optional[[]byte]](s.negativeTTL),
 				)
 			}

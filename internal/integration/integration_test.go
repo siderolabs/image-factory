@@ -253,6 +253,8 @@ func setupEnterprise(t *testing.T, options *cmd.Options) {
 
 	options.Enterprise.VEX.Data = vexDataRepositoryFlag.OCIRepositoryOptions
 
+	options.Enterprise.SPDX.Cache = spdxCacheRepositoryFlag.OCIRepositoryOptions
+
 	// Skip if the caller already configured auth (e.g. reload tests that need
 	// explicit control over the htpasswd file path).
 	if options.Authentication.Enabled && options.Authentication.HTPasswdPath != "" {
@@ -422,6 +424,7 @@ var (
 	cacheRepository                = mustNewDefaultOCIRepository(cmd.DefaultOptions.Cache.OCI.String())
 	signingCacheRepository         = mustNewDefaultOCIRepository(cmd.DefaultOptions.Cache.OCI.String() + "sign")
 	vexDataRepositoryFlag          = mustNewDefaultOCIRepository(cmd.DefaultOptions.Enterprise.VEX.Data.String())
+	spdxCacheRepositoryFlag        = mustNewDefaultOCIRepository(cmd.DefaultOptions.Enterprise.SPDX.Cache.String())
 )
 
 func init() {
@@ -432,4 +435,5 @@ func init() {
 	flag.Var(&cacheRepository, "test.cache-repository", "image repository for cached boot assets")
 	flag.Var(&signingCacheRepository, "test.signing-cache-repository", "image repository for signatures of cached boot assets (used for S3+CDN tests)")
 	flag.Var(&vexDataRepositoryFlag, "test.vex-data-repository", "OCI repository for VEX data")
+	flag.Var(&spdxCacheRepositoryFlag, "test.spdx-cache-repository", "OCI repository for cached SPDX data")
 }
