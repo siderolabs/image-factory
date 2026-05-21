@@ -1,0 +1,125 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: image-factory-enterprise
+spec:
+  concurrent: false
+  steps:
+    - name: Install local-path-storage
+      try:
+        - apply:
+            file: ../../_manifests/local-path-storage.yaml
+
+    - name: Install image-factory (enterprise)
+      use:
+        template: ../../_lib/helm-install.step.yaml
+        with:
+          bindings:
+            - name: arguments
+              value: >-
+                --set=config.authentication.enabled=true
+                --set-file=auth.htpasswd=../../testdata/htpasswd
+                --set=grypeDB.type=emptyDir
+                --set-file=cacheSigningKey.key=../../testdata/signing-key.key
+
+    - name: Assert install
+      try:
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: image-factory
+              status:
+                (readyReplicas == replicas): true
+                (availableReplicas == replicas): true
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: image-factory-htpasswd
+              type: Opaque
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: image-factory-cache-signing-key
+              type: Opaque
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: image-factory
+      catch:
+        - describe:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: image-factory
+        - podLogs:
+            selector: app.kubernetes.io/name=image-factory
+            tail: -1
+
+    - name: Upgrade with grypeDB PVC
+      use:
+        template: ../../_lib/helm-upgrade.step.yaml
+        with:
+          bindings:
+            - name: arguments
+              value: >-
+                --set=grypeDB.type=pvc
+                --set=grypeDB.pvc.size=1Gi
+
+    - name: Assert PVC
+      try:
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: image-factory
+              status:
+                (readyReplicas == replicas): true
+                (availableReplicas == replicas): true
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: image-factory-grype-db
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 1Gi
+              status:
+                phase: Bound
+      catch:
+        - describe:
+            apiVersion: v1
+            kind: PersistentVolumeClaim
+            name: image-factory-grype-db
+        - describe:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: image-factory
+        - podLogs:
+            selector: app.kubernetes.io/name=image-factory
+            tail: -1
+
+    - name: Uninstall
+      use:
+        template: ../../_lib/helm-uninstall.step.yaml
+
+    - name: Assert resources removed
+      try:
+        - error:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: image-factory

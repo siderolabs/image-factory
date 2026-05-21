@@ -1,0 +1,107 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/steptemplate-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: cosign-talos-images
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: cosign-images
+          spec:
+            backoffLimit: 0
+            template:
+              metadata:
+                labels:
+                  e2e/job: cosign-images
+              spec:
+                restartPolicy: Never
+                volumes:
+                  - name: shared-data
+                    emptyDir: {}
+                  - name: cosign-keys
+                    secret:
+                      secretName: image-factory-cosign-keys
+                initContainers:
+                  - name: download-and-generate
+                    image: alpine:latest
+                    command: ["/bin/sh", "-c"]
+                    env:
+                      - name: TALOS_VERSION
+                        value: v1.12.1
+                    args:
+                      - |
+                        apk add --no-cache curl > /dev/null
+                        echo "Downloading talosctl"
+                        curl -sL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-amd64"
+                        chmod +x /usr/local/bin/talosctl
+                        talosctl image talos-bundle "${TALOS_VERSION}" > /data/images.txt
+                    volumeMounts:
+                      - name: shared-data
+                        mountPath: /data
+                containers:
+                  - name: download-cosign-and-sign
+                    image: alpine:latest
+                    env:
+                      - name: INTERNAL_REG
+                        value: (join('', ['registry.', $namespace, '.svc.cluster.local:5000']))
+                      - name: KEY_FILE
+                        value: cosign-key
+                      - name: COSIGN_PASSWORD
+                        value: ""
+                      - name: COSIGN_YES
+                        value: "true"
+                    command: ["/bin/sh", "-c"]
+                    args:
+                      - |
+                        apk add --no-cache curl > /dev/null
+                        echo "Downloading cosign"
+                        curl -sL -o /usr/local/bin/cosign "https://github.com/sigstore/cosign/releases/download/v2.6.1/cosign-linux-amd64"
+                        chmod +x /usr/local/bin/cosign
+                        echo "Downloading crane"
+                        curl -sL "https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz" | tar -xz -C /usr/local/bin/ crane
+                        chmod +x /usr/local/bin/crane
+                        if [ ! -f /data/images.txt ]; then
+                          echo "Error: images.txt missing"
+                          exit 1
+                        fi
+                        for SOURCE_IMAGE in $(cat /data/images.txt); do
+                          IMAGE_WITHOUT_DIGEST=${SOURCE_IMAGE%%@*}
+                          REPO_PATH=${IMAGE_WITHOUT_DIGEST#*/}
+                          NEW_IMAGE="${INTERNAL_REG}/${REPO_PATH}"
+                          if echo "$NEW_IMAGE" | grep -v -q "@sha256:"; then
+                            echo "Fetching digest for $NEW_IMAGE..."
+                            DIGEST=$(crane digest "$NEW_IMAGE" --insecure)
+                            NEW_IMAGE="${NEW_IMAGE}@${DIGEST}"
+                          fi
+                          echo "Signing $NEW_IMAGE..."
+                          if ! cosign sign --key "/keys/${KEY_FILE}" "$NEW_IMAGE"; then
+                            echo "Warning: Failed to sign $NEW_IMAGE"
+                          fi
+                        done
+                    volumeMounts:
+                      - name: shared-data
+                        mountPath: /data
+                      - name: cosign-keys
+                        mountPath: /keys
+                        readOnly: true
+    - assert:
+        timeout: 600s
+        resource:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: cosign-images
+          status:
+            succeeded: 1
+  catch:
+    - describe:
+        apiVersion: batch/v1
+        kind: Job
+        name: cosign-images
+    - podLogs:
+        selector: e2e/job=cosign-images
+        tail: -1

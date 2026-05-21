@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/steptemplate-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: download-iso
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: download-iso
+          spec:
+            backoffLimit: 0
+            template:
+              metadata:
+                labels:
+                  e2e/job: download-iso
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: curl
+                    image: curlimages/curl:latest
+                    command: ["curl"]
+                    args:
+                      - -f
+                      - -v
+                      - -o
+                      - /dev/null
+                      - (join('', ['http://image-factory.', $namespace, '.svc.cluster.local:8080/image/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba/v1.12.1/metal-amd64.iso']))
+    - assert:
+        timeout: 600s
+        resource:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: download-iso
+          status:
+            succeeded: 1
+  catch:
+    - describe:
+        apiVersion: batch/v1
+        kind: Job
+        name: download-iso
+    - podLogs:
+        selector: e2e/job=download-iso
+        tail: -1
+    - describe:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: image-factory
+    - podLogs:
+        selector: app.kubernetes.io/name=image-factory
+        tail: -1

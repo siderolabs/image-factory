@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/steptemplate-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: mirror-talos-images
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: mirror-talos-images
+          spec:
+            backoffLimit: 0
+            template:
+              metadata:
+                labels:
+                  e2e/job: mirror-talos-images
+              spec:
+                restartPolicy: Never
+                volumes:
+                  - name: shared-data
+                    emptyDir: {}
+                initContainers:
+                  - name: download-and-generate
+                    image: alpine:latest
+                    command: ["/bin/sh", "-c"]
+                    env:
+                      - name: TALOS_VERSION
+                        value: v1.12.1
+                    args:
+                      - |
+                        apk add --no-cache curl > /dev/null
+                        echo "Downloading talosctl..."
+                        curl -sL -o /usr/local/bin/talosctl "https://github.com/siderolabs/talos/releases/latest/download/talosctl-linux-amd64"
+                        chmod +x /usr/local/bin/talosctl
+                        talosctl image talos-bundle "${TALOS_VERSION}" > /data/images.txt
+                    volumeMounts:
+                      - name: shared-data
+                        mountPath: /data
+                containers:
+                  - name: download-crane-and-mirror
+                    image: alpine:latest
+                    env:
+                      - name: INTERNAL_REG
+                        value: (join('', ['registry.', $namespace, '.svc.cluster.local:5000']))
+                    command: ["/bin/sh", "-c"]
+                    args:
+                      - |
+                        apk add --no-cache curl tar > /dev/null
+                        echo "Downloading crane"
+                        curl -sL "https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz" | tar -xz -C /usr/local/bin/ crane
+                        chmod +x /usr/local/bin/crane
+                        if [ ! -f /data/images.txt ]; then
+                          echo "Error: images.txt missing"
+                          exit 1
+                        fi
+                        for SOURCE_IMAGE in $(cat /data/images.txt); do
+                          IMAGE_WITHOUT_DIGEST=${SOURCE_IMAGE%%@*}
+                          REPO_PATH=${IMAGE_WITHOUT_DIGEST#*/}
+                          IMAGE_WITH_NEW_REG="${INTERNAL_REG}/${REPO_PATH}"
+                          echo "Mirroring: $SOURCE_IMAGE -> $IMAGE_WITH_NEW_REG"
+                          crane copy --insecure "$SOURCE_IMAGE" "$IMAGE_WITH_NEW_REG"
+                        done
+                    volumeMounts:
+                      - name: shared-data
+                        mountPath: /data
+    - assert:
+        timeout: 600s
+        resource:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: mirror-talos-images
+          status:
+            succeeded: 1
+  catch:
+    - describe:
+        apiVersion: batch/v1
+        kind: Job
+        name: mirror-talos-images
+    - podLogs:
+        selector: e2e/job=mirror-talos-images
+        tail: -1
+    - describe:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: internal-registry
+    - podLogs:
+        selector: app=internal-registry
+        tail: -1

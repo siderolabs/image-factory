@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/steptemplate-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: prep-image-factory
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: prep-if
+          spec:
+            backoffLimit: 0
+            template:
+              metadata:
+                labels:
+                  e2e/job: prep-if
+              spec:
+                restartPolicy: Never
+                containers:
+                  - name: curl
+                    image: curlimages/curl:latest
+                    command: ["curl"]
+                    args:
+                      - -s
+                      - -o
+                      - /dev/null
+                      - (join('', ['http://image-factory.', $namespace, '.svc.cluster.local:8080/?arch=amd64&bootloader=auto&cmdline-set=true&extensions=-&platform=metal&target=metal&version=1.12.1']))
+    - assert:
+        timeout: 600s
+        resource:
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: prep-if
+          status:
+            succeeded: 1
+  catch:
+    - describe:
+        apiVersion: batch/v1
+        kind: Job
+        name: prep-if
+    - podLogs:
+        selector: e2e/job=prep-if
+        tail: -1
+    - describe:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: image-factory
+    - podLogs:
+        selector: app.kubernetes.io/name=image-factory
+        tail: -1

@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: image-factory-upstream
+spec:
+  concurrent: false
+  steps:
+    - name: Internal registry
+      use:
+        template: ../../_lib/internal-registry.step.yaml
+
+    - name: Install image-factory
+      use:
+        template: ../../_lib/helm-install.step.yaml
+        with:
+          bindings:
+            - name: registry
+              value: (join('', ['registry.', $namespace, '.svc.cluster.local:5000']))
+            - name: arguments
+              value: >-
+                (join(' ', [
+                join('=', ['--set=config.artifacts.schematic.registry', $registry]),
+                '--set=config.artifacts.schematic.insecure=true',
+                '--set=config.containerSignature.disabled=false',
+                '--set-file=cacheSigningKey.key=../../testdata/signing-key.key'
+                ]))
+
+    - name: Assert install
+      try:
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: image-factory
+              status:
+                (readyReplicas == replicas): true
+                (availableReplicas == replicas): true
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: image-factory
+              spec:
+                type: ClusterIP
+                ports:
+                  - port: 8080
+                    targetPort: http
+                    protocol: TCP
+                    name: image-factory
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: image-factory-cache-signing-key
+              type: Opaque
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ServiceAccount
+              metadata:
+                name: image-factory
+              automountServiceAccountToken: false
+      catch:
+        - describe:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: image-factory
+        - podLogs:
+            selector: app.kubernetes.io/name=image-factory
+            tail: -1
+
+    - name: Prep image-factory
+      use:
+        template: ../../_lib/prep-image-factory.step.yaml
+
+    - name: Download ISO
+      use:
+        template: ../../_lib/download-iso.step.yaml
+
+    - name: Uninstall
+      use:
+        template: ../../_lib/helm-uninstall.step.yaml
+
+    - name: Assert resources removed
+      try:
+        - error:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: image-factory

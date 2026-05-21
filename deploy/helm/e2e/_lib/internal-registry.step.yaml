@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/steptemplate-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: internal-registry
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: internal-registry
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: internal-registry
+            template:
+              metadata:
+                labels:
+                  app: internal-registry
+              spec:
+                containers:
+                  - name: registry
+                    image: registry:2
+                    ports:
+                      - containerPort: 5000
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: registry
+          spec:
+            selector:
+              app: internal-registry
+            ports:
+              - port: 5000
+                targetPort: 5000
+    - assert:
+        timeout: 120s
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: internal-registry
+          status:
+            (readyReplicas == replicas): true
+            (availableReplicas == replicas): true
+  catch:
+    - describe:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: internal-registry
+    - podLogs:
+        selector: app=internal-registry
+        tail: -1

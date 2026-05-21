@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/steptemplate-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: helm-uninstall
+spec:
+  bindings:
+    - name: release
+      value: image-factory
+  try:
+    - script:
+        env:
+          - name: NAME
+            value: ($release)
+          - name: NAMESPACE
+            value: ($namespace)
+        content: |
+          helm uninstall "${NAME}" --namespace "${NAMESPACE}" --wait --timeout=120s

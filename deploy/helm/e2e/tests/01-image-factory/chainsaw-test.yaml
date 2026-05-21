@@ -1,0 +1,221 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/test-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: image-factory-basic
+spec:
+  concurrent: false
+  steps:
+    - name: Install prometheus-operator CRDs
+      try:
+        - apply:
+            file: ../../_crds/prom-operator-crds.yaml
+
+    - name: Install image-factory
+      use:
+        template: ../../_lib/helm-install.step.yaml
+        with:
+          bindings:
+            - name: arguments
+              value: >-
+                --set=config.containerSignature.disabled=false
+                --set-file=cacheSigningKey.key=../../testdata/signing-key.key
+
+    - name: Assert install
+      try:
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: image-factory
+              status:
+                (readyReplicas == replicas): true
+                (availableReplicas == replicas): true
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: image-factory
+              spec:
+                type: ClusterIP
+                ports:
+                  - port: 8080
+                    targetPort: http
+                    protocol: TCP
+                    name: image-factory
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: image-factory-cache-signing-key
+              type: Opaque
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: ServiceAccount
+              metadata:
+                name: image-factory
+              automountServiceAccountToken: false
+      catch:
+        - describe:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: image-factory
+        - podLogs:
+            selector: app.kubernetes.io/name=image-factory
+            tail: -1
+
+    - name: Upgrade with ingress
+      use:
+        template: ../../_lib/helm-upgrade.step.yaml
+        with:
+          bindings:
+            - name: arguments
+              value: >-
+                --set=ingress.ui.enabled=true
+                --set=ingress.pxe.enabled=true
+
+    - name: Assert ingresses
+      try:
+        - assert:
+            resource:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: image-factory-ui
+              spec:
+                rules:
+                  - host: factory.example.com
+                    http:
+                      paths:
+                        - path: /
+                          pathType: ImplementationSpecific
+                          backend:
+                            service:
+                              name: image-factory
+                              port:
+                                number: 8080
+        - assert:
+            resource:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: image-factory-pxe
+              spec:
+                rules:
+                  - host: pxe-factory.example.com
+                    http:
+                      paths:
+                        - path: /
+                          pathType: ImplementationSpecific
+                          backend:
+                            service:
+                              name: image-factory
+                              port:
+                                number: 8080
+
+    - name: Upgrade with metrics, remove ingress
+      use:
+        template: ../../_lib/helm-upgrade.step.yaml
+        with:
+          bindings:
+            - name: arguments
+              value: >-
+                --set=service.metrics.enabled=true
+                --set=service.metrics.serviceMonitor.enabled=true
+                --set=ingress.ui.enabled=false
+                --set=ingress.pxe.enabled=false
+
+    - name: Assert metrics and ingresses removed
+      try:
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: image-factory-metrics
+              spec:
+                type: ClusterIP
+                ports:
+                  - port: 2122
+                    targetPort: metrics
+                    protocol: TCP
+                    name: metrics
+        - assert:
+            resource:
+              apiVersion: monitoring.coreos.com/v1
+              kind: ServiceMonitor
+              metadata:
+                name: image-factory
+              spec:
+                selector:
+                  matchLabels:
+                    app.kubernetes.io/name: image-factory
+                endpoints:
+                  - port: metrics
+                    path: /metrics
+                    interval: 30s
+        - error:
+            resource:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: image-factory-ui
+        - error:
+            resource:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: image-factory-pxe
+
+    - name: Uninstall
+      use:
+        template: ../../_lib/helm-uninstall.step.yaml
+
+    - name: Assert resources removed
+      try:
+        - error:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: image-factory
+        - error:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: image-factory
+        - error:
+            resource:
+              apiVersion: v1
+              kind: Service
+              metadata:
+                name: image-factory-metrics
+        - error:
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: image-factory
+        - error:
+            resource:
+              apiVersion: v1
+              kind: ServiceAccount
+              metadata:
+                name: image-factory
+        - error:
+            resource:
+              apiVersion: monitoring.coreos.com/v1
+              kind: ServiceMonitor
+              metadata:
+                name: image-factory
+        - error:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: image-factory-cache-signing-key

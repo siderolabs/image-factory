@@ -117,6 +117,10 @@ spec:
       toplevel: true
     - name: k8s-down
       toplevel: true
+    - name: chainsaw-install
+      toplevel: true
+    - name: chart-e2e-chainsaw
+      toplevel: true
     - name: chart-e2e-ci
       toplevel: true
     - name: chart-version
@@ -803,6 +807,34 @@ spec:
         sed -i '/# -- Repository to use for Image Factory/{n; s|repository:.*|repository: '"$(REGISTRY)/$(USERNAME)/image-factory"'|}' deploy/helm/image-factory/values.yaml
 ---
 kind: custom.Step
+name: chainsaw-install
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    variables:
+      - name: CHAINSAW_VERSION
+        defaultValue: v0.2.12
+    depends:
+      - $(ARTIFACTS)
+    script:
+      - |
+        @curl -sSL https://github.com/kyverno/chainsaw/releases/download/$(CHAINSAW_VERSION)/chainsaw_linux_$(GOARCH).tar.gz \
+          | tar -xz -C $(ARTIFACTS) chainsaw
+        @chmod +x $(ARTIFACTS)/chainsaw
+---
+kind: custom.Step
+name: chart-e2e-chainsaw
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - chainsaw-install
+    script:
+      - export KUBECONFIG=$(shell pwd)/$(ARTIFACTS)/kubeconfig && cd deploy/helm/e2e && $(shell pwd)/$(ARTIFACTS)/chainsaw test
+---
+kind: custom.Step
 name: chart-e2e-ci
 spec:
   makefile:
@@ -814,8 +846,7 @@ spec:
       - "@$(MAKE) image-image-factory PUSH=true"
       - "@$(MAKE) chart-version CHART_VERSION=v1.0.0-test.1 REGISTRY=$(REGISTRY) USERNAME=$(USERNAME) TAG=$(TAG)"
       - "@$(MAKE) k8s-up"
-      - "@$(MAKE) kuttl-plugin-install"
-      - "@$(MAKE) chart-e2e"
+      - "@$(MAKE) chart-e2e-chainsaw"
   ghaction:
     enabled: true
     condition: on-pull-request

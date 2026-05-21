@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/kyverno/chainsaw/main/.schemas/json/steptemplate-chainsaw-v1alpha1.json
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: helm-install
+spec:
+  bindings:
+    - name: chart
+      value: ../../../image-factory
+    - name: release
+      value: image-factory
+  try:
+    - script:
+        env:
+          - name: CHART
+            value: ($chart)
+          - name: NAME
+            value: ($release)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ARGV
+            value: ($arguments)
+        content: |
+          helm install "${NAME}" "${CHART}" \
+            --namespace "${NAMESPACE}" \
+            --create-namespace \
+            --wait --timeout=600s \
+            ${ARGV}
+  catch:
+    - describe:
+        apiVersion: apps/v1
+        kind: Deployment
+        selector: app.kubernetes.io/name=image-factory
+    - podLogs:
+        selector: app.kubernetes.io/name=image-factory
+        tail: -1
