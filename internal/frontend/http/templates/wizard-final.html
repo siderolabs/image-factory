@@ -457,7 +457,9 @@
                 target="_blank">{{ t .Localizer "final.pxe.docs" }}</a>)
         {{ end }}
 </dt>
-<dd>{{ .PlatformMeta.SecureBootPXEScriptPath .Arch | $.PXEBaseURL.JoinPath }}</dd>
+<dd>
+        {{ template "copyable-text" (.PlatformMeta.SecureBootPXEScriptPath .Arch | $.PXEBaseURL.JoinPath) }}
+</dd>
 
 {{ else }}
 <dt>
