@@ -25,20 +25,20 @@
         {{ end }}
 </section>
 {{ if .Enterprise }}
-<div id="scan-detail-modal" data-scan-modal style="position:fixed;inset:0;z-index:50;background-color:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;padding:1rem;">
-        <div data-scan-modal-card class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg" style="position:relative;width:100%;max-width:64rem;height:85vh;display:flex;flex-direction:column;overflow:hidden;">
-                <div class="border-b border-slate-200 dark:border-slate-700" style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0.5rem 1rem;">
+<div id="scan-detail-modal" data-scan-modal class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
+        <div data-scan-modal-card class="relative w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg">
+                <div class="flex-none flex items-center justify-between py-2 px-4 border-b border-slate-200 dark:border-slate-700">
                         <h3 class="text-base font-semibold" data-scan-modal-title></h3>
-                        <button type="button" class="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100" data-scan-modal-close aria-label="Close" style="font-size:1.5rem;line-height:1;background:none;border:0;cursor:pointer;">&times;</button>
+                        <button type="button" class="text-2xl leading-none bg-transparent border-0 cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-slate-100" data-scan-modal-close aria-label="Close">&times;</button>
                 </div>
-                <div data-scan-modal-body style="flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:1rem;">
-                        <table class="text-xs border-collapse" style="width:100%;table-layout:fixed;">
+                <div data-scan-modal-body class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4">
+                        <table class="w-full table-fixed text-xs border-collapse">
                                 <thead>
                                         <tr class="text-left border-b border-slate-200 dark:border-slate-700">
-                                                <th class="py-1 pr-3" style="width:10rem;">CVE</th>
-                                                <th class="py-1 pr-3" style="width:18%;">Package</th>
-                                                <th class="py-1 pr-3" style="width:7rem;">Version</th>
-                                                <th class="py-1 pr-3" style="width:16%;">Fix</th>
+                                                <th class="py-1 pr-3 w-40">CVE</th>
+                                                <th class="py-1 pr-3 w-[18%]">Package</th>
+                                                <th class="py-1 pr-3 w-28">Version</th>
+                                                <th class="py-1 pr-3 w-[16%]">Fix</th>
                                                 <th class="py-1">Description</th>
                                         </tr>
                                 </thead>
@@ -56,13 +56,13 @@
                 root.querySelectorAll('[data-scan-link]').forEach(function(a) {
                         a.href = base + '/' + formats[a.dataset.scanLink];
                 });
-                var severityStyles = {
-                        Critical:   'background-color:#dc2626;color:#ffffff;',
-                        High:       'background-color:#c2410c;color:#ffffff;',
-                        Medium:     'background-color:#f97316;color:#ffffff;',
-                        Low:        'background-color:#eab308;color:#000000;',
-                        Negligible: 'background-color:#e2e8f0;color:#0f172a;',
-                        Unknown:    'background-color:#e2e8f0;color:#0f172a;'
+                var severityClasses = {
+                        Critical:   'bg-red-600 text-white',
+                        High:       'bg-orange-700 text-white',
+                        Medium:     'bg-orange-500 text-white',
+                        Low:        'bg-yellow-500 text-black',
+                        Negligible: 'bg-slate-200 text-slate-900',
+                        Unknown:    'bg-slate-200 text-slate-900'
                 };
                 var loading = root.querySelector('[data-scan-state="loading"]');
                 var ready = root.querySelector('[data-scan-state="ready"]');
@@ -115,7 +115,7 @@
                 function showModal(severity) {
                         var rows = matchesBySeverity[severity] || [];
                         modalTitle.textContent = severity + ' (' + rows.length + ')';
-                        modalTitle.setAttribute('style', severityStyles[severity] ? 'padding:2px 8px;border-radius:4px;' + severityStyles[severity] : '');
+                        modalTitle.className = 'text-base font-semibold' + (severityClasses[severity] ? ' px-2 py-0.5 rounded ' + severityClasses[severity] : '');
                         modalRows.innerHTML = '';
                         rows.sort(function(a, b) {
                                 var an = (a.artifact && a.artifact.name) || '';
@@ -164,11 +164,13 @@
                                 tr.appendChild(descCell);
                                 modalRows.appendChild(tr);
                         });
-                        modal.style.display = 'flex';
+                        modal.classList.remove('hidden');
+                        modal.classList.add('flex');
                         document.body.style.overflow = 'hidden';
                 }
                 function hideModal() {
-                        modal.style.display = 'none';
+                        modal.classList.add('hidden');
+                        modal.classList.remove('flex');
                         document.body.style.overflow = '';
                 }
                 modal.addEventListener('click', function(e) {
@@ -176,7 +178,7 @@
                 });
                 modal.querySelector('[data-scan-modal-close]').addEventListener('click', hideModal);
                 document.addEventListener('keydown', function(e) {
-                        if (e.key === 'Escape' && modal.style.display !== 'none') hideModal();
+                        if (e.key === 'Escape' && !modal.classList.contains('hidden')) hideModal();
                 });
                 fetch(base + '/' + formats.json, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                         .then(function(r) {
@@ -200,8 +202,7 @@
                                         var li = document.createElement('li');
                                         var btn = document.createElement('button');
                                         btn.type = 'button';
-                                        btn.className = 'px-2 py-1 rounded text-xs font-semibold cursor-pointer inline-flex items-center gap-1';
-                                        btn.setAttribute('style', severityStyles[sev] || severityStyles.Unknown);
+                                        btn.className = 'px-2 py-1 rounded text-xs font-semibold cursor-pointer inline-flex items-center gap-1 ' + (severityClasses[sev] || severityClasses.Unknown);
                                         btn.title = 'Click to view ' + sev + ' vulnerabilities';
                                         btn.innerHTML = '';
                                         btn.insertAdjacentHTML('afterbegin', iconSearch);
