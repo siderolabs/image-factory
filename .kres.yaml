@@ -4,11 +4,7 @@ spec:
 ---
 kind: golang.GoVulnCheck
 spec:
-  ignore:
-    - GO-2026-4348 # go-tuf (not go-tuf/v2), imported via cosign dependency
-    - GO-2026-4349 # go-tuf (not go-tuf/v2), imported via cosign dependency
-    - GO-2026-4377 # go-tuf (not go-tuf/v2), imported via cosign dependency
-    - GO-2026-4550 # dependency of imager tools, not used in the code and not a direct dependency
+  ignore: []
 ---
 kind: golang.Build
 spec:
