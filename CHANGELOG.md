@@ -1,3 +1,40 @@
+## [image-factory 1.3.2](https://github.com/siderolabs/image-factory/releases/tag/v1.3.2) (2026-05-25)
+
+Welcome to the v1.3.2 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Mateusz Urbanek
+* Orzelius
+
+### Changes
+<details><summary>8 commits</summary>
+<p>
+
+* [`38183fc`](https://github.com/siderolabs/image-factory/commit/38183fcbd0a0decebc7ea4ee4617f82fa52f637d) fix: update golang.org/x/net
+* [`9f6aee8`](https://github.com/siderolabs/image-factory/commit/9f6aee892c9446e54368f5efb0fcab00aadcf840) fix: make PXE copyable on SecureBoot
+* [`d7377c5`](https://github.com/siderolabs/image-factory/commit/d7377c522e3a3c1e1d702d3ba41e76e3cce53847) refactor: migrate to Tailwind CSS classes
+* [`1e86750`](https://github.com/siderolabs/image-factory/commit/1e86750993dac69f4dc1f0ea4b061ab6ec5c4c32) fix: update golang.org/x/* packages
+* [`33c79e4`](https://github.com/siderolabs/image-factory/commit/33c79e4d5cdcee20c6018c7451f4263baf1f0b60) test: move from kuttl to chainsaw
+* [`ba34dab`](https://github.com/siderolabs/image-factory/commit/ba34dabf151028b77447449e4f255b7daf03e879) feat: move SPDX cache to enterprise options
+* [`cd137ed`](https://github.com/siderolabs/image-factory/commit/cd137edc8d54f3d9e8640552a0ca9a8a3e3dd582) chore: disable authentication for local development
+* [`4ea792f`](https://github.com/siderolabs/image-factory/commit/4ea792f31a1fabc331b6016da2e2138710a41772) fix: build profile with version
+</p>
+</details>
+
+### Dependency Changes
+
+* **golang.org/x/crypto**  v0.50.0 -> v0.52.0
+* **golang.org/x/sys**     v0.43.0 -> v0.45.0
+* **golang.org/x/text**    v0.36.0 -> v0.37.0
+
+Previous release can be found at [v1.3.1](https://github.com/siderolabs/image-factory/releases/tag/v1.3.1)
+
 ## [image-factory 1.3.1](https://github.com/siderolabs/image-factory/releases/tag/v1.3.1) (2026-05-14)
 
 Welcome to the v1.3.1 release of image-factory!

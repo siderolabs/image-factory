@@ -1,6 +1,6 @@
 # image-factory
 
-![Version: 1.3.1](https://img.shields.io/badge/Version-1.3.1-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v1.3.1](https://img.shields.io/badge/AppVersion-v1.3.1-informational?style=flat)
+![Version: 1.3.2](https://img.shields.io/badge/Version-1.3.2-informational?style=flat) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat) ![AppVersion: v1.3.2](https://img.shields.io/badge/AppVersion-v1.3.2-informational?style=flat)
 
 A Helm chart to deploy Sidero Image Factory on a Kubernetes cluster
 

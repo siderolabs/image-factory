@@ -5,17 +5,17 @@ It is also distributed via the OCI registry.
 
 ## E2E Tests
 
-Image Factory uses KUTTL (Kubernetes Test Tool) integration tests for the Image Factory Helm chart.
+Image Factory uses [Chainsaw](https://kyverno.github.io/chainsaw/) integration tests for the Image Factory Helm chart.
 
 ### Prerequisites
 
-1. **Install KUTTL**:
+1. **Install Chainsaw**:
 
    ```bash
-   make kuttl-plugin-install
+   make chainsaw-install
    ```
 
-   This will install the `kubectl kuttl` plugin using krew.
+   This downloads the `chainsaw` CLI into `_out/`.
 
 2. **Helm**: Helm v4+ installed
 
@@ -39,37 +39,80 @@ make k8s-down
 ```bash
 export KUBECONFIG="$(pwd)/_out/kubeconfig"
 cd deploy/helm/e2e
-kubectl kuttl test
+$(pwd)/../../../_out/chainsaw test
 ```
 
-### Run with custom timeout
+Or via the Makefile target:
 
 ```bash
-kubectl kuttl test --timeout 600
+make chart-e2e-chainsaw
+```
+
+#### Run a single test
+
+```bash
+cd deploy/helm/e2e
+$(pwd)/../../../_out/chainsaw test tests/01-image-factory
+```
+
+#### Run with custom timeouts
+
+```bash
+chainsaw test --exec-timeout 600s --assert-timeout 600s
 ```
 
 ### Configuration
 
-#### Test Suite Settings (kuttl-test.yaml)
+#### Test Suite Settings (`deploy/helm/e2e/.chainsaw.yaml`)
 
-- **startKIND**: `false` - Does not start KIND automatically (we do it manually to test on Talos cluster)
-- **namespace**: `image-factory-e2e` - Fixed namespace for tests
-- **crdDir**: `./_crds` - Prometheus Operator CRDs installed before tests
-- **timeout**: `300` - Each step has 300 second timeout
-- **parallel**: `1` - Tests run sequentially
+- **timeouts.apply**: `60s` - per-apply operation timeout
+- **timeouts.assert**: `600s` - per-assert operation timeout
+- **timeouts.cleanup**: `300s` - cleanup timeout
+- **timeouts.exec**: `600s` - script/command timeout (covers `helm install --wait`)
+- **execution.parallel**: `1` - tests run sequentially
+- **execution.failFast**: `true` - stop on first failure
+- **templating.enabled**: `true` - enables `($namespace)` jmespath expressions in resources
+
+Each test runs in its own ephemeral namespace (`chainsaw-<random>`) which Chainsaw creates and deletes automatically.
+
+### Layout
+
+```text
+deploy/helm/e2e/
+├── .chainsaw.yaml          # root configuration
+├── _crds/                  # cluster-scoped CRDs applied as test setup
+├── _manifests/             # cluster-scoped manifests (local-path-storage, ...)
+├── _lib/                   # shared StepTemplates referenced via `use:` in tests
+├── testdata/               # signing keys, htpasswd, cosign keys
+└── tests/
+    ├── 01-image-factory/   # basic install/upgrade/uninstall
+    ├── 02-upstream/        # internal registry, schematic from upstream
+    ├── 03-airgapped/       # mirror + cosign Talos images, airgapped install
+    └── 04-enterprise/      # enterprise build (auth, grypeDB PVC)
+```
 
 ### Debugging
 
 ```bash
 export KUBECONFIG=./_out/kubeconfig
-kubectl get all -n image-factory-e2e
-kubectl logs -n image-factory-e2e deployment/image-factory
+kubectl get ns | grep chainsaw-       # find ephemeral namespace
+kubectl get all -n chainsaw-<suffix>
+kubectl logs -n chainsaw-<suffix> deployment/image-factory
+```
+
+Failing steps automatically dump describes and pod logs via Chainsaw `catch:` blocks defined in `_lib/*.step.yaml` and per-test `try.catch` sections.
+
+To keep resources around for inspection after a failure, pass `--skip-delete`:
+
+```bash
+chainsaw test --skip-delete --pause-on-failure
 ```
 
 ## Notes
 
-- Prometheus Operator CRDs are pre-installed from `_crds/`
-- Each test step has a 300-second timeout
-- Tests run in fixed namespace `image-factory-e2e`
-- Tests use `--reuse-values` for upgrades to maintain state
-- ECPARAM signing key is provided via a pre-generated key file in `testdata/`
+- Prometheus Operator CRDs are pre-applied from `_crds/` by the `01-image-factory` test (required for ServiceMonitor assertions).
+- `local-path-storage` is pre-applied from `_manifests/` by the `04-enterprise` test (required for the grypeDB PVC).
+- Tests use ephemeral namespaces; service references in tests resolve the namespace via the `($namespace)` jmespath binding.
+- Helm upgrades use `--reuse-values` to maintain state across steps.
+- The ECDSA signing key is provided via a pre-generated key file in `testdata/`.
+- Cosign keys for the airgapped test are in `testdata/cosign.key` and `testdata/cosign.pub`.
