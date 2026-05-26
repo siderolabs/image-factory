@@ -159,6 +159,21 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 	return versions, nil
 }
 
+// ScanReport downloads a vulnerability scan report for the given schematic, Talos version,
+// architecture, and report filename. The filename extension selects the report format:
+// ".sarif" → SARIF, ".cdx" → CycloneDX, ".json" → JSON, ".table" → plain-text table.
+func (c *Client) ScanReport(ctx context.Context, schematicID, talosVersion, arch, filename string) ([]byte, error) {
+	var data []byte
+
+	if err := c.do(ctx, http.MethodGet,
+		fmt.Sprintf("/scans/%s/%s/%s/%s", schematicID, talosVersion, arch, filename),
+		nil, &data, nil); err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
 func (c *Client) do(ctx context.Context, method, uri string, requestData []byte, responseData any, headers map[string]string) error {
 	var reader io.Reader
 
@@ -204,6 +219,12 @@ func (c *Client) do(ctx context.Context, method, uri string, requestData []byte,
 			*v = *retrieved
 
 			return nil
+		case *[]byte:
+			var err error
+
+			*v, err = io.ReadAll(resp.Body)
+
+			return err
 		default:
 			decoder := json.NewDecoder(resp.Body)
 
