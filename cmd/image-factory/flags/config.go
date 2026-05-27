@@ -5,6 +5,7 @@
 package flags
 
 import (
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -116,7 +117,35 @@ func splitProvider(s string) (string, string) {
 
 func newEnvConfig(prefix string) Config {
 	return Config{
-		Provider: env.Provider(".", env.Opt{Prefix: prefix}),
+		Provider: env.Provider(".", env.Opt{
+			Prefix:        prefix,
+			TransformFunc: envTransform(prefix),
+		}),
+	}
+}
+
+// envTransform maps a prefixed environment variable to a koanf-style dotted, lower-cased key,
+// and JSON-decodes values that look like a JSON array or object so that complex types
+// (e.g. []string, []struct{...}) can be set from a single environment variable.
+//
+// Examples:
+//   - IF_HTTP_EXTERNALURL=https://x         → http.externalurl = "https://x"
+//   - IF_HTTP_ALLOWEDORIGINS=["*","foo"]    → http.allowedorigins = []any{"*","foo"}
+//   - IF_BUILD_BROKENTALOSVERSIONS=[{...}]  → build.brokentalosversions = []any{map[...]}
+func envTransform(prefix string) func(k, v string) (string, any) {
+	return func(k, v string) (string, any) {
+		key := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(k, prefix), "_", "."))
+
+		trimmed := strings.TrimSpace(v)
+		if trimmed != "" && (trimmed[0] == '[' || trimmed[0] == '{') {
+			var parsed any
+
+			if err := stdjson.Unmarshal([]byte(trimmed), &parsed); err == nil {
+				return key, parsed
+			}
+		}
+
+		return key, v
 	}
 }
 

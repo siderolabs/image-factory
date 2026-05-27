@@ -86,6 +86,10 @@ type AssetBuilderOptions struct {
 	// MinTalosVersion specifies the minimum supported Talos version for assets.
 	MinTalosVersion string `koanf:"minTalosVersion"`
 
+	// BrokenTalosVersions lists Talos versions that should be considered broken and avoided when building assets.
+	// Those are versions that are known to have critical issues that prevent them from working correctly, such as bugs in Talos that cause build failures or runtime errors.
+	BrokenTalosVersions []string `koanf:"brokenTalosVersions"`
+
 	// MaxConcurrency sets the maximum number of simultaneous asset build operations.
 	MaxConcurrency int `koanf:"maxConcurrency"`
 }

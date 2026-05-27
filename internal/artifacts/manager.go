@@ -165,6 +165,11 @@ func (m *Manager) Get(ctx context.Context, versionString string, arch Arch, kind
 	return path, nil
 }
 
+// GetBrokenTalosVersions returns the list of Talos versions marked as broken in the configuration.
+func (m *Manager) GetBrokenTalosVersions() []semver.Version {
+	return slices.Clone(m.options.BrokenVersions)
+}
+
 // GetTalosVersions returns a list of Talos versions available.
 func (m *Manager) GetTalosVersions(ctx context.Context) ([]semver.Version, error) {
 	m.talosVersionsMu.Lock()

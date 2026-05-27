@@ -99,6 +99,16 @@ MinTalosVersion specifies the minimum supported Talos version for assets.
 
 ---
 
+### `build.brokenTalosVersions`
+
+- **Type:** `[]string`
+- **Env:** `BUILD_BROKENTALOSVERSIONS`
+
+BrokenTalosVersions lists Talos versions that should be considered broken and avoided when building assets.
+Those are versions that are known to have critical issues that prevent them from working correctly, such as bugs in Talos that cause build failures or runtime errors.
+
+---
+
 ### `build.maxConcurrency`
 
 - **Type:** `int`
@@ -1045,6 +1055,7 @@ authentication:
     enabled: false
     htpasswdPath: ""
 build:
+    brokenTalosVersions: []
     maxConcurrency: 6
     minTalosVersion: 1.2.0
 cache:
@@ -1156,6 +1167,7 @@ IF_ARTIFACTS_SCHEMATIC_REPOSITORY=schematics
 IF_ARTIFACTS_TALOSVERSIONRECHECKINTERVAL=15m0s
 IF_AUTHENTICATION_ENABLED=false
 IF_AUTHENTICATION_HTPASSWDPATH=
+IF_BUILD_BROKENTALOSVERSIONS=[]
 IF_BUILD_MAXCONCURRENCY=6
 IF_BUILD_MINTALOSVERSION=1.2.0
 IF_CACHE_CDN_ENABLED=false
@@ -1197,7 +1209,7 @@ IF_ENTERPRISE_VEX_DATA_INSECURE=false
 IF_ENTERPRISE_VEX_DATA_NAMESPACE=siderolabs/talos-vex
 IF_ENTERPRISE_VEX_DATA_REGISTRY=ghcr.io
 IF_ENTERPRISE_VEX_DATA_REPOSITORY=talos-vex-data
-IF_HTTP_ALLOWEDORIGINS=[*]
+IF_HTTP_ALLOWEDORIGINS=["*"]
 IF_HTTP_CERTFILE=
 IF_HTTP_EXTERNALPXEURL=
 IF_HTTP_EXTERNALURL=https://localhost/

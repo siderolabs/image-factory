@@ -55,6 +55,10 @@ func (m *Manager) fetchTalosVersions() (any, error) {
 			return false // ignore versions below minimum
 		}
 
+		if slices.ContainsFunc(m.options.BrokenVersions, version.EQ) {
+			return false // ignore versions marked as broken
+		}
+
 		if len(version.Pre) > 0 {
 			if version.Major != maxVersion.Major || version.Minor != maxVersion.Minor {
 				return false // ignore pre-releases for older versions

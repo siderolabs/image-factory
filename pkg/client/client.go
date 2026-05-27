@@ -81,9 +81,11 @@ func (c *Client) SchematicCreate(ctx context.Context, sc schematic.Schematic) (s
 		Schematic string `json:"schematic"`
 	}
 
-	if err = c.do(ctx, http.MethodPost, "/schematics", data, &response, map[string]string{
-		"Content-Type": "application/yaml",
-	}); err != nil {
+	if err = c.do(
+		ctx, http.MethodPost, "/schematics", &response,
+		WithRequestData(data),
+		WithHeaders(map[string]string{"Content-Type": "application/yaml"}),
+	); err != nil {
 		return "", nil, err
 	}
 
@@ -108,7 +110,7 @@ func (c *Client) SchematicCreate(ctx context.Context, sc schematic.Schematic) (s
 func (c *Client) SchematicGet(ctx context.Context, schematicID string) (*schematic.Schematic, error) {
 	var response schematic.Schematic
 
-	if err := c.do(ctx, http.MethodGet, "/schematics/"+schematicID, nil, &response, nil); err != nil {
+	if err := c.do(ctx, http.MethodGet, "/schematics/"+schematicID, &response); err != nil {
 		return nil, err
 	}
 
@@ -119,7 +121,21 @@ func (c *Client) SchematicGet(ctx context.Context, schematicID string) (*schemat
 func (c *Client) Versions(ctx context.Context) ([]string, error) {
 	var versions []string
 
-	if err := c.do(ctx, http.MethodGet, "/versions", nil, &versions, nil); err != nil {
+	if err := c.do(ctx, http.MethodGet, "/versions", &versions); err != nil {
+		return nil, err
+	}
+
+	return versions, nil
+}
+
+// BrokenVersions gets the list of Talos versions marked as broken by the factory.
+func (c *Client) BrokenVersions(ctx context.Context) ([]string, error) {
+	var versions []string
+
+	if err := c.do(
+		ctx, http.MethodGet, "/versions", &versions,
+		WithQueryParams(url.Values{"broken": {"true"}}),
+	); err != nil {
 		return nil, err
 	}
 
@@ -130,7 +146,7 @@ func (c *Client) Versions(ctx context.Context) ([]string, error) {
 func (c *Client) ExtensionsVersions(ctx context.Context, talosVersion string) ([]ExtensionInfo, error) {
 	var versions []ExtensionInfo
 
-	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/version/%s/extensions/official", talosVersion), nil, &versions, nil); err != nil {
+	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/version/%s/extensions/official", talosVersion), &versions); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +157,7 @@ func (c *Client) ExtensionsVersions(ctx context.Context, talosVersion string) ([
 func (c *Client) TalosctlList(ctx context.Context, talosVersion string) ([]string, error) {
 	var urls []string
 
-	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/talosctl/%s", talosVersion), nil, &urls, nil); err != nil {
+	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/talosctl/%s", talosVersion), &urls); err != nil {
 		return nil, err
 	}
 
@@ -152,7 +168,7 @@ func (c *Client) TalosctlList(ctx context.Context, talosVersion string) ([]strin
 func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]OverlayInfo, error) {
 	var versions []OverlayInfo
 
-	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/version/%s/overlays/official", talosVersion), nil, &versions, nil); err != nil {
+	if err := c.do(ctx, http.MethodGet, fmt.Sprintf("/version/%s/overlays/official", talosVersion), &versions); err != nil {
 		return nil, err
 	}
 
@@ -167,26 +183,68 @@ func (c *Client) ScanReport(ctx context.Context, schematicID, talosVersion, arch
 
 	if err := c.do(ctx, http.MethodGet,
 		fmt.Sprintf("/scans/%s/%s/%s/%s", schematicID, talosVersion, arch, filename),
-		nil, &data, nil); err != nil {
+		&data); err != nil {
 		return nil, err
 	}
 
 	return data, nil
 }
 
-func (c *Client) do(ctx context.Context, method, uri string, requestData []byte, responseData any, headers map[string]string) error {
-	var reader io.Reader
+// requestOptions are options that can be applied to a request via [requestOption] functions.
+type requestOptions struct {
+	headers     map[string]string
+	query       url.Values
+	requestData []byte
+}
 
-	if requestData != nil {
-		reader = bytes.NewReader(requestData)
+// requestOption configures a request issued via [Client.do].
+type requestOption func(*requestOptions)
+
+// WithRequestData attaches a request body.
+func WithRequestData(data []byte) requestOption {
+	return func(o *requestOptions) {
+		o.requestData = data
+	}
+}
+
+// WithHeaders attaches request headers.
+func WithHeaders(headers map[string]string) requestOption {
+	return func(o *requestOptions) {
+		o.headers = headers
+	}
+}
+
+// WithQueryParams attaches URL query parameters.
+func WithQueryParams(query url.Values) requestOption {
+	return func(o *requestOptions) {
+		o.query = query
+	}
+}
+
+func (c *Client) do(ctx context.Context, method, uri string, responseData any, opts ...requestOption) error {
+	var ro requestOptions
+
+	for _, opt := range opts {
+		opt(&ro)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL.JoinPath(uri).String(), reader)
+	var reader io.Reader
+
+	if ro.requestData != nil {
+		reader = bytes.NewReader(ro.requestData)
+	}
+
+	endpoint := c.baseURL.JoinPath(uri)
+	if len(ro.query) > 0 {
+		endpoint.RawQuery = ro.query.Encode()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, endpoint.String(), reader)
 	if err != nil {
 		return err
 	}
 
-	for k, v := range headers {
+	for k, v := range ro.headers {
 		req.Header.Add(k, v)
 	}
 

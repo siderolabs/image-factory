@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -139,6 +140,8 @@ func isBasicType(e ast.Expr) bool {
 }
 
 // walkStruct traverses struct fields recursively but only documents basic types.
+//
+//nolint:gocognit
 func walkStruct(
 	prefix string,
 	st *ast.StructType,
@@ -179,6 +182,30 @@ func walkStruct(
 				walkStruct(path, nested, structDefs, out)
 
 				continue
+			}
+		}
+
+		// Document arrays of nested structs as `[]StructName` and recurse into the element type
+		// using a `path[].field` prefix.
+		if arr, ok := field.Type.(*ast.ArrayType); ok {
+			if ident, ok := arr.Elt.(*ast.Ident); ok {
+				if nested, exists := structDefs[ident.Name]; exists {
+					desc := ""
+
+					if field.Doc != nil {
+						desc = strings.TrimSpace(field.Doc.Text())
+					}
+
+					*out = append(*out, FieldDoc{
+						Path:        path,
+						Type:        "[]" + ident.Name,
+						Description: desc,
+					})
+
+					walkStruct(path+"[]", nested, structDefs, out)
+
+					continue
+				}
 			}
 		}
 
@@ -250,7 +277,14 @@ func printMarkdown(docs []FieldDoc, help string, wr io.Writer) error {
 
 		if d.Type != "" {
 			fmt.Fprintf(&b, "- **Type:** `%s`\n", d.Type)
-			fmt.Fprintf(&b, "- **Env:** `%s`\n\n", strings.ReplaceAll(strings.ToUpper(d.Path), ".", "_"))
+
+			// Children of array fields (path contains "[]") can't be set via flat env vars; the
+			// whole slice must be set on the parent env var as a JSON literal.
+			if !strings.Contains(d.Path, "[]") {
+				fmt.Fprintf(&b, "- **Env:** `%s`\n", strings.ReplaceAll(strings.ToUpper(d.Path), ".", "_"))
+			}
+
+			b.WriteString("\n")
 		}
 
 		if d.Description != "" {
@@ -316,6 +350,22 @@ func flatten(prefix string, in map[string]any, out map[string]string) {
 			flatten(key, val, out)
 		default:
 			envKey := strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
+
+			if rv := reflect.ValueOf(v); rv.IsValid() && (rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array) {
+				if rv.Len() == 0 {
+					out[envKey] = "[]"
+
+					continue
+				}
+
+				data, err := json.Marshal(val)
+				if err == nil {
+					out[envKey] = string(data)
+
+					continue
+				}
+			}
+
 			out[envKey] = fmt.Sprint(val)
 		}
 	}

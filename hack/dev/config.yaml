@@ -15,6 +15,7 @@ artifacts:
     internal:
       registry: registry.local:5000
       namespace: siderolabs
+
 cache:
   oci:
     # private registry repository for cached assets

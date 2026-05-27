@@ -21,7 +21,15 @@ import (
 )
 
 // handleVersions handles list of Talos versions available.
-func (f *Frontend) handleVersions(ctx context.Context, w http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
+func (f *Frontend) handleVersions(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+	if r.URL.Query().Get("broken") == "true" {
+		return json.NewEncoder(w).Encode(
+			xslices.Map(f.artifactsManager.GetBrokenTalosVersions(), func(v semver.Version) string {
+				return "v" + v.String()
+			}),
+		)
+	}
+
 	versions, err := f.artifactsManager.GetTalosVersions(ctx)
 	if err != nil {
 		return err

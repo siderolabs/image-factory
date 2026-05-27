@@ -449,8 +449,22 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 		return nil, fmt.Errorf("failed to parse minimum Talos version: %w", err)
 	}
 
+	brokenVersions := make([]semver.Version, 0, len(opts.Build.BrokenTalosVersions))
+
+	for _, v := range opts.Build.BrokenTalosVersions {
+		var parsed semver.Version
+
+		parsed, err = semver.Parse(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse broken Talos version %q: %w", v, err)
+		}
+
+		brokenVersions = append(brokenVersions, parsed)
+	}
+
 	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
 		MinVersion:                  minVersion,
+		BrokenVersions:              brokenVersions,
 		ImageRegistry:               opts.Artifacts.Core.Registry,
 		InsecureImageRegistry:       opts.Artifacts.Core.Insecure,
 		ImageVerifyOptions:          imageVerifyOptions,
