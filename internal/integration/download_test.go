@@ -222,8 +222,30 @@ func checkCors(ctx context.Context, t *testing.T, baseURL, schematicID, talosVer
 	}
 }
 
-func downloadDiskImageMatchSizeAndPartitions(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string, fileType string, expectedSize int64, expectedPartitions []partitionAssertion) {
+type diskImageMatchOptions struct {
+	probeOptions []blkid.ProbeOption
+}
+
+type diskImageMatchOption func(*diskImageMatchOptions)
+
+func withProbeOptions(opts ...blkid.ProbeOption) diskImageMatchOption {
+	return func(o *diskImageMatchOptions) {
+		o.probeOptions = append(o.probeOptions, opts...)
+	}
+}
+
+func downloadDiskImageMatchSizeAndPartitions(
+	ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string,
+	fileType string, expectedSize int64, expectedPartitions []partitionAssertion,
+	opts ...diskImageMatchOption,
+) {
 	t.Helper()
+
+	var options diskImageMatchOptions
+
+	for _, opt := range opts {
+		opt(&options)
+	}
 
 	resp := downloadAsset(ctx, t, baseURL, schematicID, talosVersion, path)
 
@@ -274,7 +296,7 @@ func downloadDiskImageMatchSizeAndPartitions(ctx context.Context, t *testing.T, 
 	_, err = io.Copy(decompressedFile, in)
 	require.NoError(t, err)
 
-	info, err := blkid.ProbePath(decompressedPath, blkid.WithProbeLogger(zaptest.NewLogger(t)))
+	info, err := blkid.ProbePath(decompressedPath, append(options.probeOptions, blkid.WithProbeLogger(zaptest.NewLogger(t)))...)
 	require.NoError(t, err)
 
 	assert.Equal(t, "gpt", info.Name)
@@ -1276,6 +1298,20 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 			t.Parallel()
 
 			downloadDiskImageMatchSizeAndPartitions(ctx, t, baseURL, sdBootBootloaderOverrideSchematicID, "v1.12.0", "metal-amd64.raw.zst", "application/zstd", 93*MiB, sdBootPartitions("v1.12.0"))
+		})
+	})
+
+	t.Run("sector size 4096", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("v1.13.0", func(t *testing.T) {
+			t.Parallel()
+
+			downloadDiskImageMatchSizeAndPartitions(
+				ctx, t, baseURL, diskImage4kSectorSchematicID, "v1.13.0", "metal-amd64.raw.zst",
+				"application/zstd", 205*MiB, dualBootPartitions("v1.13.0"),
+				withProbeOptions(blkid.WithSectorSize(4096)),
+			)
 		})
 	})
 

@@ -44,6 +44,8 @@ type Customization struct {
 	Bootloader imageropts.BootloaderKind `yaml:"bootloader,omitempty"`
 	// SecureBoot represents the secure boot options for the image.
 	SecureBoot SecureBootCustomization `yaml:"secureboot,omitempty"`
+	// DiskImage represents the disk image options for the image.
+	DiskImage DiskImageCustomization `yaml:"diskImage,omitempty"`
 }
 
 // MetaValue provides initial META contents for the image.
@@ -73,6 +75,14 @@ type Overlay struct { //nolint:govet
 type SecureBootCustomization struct {
 	// Include well-known UEFI certificates in the auto-enrollment database.
 	IncludeWellKnownCertificates bool `yaml:"includeWellKnownCertificates,omitempty"`
+}
+
+// DiskImageCustomization represents the disk image options for the image.
+type DiskImageCustomization struct {
+	// SectorSize is the size of the disk image sector in bytes.
+	//
+	// Defaults to 512 if not set.
+	SectorSize uint `yaml:"sectorSize,omitempty"`
 }
 
 // InvalidErrorTag is a tag for invalid schematic errors.

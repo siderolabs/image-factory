@@ -60,6 +60,17 @@ func TestID(t *testing.T) {
 			},
 			expectedID: "fa8e05f142a851d3ee568eb0a8e5841eaf6b0ebc8df9a63df16ac5ed2c04f3e6",
 		},
+		{
+			name: "4k sector disk image",
+			cfg: schematic.Schematic{
+				Customization: schematic.Customization{
+					DiskImage: schematic.DiskImageCustomization{
+						SectorSize: 4096,
+					},
+				},
+			},
+			expectedID: "92833e9ddd9bb9e11b2464fa5525429f01866306d52ebd882ee08d7918f6d1ea",
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

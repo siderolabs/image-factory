@@ -40,6 +40,7 @@ var (
 	grubBootloaderOverrideSchematicID   string
 	sdBootBootloaderOverrideSchematicID string
 	embeddedConfigSchematicID           string
+	diskImage4kSectorSchematicID        string
 
 	testSchematics map[string]*schematic.Schematic
 )
@@ -69,6 +70,7 @@ func init() {
 		{Owner: owner, Customization: schematic.Customization{Bootloader: profile.BootLoaderKindGrub}},
 		{Owner: owner, Customization: schematic.Customization{Bootloader: profile.BootLoaderKindSDBoot}},
 		{Owner: owner, Customization: schematic.Customization{EmbeddedMachineConfiguration: testEmbdeddedMachineConfiguration}},
+		{Owner: owner, Customization: schematic.Customization{DiskImage: schematic.DiskImageCustomization{SectorSize: 4096}}},
 	}
 
 	testSchematics = make(map[string]*schematic.Schematic, len(raw))
@@ -82,6 +84,7 @@ func init() {
 	grubBootloaderOverrideSchematicID = mustSchematicID(raw[6])
 	sdBootBootloaderOverrideSchematicID = mustSchematicID(raw[7])
 	embeddedConfigSchematicID = mustSchematicID(raw[8])
+	diskImage4kSectorSchematicID = mustSchematicID(raw[9])
 
 	testSchematics[emptySchematicID] = raw[0]
 	testSchematics[extraArgsSchematicID] = raw[1]
@@ -92,6 +95,7 @@ func init() {
 	testSchematics[grubBootloaderOverrideSchematicID] = raw[6]
 	testSchematics[sdBootBootloaderOverrideSchematicID] = raw[7]
 	testSchematics[embeddedConfigSchematicID] = raw[8]
+	testSchematics[diskImage4kSectorSchematicID] = raw[9]
 }
 
 func createSchematicGetID(ctx context.Context, t *testing.T, c *client.Client, schematic schematic.Schematic) string {
@@ -163,6 +167,10 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 
 	t.Run("embedded config", func(t *testing.T) {
 		assert.Equal(t, embeddedConfigSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[embeddedConfigSchematicID]))
+	})
+
+	t.Run("disk 4k sector", func(t *testing.T) {
+		assert.Equal(t, diskImage4kSectorSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[diskImage4kSectorSchematicID]))
 	})
 
 	t.Run("secureboot well-known certs", func(t *testing.T) {

@@ -635,6 +635,31 @@ hostname: worker-33`
 		}
 	}
 
+	// Special case: with 4k sector disk image.
+	for _, version := range versions {
+		for _, arch := range archs {
+			tc := testCase{
+				version:     version,
+				arch:        arch,
+				secureBoot:  false,
+				extraSuffix: "disk_image_4k_sector",
+				outputKind:  profile.OutKindImage,
+				baseProfile: getBaseProfile(profile.OutKindImage, arch, false),
+				schematic: schematic.Schematic{
+					Customization: schematic.Customization{
+						DiskImage: schematic.DiskImageCustomization{
+							SectorSize: 4096,
+						},
+					},
+				},
+
+				expectedProfile: defaultExpectedProfileWithDiskImage4KSector(version, arch, profile.OutKindImage),
+			}
+
+			tests = append(tests, tc)
+		}
+	}
+
 	for _, tc := range tests {
 		if tc.extraSuffix == "" {
 			t.Fatalf("extraSuffix must be set to generate unique test names")
@@ -854,6 +879,20 @@ func defaultExpectedProfileSecurebootWellKnownKeysIncluded(version, arch string,
 	}
 
 	prof.Input.SecureBoot.IncludeWellKnownCerts = true
+
+	return prof
+}
+
+func defaultExpectedProfileWithDiskImage4KSector(version, arch string, outKind profile.OutputKind) profile.Profile {
+	prof := defaultExpectedProfile(version, arch, outKind, false)
+
+	prof.Input.SystemExtensions = []profile.ContainerAsset{
+		{
+			TarballPath: "92833e9ddd9bb9e11b2464fa5525429f01866306d52ebd882ee08d7918f6d1ea.tar",
+		},
+	}
+
+	prof.Output.ImageOptions.DiskSectorSize = 4096
 
 	return prof
 }

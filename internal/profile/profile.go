@@ -492,6 +492,14 @@ func EnhanceFromSchematic(
 
 			prof.Output.ImageOptions.Bootloader = schematic.Customization.Bootloader
 		}
+
+		if schematic.Customization.DiskImage.SectorSize != 0 {
+			if prof.Output.ImageOptions == nil {
+				prof.Output.ImageOptions = &profile.ImageOptions{}
+			}
+
+			prof.Output.ImageOptions.DiskSectorSize = schematic.Customization.DiskImage.SectorSize
+		}
 	// all other output supports cmdline & META
 	default:
 		setKernelArgsAndMeta(&prof, schematic)

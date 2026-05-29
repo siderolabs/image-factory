@@ -75,6 +75,8 @@ customization:
       kind: KmsgLogConfig
       name: remote-log
       url: tcp://10.0.0.50:5044/
+    diskImage: # optional, only applies to disk images
+      sectorSize: 4096 # optional, disk image sector size in bytes, defaults to 512 if not set
 overlay: # optional
   image: ghcr.io/siderolabs/sbc-raspberry-pi # overlay image
   name: rpi_generic # overlay name

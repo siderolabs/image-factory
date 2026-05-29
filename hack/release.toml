@@ -5,15 +5,27 @@ project_name = "image-factory"
 github_repo = "siderolabs/image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v1.3.1"
+previous = "v1.3.2"
 pre_release = false
 
 [notes]
 
     [notes.scanner]
-        title = "Machine configuration embedding"
+        title = "Embedded Machine Configuration"
         description = """\
 Image Factory now supports embedding machine configuration into generated images starting with Talos version 1.2.0 onwards.
+"""
+
+    [notes.secureboot]
+        title = "Secure Boot Disk Images"
+        description = """\
+Image Factory now generates disk images with Secure Boot supporting automatically enrolling keys (with if-safe setting, enabled for VMs in setup mode).
+"""
+
+    [notes.diskimage4ksector]
+        title = "Disk Images"
+        description = """\
+Image Factory now supports generating disk images with 4096 byte sector size (custom size), set via schematic customization.
 """
 
 [make_deps]
