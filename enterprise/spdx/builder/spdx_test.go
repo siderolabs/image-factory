@@ -8,15 +8,19 @@
 package builder_test
 
 import (
+	"bytes"
 	"io"
 	"strings"
 	"testing"
 
 	spdxjson "github.com/spdx/tools-golang/json"
+	"github.com/spdx/tools-golang/spdx"
+	"github.com/spdx/tools-golang/spdx/v2/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
+	ifconstants "github.com/siderolabs/image-factory/pkg/constants"
 )
 
 func TestCacheTag(t *testing.T) {
@@ -99,4 +103,151 @@ func TestBundleToJSON_DocumentNamespace(t *testing.T) {
 			assert.Equal(t, tc.want, doc.DocumentNamespace)
 		})
 	}
+}
+
+// TestBundleToJSON_SingleTalosRoot guards the source-name/version pathway
+// that grype's OpenVEX matcher relies on. Two invariants the test enforces:
+//
+//  1. Exactly one package is the target of a DOCUMENT-DESCRIBES relationship.
+//     syft's SPDX importer returns its derived source only when there is a
+//     single root (see findRootPackages + extractSource in syft).
+//  2. That root package is named after constants.TalosPackageName (always
+//     "talos-enterprise" in this enterprise-only package), carries the
+//     bundle's TalosVersion, and is marked with PrimaryPackagePurpose=FILE
+//     plus the "DocumentRoot-Directory-..." SPDXIdentifier prefix syft uses
+//     to map the root onto a syft Source.Description with Name and Version set.
+//
+// Without both, grype's productIdentifiersFromContext returns an empty list,
+// the VEX product `pkg:generic/talos-enterprise@<ver>` never matches any
+// artifact, and the talos-vex statements don't suppress matches.
+func TestBundleToJSON_SingleTalosRoot(t *testing.T) {
+	t.Parallel()
+
+	const (
+		sourceID   = "talos-amd64"
+		sourceName = "talos"
+	)
+
+	sourceDoc := minimalSourceSPDX(t, sourceID, sourceName, "v1.13.3")
+
+	bundle := &builder.Bundle{
+		SchematicID:  "sch",
+		TalosVersion: "v1.13.3",
+		Arch:         "amd64",
+		ExternalURL:  "https://factory.sidero.dev",
+		Files: []builder.File{
+			{
+				Filename: sourceID + ".spdx.json",
+				Source:   sourceID,
+				Content:  sourceDoc,
+			},
+		},
+	}
+
+	r, _, err := builder.BundleToJSON(bundle)
+	require.NoError(t, err)
+
+	data, err := io.ReadAll(r)
+	require.NoError(t, err)
+
+	doc, err := spdxjson.Read(bytes.NewReader(data))
+	require.NoError(t, err)
+
+	var roots []common.ElementID
+
+	for _, rel := range doc.Relationships {
+		if rel.RefA.ElementRefID == common.ElementID("DOCUMENT") &&
+			rel.Relationship == common.TypeRelationshipDescribe {
+			roots = append(roots, rel.RefB.ElementRefID)
+		}
+	}
+
+	require.Len(t, roots, 1, "merged document must have exactly one DOCUMENT-DESCRIBES root")
+
+	var rootPkg *spdx.Package
+
+	for _, p := range doc.Packages {
+		if p.PackageSPDXIdentifier == roots[0] {
+			rootPkg = p
+
+			break
+		}
+	}
+
+	require.NotNil(t, rootPkg, "DESCRIBES target %q must exist in doc.Packages", roots[0])
+
+	assert.Equal(t, ifconstants.TalosPackageName, rootPkg.PackageName,
+		"root PackageName must equal constants.TalosPackageName so grype's derived pkg:generic/<name>@<version> equals the VEX product")
+	assert.Equal(t, "v1.13.3", rootPkg.PackageVersion, "root package version feeds syft's Source.Version")
+	assert.Equal(t, "FILE", rootPkg.PrimaryPackagePurpose, "FILE purpose routes syft through fileSource()")
+	assert.True(t,
+		strings.HasPrefix(string(rootPkg.PackageSPDXIdentifier), "DocumentRoot-"),
+		"SPDXIdentifier prefix is what triggers syft's directory/file source classification")
+
+	// Per-source root must be re-parented under the new talos root via
+	// CONTAINS, not via another DOCUMENT-DESCRIBES (which would create a
+	// second root and break syft's single-root detection).
+	// The merge prefixes every source element ID with "<source>-", so the
+	// per-source root is "<sourceID>-DocumentRoot-Directory-<sourceName>".
+	perSourceRoot := common.ElementID(sourceID + "-DocumentRoot-Directory-" + sourceName)
+
+	var perSourceContained bool
+
+	for _, rel := range doc.Relationships {
+		if rel.RefA.ElementRefID == roots[0] &&
+			rel.Relationship == common.TypeRelationshipContains &&
+			rel.RefB.ElementRefID == perSourceRoot {
+			perSourceContained = true
+
+			break
+		}
+	}
+
+	assert.True(t, perSourceContained,
+		"per-source root must be re-parented under the talos root via CONTAINS")
+}
+
+// minimalSourceSPDX produces a syft-shaped SPDX 2.3 JSON document with one
+// DocumentRoot-Directory-<name> root, mirroring what hack/sbom.sh embeds
+// into the Talos initramfs.
+func minimalSourceSPDX(t *testing.T, sourceID, name, version string) []byte {
+	t.Helper()
+
+	rootID := common.ElementID("DocumentRoot-Directory-" + name)
+
+	doc := &spdx.Document{
+		SPDXVersion:       spdx.Version,
+		DataLicense:       spdx.DataLicense,
+		SPDXIdentifier:    common.ElementID("DOCUMENT"),
+		DocumentName:      sourceID,
+		DocumentNamespace: "https://anchore.com/syft/dir/" + sourceID,
+		CreationInfo: &spdx.CreationInfo{
+			Created: "2026-05-30T00:00:00Z",
+			Creators: []common.Creator{
+				{CreatorType: "Tool", Creator: "syft-test"},
+			},
+		},
+		Packages: []*spdx.Package{
+			{
+				PackageSPDXIdentifier:   rootID,
+				PackageName:             name,
+				PackageVersion:          version,
+				PrimaryPackagePurpose:   "FILE",
+				PackageDownloadLocation: "NOASSERTION",
+			},
+		},
+		Relationships: []*spdx.Relationship{
+			{
+				RefA:         common.DocElementID{ElementRefID: common.ElementID("DOCUMENT")},
+				RefB:         common.DocElementID{ElementRefID: rootID},
+				Relationship: common.TypeRelationshipDescribe,
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+
+	require.NoError(t, spdxjson.Write(doc, &buf))
+
+	return buf.Bytes()
 }

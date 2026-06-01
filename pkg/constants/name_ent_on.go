@@ -6,11 +6,13 @@
 
 package constants
 
-// TalosName is the name in the profile.
-const TalosName = "Talos Enterprise"
-
-// ImageFactoryName is the name of the image factory.
-const ImageFactoryName = "Image Factory Enterprise"
-
-// TalosPURL is the purl for Talos Enterprise.
-const TalosPURL = "pkg:generic/talos-enterprise"
+const (
+	// TalosName is the name in the profile.
+	TalosName = "Talos Enterprise"
+	// ImageFactoryName is the name of the image factory.
+	ImageFactoryName = "Image Factory Enterprise"
+	// TalosPackageName is the name of the Talos package in SPDX documents.
+	TalosPackageName = "talos-enterprise"
+	// TalosPURL is the purl for Talos Enterprise.
+	TalosPURL = "pkg:generic/" + TalosPackageName
+)

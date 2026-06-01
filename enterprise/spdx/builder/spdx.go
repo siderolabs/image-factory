@@ -18,7 +18,13 @@ import (
 	spdxjson "github.com/spdx/tools-golang/json"
 	"github.com/spdx/tools-golang/spdx"
 	"github.com/spdx/tools-golang/spdx/v2/common"
+
+	ifconstants "github.com/siderolabs/image-factory/pkg/constants"
 )
+
+// talosRootSPDXID is the SPDXIdentifier of the synthetic root package added
+// to every merged bundle.
+const talosRootSPDXID = common.ElementID("DocumentRoot-Directory-talos")
 
 // File represents an extracted SPDX file.
 type File struct {
@@ -74,6 +80,25 @@ func BundleToJSON(bundle *Bundle) (io.Reader, int64, error) {
 			Creators: []common.Creator{
 				{CreatorType: "Organization", Creator: "Sidero Labs, Inc."},
 				{CreatorType: "Tool", Creator: "image-factory"},
+			},
+		},
+		Packages: []*spdx.Package{
+			{
+				PackageSPDXIdentifier:   talosRootSPDXID,
+				PackageName:             ifconstants.TalosPackageName,
+				PackageVersion:          bundle.TalosVersion,
+				PrimaryPackagePurpose:   "FILE",
+				PackageDownloadLocation: "NOASSERTION",
+				// PackageSupplier must be non-nil — syft's fileSource
+				// dereferences it unconditionally when classifying the root.
+				PackageSupplier: &common.Supplier{Supplier: "NOASSERTION"},
+			},
+		},
+		Relationships: []*spdx.Relationship{
+			{
+				RefA:         common.DocElementID{ElementRefID: common.ElementID("DOCUMENT")},
+				RefB:         common.DocElementID{ElementRefID: talosRootSPDXID},
+				Relationship: common.TypeRelationshipDescribe,
 			},
 		},
 	}
@@ -143,9 +168,13 @@ func mergeDocument(merged, source *spdx.Document, sourceID string) {
 			rel.Relationship == common.TypeRelationshipDescribe
 
 		if isDocDescribes {
-			// Point DESCRIBES from the merged document to the prefixed target.
+			// Re-parent each source's root package under the synthetic talos
+			// root via CONTAINS so the merged document has exactly one
+			// DOCUMENT-DESCRIBES root — required by syft's source detection
+			// (see talosRootSPDXID).
+			newRel.Relationship = common.TypeRelationshipContains
 			newRel.RefA = common.DocElementID{
-				ElementRefID: merged.SPDXIdentifier,
+				ElementRefID: talosRootSPDXID,
 			}
 			newRel.RefB = prefixDocElementID(prefix, rel.RefB)
 		} else {
