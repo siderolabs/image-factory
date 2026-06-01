@@ -66,6 +66,10 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	)
 	defer logger.Info("shutting down", zap.String("name", version.Name))
 
+	// apply registry client tuning before any puller/pusher is constructed
+	remotewrap.SetJobs(opts.Registry.Jobs)
+	remotewrap.SetDebug(opts.Registry.Debug)
+
 	// many image generation steps rely on SOURCE_DATE_EPOCH
 	// to ensure reproducibility, set it to a fixed value
 	if err := os.Setenv("SOURCE_DATE_EPOCH", "1559424892"); err != nil { // this value matches `pkgs` SOURCE_DATE_EPOCH
@@ -605,7 +609,7 @@ func buildSchematicFactory(ctx context.Context, logger *zap.Logger, eg *errgroup
 //
 // Enable registry auth from the standard Docker config, and from GitHub via the token.
 func remoteOptions() []remote.Option {
-	return []remote.Option{
+	opts := []remote.Option{
 		remote.WithAuthFromKeychain(
 			authn.NewMultiKeychain(
 				authn.DefaultKeychain,
@@ -614,6 +618,15 @@ func remoteOptions() []remote.Option {
 			),
 		),
 	}
+
+	// When registry debugging is enabled, route cosign's remote operations through
+	// the same instrumented transport so leaked blob/manifest bodies (i.e. leaked
+	// pull-limiter tokens) in the sign/verify paths are tracked too.
+	if remotewrap.DebugEnabled() {
+		opts = append(opts, remote.WithTransport(remotewrap.RoundTripper()))
+	}
+
+	return opts
 }
 
 // buildCacheSigner constructs the image signer from options.

@@ -1017,6 +1017,38 @@ Capacity caps the number of cached objects before LRU eviction.
 
 ---
 
+### `registry`
+
+Registry contains low-level tuning for the registry client (pull/push concurrency, debugging).
+
+---
+
+### `registry.jobs`
+
+- **Type:** `int`
+- **Env:** `REGISTRY_JOBS`
+
+Jobs is the maximum number of concurrent blob pull/push operations per registry client.
+
+go-containerregistry gates concurrent blob fetches on this value; too low a value can
+deadlock under Image Factory's concurrent, multiplexed fetch pattern.
+Defaults to remotewrap.DefaultJobs.
+
+---
+
+### `registry.debug`
+
+- **Type:** `bool`
+- **Env:** `REGISTRY_DEBUG`
+
+Debug tracks registry response bodies to help diagnose pull-limiter token leaks/stalls:
+it periodically logs how many bodies are open and dumps any body that stays open too long
+together with the stack that opened it.
+
+Set via config or the IF_REGISTRY_DEBUG environment variable.
+
+---
+
 ## Default Configuration
 
 ### YAML
@@ -1122,6 +1154,9 @@ http:
     keyFile: ""
 metrics:
     addr: :2122
+registry:
+    debug: false
+    jobs: 64
 secureBoot:
     awsKMS:
         certARN: ""
@@ -1216,6 +1251,8 @@ IF_HTTP_EXTERNALURL=https://localhost/
 IF_HTTP_HTTPLISTENADDR=:8080
 IF_HTTP_KEYFILE=
 IF_METRICS_ADDR=:2122
+IF_REGISTRY_DEBUG=false
+IF_REGISTRY_JOBS=64
 IF_SECUREBOOT_AWSKMS_CERTARN=
 IF_SECUREBOOT_AWSKMS_CERTPATH=
 IF_SECUREBOOT_AWSKMS_KEYID=

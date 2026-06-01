@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 // Validate checks Options for inconsistencies that would otherwise produce
@@ -46,6 +48,12 @@ func (o *Options) Validate() error {
 		}
 	}
 
+	// 0 means "unset" (falls back to remotewrap.DefaultJobs); any explicit value must not be
+	// below the default, as lower concurrency can deadlock the limiter under load.
+	if o.Registry.Jobs != 0 && o.Registry.Jobs < remotewrap.DefaultJobs {
+		return fmt.Errorf("registry.jobs must be >= %d if set, got %d", remotewrap.DefaultJobs, o.Registry.Jobs)
+	}
+
 	return nil
 }
 
@@ -79,6 +87,26 @@ type Options struct { //nolint:govet // keeping order for semantic clarity
 
 	// Enterprise contains configuration for enterprise-specific features.
 	Enterprise EnterpriseOptions `koanf:"enterprise"`
+
+	// Registry contains low-level tuning for the registry client (pull/push concurrency, debugging).
+	Registry RegistryOptions `koanf:"registry"`
+}
+
+// RegistryOptions tunes the shared registry client used for all pull/push operations.
+type RegistryOptions struct {
+	// Jobs is the maximum number of concurrent blob pull/push operations per registry client.
+	//
+	// go-containerregistry gates concurrent blob fetches on this value; too low a value can
+	// deadlock under Image Factory's concurrent, multiplexed fetch pattern.
+	// Defaults to remotewrap.DefaultJobs.
+	Jobs int `koanf:"jobs"`
+
+	// Debug tracks registry response bodies to help diagnose pull-limiter token leaks/stalls:
+	// it periodically logs how many bodies are open and dumps any body that stays open too long
+	// together with the stack that opened it.
+	//
+	// Set via config or the IF_REGISTRY_DEBUG environment variable.
+	Debug bool `koanf:"debug"`
 }
 
 // AssetBuilderOptions contains settings for building assets.
@@ -605,5 +633,9 @@ var DefaultOptions = Options{
 				Capacity: 4096,
 			},
 		},
+	},
+
+	Registry: RegistryOptions{
+		Jobs: remotewrap.DefaultJobs,
 	},
 }

@@ -22,6 +22,8 @@ func newObjectReference(asset cache.BootAsset) (*objectReference, error) {
 		return nil, err
 	}
 
+	defer r.Close() //nolint:errcheck
+
 	obj := &objectReference{}
 
 	err = json.NewDecoder(r).Decode(obj)

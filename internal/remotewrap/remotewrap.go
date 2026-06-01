@@ -20,6 +20,37 @@ import (
 	"github.com/siderolabs/image-factory/internal/remotewrap/internal/refresher"
 )
 
+// DefaultJobs is the default parallelism for remote pull/push operations.
+//
+// go-containerregistry v0.21.x introduced a pull limiter that gates concurrent
+// blob fetches on this value (default 4); the token is released only when the
+// blob body is closed. Image Factory fans out many concurrent blob reads through
+// a small set of shared pullers: layout.WriteImage spawns one goroutine per layer
+// plus a separate fetch for the config, multiple image fetches (installer, imager,
+// extensions) run at once, and crane.Export streams layers through a pipe. All of
+// that traffic multiplexes over a single HTTP/2 connection per registry host.
+//
+// With a low limit, the few tokens get pinned by blob streams that stall on
+// HTTP/2 connection-level flow control while another fetch (e.g. an image's
+// config) waits in acquire() — a deadlock that never recovers until FetchTimeout.
+// Before the limiter existed (v0.21.2) concurrency was unbounded and this never
+// happened. Set the limit high enough to restore that behavior; actual
+// concurrency stays bounded by the connection pool.
+const DefaultJobs = 64
+
+// remoteJobs is the active pull/push parallelism; override with SetJobs before
+// any puller/pusher is created (i.e. at startup).
+var remoteJobs = DefaultJobs
+
+// SetJobs overrides the pull/push parallelism. Values <= 0 are ignored (the
+// go-containerregistry limiter requires a positive value). Call at startup,
+// before any Puller/Pusher is constructed.
+func SetJobs(jobs int) {
+	if jobs > 0 {
+		remoteJobs = jobs
+	}
+}
+
 var transport = sync.OnceValue(func() *http.Transport {
 	t := cleanhttp.DefaultPooledTransport()
 	t.MaxIdleConnsPerHost = t.MaxIdleConns / 2 // use half of the default max idle connections per host
@@ -74,7 +105,7 @@ func NewPusher(refreshInterval time.Duration, opts ...remote.Option) (Pusher, er
 	return &pusherWrapper{
 		refresher: refresher.New(
 			func() (*remote.Pusher, error) {
-				return remote.NewPusher(slices.Concat(opts, []remote.Option{remote.WithTransport(transport())})...)
+				return remote.NewPusher(slices.Concat([]remote.Option{remote.WithJobs(remoteJobs)}, opts, []remote.Option{remote.WithTransport(roundTripper())})...)
 			},
 			refreshInterval,
 		),
@@ -134,7 +165,7 @@ func NewPuller(refreshInterval time.Duration, opts ...remote.Option) (Puller, er
 	return &pullerWrapper{
 		refresher: refresher.New(
 			func() (*remote.Puller, error) {
-				return remote.NewPuller(slices.Concat(opts, []remote.Option{remote.WithTransport(transport())})...)
+				return remote.NewPuller(slices.Concat([]remote.Option{remote.WithJobs(remoteJobs)}, opts, []remote.Option{remote.WithTransport(roundTripper())})...)
 			},
 			refreshInterval,
 		),

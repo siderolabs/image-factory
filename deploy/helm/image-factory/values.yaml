@@ -237,6 +237,19 @@ config:
         ## Repository name for VEX data
         # repository: talos-vex-data
 
+  ## Registry Client Tuning
+  ## Low-level tuning for the shared registry client used for all pull/push operations.
+  registry:
+    ## Maximum number of concurrent blob pull/push operations per registry client.
+    ## Must be >= 64; lower values can deadlock the go-containerregistry pull limiter
+    ## under Image Factory's concurrent, multiplexed fetch pattern.
+    # @schema minimum:64
+    jobs: 64
+    ## Track registry response bodies to diagnose pull-limiter token leaks/stalls: periodically
+    ## logs how many bodies are open and dumps any body that stays open too long together with the
+    ## stack that opened it. Can also be set via the IF_REGISTRY_DEBUG environment variable.
+    debug: false
+
 # -- Environment variables to pass to Image Factory
 env: []
 
