@@ -1,4 +1,4 @@
-# Image Factory
+# Image Factory go brr
 
 The Image Factory provides a way to download Talos Linux artifacts.
 Artifacts can be generated with customizations defined by a "schematic".
