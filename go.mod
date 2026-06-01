@@ -40,7 +40,7 @@ require (
 	github.com/siderolabs/go-blockdevice/v2 v2.0.29
 	github.com/siderolabs/go-debug v0.6.2
 	github.com/siderolabs/go-pointer v1.0.1
-	github.com/siderolabs/go-vex v0.0.0-20260511103453-59abb9af79f6
+	github.com/siderolabs/go-vex v0.1.1
 	github.com/siderolabs/talos v1.14.0-alpha.1
 	github.com/siderolabs/talos/pkg/machinery v1.14.0-alpha.1
 	github.com/sigstore/cosign/v3 v3.0.6
@@ -463,12 +463,12 @@ require (
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
-	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.44.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10 // indirect
 	gonum.org/v1/gonum v0.17.0 // indirect
