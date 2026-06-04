@@ -216,21 +216,6 @@ func prefixDocElementID(prefix string, id common.DocElementID) common.DocElement
 	}
 }
 
-// CacheTag returns the cache tag for an SPDX bundle.
-//
-// Format: spdx-<schematic_id>-<version>-<arch>
-//
-// Operators are expected to use distinct cache repositories for OSS vs
-// Enterprise deployments since the bundle content differs by build flavor.
-//
-// Version is sanitized to replace characters that are invalid in OCI tags.
-func CacheTag(schematicID, version, arch string) string {
-	// OCI tags cannot contain '+', replace with '-'
-	sanitizedVersion := strings.ReplaceAll(version, "+", "-")
-
-	return fmt.Sprintf("spdx-%s-%s-%s", schematicID, sanitizedVersion, arch)
-}
-
 // buildDocumentNamespace assembles the SPDX DocumentNamespace from the
 // configured external URL plus the schematic / version / arch path. It uses
 // url.URL.JoinPath rather than string concatenation to avoid producing

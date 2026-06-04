@@ -106,7 +106,7 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 	}
 
 	// Build the bundle using singleflight to prevent duplicate work
-	cacheKey := CacheTag(schematicID, versionTag, string(arch))
+	cacheKey := Hash(schematicID, versionTag, string(arch))
 
 	resultCh := b.sf.DoChan(cacheKey, func() (any, error) { //nolint:contextcheck
 		return nil, b.buildBundle(sc, schematicID, versionTag, arch)

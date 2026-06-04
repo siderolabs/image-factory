@@ -23,20 +23,21 @@ import (
 	ifconstants "github.com/siderolabs/image-factory/pkg/constants"
 )
 
-func TestCacheTag(t *testing.T) {
+func TestHash(t *testing.T) {
 	t.Parallel()
 
-	tag := builder.CacheTag("schematic123", "v1.13.0", "amd64")
+	base := builder.Hash("schematic123", "v1.13.0", "amd64")
 
-	assert.True(t, strings.HasPrefix(tag, "spdx-"), "got %q", tag)
-	assert.Contains(t, tag, "schematic123")
-	assert.Contains(t, tag, "v1.13.0")
-	assert.Contains(t, tag, "amd64")
+	// The hash is the OCI cache tag, so it must always be a valid tag (hex, no '+').
+	assert.NotContains(t, base, "+")
 
-	// `+` must be sanitized for OCI tag compatibility.
-	tagWithPlus := builder.CacheTag("schematic", "v1.13.0+rc.0", "amd64")
-	assert.NotContains(t, tagWithPlus, "+")
-	assert.Contains(t, tagWithPlus, "v1.13.0-rc.0")
+	// Deterministic for the same inputs.
+	assert.Equal(t, base, builder.Hash("schematic123", "v1.13.0", "amd64"))
+
+	// Sensitive to each input so distinct bundles never collide.
+	assert.NotEqual(t, base, builder.Hash("schematic456", "v1.13.0", "amd64"))
+	assert.NotEqual(t, base, builder.Hash("schematic123", "v1.13.1", "amd64"))
+	assert.NotEqual(t, base, builder.Hash("schematic123", "v1.13.0", "arm64"))
 }
 
 func TestBundleToJSON_DocumentNamespace(t *testing.T) {
