@@ -23,6 +23,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset/cache"
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 	factoryprofile "github.com/siderolabs/image-factory/internal/profile"
 )
 
@@ -156,14 +157,18 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 	b.metricAssetCachedErrors.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
 
 	if b.cacheMightFail {
-		b.logger.Warn("unable to reach cache, falling back to direct delivery", zap.Error(err))
+		ctxlog.Logger(ctx, b.logger).Warn("unable to reach cache, falling back to direct delivery", zap.Error(err))
 	} else if !errors.Is(err, cache.ErrCacheNotFound) {
 		return nil, fmt.Errorf("error getting asset from cache: %w", err)
 	}
 
-	// nothing in cache, so build the asset, but make sure we do it only once
+	// nothing in cache, so build the asset, but make sure we do it only once.
+	// pass the request ID explicitly: the build runs on a detached context (so it
+	// survives request cancellation) but its logs keep the request_id.
+	reqID := ctxlog.RequestID(ctx)
+
 	ch := b.sf.DoChan(profileHash, func() (any, error) { //nolint:contextcheck
-		return b.buildAndCache(profileHash, prof, versionString, filename)
+		return b.buildAndCache(reqID, profileHash, prof, versionString, filename)
 	})
 
 	select {
@@ -187,10 +192,15 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 }
 
 // buildAndCache builds the asset and pushes it to the cache.
-func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versionString, filename string) (BootAsset, error) {
-	// detach the context to make sure the asset is built no matter if the request is canceled
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
+//
+// reqID is the request ID, carried into the detached build context so build logs
+// keep the request_id.
+func (b *Builder) buildAndCache(reqID, profileHash string, prof profile.Profile, versionString, filename string) (BootAsset, error) {
+	// detach the context to make sure the asset is built no matter if the request is canceled.
+	ctx, cancel := context.WithTimeout(ctxlog.WithRequestID(context.Background(), reqID), 20*time.Minute)
 	defer cancel()
+
+	logger := ctxlog.Logger(ctx, b.logger)
 
 	asset, err := b.build(ctx, prof, versionString)
 	if err != nil {
@@ -201,7 +211,7 @@ func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versio
 	b.metricAssetBytesBuilt.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Add(float64(asset.Size()))
 
 	if err = b.cache.Put(ctx, profileHash, asset, filename); err != nil {
-		b.logger.Error("error putting asset to cache", zap.Error(err), zap.String("profile_hash", profileHash))
+		logger.Error("error putting asset to cache", zap.Error(err), zap.String("profile_hash", profileHash))
 	}
 
 	// if the asset delivery requires a redirect to the cache, we need to return the cached asset
@@ -216,7 +226,7 @@ func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versio
 		}
 
 		// if we failed to get the asset from cache, return the built asset anyway
-		b.logger.Warn("failed to get object from cache, falling back to direct delivery", zap.Error(err))
+		logger.Warn("failed to get object from cache, falling back to direct delivery", zap.Error(err))
 
 		b.metricAssetCachedErrors.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
 	}
@@ -228,6 +238,8 @@ func (b *Builder) buildAndCache(profileHash string, prof profile.Profile, versio
 //
 // A concurrency limit is enforced.
 func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString string) (BootAsset, error) {
+	logger := ctxlog.Logger(ctx, b.logger)
+
 	start := time.Now()
 
 	// enforce concurrency limit
@@ -242,7 +254,7 @@ func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString
 	}()
 
 	concurrencyLatency := time.Since(start)
-	b.logger.Info("building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("concurrency_latency", concurrencyLatency))
+	logger.Info("building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("concurrency_latency", concurrencyLatency))
 	b.metricConcurrencyLatency.Observe(concurrencyLatency.Seconds())
 
 	if err := b.getBuildAsset(ctx, versionString, prof.Arch, artifacts.KindKernel, &prof.Input.Kernel); err != nil {
@@ -286,7 +298,7 @@ func (b *Builder) build(ctx context.Context, prof profile.Profile, versionString
 	tmpDir.size = st.Size()
 
 	buildLatency := time.Since(start) - concurrencyLatency
-	b.logger.Info("finished building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("build_latency", buildLatency))
+	logger.Info("finished building image asset", zap.Any("profile", prof), zap.String("version", versionString), zap.Duration("build_latency", buildLatency))
 	b.metricBuildLatency.Observe(buildLatency.Seconds())
 
 	return tmpDir, nil

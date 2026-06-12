@@ -33,6 +33,7 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/auth"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/cache"
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 )
 
@@ -211,8 +212,11 @@ func (b *Builder) scan(ctx context.Context, schematicID, versionTag, arch string
 	// checks (the SPDX builder re-verifies access against the schematic owner).
 	username, _ := auth.GetAuthUsername(ctx)
 
+	// carry the request ID into the detached scan so its logs keep the request_id.
+	reqID := ctxlog.RequestID(ctx)
+
 	resultCh := b.c.SF.DoChan(key, func() (any, error) { //nolint:contextcheck
-		return b.scanAndCache(username, schematicID, versionTag, arch, key)
+		return b.scanAndCache(reqID, username, schematicID, versionTag, arch, key)
 	})
 
 	select {
@@ -237,8 +241,11 @@ func cacheKey(schematicID, versionTag, arch string) string {
 }
 
 // scanAndCache runs under singleflight with a detached context.
-func (b *Builder) scanAndCache(username, schematicID, versionTag, arch, key string) (cachedScan, error) {
-	baseCtx := context.Background()
+//
+// reqID is the request ID, carried into the detached context so the scan logs
+// (and downstream SPDX/VEX builds) keep the request_id.
+func (b *Builder) scanAndCache(reqID, username, schematicID, versionTag, arch, key string) (cachedScan, error) {
+	baseCtx := ctxlog.WithRequestID(context.Background(), reqID)
 	if username != "" {
 		baseCtx = auth.WithAuthUsername(baseCtx, username)
 	}
@@ -246,7 +253,7 @@ func (b *Builder) scanAndCache(username, schematicID, versionTag, arch, key stri
 	ctx, cancel := context.WithTimeout(baseCtx, ScanTimeout)
 	defer cancel()
 
-	logger := b.logger.With(
+	logger := ctxlog.Logger(ctx, b.logger).With(
 		zap.String("schematic", schematicID),
 		zap.String("version", versionTag),
 		zap.String("arch", arch),

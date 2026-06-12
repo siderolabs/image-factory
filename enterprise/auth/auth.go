@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -158,14 +159,25 @@ type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request,
 // Middleware implements enterprise.AuthProvider.
 func (provider *Provider) Middleware(handler Handler) Handler {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+		// the request context already carries the request ID (set by the HTTP
+		// frontend wrapper), so auth events correlate with the rest of the request.
+		logger := ctxlog.Logger(ctx, provider.logger)
+
 		username, password, ok := r.BasicAuth()
 		if !ok {
+			logger.Debug("authentication required: no credentials provided")
+
 			return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New("authentication required"))
 		}
 
 		if !provider.verifyCredentials(username, password) {
+			// log the attempted username for audit; never log the password.
+			logger.Warn("authentication failed: invalid credentials", zap.String("username", username))
+
 			return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New("invalid credentials"))
 		}
+
+		logger.Debug("authenticated", zap.String("username", username))
 
 		ctx = context.WithValue(ctx, authContextKey{}, username)
 

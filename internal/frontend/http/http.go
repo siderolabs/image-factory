@@ -16,6 +16,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/rs/cors"
@@ -30,6 +31,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
@@ -238,9 +240,19 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		ctx := r.Context()
 
+		requestID := r.Header.Get(RequestIDHeader)
+		if requestID == "" {
+			requestID = uuid.NewString()
+		}
+
+		ctx = ctxlog.WithRequestID(ctx, requestID)
+
+		logger := ctxlog.Logger(ctx, f.logger)
+
 		start := time.Now()
 
 		w.Header().Set("Server", version.ServerString())
+		w.Header().Set(RequestIDHeader, requestID)
 
 		err := h(ctx, w, r, p)
 
@@ -254,7 +266,7 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 			http.Error(w, message, code)
 		})
 
-		f.logger.Log(
+		logger.Log(
 			level, "request",
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),

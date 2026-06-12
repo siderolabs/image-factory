@@ -24,6 +24,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/internal/cache"
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/image/verify"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/pkg/constants"
@@ -109,8 +110,11 @@ func (b *Builder) Build(ctx context.Context, versionTag string) ([]byte, error) 
 		return item.Value(), nil
 	}
 
+	// carry the request ID into the detached build so its logs keep the request_id.
+	reqID := ctxlog.RequestID(ctx)
+
 	resultCh := b.c.SF.DoChan(versionTag, func() (any, error) { //nolint:contextcheck
-		return b.buildAndCache(versionTag)
+		return b.buildAndCache(reqID, versionTag)
 	})
 
 	select {
@@ -131,8 +135,11 @@ func (b *Builder) Build(ctx context.Context, versionTag string) ([]byte, error) 
 }
 
 // buildAndCache runs under singleflight with a detached context.
-func (b *Builder) buildAndCache(versionTag string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
+//
+// reqID is the request ID, carried into the detached context so the build logs
+// keep the request_id.
+func (b *Builder) buildAndCache(reqID, versionTag string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctxlog.WithRequestID(context.Background(), reqID), FetchTimeout)
 	defer cancel()
 
 	expData, err := b.fetchExploitabilityData(ctx)
@@ -191,7 +198,7 @@ func (b *Builder) fetchExploitabilityData(ctx context.Context) (*v1alpha1.Exploi
 
 	digestRef := tagRef.Digest(descriptor.Digest.String())
 
-	logger := b.logger.With(zap.Stringer("image", digestRef))
+	logger := ctxlog.Logger(ctx, b.logger).With(zap.Stringer("image", digestRef))
 
 	logger.Debug("verifying VEX image signature")
 

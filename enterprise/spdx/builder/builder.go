@@ -28,6 +28,7 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/spdx/storage"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/schematic"
 	ifconstants "github.com/siderolabs/image-factory/pkg/constants"
@@ -92,7 +93,7 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 
 	// Check cache first
 	if err := b.storage.Head(ctx, schematicID, versionTag, string(arch)); err == nil {
-		b.logger.Debug("SPDX bundle cache hit", zap.String("schematic", schematicID), zap.String("version", versionTag), zap.String("arch", string(arch)))
+		ctxlog.Logger(ctx, b.logger).Debug("SPDX bundle cache hit", zap.String("schematic", schematicID), zap.String("version", versionTag), zap.String("arch", string(arch)))
 
 		return b.storage.Get(ctx, schematicID, versionTag, string(arch))
 	}
@@ -108,8 +109,11 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 	// Build the bundle using singleflight to prevent duplicate work
 	cacheKey := CacheTag(schematicID, versionTag, string(arch))
 
+	// carry the request ID into the detached build so its logs keep the request_id.
+	reqID := ctxlog.RequestID(ctx)
+
 	resultCh := b.sf.DoChan(cacheKey, func() (any, error) { //nolint:contextcheck
-		return nil, b.buildBundle(sc, schematicID, versionTag, arch)
+		return nil, b.buildBundle(reqID, sc, schematicID, versionTag, arch)
 	})
 
 	select {
@@ -128,11 +132,12 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 // buildBundle creates and stores an SPDX bundle for a single architecture.
 // sc must be pre-fetched by the caller (Build) using the live request context,
 // since this function runs inside singleflight with context.Background().
-func (b *Builder) buildBundle(sc *schematicpkg.Schematic, schematicID, versionTag string, arch artifacts.Arch) error {
-	// Use a fresh context since we're in singleflight
-	ctx := context.Background()
+func (b *Builder) buildBundle(reqID string, sc *schematicpkg.Schematic, schematicID, versionTag string, arch artifacts.Arch) error {
+	// Use a fresh context since we're in singleflight, but carry the
+	// request ID so build logs keep the request_id.
+	ctx := ctxlog.WithRequestID(context.Background(), reqID)
 
-	logger := b.logger.With(zap.String("schematic", schematicID), zap.String("version", versionTag), zap.String("arch", string(arch)))
+	logger := ctxlog.Logger(ctx, b.logger).With(zap.String("schematic", schematicID), zap.String("version", versionTag), zap.String("arch", string(arch)))
 
 	logger.Info("building SPDX bundle")
 
@@ -324,6 +329,8 @@ func (b *Builder) extractSPDXFromInitramfs(bundle *Bundle, bootAsset asset.BootA
 
 // extractExtensionsSPDX extracts SPDX from all extensions in the schematic for a single architecture.
 func (b *Builder) extractExtensionsSPDX(ctx context.Context, bundle *Bundle, schematicData *schematicpkg.Schematic, versionTag string, arch artifacts.Arch) error {
+	logger := ctxlog.Logger(ctx, b.logger)
+
 	availableExtensions, err := b.artifactsManager.GetOfficialExtensions(ctx, versionTag)
 	if err != nil {
 		return fmt.Errorf("failed to get official extensions: %w", err)
@@ -340,7 +347,7 @@ func (b *Builder) extractExtensionsSPDX(ctx context.Context, bundle *Bundle, sch
 		}
 
 		if value.IsZero(extensionRef) {
-			b.logger.Warn("extension not found, skipping SPDX extraction",
+			logger.Warn("extension not found, skipping SPDX extraction",
 				zap.String("extension", extensionName),
 				zap.String("version", versionTag))
 
@@ -350,7 +357,7 @@ func (b *Builder) extractExtensionsSPDX(ctx context.Context, bundle *Bundle, sch
 		// Extract SPDX for the requested architecture
 		files, err := b.artifactsManager.ExtractExtensionSPDX(ctx, arch, extensionRef)
 		if err != nil {
-			b.logger.Warn("failed to extract SPDX from extension",
+			logger.Warn("failed to extract SPDX from extension",
 				zap.String("extension", extensionName),
 				zap.String("arch", string(arch)),
 				zap.Error(err))
@@ -359,7 +366,7 @@ func (b *Builder) extractExtensionsSPDX(ctx context.Context, bundle *Bundle, sch
 		}
 
 		if len(files) == 0 {
-			b.logger.Debug("no SPDX files in extension",
+			logger.Debug("no SPDX files in extension",
 				zap.String("extension", extensionName),
 				zap.String("arch", string(arch)))
 

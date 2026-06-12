@@ -28,6 +28,7 @@ import (
 
 	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx/storage"
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/regtransport"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
@@ -85,7 +86,7 @@ func (s *Storage) Head(ctx context.Context, schematicID, version, arch string) e
 	tag := builder.CacheTag(schematicID, version, arch)
 	taggedRef := s.cacheRepository.Tag(tag)
 
-	s.logger.Debug("heading SPDX bundle", zap.Stringer("ref", taggedRef))
+	ctxlog.Logger(ctx, s.logger).Debug("heading SPDX bundle", zap.Stringer("ref", taggedRef))
 
 	_, err := s.puller.Head(ctx, taggedRef)
 	if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
@@ -104,7 +105,7 @@ func (s *Storage) Get(ctx context.Context, schematicID, version, arch string) (s
 	tag := builder.CacheTag(schematicID, version, arch)
 	taggedRef := s.cacheRepository.Tag(tag)
 
-	s.logger.Debug("getting SPDX bundle", zap.Stringer("ref", taggedRef))
+	ctxlog.Logger(ctx, s.logger).Debug("getting SPDX bundle", zap.Stringer("ref", taggedRef))
 
 	desc, err := s.puller.Head(ctx, taggedRef)
 	if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
@@ -120,12 +121,12 @@ func (s *Storage) Get(ctx context.Context, schematicID, version, arch string) (s
 	// Verify signature
 	err = s.imageSigner.VerifyImage(ctx, digestRef)
 	if err != nil {
-		s.logger.Warn("SPDX bundle signature doesn't validate", zap.Error(err), zap.Stringer("ref", taggedRef))
+		ctxlog.Logger(ctx, s.logger).Warn("SPDX bundle signature doesn't validate", zap.Error(err), zap.Stringer("ref", taggedRef))
 
 		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("SPDX bundle signature verification failed")
 	}
 
-	s.logger.Info("using cached SPDX bundle", zap.Stringer("ref", taggedRef))
+	ctxlog.Logger(ctx, s.logger).Info("using cached SPDX bundle", zap.Stringer("ref", taggedRef))
 
 	imgDesc, err := s.puller.Get(ctx, digestRef)
 	if err != nil {
@@ -164,7 +165,7 @@ func (s *Storage) Put(ctx context.Context, schematicID, version, arch string, da
 	tag := builder.CacheTag(schematicID, version, arch)
 	taggedRef := s.cacheRepository.Tag(tag)
 
-	s.logger.Info("pushing SPDX bundle", zap.Stringer("ref", taggedRef))
+	ctxlog.Logger(ctx, s.logger).Info("pushing SPDX bundle", zap.Stringer("ref", taggedRef))
 
 	// Read all data into memory for the layer
 	content, err := io.ReadAll(data)
@@ -195,7 +196,7 @@ func (s *Storage) Put(ctx context.Context, schematicID, version, arch string, da
 
 	digestRef := s.cacheRepository.Digest(digest.String())
 
-	s.logger.Info("signing SPDX bundle", zap.Stringer("ref", digestRef))
+	ctxlog.Logger(ctx, s.logger).Info("signing SPDX bundle", zap.Stringer("ref", digestRef))
 
 	if err := s.imageSigner.SignImage(ctx, digestRef, s.pusher); err != nil {
 		return fmt.Errorf("error signing SPDX bundle: %w", err)

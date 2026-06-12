@@ -25,6 +25,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/regtransport"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
@@ -101,10 +102,10 @@ func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, req *h
 
 	digest := p.ByName("digest")
 
-	return f.handleExternalRegistry(w, req, img.Name(), schematicID, "blobs", digest)
+	return f.handleExternalRegistry(ctx, w, req, img.Name(), schematicID, "blobs", digest)
 }
 
-func (f *Frontend) handleExternalRegistry(w http.ResponseWriter, req *http.Request, imageName, schematicID, manifestsOrBlobs, tagOrDigest string) error {
+func (f *Frontend) handleExternalRegistry(ctx context.Context, w http.ResponseWriter, req *http.Request, imageName, schematicID, manifestsOrBlobs, tagOrDigest string) error {
 	var redirectURL url.URL
 
 	repo := f.options.InstallerExternalRepository
@@ -120,7 +121,7 @@ func (f *Frontend) handleExternalRegistry(w http.ResponseWriter, req *http.Reque
 
 	// When auth is active, always proxy - redirecting to the backing registry would bypass the auth boundary.
 	if f.options.ProxyInstallerInternalRepository || f.options.AuthProvider != nil {
-		f.logger.Info("proxying manifest/blob", zap.Stringer("location", location))
+		f.reqLogger(ctx).Info("proxying manifest/blob", zap.Stringer("location", location))
 
 		proxy := &httputil.ReverseProxy{
 			Director: func(out *http.Request) {
@@ -140,7 +141,7 @@ func (f *Frontend) handleExternalRegistry(w http.ResponseWriter, req *http.Reque
 		return nil
 	}
 
-	f.logger.Info("redirecting manifest/blob", zap.Stringer("location", location))
+	f.reqLogger(ctx).Info("redirecting manifest/blob", zap.Stringer("location", location))
 
 	w.Header().Add("Location", location.String())
 	w.WriteHeader(http.StatusTemporaryRedirect)
@@ -176,7 +177,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 
 	// if the tag is the digest, or it doesn't look like the version, we just redirect to the external registry
 	if strings.HasPrefix(versionTag, "sha256:") || !strings.HasPrefix(versionTag, "v") {
-		return f.handleExternalRegistry(w, req, img.Name(), schematicID, "manifests", versionTag)
+		return f.handleExternalRegistry(ctx, w, req, img.Name(), schematicID, "manifests", versionTag)
 	}
 
 	imageRepository := f.options.InstallerInternalRepository.Repo(
@@ -186,7 +187,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 	)
 
 	// check if the asset has already been built
-	f.logger.Info(
+	f.reqLogger(ctx).Info(
 		"heading installer image",
 		zap.String("image", img.Name()),
 		zap.String("schematic", schematicID),
@@ -200,7 +201,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 	)
 	if err == nil {
 		// the asset has already been built, so check the signature
-		f.logger.Info(
+		f.reqLogger(ctx).Info(
 			"verifying cached installer image signature",
 			zap.String("image", img.Name()),
 			zap.String("schematic", schematicID),
@@ -211,11 +212,17 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 		signatureErr := f.imageSigner.VerifyImage(ctx, imageRepository.Digest(extDesc.Digest.String()))
 		if signatureErr == nil {
 			// redirect to the external registry, but use the digest directly to avoid tag changes
-			return f.handleExternalRegistry(w, req, img.Name(), schematicID, "manifests", extDesc.Digest.String())
+			return f.handleExternalRegistry(ctx, w, req, img.Name(), schematicID, "manifests", extDesc.Digest.String())
 		}
 
 		// log the signature verification error, but continue to build the image
-		f.logger.Error("error verifying cached image signature", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag), zap.Error(signatureErr))
+		f.reqLogger(ctx).Error(
+			"error verifying cached image signature",
+			zap.String("image", img.Name()),
+			zap.String("schematic", schematicID),
+			zap.String("version", versionTag),
+			zap.Error(signatureErr),
+		)
 	}
 
 	if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
@@ -237,9 +244,12 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 	// build installer images for each architecture, combine them into a single index and push it
 	key := fmt.Sprintf("%s-%s-%s", img.Name(), schematicID, versionTag)
 
+	// carry the request ID into the detached build so build logs keep the request_id.
+	reqID := ctxlog.RequestID(ctx)
+
 	resultCh := f.sf.DoChan(key, func() (any, error) { //nolint:contextcheck
 		// we use here detached context to make sure image is built no matter if the request is canceled
-		return f.buildInstallImage(context.Background(), img, schematic, version, schematicID, versionTag)
+		return f.buildInstallImage(ctxlog.WithRequestID(context.Background(), reqID), img, schematic, version, schematicID, versionTag)
 	})
 
 	var res singleflight.Result
@@ -260,7 +270,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 	}
 
 	// now we can redirect to the external registry
-	return f.handleExternalRegistry(w, req, img.Name(), schematicID, "manifests", manifestHash.String())
+	return f.handleExternalRegistry(ctx, w, req, img.Name(), schematicID, "manifests", manifestHash.String())
 }
 
 func (f *Frontend) resolveLatest(ctx context.Context, schematicID string) (string, error) {
@@ -282,13 +292,13 @@ func (f *Frontend) resolveLatest(ctx context.Context, schematicID string) (strin
 		}
 	}
 
-	f.logger.Info("resolving latest tag to version", zap.String("schematic", schematicID), zap.String("version", versionTag))
+	f.reqLogger(ctx).Info("resolving latest tag to version", zap.String("schematic", schematicID), zap.String("version", versionTag))
 
 	return versionTag, nil
 }
 
 func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, schematic *schematic.Schematic, version semver.Version, schematicID, versionTag string) (v1.Hash, error) {
-	f.logger.Info("building installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
+	f.reqLogger(ctx).Info("building installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
 
 	var imageIndex v1.ImageIndex = empty.Index
 
@@ -326,7 +336,7 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 			})
 	}
 
-	f.logger.Info("pushing installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
+	f.reqLogger(ctx).Info("pushing installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag))
 
 	installerRepo := f.options.InstallerInternalRepository.Repo(
 		f.options.InstallerInternalRepository.RepositoryStr(),
@@ -347,7 +357,7 @@ func (f *Frontend) buildInstallImage(ctx context.Context, img requestedImage, sc
 		return v1.Hash{}, fmt.Errorf("error getting index digest: %w", err)
 	}
 
-	f.logger.Info("signing installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag), zap.Stringer("digest", digest))
+	f.reqLogger(ctx).Info("signing installer image", zap.String("image", img.Name()), zap.String("schematic", schematicID), zap.String("version", versionTag), zap.Stringer("digest", digest))
 
 	if err := f.imageSigner.SignImage(
 		ctx,

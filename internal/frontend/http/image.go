@@ -91,7 +91,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 	if r.URL.Query().Get("filename") != "" {
 		filename = r.URL.Query().Get("filename")
 
-		f.logger.Info("using filename override", zap.String("filename", filename))
+		f.reqLogger(ctx).Info("using filename override", zap.String("filename", filename))
 	}
 
 	asset, err := f.assetBuilder.Build(ctx, prof, version.String(), path, filename)
@@ -119,7 +119,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 			return nil
 		}
 
-		f.logger.Warn("asset does not support redirection, serving directly", zap.Error(err))
+		f.reqLogger(ctx).Warn("asset does not support redirection, serving directly", zap.Error(err))
 	}
 
 	w.Header().Set("Content-Length", strconv.FormatInt(asset.Size(), 10))

@@ -13,6 +13,7 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
@@ -71,8 +72,10 @@ func (s *Factory) Put(ctx context.Context, cfg *schematic.Schematic) (string, er
 		return "", err
 	}
 
+	logger := ctxlog.Logger(ctx, s.logger)
+
 	if err = s.storage.Head(ctx, id); err == nil {
-		s.logger.Info("schematic already exists", zap.String("id", id))
+		logger.Info("schematic already exists", zap.String("id", id))
 
 		s.metricDuplicate.Inc()
 
@@ -88,7 +91,7 @@ func (s *Factory) Put(ctx context.Context, cfg *schematic.Schematic) (string, er
 	if err == nil {
 		s.metricCreate.Inc()
 
-		s.logger.Info("schematic created", zap.String("id", id), zap.Any("customization", cfg.Customization))
+		logger.Info("schematic created", zap.String("id", id), zap.Any("customization", cfg.Customization))
 	}
 
 	return id, err
