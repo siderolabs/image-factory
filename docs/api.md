@@ -64,6 +64,9 @@ customization:
     secureboot: # optional, only applies to SecureBoot images
        # optional, include well-known UEFI certificates into auto-enrollment database (SecureBoot ISO only)
       includeWellKnownCertificates: true
+       # optional, how systemd-boot enrolls SecureBoot keys on first boot: off, manual, if-safe, force
+       # defaults to if-safe (auto-enrolls only in a VM); use force for unattended bare-metal enrollment in setup mode
+      enrollKeys: force
     bootloader: sd-boot # optional, defaults to auto (bootloader chosen by imager), other options: dual-boot, grub
     embeddedMachineConfiguration: | # optional, embedded machine configuration (YAML-encoded)
       apiVersion: v1alpha1

@@ -31,6 +31,8 @@ type Schematic struct {
 }
 
 // Customization represents the Talos image customization.
+//
+//nolint:govet // field order is part of the stable schematic serialization (see ID()), so it cannot be reordered for alignment
 type Customization struct {
 	// EmbeddedMachineConfiguration is the initial embedded machine configuration.
 	EmbeddedMachineConfiguration string `yaml:"embeddedMachineConfiguration,omitempty"`
@@ -73,6 +75,13 @@ type Overlay struct { //nolint:govet
 
 // SecureBootCustomization represents the secure boot options for the image.
 type SecureBootCustomization struct {
+	// EnrollKeys controls how systemd-boot enrolls the SecureBoot keys on first boot
+	// (loader.conf secure-boot-enroll): one of "off", "manual", "if-safe", "force".
+	//
+	// Defaults to "if-safe", which auto-enrolls keys only inside a virtual machine.
+	// Use "force" for unattended enrollment on bare-metal when the UEFI firmware is
+	// in setup mode.
+	EnrollKeys string `yaml:"enrollKeys,omitempty"`
 	// Include well-known UEFI certificates in the auto-enrollment database.
 	IncludeWellKnownCertificates bool `yaml:"includeWellKnownCertificates,omitempty"`
 }

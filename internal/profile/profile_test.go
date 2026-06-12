@@ -973,3 +973,68 @@ func TestInstallerProfile(t *testing.T) {
 		})
 	}
 }
+
+func TestEnhanceFromSchematicEnrollKeys(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	secureBootService, err := secureboot.NewService(secureboot.Options{
+		Enabled:         true,
+		SigningKeyPath:  "sign-key.pem",
+		SigningCertPath: "sign-cert.pem",
+		PCRKeyPath:      "pcr-key.pem",
+	})
+	require.NoError(t, err)
+
+	base := func(name string) profile.Profile {
+		p := profile.Default[name]
+		p.Arch = "amd64"
+
+		return p.DeepCopy()
+	}
+
+	const version = "v1.13.0"
+
+	enrollKeysSchematic := func(value string) *schematic.Schematic {
+		return &schematic.Schematic{
+			Customization: schematic.Customization{
+				SecureBoot: schematic.SecureBootCustomization{EnrollKeys: value},
+			},
+		}
+	}
+
+	t.Run("force on disk image sets image options", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := imageprofile.EnhanceFromSchematic(ctx, base("secureboot-"+constants.PlatformMetal), enrollKeysSchematic("force"), mockArtifactProducer{}, secureBootService, version)
+		require.NoError(t, err)
+		require.NotNil(t, out.Output.ImageOptions)
+		require.Equal(t, profile.SDBootEnrollKeysForce, out.Output.ImageOptions.SDBootEnrollKeys)
+	})
+
+	t.Run("force on ISO sets ISO options", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := imageprofile.EnhanceFromSchematic(ctx, base("secureboot-iso"), enrollKeysSchematic("force"), mockArtifactProducer{}, secureBootService, version)
+		require.NoError(t, err)
+		require.NotNil(t, out.Output.ISOOptions)
+		require.Equal(t, profile.SDBootEnrollKeysForce, out.Output.ISOOptions.SDBootEnrollKeys)
+	})
+
+	t.Run("invalid value is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := imageprofile.EnhanceFromSchematic(ctx, base("secureboot-"+constants.PlatformMetal), enrollKeysSchematic("bogus"), mockArtifactProducer{}, secureBootService, version)
+		require.Error(t, err)
+	})
+
+	t.Run("ignored without secureboot", func(t *testing.T) {
+		t.Parallel()
+
+		out, err := imageprofile.EnhanceFromSchematic(ctx, base(constants.PlatformMetal), enrollKeysSchematic("force"), mockArtifactProducer{}, secureBootService, version)
+		require.NoError(t, err)
+		require.NotNil(t, out.Output.ImageOptions)
+		require.Equal(t, profile.SDBootEnrollKeysIfSafe, out.Output.ImageOptions.SDBootEnrollKeys)
+	})
+}

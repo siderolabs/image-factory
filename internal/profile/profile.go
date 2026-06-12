@@ -359,6 +359,30 @@ func EnhanceFromSchematic(
 		}
 
 		prof.Input.SecureBoot = &secureBootAssetsCopy
+
+		if enroll := schematic.Customization.SecureBoot.EnrollKeys; enroll != "" {
+			enrollKeys, err := profile.SDBootEnrollKeysString(enroll)
+			if err != nil {
+				return prof, xerrors.NewTaggedf[InvalidErrorTag]("invalid secureboot enrollKeys value %q: %w", enroll, err)
+			}
+
+			// secure-boot-enroll only applies to the ESP loader.conf, i.e. the ISO and
+			// disk image outputs; it is meaningless for installer/UKI outputs.
+			switch prof.Output.Kind { //nolint:exhaustive
+			case profile.OutKindISO:
+				if prof.Output.ISOOptions == nil {
+					prof.Output.ISOOptions = &profile.ISOOptions{}
+				}
+
+				prof.Output.ISOOptions.SDBootEnrollKeys = enrollKeys
+			case profile.OutKindImage:
+				if prof.Output.ImageOptions == nil {
+					prof.Output.ImageOptions = &profile.ImageOptions{}
+				}
+
+				prof.Output.ImageOptions.SDBootEnrollKeys = enrollKeys
+			}
+		}
 	}
 
 	if schematic.Overlay.Name != "" && !quirks.New(versionTag).SupportsOverlay() {
