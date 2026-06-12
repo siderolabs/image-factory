@@ -9,17 +9,21 @@ package integration_test
 import (
 	"bufio"
 	"context"
+	"encoding/hex"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
+	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 func downloadPXE(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string) string {
@@ -197,4 +201,37 @@ func testPXEFrontend(ctx context.Context, t *testing.T, baseURL, pxeURL string) 
 			})
 		})
 	}
+
+	t.Run("caching", func(t *testing.T) {
+		t.Parallel()
+
+		c, err := client.New(baseURL, clientAuthCredentials()...)
+		require.NoError(t, err)
+
+		// Use a fresh schematic with a random kernel arg so the PXE cmdline asset
+		// is guaranteed to be cold on the first request.
+		randomKernelArg := hex.EncodeToString(randomBytes(t, 32))
+
+		schematicID := createSchematicGetID(ctx, t, c, schematic.Schematic{
+			Customization: schematic.Customization{
+				ExtraKernelArgs: []string{randomKernelArg},
+			},
+		})
+
+		const talosVersion = "v1.11.0"
+
+		start := time.Now()
+		downloadPXE(ctx, t, baseURL, schematicID, talosVersion, "metal-amd64")
+		firstDuration := time.Since(start)
+
+		start = time.Now()
+		downloadPXE(ctx, t, baseURL, schematicID, talosVersion, "metal-amd64")
+		secondDuration := time.Since(start)
+
+		t.Logf("PXE caching: first=%s second=%s", firstDuration, secondDuration)
+
+		assert.Less(t, 2*secondDuration, firstDuration,
+			"second PXE request should be significantly faster than the first (caching): first=%s second=%s",
+			firstDuration, secondDuration)
+	})
 }
