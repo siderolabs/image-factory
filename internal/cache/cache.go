@@ -2,9 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package cache provides a capacity-bounded TTL cache with Prometheus metrics
-// and singleflight de-duplication. Consumers compose their own value semantics
-// (negative caching, optional wrapping, etc.) on top of the primitive.
+// Package cache provides reusable in-memory caching primitives.
+//
+// Cache is a capacity-bounded TTL cache with Prometheus metrics and
+// singleflight de-duplication; consumers compose their own value semantics
+// (negative caching, optional wrapping, etc.) on top of it.
+//
+// VersionedCache lazily fetches and caches lists of values keyed by a version
+// tag, de-duplicating concurrent loads and respecting context cancellation.
 package cache
 
 import (
