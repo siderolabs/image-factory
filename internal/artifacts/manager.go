@@ -25,6 +25,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/siderolabs/image-factory/internal/cache"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
@@ -39,14 +40,9 @@ type Manager struct { //nolint:govet
 
 	sf singleflight.Group
 
-	officialExtensionsMu sync.Mutex
-	officialExtensions   map[string][]ExtensionRef
-
-	officialOverlaysMu sync.Mutex
-	officialOverlays   map[string][]OverlayRef
-
-	talosctlTuplesMu sync.Mutex
-	talosctlTuples   map[string][]TalosctlTuple
+	officialExtensions *cache.SingleFlightCache[[]ExtensionRef]
+	officialOverlays   *cache.SingleFlightCache[[]OverlayRef]
+	talosctlTuples     *cache.SingleFlightCache[[]TalosctlTuple]
 
 	talosVersionsMu        sync.Mutex
 	talosVersions          []semver.Version
@@ -96,14 +92,28 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 		}
 	}
 
-	return &Manager{
+	m := &Manager{
 		options:        options,
 		storagePath:    tmpDir,
 		schematicsPath: schematicsPath,
 		logger:         logger,
 		imageRegistry:  imageRegistry,
 		pullers:        pullers,
-	}, nil
+	}
+
+	m.officialExtensions = cache.NewSingleFlightCache(func(tag string) ([]ExtensionRef, error) {
+		return m.fetchExtensionList(m.options.ExtensionManifestImage, tag)
+	})
+
+	m.officialOverlays = cache.NewSingleFlightCache(func(tag string) ([]OverlayRef, error) {
+		return m.fetchOverlayList(tag)
+	})
+
+	m.talosctlTuples = cache.NewSingleFlightCache(func(tag string) ([]TalosctlTuple, error) {
+		return m.fetchTalosctlTuples(tag)
+	})
+
+	return m, nil
 }
 
 // Close the manager.
@@ -199,77 +209,23 @@ func (m *Manager) GetTalosVersions(ctx context.Context) ([]semver.Version, error
 }
 
 // GetOfficialExtensions returns a list of Talos extensions per Talos version available.
-//
-//nolint:dupl
 func (m *Manager) GetOfficialExtensions(ctx context.Context, versionString string) ([]ExtensionRef, error) {
 	tag, err := m.parseTag(ctx, versionString)
 	if err != nil {
 		return nil, err
 	}
 
-	m.officialExtensionsMu.Lock()
-	extensions, ok := m.officialExtensions[tag]
-	m.officialExtensionsMu.Unlock()
-
-	if ok {
-		return extensions, nil
-	}
-
-	resultCh := m.sf.DoChan("extensions-"+tag, func() (any, error) { //nolint:contextcheck
-		return nil, m.fetchOfficialExtensions(tag)
-	})
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case result := <-resultCh:
-		if result.Err != nil {
-			return nil, result.Err
-		}
-	}
-
-	m.officialExtensionsMu.Lock()
-	extensions = m.officialExtensions[tag]
-	m.officialExtensionsMu.Unlock()
-
-	return extensions, nil
+	return m.officialExtensions.Get(ctx, tag)
 }
 
 // GetOfficialOverlays returns a list of overlays per Talos version available.
-//
-//nolint:dupl
 func (m *Manager) GetOfficialOverlays(ctx context.Context, versionString string) ([]OverlayRef, error) {
 	tag, err := m.parseTag(ctx, versionString)
 	if err != nil {
 		return nil, err
 	}
 
-	m.officialOverlaysMu.Lock()
-	overlays, ok := m.officialOverlays[tag]
-	m.officialOverlaysMu.Unlock()
-
-	if ok {
-		return overlays, nil
-	}
-
-	resultCh := m.sf.DoChan("overlays-"+tag, func() (any, error) { //nolint:contextcheck
-		return nil, m.fetchOfficialOverlays(tag)
-	})
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case result := <-resultCh:
-		if result.Err != nil {
-			return nil, result.Err
-		}
-	}
-
-	m.officialOverlaysMu.Lock()
-	overlays = m.officialOverlays[tag]
-	m.officialOverlaysMu.Unlock()
-
-	return overlays, nil
+	return m.officialOverlays.Get(ctx, tag)
 }
 
 // GetInstallerImage pulls and stores in OCI layout installer-base image.
@@ -424,44 +380,17 @@ func (m *Manager) GetTalosctlImage(ctx context.Context, versionString string) (s
 }
 
 // GetTalosctlTuples returns a list of Talosctl tuples for the given version.
-//
-//nolint:dupl
 func (m *Manager) GetTalosctlTuples(ctx context.Context, versionString string) ([]TalosctlTuple, error) {
 	tag, err := m.parseTag(ctx, versionString)
 	if err != nil {
 		return nil, err
 	}
 
-	m.talosctlTuplesMu.Lock()
-	tuples, ok := m.talosctlTuples[tag]
-	m.talosctlTuplesMu.Unlock()
-
-	if ok {
-		return tuples, nil
-	}
-
 	if !quirks.New(versionString).SupportsFactoryTalosctlDownload() {
-		return tuples, nil
+		return nil, nil
 	}
 
-	resultCh := m.sf.DoChan("tuples-"+tag, func() (any, error) { //nolint:contextcheck
-		return nil, m.fetchTalosctlTuples(tag)
-	})
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case result := <-resultCh:
-		if result.Err != nil {
-			return nil, result.Err
-		}
-	}
-
-	m.talosctlTuplesMu.Lock()
-	tuples = m.talosctlTuples[tag]
-	m.talosctlTuplesMu.Unlock()
-
-	return tuples, nil
+	return m.talosctlTuples.Get(ctx, tag)
 }
 
 func (m *Manager) parseTag(ctx context.Context, versionString string) (string, error) {

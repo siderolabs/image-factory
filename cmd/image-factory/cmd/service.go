@@ -78,7 +78,9 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	defer remotewrap.ShutdownTransport()
 
-	artifactsManager, err := buildArtifactsManager(logger, opts)
+	// artifact fetches intentionally run on their own detached, timeout-bound contexts,
+	// so there's no need to pass context here.
+	artifactsManager, err := buildArtifactsManager(logger, opts) //nolint:contextcheck
 	if err != nil {
 		return err
 	}
