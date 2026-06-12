@@ -131,10 +131,10 @@ type overlaysDescription struct {
 	Digest string `yaml:"digest"`
 }
 
-func (m *Manager) fetchOfficialExtensions(tag string) error {
+func (m *Manager) fetchExtensionList(image, tag string) ([]ExtensionRef, error) {
 	var extensions []ExtensionRef
 
-	if err := m.fetchImageByTag(m.options.ExtensionManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	err := m.fetchImageByTag(image, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		extensions, extractErr = extractExtensionList(r)
@@ -143,27 +143,15 @@ func (m *Manager) fetchOfficialExtensions(tag string) error {
 		}
 
 		return extractErr
-	})); err != nil {
-		return err
-	}
+	}))
 
-	m.officialExtensionsMu.Lock()
-
-	if m.officialExtensions == nil {
-		m.officialExtensions = make(map[string][]ExtensionRef)
-	}
-
-	m.officialExtensions[tag] = extensions
-
-	m.officialExtensionsMu.Unlock()
-
-	return nil
+	return extensions, err
 }
 
-func (m *Manager) fetchOfficialOverlays(tag string) error {
+func (m *Manager) fetchOverlayList(tag string) ([]OverlayRef, error) {
 	var overlays []OverlayRef
 
-	if err := m.fetchImageByTag(m.options.OverlayManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	err := m.fetchImageByTag(m.options.OverlayManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		overlays, extractErr = extractOverlayList(r)
@@ -172,27 +160,15 @@ func (m *Manager) fetchOfficialOverlays(tag string) error {
 		}
 
 		return extractErr
-	})); err != nil {
-		return err
-	}
+	}))
 
-	m.officialOverlaysMu.Lock()
-
-	if m.officialOverlays == nil {
-		m.officialOverlays = make(map[string][]OverlayRef)
-	}
-
-	m.officialOverlays[tag] = overlays
-
-	m.officialOverlaysMu.Unlock()
-
-	return nil
+	return overlays, err
 }
 
-func (m *Manager) fetchTalosctlTuples(tag string) error {
+func (m *Manager) fetchTalosctlTuples(tag string) ([]TalosctlTuple, error) {
 	var talosctlTuples []TalosctlTuple
 
-	if err := m.fetchImageByTag(m.options.TalosctlImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	err := m.fetchImageByTag(m.options.TalosctlImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		talosctlTuples, extractErr = extractTalosctlTuples(r)
@@ -201,21 +177,9 @@ func (m *Manager) fetchTalosctlTuples(tag string) error {
 		}
 
 		return extractErr
-	})); err != nil {
-		return err
-	}
+	}))
 
-	m.talosctlTuplesMu.Lock()
-
-	if m.talosctlTuples == nil {
-		m.talosctlTuples = make(map[string][]TalosctlTuple)
-	}
-
-	m.talosctlTuples[tag] = talosctlTuples
-
-	m.talosctlTuplesMu.Unlock()
-
-	return nil
+	return talosctlTuples, err
 }
 
 //nolint:gocognit
