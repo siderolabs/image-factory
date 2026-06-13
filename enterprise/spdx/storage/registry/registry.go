@@ -83,7 +83,7 @@ func NewStorage(logger *zap.Logger, options Options) (*Storage, error) {
 
 // Head checks if an SPDX bundle exists for the given schematic, version and architecture.
 func (s *Storage) Head(ctx context.Context, schematicID, version, arch string) error {
-	tag := builder.CacheTag(schematicID, version, arch)
+	tag := builder.Hash(schematicID, version, arch)
 	taggedRef := s.cacheRepository.Tag(tag)
 
 	ctxlog.Logger(ctx, s.logger).Debug("heading SPDX bundle", zap.Stringer("ref", taggedRef))
@@ -102,7 +102,7 @@ func (s *Storage) Head(ctx context.Context, schematicID, version, arch string) e
 
 // Get retrieves an SPDX bundle for the given schematic, version and architecture.
 func (s *Storage) Get(ctx context.Context, schematicID, version, arch string) (storage.Bundle, error) {
-	tag := builder.CacheTag(schematicID, version, arch)
+	tag := builder.Hash(schematicID, version, arch)
 	taggedRef := s.cacheRepository.Tag(tag)
 
 	ctxlog.Logger(ctx, s.logger).Debug("getting SPDX bundle", zap.Stringer("ref", taggedRef))
@@ -162,7 +162,7 @@ func (s *Storage) Get(ctx context.Context, schematicID, version, arch string) (s
 
 // Put stores an SPDX bundle.
 func (s *Storage) Put(ctx context.Context, schematicID, version, arch string, data io.Reader, size int64) error {
-	tag := builder.CacheTag(schematicID, version, arch)
+	tag := builder.Hash(schematicID, version, arch)
 	taggedRef := s.cacheRepository.Tag(tag)
 
 	ctxlog.Logger(ctx, s.logger).Info("pushing SPDX bundle", zap.Stringer("ref", taggedRef))

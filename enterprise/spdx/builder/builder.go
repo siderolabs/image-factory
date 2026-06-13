@@ -107,7 +107,7 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 	}
 
 	// Build the bundle using singleflight to prevent duplicate work
-	cacheKey := CacheTag(schematicID, versionTag, string(arch))
+	cacheKey := Hash(schematicID, versionTag, string(arch))
 
 	// carry the request ID into the detached build so its logs keep the request_id.
 	reqID := ctxlog.RequestID(ctx)
