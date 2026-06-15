@@ -55,6 +55,7 @@ type VEXSource interface {
 // It must enforce ownership before returning bytes.
 type SPDXSource interface {
 	Build(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (io.ReadCloser, error)
+	PayloadHash(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (string, error)
 }
 
 // Options configures the Builder.
@@ -199,9 +200,15 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag, arch strin
 }
 
 func (b *Builder) scan(ctx context.Context, schematicID, versionTag, arch string) (*models.Document, *sbom.SBOM, error) {
-	key := cacheKey(schematicID, versionTag, arch)
+	// Derive the cache key from only the inputs that affect the SBOM content,
+	// so schematics that share the same extension list, version and arch
+	// reuse scan results.
+	sbomHash, err := b.spdxSource.PayloadHash(ctx, schematicID, versionTag, artifacts.Arch(arch))
+	if err != nil {
+		return nil, nil, err
+	}
 
-	if item := b.c.TTL.Get(key); item != nil && !item.IsExpired() {
+	if item := b.c.TTL.Get(sbomHash); item != nil && !item.IsExpired() {
 		entry := item.Value()
 
 		return entry.document, entry.sbom, nil
@@ -215,8 +222,8 @@ func (b *Builder) scan(ctx context.Context, schematicID, versionTag, arch string
 	// carry the request ID into the detached scan so its logs keep the request_id.
 	reqID := ctxlog.RequestID(ctx)
 
-	resultCh := b.c.SF.DoChan(key, func() (any, error) { //nolint:contextcheck
-		return b.scanAndCache(reqID, username, schematicID, versionTag, arch, key)
+	resultCh := b.c.SF.DoChan(sbomHash, func() (any, error) { //nolint:contextcheck
+		return b.scanAndCache(reqID, username, schematicID, versionTag, arch, sbomHash)
 	})
 
 	select {
@@ -234,10 +241,6 @@ func (b *Builder) scan(ctx context.Context, schematicID, versionTag, arch string
 
 		return entry.document, entry.sbom, nil
 	}
-}
-
-func cacheKey(schematicID, versionTag, arch string) string {
-	return schematicID + "|" + versionTag + "|" + arch
 }
 
 // scanAndCache runs under singleflight with a detached context.

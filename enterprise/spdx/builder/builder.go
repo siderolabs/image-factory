@@ -79,6 +79,22 @@ func NewBuilder(
 	}
 }
 
+// PayloadHash returns the SBOM cache key for the given schematic/version/arch.
+//
+// It fetches the schematic to extract the extension list, then computes a
+// content hash that reflects only the inputs that affect the SPDX bundle
+// content. Callers should use this hash as a cache key so that schematics
+// differing only in non-SBOM fields (kernel args, config, etc.) share
+// cached bundles.
+func (b *Builder) PayloadHash(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (string, error) {
+	sc, err := b.schematicFactory.Get(ctx, schematicID, b.authProvider)
+	if err != nil {
+		return "", fmt.Errorf("failed to get schematic: %w", err)
+	}
+
+	return Hash(sc.Customization.SystemExtensions.OfficialExtensions, versionTag, string(arch)), nil
+}
+
 // Build returns an SPDX bundle, building and caching if necessary.
 func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (storage.Bundle, error) {
 	// Normalize version tag
@@ -91,29 +107,32 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 		return nil, fmt.Errorf("invalid version: %w", err)
 	}
 
-	// Check cache first
-	if err := b.storage.Head(ctx, schematicID, versionTag, string(arch)); err == nil {
-		ctxlog.Logger(ctx, b.logger).Debug("SPDX bundle cache hit", zap.String("schematic", schematicID), zap.String("version", versionTag), zap.String("arch", string(arch)))
-
-		return b.storage.Get(ctx, schematicID, versionTag, string(arch))
-	}
-
-	// Verify access and fetch schematic data before entering singleflight.
-	// buildBundle runs with context.Background() (request context may be canceled),
-	// so ownership enforcement must happen here with the live request context.
+	// Fetch schematic first: we need the extension list to derive the cache key.
+	// Ownership enforcement happens here with the live request context, before
+	// entering singleflight which uses a detached context.
 	sc, err := b.schematicFactory.Get(ctx, schematicID, b.authProvider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schematic: %w", err)
 	}
 
-	// Build the bundle using singleflight to prevent duplicate work
-	cacheKey := CacheTag(schematicID, versionTag, string(arch))
+	// Compute cache key from only the inputs that affect the SBOM content
+	// (extensions list, version, architecture), so that schematics differing
+	// in other fields share the same cached bundle.
+	sbomHash := Hash(sc.Customization.SystemExtensions.OfficialExtensions, versionTag, string(arch))
 
+	// Check cache first
+	if err := b.storage.Head(ctx, sbomHash); err == nil {
+		ctxlog.Logger(ctx, b.logger).Debug("SPDX bundle cache hit", zap.String("schematic", schematicID), zap.String("version", versionTag), zap.String("arch", string(arch)))
+
+		return b.storage.Get(ctx, sbomHash)
+	}
+
+	// Build the bundle using singleflight to prevent duplicate work
 	// carry the request ID into the detached build so its logs keep the request_id.
 	reqID := ctxlog.RequestID(ctx)
 
-	resultCh := b.sf.DoChan(cacheKey, func() (any, error) { //nolint:contextcheck
-		return nil, b.buildBundle(reqID, sc, schematicID, versionTag, arch)
+	resultCh := b.sf.DoChan(sbomHash, func() (any, error) { //nolint:contextcheck
+		return nil, b.buildBundle(reqID, sc, schematicID, sbomHash, versionTag, arch)
 	})
 
 	select {
@@ -125,14 +144,14 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 		}
 
 		// Retrieve from cache after building
-		return b.storage.Get(ctx, schematicID, versionTag, string(arch))
+		return b.storage.Get(ctx, sbomHash)
 	}
 }
 
 // buildBundle creates and stores an SPDX bundle for a single architecture.
 // sc must be pre-fetched by the caller (Build) using the live request context,
 // since this function runs inside singleflight with context.Background().
-func (b *Builder) buildBundle(reqID string, sc *schematicpkg.Schematic, schematicID, versionTag string, arch artifacts.Arch) error {
+func (b *Builder) buildBundle(reqID string, sc *schematicpkg.Schematic, schematicID, sbomHash, versionTag string, arch artifacts.Arch) error {
 	// Use a fresh context since we're in singleflight, but carry the
 	// request ID so build logs keep the request_id.
 	ctx := ctxlog.WithRequestID(context.Background(), reqID)
@@ -173,8 +192,8 @@ func (b *Builder) buildBundle(reqID string, sc *schematicpkg.Schematic, schemati
 		return fmt.Errorf("failed to create SPDX JSON document: %w", err)
 	}
 
-	// Store the bundle
-	if err := b.storage.Put(ctx, schematicID, versionTag, string(arch), jsonReader, size); err != nil {
+	// Store the bundle keyed by the SBOM content hash
+	if err := b.storage.Put(ctx, sbomHash, jsonReader, size); err != nil {
 		return fmt.Errorf("failed to store SPDX bundle: %w", err)
 	}
 

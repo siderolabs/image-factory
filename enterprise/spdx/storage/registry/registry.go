@@ -26,7 +26,6 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 
-	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx/storage"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/image/signer"
@@ -81,16 +80,15 @@ func NewStorage(logger *zap.Logger, options Options) (*Storage, error) {
 	return s, nil
 }
 
-// Head checks if an SPDX bundle exists for the given schematic, version and architecture.
-func (s *Storage) Head(ctx context.Context, schematicID, version, arch string) error {
-	tag := builder.CacheTag(schematicID, version, arch)
-	taggedRef := s.cacheRepository.Tag(tag)
+// Head checks if an SPDX bundle exists for the given cache tag.
+func (s *Storage) Head(ctx context.Context, cacheTag string) error {
+	taggedRef := s.cacheRepository.Tag(cacheTag)
 
 	ctxlog.Logger(ctx, s.logger).Debug("heading SPDX bundle", zap.Stringer("ref", taggedRef))
 
 	_, err := s.puller.Head(ctx, taggedRef)
 	if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
-		return xerrors.NewTaggedf[storage.ErrNotFoundTag]("SPDX bundle for schematic %q version %q arch %q not found", schematicID, version, arch)
+		return xerrors.NewTaggedf[storage.ErrNotFoundTag]("SPDX bundle not found for tag %q", cacheTag)
 	}
 
 	if err != nil {
@@ -100,16 +98,15 @@ func (s *Storage) Head(ctx context.Context, schematicID, version, arch string) e
 	return nil
 }
 
-// Get retrieves an SPDX bundle for the given schematic, version and architecture.
-func (s *Storage) Get(ctx context.Context, schematicID, version, arch string) (storage.Bundle, error) {
-	tag := builder.CacheTag(schematicID, version, arch)
-	taggedRef := s.cacheRepository.Tag(tag)
+// Get retrieves an SPDX bundle for the given cache tag.
+func (s *Storage) Get(ctx context.Context, cacheTag string) (storage.Bundle, error) {
+	taggedRef := s.cacheRepository.Tag(cacheTag)
 
 	ctxlog.Logger(ctx, s.logger).Debug("getting SPDX bundle", zap.Stringer("ref", taggedRef))
 
 	desc, err := s.puller.Head(ctx, taggedRef)
 	if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
-		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("SPDX bundle for schematic %q version %q arch %q not found", schematicID, version, arch)
+		return nil, xerrors.NewTaggedf[storage.ErrNotFoundTag]("SPDX bundle not found for tag %q", cacheTag)
 	}
 
 	if err != nil {
@@ -161,9 +158,8 @@ func (s *Storage) Get(ctx context.Context, schematicID, version, arch string) (s
 }
 
 // Put stores an SPDX bundle.
-func (s *Storage) Put(ctx context.Context, schematicID, version, arch string, data io.Reader, size int64) error {
-	tag := builder.CacheTag(schematicID, version, arch)
-	taggedRef := s.cacheRepository.Tag(tag)
+func (s *Storage) Put(ctx context.Context, cacheTag string, data io.Reader, size int64) error {
+	taggedRef := s.cacheRepository.Tag(cacheTag)
 
 	ctxlog.Logger(ctx, s.logger).Info("pushing SPDX bundle", zap.Stringer("ref", taggedRef))
 

@@ -14,15 +14,19 @@ import (
 )
 
 // Storage is the SPDX bundle storage interface.
+//
+// cacheTag is a content-hash derived from the inputs that determine the
+// SPDX bundle content (extension list, version, architecture). It is
+// computed by the caller using builder.Hash.
 type Storage interface {
-	// Head checks if a bundle exists for the given schematic, version and architecture.
-	Head(ctx context.Context, schematicID, version, arch string) error
+	// Head checks if a bundle exists for the given cache tag.
+	Head(ctx context.Context, cacheTag string) error
 
-	// Get retrieves a bundle for the given schematic, version and architecture.
-	Get(ctx context.Context, schematicID, version, arch string) (Bundle, error)
+	// Get retrieves a bundle for the given cache tag.
+	Get(ctx context.Context, cacheTag string) (Bundle, error)
 
-	// Put stores a bundle for the given schematic, version and architecture.
-	Put(ctx context.Context, schematicID, version, arch string, data io.Reader, size int64) error
+	// Put stores a bundle for the given cache tag.
+	Put(ctx context.Context, cacheTag string, data io.Reader, size int64) error
 }
 
 // Bundle represents a stored SPDX bundle that can be read.

@@ -23,20 +23,32 @@ import (
 	ifconstants "github.com/siderolabs/image-factory/pkg/constants"
 )
 
-func TestCacheTag(t *testing.T) {
+func TestHash(t *testing.T) {
 	t.Parallel()
 
-	tag := builder.CacheTag("schematic123", "v1.13.0", "amd64")
+	base := builder.Hash([]string{"ext1", "ext2"}, "v1.13.0", "amd64")
 
-	assert.True(t, strings.HasPrefix(tag, "spdx-"), "got %q", tag)
-	assert.Contains(t, tag, "schematic123")
-	assert.Contains(t, tag, "v1.13.0")
-	assert.Contains(t, tag, "amd64")
+	// The hash is the OCI cache tag, so it must always be valid (hex, no '+').
+	assert.NotContains(t, base, "+")
 
-	// `+` must be sanitized for OCI tag compatibility.
-	tagWithPlus := builder.CacheTag("schematic", "v1.13.0+rc.0", "amd64")
-	assert.NotContains(t, tagWithPlus, "+")
-	assert.Contains(t, tagWithPlus, "v1.13.0-rc.0")
+	// Deterministic for the same inputs.
+	assert.Equal(t, base, builder.Hash([]string{"ext1", "ext2"}, "v1.13.0", "amd64"))
+
+	// Extension order does not matter (sorting is internal).
+	assert.Equal(
+		t,
+		builder.Hash([]string{"ext2", "ext1"}, "v1.13.0", "amd64"),
+		builder.Hash([]string{"ext1", "ext2"}, "v1.13.0", "amd64"),
+	)
+
+	// Sensitive to distinct inputs so different bundles never collide.
+	assert.NotEqual(t, base, builder.Hash([]string{"ext1", "ext3"}, "v1.13.0", "amd64"))
+	assert.NotEqual(t, base, builder.Hash([]string{"ext1", "ext2"}, "v1.13.1", "amd64"))
+	assert.NotEqual(t, base, builder.Hash([]string{"ext1", "ext2"}, "v1.13.0", "arm64"))
+
+	// Empty extension list is valid and produces a consistent hash.
+	empty := builder.Hash([]string{}, "v1.13.0", "amd64")
+	assert.Equal(t, empty, builder.Hash([]string{}, "v1.13.0", "amd64"))
 }
 
 func TestBundleToJSON_DocumentNamespace(t *testing.T) {

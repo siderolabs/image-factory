@@ -78,6 +78,12 @@ type VEXSource interface {
 // so the SBOM extraction and access control live in one place.
 type SPDXSource interface {
 	Build(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (io.ReadCloser, error)
+
+	// PayloadHash returns a content-hash describing the inputs that determine
+	// the SPDX bundle content (extension list, version, architecture). Schematics
+	// with the same SBOM-relevant inputs share the same hash. Callers should use
+	// this hash as a cache key.
+	PayloadHash(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (string, error)
 }
 
 // ScannerOptions holds configuration options for the Scanner frontend.
