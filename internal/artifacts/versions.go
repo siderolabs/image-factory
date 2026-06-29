@@ -137,7 +137,7 @@ func (m *Manager) fetchExtensionList(image, tag string) ([]ExtensionRef, error) 
 	err := m.fetchImageByTag(image, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
-		extensions, extractErr = extractExtensionList(r)
+		extensions, extractErr = extractExtensionList(r, m.imageRegistry)
 		if extractErr == nil {
 			m.logger.Info("extracted the image digests", zap.Int("count", len(extensions)))
 		}
@@ -183,7 +183,7 @@ func (m *Manager) fetchTalosctlTuples(tag string) ([]TalosctlTuple, error) {
 }
 
 //nolint:gocognit
-func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
+func extractExtensionList(r io.Reader, imageRegistry name.Registry) ([]ExtensionRef, error) {
 	var extensions []ExtensionRef
 
 	tr := tar.NewReader(r)
@@ -223,6 +223,8 @@ func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse tagged reference %s: %w", tagged, err)
 				}
+
+				taggedRef = imageRegistry.Repo(taggedRef.RepositoryStr()).Tag(taggedRef.TagStr())
 
 				extensions = append(extensions, ExtensionRef{
 					TaggedReference: taggedRef,

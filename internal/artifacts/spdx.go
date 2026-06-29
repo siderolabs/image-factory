@@ -38,7 +38,7 @@ type SPDXFile struct {
 
 // ExtractExtensionSPDX extracts SPDX files from an extension image.
 func (m *Manager) ExtractExtensionSPDX(ctx context.Context, arch Arch, ref ExtensionRef) ([]SPDXFile, error) {
-	imageRef := m.imageRegistry.Repo(ref.TaggedReference.RepositoryStr()).Digest(ref.Digest)
+	imageRef := ref.TaggedReference.Digest(ref.Digest)
 
 	var files []SPDXFile
 

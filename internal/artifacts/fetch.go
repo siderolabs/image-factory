@@ -118,7 +118,7 @@ func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, i
 
 	var nameOptions []name.Option
 
-	if m.options.InsecureImageRegistry {
+	if digestRef.Scheme() == "http" {
 		nameOptions = append(nameOptions, name.Insecure)
 	}
 
@@ -175,7 +175,7 @@ func (m *Manager) extractOverlay(arch Arch, ref OverlayRef) error {
 
 // fetchExtensionImage fetches a specified extension image and exports it to the storage as OCI.
 func (m *Manager) fetchExtensionImage(arch Arch, ref ExtensionRef, destPath string) error {
-	imageRef := m.imageRegistry.Repo(ref.TaggedReference.RepositoryStr()).Digest(ref.Digest)
+	imageRef := ref.TaggedReference.Digest(ref.Digest)
 
 	if err := m.fetchImageByDigest(imageRef, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
 		return err
