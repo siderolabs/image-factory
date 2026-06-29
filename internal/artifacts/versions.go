@@ -20,6 +20,8 @@ import (
 	"github.com/siderolabs/gen/xslices"
 	"go.uber.org/zap"
 	"go.yaml.in/yaml/v4"
+
+	"github.com/siderolabs/image-factory/internal/artifacts/imagehandler"
 )
 
 func (m *Manager) fetchTalosVersions() (any, error) {
@@ -134,7 +136,7 @@ type overlaysDescription struct {
 func (m *Manager) fetchExtensionList(image, tag string) ([]ExtensionRef, error) {
 	var extensions []ExtensionRef
 
-	err := m.fetchImageByTag(image, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	err := m.fetchImageByTag(image, tag, ArchAmd64, imagehandler.Export(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		extensions, extractErr = extractExtensionList(r, m.imageRegistry)
@@ -151,7 +153,7 @@ func (m *Manager) fetchExtensionList(image, tag string) ([]ExtensionRef, error) 
 func (m *Manager) fetchOverlayList(tag string) ([]OverlayRef, error) {
 	var overlays []OverlayRef
 
-	err := m.fetchImageByTag(m.options.OverlayManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	err := m.fetchImageByTag(m.options.OverlayManifestImage, tag, ArchAmd64, imagehandler.Export(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		overlays, extractErr = extractOverlayList(r)
@@ -168,7 +170,7 @@ func (m *Manager) fetchOverlayList(tag string) ([]OverlayRef, error) {
 func (m *Manager) fetchTalosctlTuples(tag string) ([]TalosctlTuple, error) {
 	var talosctlTuples []TalosctlTuple
 
-	err := m.fetchImageByTag(m.options.TalosctlImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	err := m.fetchImageByTag(m.options.TalosctlImage, tag, ArchAmd64, imagehandler.Export(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		talosctlTuples, extractErr = extractTalosctlTuples(r)

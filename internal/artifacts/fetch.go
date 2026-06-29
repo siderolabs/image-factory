@@ -14,76 +14,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 
+	"github.com/siderolabs/image-factory/internal/artifacts/imagehandler"
 	"github.com/siderolabs/image-factory/internal/image/verify"
 )
 
-type imageHandler func(ctx context.Context, logger *zap.Logger, img v1.Image) error
-
-// imageExportHandler exports the image for further processing.
-func imageExportHandler(exportHandler func(logger *zap.Logger, r io.Reader) error) imageHandler {
-	return func(_ context.Context, logger *zap.Logger, img v1.Image) error {
-		logger.Info("extracting the image")
-
-		r, w := io.Pipe()
-
-		var eg errgroup.Group
-
-		eg.Go(func() error {
-			defer w.Close() //nolint:errcheck
-
-			return crane.Export(img, w)
-		})
-
-		eg.Go(func() error {
-			err := exportHandler(logger, r)
-			if err != nil {
-				r.CloseWithError(err) // signal the exporter to stop
-			}
-
-			return err
-		})
-
-		if err := eg.Wait(); err != nil {
-			return fmt.Errorf("error extracting the image: %w", err)
-		}
-
-		return nil
-	}
-}
-
-// imageOCIHandler exports the image to the OCI format.
-func imageOCIHandler(path string) imageHandler {
-	return func(_ context.Context, logger *zap.Logger, img v1.Image) error {
-		if err := os.RemoveAll(path); err != nil {
-			return fmt.Errorf("error removing the directory %q: %w", path, err)
-		}
-
-		l, err := layout.Write(path, empty.Index)
-		if err != nil {
-			return fmt.Errorf("error creating layout: %w", err)
-		}
-
-		logger.Info("exporting the image", zap.String("destination", path))
-
-		if err = l.AppendImage(img); err != nil {
-			return fmt.Errorf("error exporting the image: %w", err)
-		}
-
-		return nil
-	}
-}
-
 // fetchImageByTag contains combined logic of image handling: heading, downloading, verifying signatures, and exporting.
-func (m *Manager) fetchImageByTag(imageName, tag string, architecture Arch, imageHandler imageHandler) error {
+func (m *Manager) fetchImageByTag(imageName, tag string, architecture Arch, imageHandler imagehandler.Handler) error {
 	// set a timeout for fetching, but don't bind it to any context, as we want fetch operation to finish
 	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
 	defer cancel()
@@ -105,7 +45,7 @@ func (m *Manager) fetchImageByTag(imageName, tag string, architecture Arch, imag
 }
 
 // fetchImageByDigest fetches an image by digest, verifies signatures, and exports it to the storage.
-func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, imageHandler imageHandler) error {
+func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, imageHandler imagehandler.Handler) error {
 	var err error
 	// set a timeout for fetching, but don't bind it to any context, as we want fetch operation to finish
 	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
@@ -149,7 +89,7 @@ func (m *Manager) fetchImageByDigest(digestRef name.Digest, architecture Arch, i
 func (m *Manager) fetchImager(tag string) error {
 	destinationPath := filepath.Join(m.storagePath, tag)
 
-	if err := m.fetchImageByTag(m.options.ImagerImage, tag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
+	if err := m.fetchImageByTag(m.options.ImagerImage, tag, ArchAmd64, imagehandler.Export(func(logger *zap.Logger, r io.Reader) error {
 		return untarWithPrefix(logger, r, usrInstallPrefix, destinationPath+tmpSuffix)
 	})); err != nil {
 		return err
@@ -164,7 +104,7 @@ func (m *Manager) extractOverlay(arch Arch, ref OverlayRef) error {
 
 	destinationPath := filepath.Join(m.storagePath, string(arch)+"-"+ref.Digest+"-overlay")
 
-	if err := m.fetchImageByDigest(imageRef, arch, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
+	if err := m.fetchImageByDigest(imageRef, arch, imagehandler.Export(func(logger *zap.Logger, r io.Reader) error {
 		return untarWithPrefix(logger, r, overlaysPrefix, destinationPath+tmpSuffix)
 	})); err != nil {
 		return err
@@ -177,7 +117,7 @@ func (m *Manager) extractOverlay(arch Arch, ref OverlayRef) error {
 func (m *Manager) fetchExtensionImage(arch Arch, ref ExtensionRef, destPath string) error {
 	imageRef := ref.TaggedReference.Digest(ref.Digest)
 
-	if err := m.fetchImageByDigest(imageRef, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
+	if err := m.fetchImageByDigest(imageRef, arch, imagehandler.OCI(destPath+tmpSuffix)); err != nil {
 		return err
 	}
 
@@ -188,7 +128,7 @@ func (m *Manager) fetchExtensionImage(arch Arch, ref ExtensionRef, destPath stri
 func (m *Manager) fetchOverlayImage(arch Arch, ref OverlayRef, destPath string) error {
 	imageRef := m.imageRegistry.Repo(ref.TaggedReference.RepositoryStr()).Digest(ref.Digest)
 
-	if err := m.fetchImageByDigest(imageRef, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
+	if err := m.fetchImageByDigest(imageRef, arch, imagehandler.OCI(destPath+tmpSuffix)); err != nil {
 		return err
 	}
 
@@ -206,7 +146,7 @@ func (m *Manager) InstallerImageName(versionTag string) string {
 
 // fetchInstallerImage fetches a Talos installer image and exports it to the storage.
 func (m *Manager) fetchInstallerImage(arch Arch, versionTag string, destPath string) error {
-	if err := m.fetchImageByTag(m.InstallerImageName(versionTag), versionTag, arch, imageOCIHandler(destPath+tmpSuffix)); err != nil {
+	if err := m.fetchImageByTag(m.InstallerImageName(versionTag), versionTag, arch, imagehandler.OCI(destPath+tmpSuffix)); err != nil {
 		return err
 	}
 
@@ -215,7 +155,7 @@ func (m *Manager) fetchInstallerImage(arch Arch, versionTag string, destPath str
 
 // fetchTalosctlImage fetches a Talosctl image and exports it to the storage.
 func (m *Manager) fetchTalosctlImage(versionTag string, destPath string) error {
-	if err := m.fetchImageByTag(m.options.TalosctlImage, versionTag, ArchAmd64, imageExportHandler(func(logger *zap.Logger, r io.Reader) error {
+	if err := m.fetchImageByTag(m.options.TalosctlImage, versionTag, ArchAmd64, imagehandler.Export(func(logger *zap.Logger, r io.Reader) error {
 		return untarWithPrefix(logger, r, "", destPath+tmpSuffix)
 	})); err != nil {
 		return err

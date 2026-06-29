@@ -27,6 +27,7 @@ import (
 
 	"github.com/siderolabs/image-factory/enterprise/spdx/storage"
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/artifacts/imagehandler"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/profile"
@@ -309,7 +310,7 @@ func (b *Builder) extractSPDXFromInitramfs(bundle *Bundle, bootAsset asset.BootA
 					return nil
 				}
 
-				if !strings.HasSuffix(path, artifacts.SPDXFileSuffix) {
+				if !strings.HasSuffix(path, imagehandler.SPDXFileSuffix) {
 					return nil
 				}
 
