@@ -22,6 +22,8 @@ type Options struct { //nolint:govet
 	ImageRegistry string
 	// Option to allow using an image registry without TLS.
 	InsecureImageRegistry bool
+	// Option to allow using an image registry without TLS for extra extensions.
+	InsecureExtraExtensionsRegistry bool
 	// MinVersion is the minimum version of Talos to use.
 	MinVersion semver.Version
 	// BrokenVersions are Talos versions that should be rejected when listing available versions.
@@ -36,12 +38,13 @@ type Options struct { //nolint:govet
 	RegistryRefreshInterval time.Duration
 
 	// Images used by the artifacts manager.
-	InstallerBaseImage     string
-	InstallerImage         string
-	ImagerImage            string
-	ExtensionManifestImage string
-	OverlayManifestImage   string
-	TalosctlImage          string
+	InstallerBaseImage          string
+	InstallerImage              string
+	ImagerImage                 string
+	ExtensionManifestImage      string
+	ExtraExtensionManifestImage string
+	OverlayManifestImage        string
+	TalosctlImage               string
 
 	// External identification.
 	ExternalURL string

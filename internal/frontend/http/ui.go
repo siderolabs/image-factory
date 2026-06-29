@@ -843,12 +843,12 @@ func (f *Frontend) handleUIExtensionsList(ctx context.Context, w http.ResponseWr
 
 	if filter != "" {
 		extensionList = xslices.Filter(extensionList, func(ext artifacts.ExtensionRef) bool {
-			if slices.Index(extensions, ext.TaggedReference.RepositoryStr()) != -1 {
+			if slices.Index(extensions, ext.TaggedReference.Ref.RepositoryStr()) != -1 {
 				// selected
 				return true
 			}
 
-			if strings.Contains(strings.ToLower(ext.TaggedReference.String()), strings.ToLower(filter)) {
+			if strings.Contains(strings.ToLower(ext.TaggedReference.Ref.String()), strings.ToLower(filter)) {
 				return true
 			}
 
@@ -967,6 +967,6 @@ func (f *Frontend) getOfficialExtensions(ctx context.Context, version string) ([
 	}
 
 	return xslices.Filter(extensions, func(ext artifacts.ExtensionRef) bool {
-		return ext.TaggedReference.Context().RepositoryStr() != "siderolabs/metal-agent" // hide the internal metal-agent extension on the UI
+		return ext.TaggedReference.Ref.Context().RepositoryStr() != "siderolabs/metal-agent" // hide the internal metal-agent extension on the UI
 	}), nil
 }

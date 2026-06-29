@@ -1,7 +1,7 @@
 {{ define "extensions-list" }}
     <input type="hidden" name="extensions" value="-">
     {{ range .AvailableExtensions }}
-        {{ template "checkbox-with-description" dict "name" "extensions" "value" .TaggedReference.RepositoryStr "label" (printf "%s (%s)" .TaggedReference.RepositoryStr .TaggedReference.TagStr) "description" .Description "checked" (in $.SelectedExtensions .TaggedReference.RepositoryStr)  }}
+        {{ template "checkbox-with-description" dict "name" "extensions" "value" .TaggedReference.Ref.RepositoryStr "label" (printf "%s (%s)" .TaggedReference.Ref.RepositoryStr .TaggedReference.Ref.TagStr) "description" .Description "checked" (in $.SelectedExtensions .TaggedReference.Ref.RepositoryStr)  }}
     {{ end }}
 {{ end }}
 

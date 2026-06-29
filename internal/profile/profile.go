@@ -282,7 +282,7 @@ type ArtifactProducer interface {
 
 func findExtension(availableExtensions []artifacts.ExtensionRef, extensionName string) artifacts.ExtensionRef {
 	for _, availableExtension := range availableExtensions {
-		if availableExtension.TaggedReference.RepositoryStr() == extensionName {
+		if availableExtension.TaggedReference.Ref.RepositoryStr() == extensionName {
 			return availableExtension
 		}
 	}
@@ -421,7 +421,7 @@ func EnhanceFromSchematic(
 
 				imagePath, err := artifactProducer.GetExtensionImage(ctx, artifacts.Arch(prof.Arch), extensionRef)
 				if err != nil {
-					return prof, fmt.Errorf("error getting extension image %s: %w", extensionRef.TaggedReference, err)
+					return prof, fmt.Errorf("error getting extension image %s: %w", extensionRef.TaggedReference.Ref, err)
 				}
 
 				metricSystemExtensionHit.WithLabelValues(extensionName).Inc()
@@ -455,17 +455,17 @@ func EnhanceFromSchematic(
 			}
 
 			if value.IsZero(overlayRef) {
-				return prof, xerrors.NewTaggedf[InvalidErrorTag]("official overlay %q is not available for Talos version %s", overlayRef, versionTag)
+				return prof, xerrors.NewTaggedf[InvalidErrorTag]("official overlay %q is not available for Talos version %s", overlayRef.Name, versionTag)
 			}
 
 			imageNativePath, err := artifactProducer.GetOverlayImage(ctx, artifacts.Arch(runtime.GOARCH), overlayRef)
 			if err != nil {
-				return prof, fmt.Errorf("error getting extension image %s: %w", overlayRef.TaggedReference, err)
+				return prof, fmt.Errorf("error getting extension image %s: %w", overlayRef.TaggedReference.Ref, err)
 			}
 
 			imageTargetPath, err := artifactProducer.GetOverlayImage(ctx, artifacts.Arch(prof.Arch), overlayRef)
 			if err != nil {
-				return prof, fmt.Errorf("error getting extension image %s: %w", overlayRef.TaggedReference, err)
+				return prof, fmt.Errorf("error getting extension image %s: %w", overlayRef.TaggedReference.Ref, err)
 			}
 
 			if err := MergeOverlayProfile(ctx, artifactProducer, &prof, overlayRef); err != nil {
@@ -563,7 +563,7 @@ func MergeOverlayProfile(
 ) error {
 	overlayProfilePath, err := artifactProducer.GetOverlayArtifact(ctx, artifacts.Arch(prof.Arch), overlayRef, artifacts.OverlayKindProfiles)
 	if err != nil {
-		return fmt.Errorf("error getting overlay profiles %s: %w", overlayRef.TaggedReference, err)
+		return fmt.Errorf("error getting overlay profiles %s: %w", overlayRef.TaggedReference.Ref, err)
 	}
 
 	var overlayProfile profile.Profile

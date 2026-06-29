@@ -469,21 +469,23 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 	}
 
 	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
-		MinVersion:                  minVersion,
-		BrokenVersions:              brokenVersions,
-		ImageRegistry:               opts.Artifacts.Core.Registry,
-		InsecureImageRegistry:       opts.Artifacts.Core.Insecure,
-		ImageVerifyOptions:          imageVerifyOptions,
-		TalosVersionRecheckInterval: opts.Artifacts.TalosVersionRecheckInterval,
-		RemoteOptions:               remoteOptions(),
-		RegistryRefreshInterval:     opts.Artifacts.RefreshInterval,
+		MinVersion:                      minVersion,
+		BrokenVersions:                  brokenVersions,
+		ImageRegistry:                   opts.Artifacts.Core.Registry,
+		InsecureImageRegistry:           opts.Artifacts.Core.Insecure,
+		InsecureExtraExtensionsRegistry: opts.Enterprise.ExtraExtensions.Manifest.Insecure,
+		ImageVerifyOptions:              imageVerifyOptions,
+		TalosVersionRecheckInterval:     opts.Artifacts.TalosVersionRecheckInterval,
+		RemoteOptions:                   remoteOptions(),
+		RegistryRefreshInterval:         opts.Artifacts.RefreshInterval,
 
-		InstallerBaseImage:     opts.Artifacts.Core.Components.InstallerBase,
-		InstallerImage:         opts.Artifacts.Core.Components.Installer,
-		ImagerImage:            opts.Artifacts.Core.Components.Imager,
-		ExtensionManifestImage: opts.Artifacts.Core.Components.ExtensionManifest,
-		OverlayManifestImage:   opts.Artifacts.Core.Components.OverlayManifest,
-		TalosctlImage:          opts.Artifacts.Core.Components.Talosctl,
+		InstallerBaseImage:          opts.Artifacts.Core.Components.InstallerBase,
+		InstallerImage:              opts.Artifacts.Core.Components.Installer,
+		ImagerImage:                 opts.Artifacts.Core.Components.Imager,
+		ExtensionManifestImage:      opts.Artifacts.Core.Components.ExtensionManifest,
+		ExtraExtensionManifestImage: opts.Enterprise.ExtraExtensions.Manifest.String(),
+		OverlayManifestImage:        opts.Artifacts.Core.Components.OverlayManifest,
+		TalosctlImage:               opts.Artifacts.Core.Components.Talosctl,
 
 		ExternalURL: opts.HTTP.ExternalURL,
 	})

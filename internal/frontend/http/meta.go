@@ -62,8 +62,8 @@ func (f *Frontend) handleOfficialExtensions(ctx context.Context, w http.Response
 	return json.NewEncoder(w).Encode(
 		xslices.Map(extensions, func(e artifacts.ExtensionRef) client.ExtensionInfo {
 			return client.ExtensionInfo{
-				Name:        e.TaggedReference.RepositoryStr(),
-				Ref:         e.TaggedReference.String(),
+				Name:        e.TaggedReference.Ref.RepositoryStr(),
+				Ref:         e.TaggedReference.Ref.String(),
 				Digest:      e.Digest,
 				Author:      e.Author,
 				Description: e.Description,
@@ -97,8 +97,8 @@ func (f *Frontend) handleOfficialOverlays(ctx context.Context, w http.ResponseWr
 		xslices.Map(overlays, func(e artifacts.OverlayRef) client.OverlayInfo {
 			return client.OverlayInfo{
 				Name:   e.Name,
-				Image:  e.TaggedReference.RepositoryStr(),
-				Ref:    e.TaggedReference.String(),
+				Image:  e.TaggedReference.Ref.RepositoryStr(),
+				Ref:    e.TaggedReference.Ref.String(),
 				Digest: e.Digest,
 			}
 		}),

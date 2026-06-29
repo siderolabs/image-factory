@@ -413,7 +413,7 @@ func (b *Builder) extractExtensionsSPDX(ctx context.Context, bundle *Bundle, sch
 // findExtension finds an extension by name in the available extensions list.
 func findExtension(availableExtensions []artifacts.ExtensionRef, extensionName string) artifacts.ExtensionRef {
 	for _, availableExtension := range availableExtensions {
-		if availableExtension.TaggedReference.RepositoryStr() == extensionName {
+		if availableExtension.TaggedReference.Ref.RepositoryStr() == extensionName {
 			return availableExtension
 		}
 	}

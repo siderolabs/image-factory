@@ -502,6 +502,16 @@ type EnterpriseOptions struct {
 
 	// VEX contains configuration for VEX data fetching.
 	VEX VEXOptions `koanf:"vex"`
+	// ExtraExtensions contains configuration for extra (custom) extensions.
+	ExtraExtensions ExtraExtensionsOptions `koanf:"extraExtensions"`
+}
+
+// ExtraExtensionsOptions configures custom extensions offered alongside the official ones.
+type ExtraExtensionsOptions struct {
+	// Manifest specifies the OCI repository holding the extra extensions manifest image.
+	//
+	// It may live in a different registry than the official images.
+	Manifest OCIRepositoryOptions `koanf:"manifest"`
 }
 
 // SPDXOptions configures SPDX document generation and caching.

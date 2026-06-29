@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
@@ -35,7 +34,6 @@ type Manager struct { //nolint:govet
 	storagePath    string
 	schematicsPath string
 	logger         *zap.Logger
-	imageRegistry  name.Registry
 	pullers        map[Arch]remotewrap.Puller
 
 	sf singleflight.Group
@@ -60,16 +58,6 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 
 	if err = os.Mkdir(schematicsPath, 0o700); err != nil {
 		return nil, fmt.Errorf("failed to create schematics directory: %w", err)
-	}
-
-	opts := []name.Option{}
-	if options.InsecureImageRegistry {
-		opts = append(opts, name.Insecure)
-	}
-
-	imageRegistry, err := name.NewRegistry(options.ImageRegistry, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse image registry: %w", err)
 	}
 
 	pullers := make(map[Arch]remotewrap.Puller, 2)
@@ -97,12 +85,45 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 		storagePath:    tmpDir,
 		schematicsPath: schematicsPath,
 		logger:         logger,
-		imageRegistry:  imageRegistry,
 		pullers:        pullers,
 	}
 
 	m.officialExtensions = cache.NewSingleFlightCache(func(tag string) ([]ExtensionRef, error) {
-		return m.fetchExtensionList(m.options.ExtensionManifestImage, tag)
+		officialExtensions, err := m.fetchExtensionList(m.options.ExtensionManifestImage, tag, m.options.InsecureImageRegistry)
+		if err != nil {
+			return nil, err
+		}
+
+		if m.options.ExtraExtensionManifestImage == "" {
+			return officialExtensions, nil
+		}
+
+		extraExtensions, err := m.fetchExtensionList(m.options.ExtraExtensionManifestImage, tag, m.options.InsecureExtraExtensionsRegistry)
+		if err != nil {
+			return nil, err
+		}
+
+		allExtensions := extraExtensions
+
+		for _, official := range officialExtensions {
+			extraOverride := false
+
+			for _, extra := range extraExtensions {
+				if official.TaggedReference.Ref.RepositoryStr() == extra.TaggedReference.Ref.RepositoryStr() {
+					extraOverride = true
+
+					break
+				}
+			}
+
+			if extraOverride {
+				continue
+			}
+
+			allExtensions = append(allExtensions, official)
+		}
+
+		return allExtensions, nil
 	})
 
 	m.officialOverlays = cache.NewSingleFlightCache(func(tag string) ([]OverlayRef, error) {
@@ -285,7 +306,7 @@ func (m *Manager) GetExtensionImage(ctx context.Context, arch Arch, ref Extensio
 	return ociPath, nil
 }
 
-// GetOverlayImage pulls and stores in OCI layout an overlay image.
+// GetOverlayImage pulls and stores in OCI layout as an overlay image.
 func (m *Manager) GetOverlayImage(ctx context.Context, arch Arch, ref OverlayRef) (string, error) {
 	ociPath := filepath.Join(m.storagePath, string(arch)+"-"+ref.Digest)
 

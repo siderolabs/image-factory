@@ -17,6 +17,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/siderolabs/image-factory/internal/artifacts/imagehandler"
 )
 
 const (
@@ -38,21 +40,21 @@ type SPDXFile struct {
 
 // ExtractExtensionSPDX extracts SPDX files from an extension image.
 func (m *Manager) ExtractExtensionSPDX(ctx context.Context, arch Arch, ref ExtensionRef) ([]SPDXFile, error) {
-	imageRef := m.imageRegistry.Repo(ref.TaggedReference.RepositoryStr()).Digest(ref.Digest)
+	imageRef := ref.TaggedReference.Ref.Context().Digest(ref.Digest)
 
 	var files []SPDXFile
 
-	handler := spdxExportHandler(&files, ref.TaggedReference.RepositoryStr())
+	handler := spdxExportHandler(&files, ref.TaggedReference.Ref.RepositoryStr())
 
-	if err := m.fetchImageByDigest(imageRef, arch, handler); err != nil { //nolint:contextcheck
-		return nil, fmt.Errorf("failed to extract SPDX from extension %s: %w", ref.TaggedReference.RepositoryStr(), err)
+	if err := m.fetchImageByDigest(imageRef, ref.TaggedReference.Insecure, arch, handler); err != nil { //nolint:contextcheck
+		return nil, fmt.Errorf("failed to extract SPDX from extension %s: %w", ref.TaggedReference.Ref.RepositoryStr(), err)
 	}
 
 	return files, nil
 }
 
 // spdxExportHandler creates an image handler that extracts SPDX files.
-func spdxExportHandler(files *[]SPDXFile, source string) imageHandler {
+func spdxExportHandler(files *[]SPDXFile, source string) imagehandler.Handler {
 	return func(_ context.Context, logger *zap.Logger, img v1.Image) error {
 		logger.Info("extracting SPDX files from image")
 

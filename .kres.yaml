@@ -421,6 +421,8 @@ spec:
       - docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
       - docker rm -f local-if || true
       - docker run -d -p 5100:5000 --name=local-if registry:3
+      - crane push internal/integration/testdata/extra-extensions/extensions-catalog-image  "localhost:5100/extension-testing/extensions:v1.13.4"
+      - crane push internal/integration/testdata/extra-extensions/my-extension-image  "localhost:5100/extension-testing/my-extension:v1.0.0"
       - docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.coverprofile=/out/coverage-integration-direct.txt -test.run $(RUN_TESTS_DIRECT)
       - docker rm -f local-if
   ghaction:

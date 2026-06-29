@@ -311,39 +311,39 @@ func (mockArtifactProducer) GetSchematicExtension(_ context.Context, _ string, s
 func (mockArtifactProducer) GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error) {
 	return []artifacts.ExtensionRef{
 		{
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/amd-ucode:2023048")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/amd-ucode:2023048"))},
 			Digest:          "sha256:amd-ucode",
 		},
 		{
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/intel-ucode:20210608")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/intel-ucode:20210608"))},
 			Digest:          "sha256:intel-ucode",
 		},
 		{
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/gasket-driver:20240101")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/gasket-driver:20240101"))},
 			Digest:          "sha256:gasket-driver",
 		},
 		{
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-container-toolkit-lts:v535.0.0-v1.15.0")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-container-toolkit-lts:v535.0.0-v1.15.0"))},
 			Digest:          "sha256:nvidia-toolkit",
 		},
 		{
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-open-gpu-kernel-modules-lts:v535.0.0")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-open-gpu-kernel-modules-lts:v535.0.0"))},
 			Digest:          "sha256:nvidia-open",
 		},
 		{
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nonfree-kmod-nvidia-lts:v535.0.0")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/nonfree-kmod-nvidia-lts:v535.0.0"))},
 			Digest:          "sha256:nvidia-nonfree",
 		},
 		{
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-fabricmanager:v535.0.0")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/nvidia-fabricmanager:v535.0.0"))},
 			Digest:          "sha256:nvidia-fabric",
 		},
 		{
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/i915-ucode:2023048")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/i915-ucode:2023048"))},
 			Digest:          "sha256:i915-ucode",
 		},
 		{
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/amdgpu-firmware:2023048")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/amdgpu-firmware:2023048"))},
 			Digest:          "sha256:amdgpu-firmware",
 		},
 	}, nil
@@ -353,12 +353,12 @@ func (mockArtifactProducer) GetOfficialOverlays(context.Context, string) ([]arti
 	return []artifacts.OverlayRef{
 		{
 			Name:            "rpi_generic",
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0"))},
 			Digest:          "sha256:sbc-raspberrypi",
 		},
 		{
 			Name:            "rockpi",
-			TaggedReference: ensure.Value(name.NewTag("ghcr.io/siderolabs/sbc-rockpi:v0.2.0")),
+			TaggedReference: artifacts.TaggedReference{Ref: ensure.Value(name.NewTag("ghcr.io/siderolabs/sbc-rockpi:v0.2.0"))},
 			Digest:          "sha256:sbc-rockpi",
 		},
 	}, nil

@@ -20,6 +20,8 @@ import (
 	"github.com/siderolabs/gen/xslices"
 	"go.uber.org/zap"
 	"go.yaml.in/yaml/v4"
+
+	"github.com/siderolabs/image-factory/internal/artifacts/imagehandler"
 )
 
 func (m *Manager) fetchTalosVersions() (any, error) {
@@ -28,7 +30,15 @@ func (m *Manager) fetchTalosVersions() (any, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
 	defer cancel()
 
-	repository := m.imageRegistry.Repo(m.options.ImagerImage)
+	nameOptions := []name.Option{name.WithDefaultRegistry(m.options.ImageRegistry)}
+	if m.options.InsecureImageRegistry {
+		nameOptions = append(nameOptions, name.Insecure)
+	}
+
+	repository, err := name.NewRepository(m.options.ImagerImage, nameOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse imager repository %q: %w", m.options.ImagerImage, err)
+	}
 
 	candidates, err := m.pullers[ArchAmd64].List(ctx, repository)
 	if err != nil {
@@ -94,19 +104,26 @@ func (m *Manager) fetchTalosVersions() (any, error) {
 
 // ExtensionRef is a ref to the extension for some Talos version.
 type ExtensionRef struct {
-	TaggedReference name.Tag
-	Digest          string
-	Description     string
-	Author          string
+	Digest      string
+	Description string
+	Author      string
 
-	imageDigest string
+	imageDigest     string
+	TaggedReference TaggedReference
+}
+
+// TaggedReference is a tagged image reference with an insecure-transport flag.
+type TaggedReference struct {
+	Ref name.Tag
+
+	Insecure bool
 }
 
 // OverlayRef is a ref to the overlay for some Talos version.
 type OverlayRef struct {
 	Name            string
-	TaggedReference name.Tag
 	Digest          string
+	TaggedReference TaggedReference
 }
 
 // TalosctlTuple represents a OS/Arch/Ext tuple for talosctl binaries.
@@ -131,13 +148,20 @@ type overlaysDescription struct {
 	Digest string `yaml:"digest"`
 }
 
-func (m *Manager) fetchExtensionList(image, tag string) ([]ExtensionRef, error) {
+func (m *Manager) fetchExtensionList(image, tag string, insecure bool) ([]ExtensionRef, error) {
 	var extensions []ExtensionRef
 
-	err := m.fetchImageByTag(image, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	ref, err := m.taggedRef(image, tag, insecure)
+	if err != nil {
+		return nil, err
+	}
+
+	targetRegistry := ref.Ref.RegistryStr()
+
+	err = m.fetchImageByTag(ref, ArchAmd64, imagehandler.Export(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
-		extensions, extractErr = extractExtensionList(r)
+		extensions, extractErr = extractExtensionList(r, targetRegistry, insecure)
 		if extractErr == nil {
 			m.logger.Info("extracted the image digests", zap.Int("count", len(extensions)))
 		}
@@ -151,10 +175,15 @@ func (m *Manager) fetchExtensionList(image, tag string) ([]ExtensionRef, error) 
 func (m *Manager) fetchOverlayList(tag string) ([]OverlayRef, error) {
 	var overlays []OverlayRef
 
-	err := m.fetchImageByTag(m.options.OverlayManifestImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	ref, err := m.taggedRef(m.options.OverlayManifestImage, tag, m.options.InsecureImageRegistry)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.fetchImageByTag(ref, ArchAmd64, imagehandler.Export(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
-		overlays, extractErr = extractOverlayList(r)
+		overlays, extractErr = extractOverlayList(r, ref.Ref.RegistryStr(), m.options.InsecureImageRegistry)
 		if extractErr == nil {
 			m.logger.Info("extracted the image digests", zap.Int("count", len(overlays)))
 		}
@@ -168,7 +197,12 @@ func (m *Manager) fetchOverlayList(tag string) ([]OverlayRef, error) {
 func (m *Manager) fetchTalosctlTuples(tag string) ([]TalosctlTuple, error) {
 	var talosctlTuples []TalosctlTuple
 
-	err := m.fetchImageByTag(m.options.TalosctlImage, tag, ArchAmd64, imageExportHandler(func(_ *zap.Logger, r io.Reader) error {
+	ref, err := m.taggedRef(m.options.TalosctlImage, tag, m.options.InsecureImageRegistry)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.fetchImageByTag(ref, ArchAmd64, imagehandler.Export(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
 		talosctlTuples, extractErr = extractTalosctlTuples(r)
@@ -183,7 +217,7 @@ func (m *Manager) fetchTalosctlTuples(tag string) ([]TalosctlTuple, error) {
 }
 
 //nolint:gocognit
-func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
+func extractExtensionList(r io.Reader, targetRegistry string, insecure bool) ([]ExtensionRef, error) {
 	var extensions []ExtensionRef
 
 	tr := tar.NewReader(r)
@@ -224,8 +258,13 @@ func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
 					return nil, fmt.Errorf("failed to parse tagged reference %s: %w", tagged, err)
 				}
 
+				taggedRef, err = rebindRegistry(taggedRef, targetRegistry, insecure)
+				if err != nil {
+					return nil, err
+				}
+
 				extensions = append(extensions, ExtensionRef{
-					TaggedReference: taggedRef,
+					TaggedReference: TaggedReference{Ref: taggedRef, Insecure: insecure},
 					Digest:          digest,
 
 					imageDigest: line,
@@ -257,7 +296,23 @@ func extractExtensionList(r io.Reader) ([]ExtensionRef, error) {
 	return nil, errors.New("failed to find image-digests file")
 }
 
-func extractOverlayList(r io.Reader) ([]OverlayRef, error) {
+// rebindRegistry returns ref bound to registryHost, preserving the repository
+// path and tag and applying the insecure flag.
+func rebindRegistry(ref name.Tag, registryHost string, insecure bool) (name.Tag, error) {
+	var opts []name.Option
+	if insecure {
+		opts = append(opts, name.Insecure)
+	}
+
+	registry, err := name.NewRegistry(registryHost, opts...)
+	if err != nil {
+		return name.Tag{}, fmt.Errorf("failed to parse registry %q: %w", registryHost, err)
+	}
+
+	return registry.Repo(ref.RepositoryStr()).Tag(ref.TagStr()), nil
+}
+
+func extractOverlayList(r io.Reader, targetRegistry string, insecure bool) ([]OverlayRef, error) {
 	var overlays []OverlayRef
 
 	tr := tar.NewReader(r)
@@ -287,9 +342,14 @@ func extractOverlayList(r io.Reader) ([]OverlayRef, error) {
 					return nil, fmt.Errorf("failed to parse tagged reference %s: %w", overlay.Image, err)
 				}
 
+				taggedRef, err = rebindRegistry(taggedRef, targetRegistry, insecure)
+				if err != nil {
+					return nil, err
+				}
+
 				overlays = append(overlays, OverlayRef{
 					Name:            overlay.Name,
-					TaggedReference: taggedRef,
+					TaggedReference: TaggedReference{Ref: taggedRef, Insecure: insecure},
 					Digest:          overlay.Digest,
 				})
 			}
