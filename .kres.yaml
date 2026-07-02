@@ -721,6 +721,17 @@ spec:
   ghaction:
     enabled: true
     condition: on-pull-request
+  lefthook:
+    enabled: true
+    hooks:
+      pre-commit:
+        jobs:
+          - name: fix
+            group:
+              jobs:
+                - name: docs
+                  run: make docs
+                  stage_fixed: true
 ---
 kind: custom.Step
 name: talosctl
