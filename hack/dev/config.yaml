@@ -9,12 +9,14 @@ artifacts:
     registry: registry.local:5000
     namespace: image-factory
     repository: schematic
+    insecure: true
 
   installer:
     # internal registry namespace to push installer images to
     internal:
       registry: registry.local:5000
       namespace: siderolabs
+      insecure: true
 
 cache:
   oci:
@@ -22,6 +24,7 @@ cache:
     registry: registry.local:5000
     namespace: image-factory
     repository: cache
+    insecure: true
 
   # path to the ECDSA private key (to sign cached assets)
   signingKeyPath: /etc/image-factory/cache-signing-key.key
@@ -41,6 +44,7 @@ enterprise:
       registry: registry.local:5000
       namespace: image-factory
       repository: spdx-cache
+      insecure: true
   vex:
     data:
       registry: registry.ghcr.io:5000
