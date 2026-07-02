@@ -133,13 +133,13 @@ type overlaysDescription struct {
 	Digest string `yaml:"digest"`
 }
 
-func (m *Manager) fetchExtensionList(image, tag string) ([]ExtensionRef, error) {
+func (m *Manager) fetchExtensionList(image, tag string, registry name.Registry) ([]ExtensionRef, error) {
 	var extensions []ExtensionRef
 
-	err := m.fetchImageByTag(image, tag, ArchAmd64, imagehandler.Export(func(_ *zap.Logger, r io.Reader) error {
+	err := m.fetchImageByTagWithRepo(image, tag, registry, ArchAmd64, imagehandler.Export(func(_ *zap.Logger, r io.Reader) error {
 		var extractErr error
 
-		extensions, extractErr = extractExtensionList(r, m.imageRegistry)
+		extensions, extractErr = extractExtensionList(r, registry)
 		if extractErr == nil {
 			m.logger.Info("extracted the image digests", zap.Int("count", len(extensions)))
 		}

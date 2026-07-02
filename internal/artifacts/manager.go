@@ -26,17 +26,19 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-factory/internal/cache"
+	"github.com/siderolabs/image-factory/internal/regtransport"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 // Manager supports loading, caching and serving Talos release artifacts.
 type Manager struct { //nolint:govet
-	options        Options
-	storagePath    string
-	schematicsPath string
-	logger         *zap.Logger
-	imageRegistry  name.Registry
-	pullers        map[Arch]remotewrap.Puller
+	options                 Options
+	storagePath             string
+	schematicsPath          string
+	logger                  *zap.Logger
+	imageRegistry           name.Registry
+	extraExtensionsRegistry name.Registry
+	pullers                 map[Arch]remotewrap.Puller
 
 	sf singleflight.Group
 
@@ -72,6 +74,16 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 		return nil, fmt.Errorf("failed to parse image registry: %w", err)
 	}
 
+	opts = []name.Option{}
+	if options.InsecureExtraExtensionsRegistry {
+		opts = append(opts, name.Insecure)
+	}
+
+	extraExtensionsImageRegistry, err := name.NewRegistry(options.ExtraExtensionsImageRegistry, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse extra extensions image registry: %w", err)
+	}
+
 	pullers := make(map[Arch]remotewrap.Puller, 2)
 
 	for _, arch := range []Arch{ArchAmd64, ArchArm64} {
@@ -93,16 +105,58 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 	}
 
 	m := &Manager{
-		options:        options,
-		storagePath:    tmpDir,
-		schematicsPath: schematicsPath,
-		logger:         logger,
-		imageRegistry:  imageRegistry,
-		pullers:        pullers,
+		options:                 options,
+		storagePath:             tmpDir,
+		schematicsPath:          schematicsPath,
+		logger:                  logger,
+		imageRegistry:           imageRegistry,
+		extraExtensionsRegistry: extraExtensionsImageRegistry,
+		pullers:                 pullers,
 	}
 
 	m.officialExtensions = cache.NewSingleFlightCache(func(tag string) ([]ExtensionRef, error) {
-		return m.fetchExtensionList(m.options.ExtensionManifestImage, tag)
+		officialExtensions, err := m.fetchExtensionList(m.options.ExtensionManifestImage, tag, m.imageRegistry)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch official extensions: %w", err)
+		}
+
+		if m.options.ExtraExtensionManifestImage == "" {
+			return officialExtensions, nil
+		}
+
+		extraExtensions, err := m.fetchExtensionList(m.options.ExtraExtensionManifestImage, tag, m.extraExtensionsRegistry)
+		if err != nil {
+			if regtransport.IsStatusCodeError(err, http.StatusNotFound) {
+				logger.Sugar().Warnf("extra extensions not published for talos version %s", tag)
+
+				return officialExtensions, nil
+			}
+
+			return nil, fmt.Errorf("failed to fetch extra extensions: %w", err)
+		}
+
+		allExtensions := slices.Concat(extraExtensions)
+
+		// prioritize extra extensions if there's a name conflict
+		for _, official := range officialExtensions {
+			extraOverride := false
+
+			for _, extra := range extraExtensions {
+				if official.TaggedReference.RepositoryStr() == extra.TaggedReference.RepositoryStr() {
+					extraOverride = true
+
+					break
+				}
+			}
+
+			if extraOverride {
+				continue
+			}
+
+			allExtensions = append(allExtensions, official)
+		}
+
+		return allExtensions, nil
 	})
 
 	m.officialOverlays = cache.NewSingleFlightCache(func(tag string) ([]OverlayRef, error) {

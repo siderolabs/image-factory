@@ -9,12 +9,15 @@ artifacts:
     registry: registry.local:5000
     namespace: image-factory
     repository: schematic
+    insecure: true
+
 
   installer:
     # internal registry namespace to push installer images to
     internal:
       registry: registry.local:5000
       namespace: siderolabs
+      insecure: true
 
 cache:
   oci:
@@ -22,6 +25,7 @@ cache:
     registry: registry.local:5000
     namespace: image-factory
     repository: cache
+    insecure: true
 
   # path to the ECDSA private key (to sign cached assets)
   signingKeyPath: /etc/image-factory/cache-signing-key.key
@@ -34,13 +38,23 @@ authentication:
   enabled: false
   htpasswdPath: /etc/image-factory/htpasswd
 
+containerSignature:
+  disabled: true
+
 enterprise:
+  extraExtensions:
+    manifest:
+      registry: host.docker.internal:5005
+      namespace: extension-testing
+      repository: extensions
+      insecure: true
   spdx:
     cache:
       # private registry repository for cached spdx
       registry: registry.local:5000
       namespace: image-factory
       repository: spdx-cache
+      insecure: true
   vex:
     data:
       registry: registry.ghcr.io:5000
