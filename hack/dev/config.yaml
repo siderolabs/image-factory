@@ -37,7 +37,14 @@ authentication:
   enabled: false
   htpasswdPath: /etc/image-factory/htpasswd
 
+
 enterprise:
+  extraExtensions:
+    manifest:
+      registry: registry.local:5000
+      namespace: extension-testing
+      repository: extensions
+      insecure: true
   spdx:
     cache:
       # private registry repository for cached spdx

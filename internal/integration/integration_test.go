@@ -267,6 +267,10 @@ func setupEnterprise(t *testing.T, options *cmd.Options) {
 
 	options.Authentication.Enabled = true
 	options.Authentication.HTPasswdPath = filepath.Join(configDir, "htpasswd")
+
+	options.Enterprise.ExtraExtensions = cmd.ExtraExtensionsOptions{
+		Manifest: extraExtensionsManifestFlag.OCIRepositoryOptions,
+	}
 }
 
 func authCredentials() (string, string) {
@@ -425,6 +429,7 @@ var (
 	signingCacheRepository         = mustNewDefaultOCIRepository(cmd.DefaultOptions.Cache.OCI.String() + "sign")
 	vexDataRepositoryFlag          = mustNewDefaultOCIRepository(cmd.DefaultOptions.Enterprise.VEX.Data.String())
 	spdxCacheRepositoryFlag        = mustNewDefaultOCIRepository(cmd.DefaultOptions.Enterprise.SPDX.Cache.String())
+	extraExtensionsManifestFlag    = mustNewDefaultOCIRepository(cmd.DefaultOptions.Enterprise.ExtraExtensions.Manifest.String())
 )
 
 func init() {
@@ -436,4 +441,5 @@ func init() {
 	flag.Var(&signingCacheRepository, "test.signing-cache-repository", "image repository for signatures of cached boot assets (used for S3+CDN tests)")
 	flag.Var(&vexDataRepositoryFlag, "test.vex-data-repository", "OCI repository for VEX data")
 	flag.Var(&spdxCacheRepositoryFlag, "test.spdx-cache-repository", "OCI repository for cached SPDX data")
+	flag.Var(&extraExtensionsManifestFlag, "test.extra-extensions-manifest", "OCI repository for extra extensions")
 }

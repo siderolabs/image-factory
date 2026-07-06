@@ -1017,6 +1017,59 @@ Capacity caps the number of cached objects before LRU eviction.
 
 ---
 
+### `enterprise.extraExtensions`
+
+ExtraExtensions contains configuration for extra (custom) extensions.
+
+---
+
+### `enterprise.extraExtensions.manifest`
+
+Manifest specifies the OCI repository holding the extra extensions manifest image.
+
+It may live in a different registry than the official images.
+
+---
+
+### `enterprise.extraExtensions.manifest.registry`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REGISTRY`
+
+Registry is the hostname of the container registry, e.g., `ghcr.io`.
+This is where images are stored.
+
+---
+
+### `enterprise.extraExtensions.manifest.namespace`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_NAMESPACE`
+
+Namespace is the repository namespace or organization within the registry, e.g., `sidero-labs`.
+Some registries allow repositories without a namespace.
+
+---
+
+### `enterprise.extraExtensions.manifest.repository`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REPOSITORY`
+
+Repository is the name of the repository inside the namespace, e.g., `talos`.
+Combined with Registry and Namespace, it forms the fully qualified repository path.
+
+---
+
+### `enterprise.extraExtensions.manifest.insecure`
+
+- **Type:** `bool`
+- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_INSECURE`
+
+Insecure allows connections to registries over HTTP or with invalid TLS certificates.
+
+---
+
 ### `registry`
 
 Registry contains low-level tuning for the registry client (pull/push concurrency, debugging).
@@ -1124,6 +1177,12 @@ containerSignature:
     publicKeyHashAlgo: sha256
     subjectRegExp: (@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)
 enterprise:
+    extraExtensions:
+        manifest:
+            insecure: false
+            namespace: ""
+            registry: ""
+            repository: ""
     scanner:
         cache:
             capacity: 4096
@@ -1231,6 +1290,10 @@ IF_CONTAINERSIGNATURE_ISSUERREGEXP=
 IF_CONTAINERSIGNATURE_PUBLICKEYFILE=
 IF_CONTAINERSIGNATURE_PUBLICKEYHASHALGO=sha256
 IF_CONTAINERSIGNATURE_SUBJECTREGEXP=(@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)
+IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_INSECURE=false
+IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_NAMESPACE=
+IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REGISTRY=
+IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REPOSITORY=
 IF_ENTERPRISE_SCANNER_CACHE_CAPACITY=4096
 IF_ENTERPRISE_SCANNER_CACHE_TTL=15m0s
 IF_ENTERPRISE_SCANNER_DATABASEURL=https://grype.anchore.io/databases

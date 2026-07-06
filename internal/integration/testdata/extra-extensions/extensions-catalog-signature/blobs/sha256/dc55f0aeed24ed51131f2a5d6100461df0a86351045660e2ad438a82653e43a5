@@ -1,0 +1,1 @@
+{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[{"mediaType":"application/vnd.oci.image.manifest.v1+json","size":888,"digest":"sha256:a7bef7f443fe8dd71efb4970fef7e085039656c17b4fc0857a81968dd1e61b3c","artifactType":"application/vnd.dev.sigstore.bundle.v0.3+json"}]}

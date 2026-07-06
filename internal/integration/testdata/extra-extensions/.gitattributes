@@ -1,0 +1,3 @@
+# OCI layout fixtures (catalog/extension images and signatures) — treat as
+# binary so git never normalizes line endings or attempts textual diffs/merges.
+* binary

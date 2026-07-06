@@ -135,6 +135,62 @@ func TestOCIRepositoryOptions(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("Image", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range []struct {
+			expected string
+			input    cmd.OCIRepositoryOptions
+		}{
+			{
+				expected: "library/golang",
+				input: cmd.OCIRepositoryOptions{
+					Registry:   "docker.io",
+					Namespace:  "library",
+					Repository: "golang",
+				},
+			},
+			{
+				expected: "nginx",
+				input: cmd.OCIRepositoryOptions{
+					Registry:   "127.0.0.1:5000",
+					Namespace:  "",
+					Repository: "nginx",
+				},
+			},
+			{
+				expected: "internal/nginx",
+				input: cmd.OCIRepositoryOptions{
+					Registry:   "example.com",
+					Namespace:  "internal",
+					Repository: "nginx",
+				},
+			},
+			{
+				expected: "foo/bar/baz/nginx",
+				input: cmd.OCIRepositoryOptions{
+					Registry:   "example.com",
+					Namespace:  "foo/bar/baz",
+					Repository: "nginx",
+				},
+			},
+			{
+				expected: "library/golang",
+				input: cmd.OCIRepositoryOptions{
+					Namespace:  "library",
+					Repository: "golang",
+				},
+			},
+		} {
+			t.Run(tc.expected, func(t *testing.T) {
+				t.Parallel()
+
+				actual := tc.input.Image()
+				assert.Equal(t, tc.expected, actual)
+			})
+		}
+	})
 }
 
 func TestOptionsValidate(t *testing.T) {

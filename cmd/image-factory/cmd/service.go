@@ -468,7 +468,7 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 		brokenVersions = append(brokenVersions, parsed)
 	}
 
-	artifactsManager, err := artifacts.NewManager(logger, artifacts.Options{
+	artifactsManagerOpts := artifacts.Options{
 		MinVersion:                  minVersion,
 		BrokenVersions:              brokenVersions,
 		ImageRegistry:               opts.Artifacts.Core.Registry,
@@ -486,7 +486,14 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 		TalosctlImage:          opts.Artifacts.Core.Components.Talosctl,
 
 		ExternalURL: opts.HTTP.ExternalURL,
-	})
+	}
+
+	if enterprise.Enabled() {
+		artifactsManagerOpts.ExtraExtensionManifestImage = opts.Enterprise.ExtraExtensions.Manifest.Image()
+		artifactsManagerOpts.ExtraExtensionsImageRegistry = opts.Enterprise.ExtraExtensions.Manifest.Registry
+	}
+
+	artifactsManager, err := artifacts.NewManager(logger, artifactsManagerOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize artifacts manager: %w", err)
 	}

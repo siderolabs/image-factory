@@ -26,6 +26,10 @@ make docker-compose-down
 By default, authentication is disabled for local development, enable it by setting `authentication.enabled` to `true` in the config file (`hack/dev/config.yaml`), and providing a valid `htpasswd` file at the path specified by `authentication.htpasswdPath`.
 Optionally use the existing htpasswd file at `hack/dev/htpasswd` for testing.
 
+When running `make docker-compose-up` or the integration tests, the extra extension catalog and an extra extension image and their signatures are automatically pushed to the local registry.
+You can push the extra images manually with `push-extra-extensions`, optionally setting the `EXTRA_EXTENSIONS_REGISTRY`.
+The extra images are located under [internal/integration/testdata/extra-extensions/](../internal/integration/testdata/extra-extensions/).
+
 ## Running Image Factory Manually
 
 In order to run the Image Factory, generate a ECDSA key pair:
@@ -90,7 +94,7 @@ Example running direct integration tests with registry mirrors
 (`127.0.0.1:5004` is a registry mirror for `ghcr.io`, `127.0.0.1:5100` is an ephemeral local registry brought up by `make` automatically, and `127.0.0.1:5005` is a local registry for pushing images):
 
 ```bash
-make integration-direct TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/test -test.installer-internal-repository=127.0.0.1:5100/test -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache" REGISTRY=127.0.0.1:5005
+make integration-direct TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/test -test.installer-internal-repository=127.0.0.1:5100/test -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache -test.extra-extensions-manifest=127.0.0.1:5100/extension-testing/extensions" REGISTRY=127.0.0.1:5005
 ```
 
 A test focus can be set with:
@@ -102,7 +106,7 @@ A test focus can be set with:
 For Enterprise tests, use the following command:
 
 ```bash
-make integration-enterprise TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/test -test.installer-internal-repository=127.0.0.1:5100/test -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache" REGISTRY=127.0.0.1:5005
+make integration-enterprise TEST_FLAGS="-test.image-registry=127.0.0.1:5004 -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-external-repository=127.0.0.1:5100/test -test.installer-internal-repository=127.0.0.1:5100/test -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache -test.extra-extensions-manifest=127.0.0.1:5100/extension-testing/extensions" REGISTRY=127.0.0.1:5005
 ```
 
 (The only change is `s/integration-direct/integration-enterprise/` in the target name, and the test focus variable will be `RUN_TESTS_ENTERPRISE` instead of `RUN_TESTS_DIRECT`.)

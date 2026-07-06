@@ -243,6 +243,21 @@ func (o *OCIRepositoryOptions) String() string {
 	return strings.Join(parts, "/")
 }
 
+// Image returns the Namespace + Repository string (without the registry).
+func (o *OCIRepositoryOptions) Image() string {
+	parts := []string{}
+
+	if o.Namespace != "" {
+		parts = append(parts, o.Namespace)
+	}
+
+	if o.Repository != "" {
+		parts = append(parts, o.Repository)
+	}
+
+	return strings.Join(parts, "/")
+}
+
 // MetricsOptions holds configuration for exposing Prometheus metrics.
 type MetricsOptions struct {
 	// Addr is the bind address for the metrics HTTP server.
@@ -494,6 +509,9 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 
 // EnterpriseOptions contains configuration for enterprise-specific features.
 type EnterpriseOptions struct {
+	// ExtraExtensions contains configuration for extra (custom) extensions.
+	ExtraExtensions ExtraExtensionsOptions `koanf:"extraExtensions"`
+
 	// Scanner contains configuration for the vulnerability scanner.
 	Scanner ScannerOptions `koanf:"scanner"`
 
@@ -502,6 +520,14 @@ type EnterpriseOptions struct {
 
 	// VEX contains configuration for VEX data fetching.
 	VEX VEXOptions `koanf:"vex"`
+}
+
+// ExtraExtensionsOptions configures custom extensions offered alongside the official ones.
+type ExtraExtensionsOptions struct {
+	// Manifest specifies the OCI repository holding the extra extensions manifest image.
+	//
+	// It may live in a different registry than the official images.
+	Manifest OCIRepositoryOptions `koanf:"manifest"`
 }
 
 // SPDXOptions configures SPDX document generation and caching.

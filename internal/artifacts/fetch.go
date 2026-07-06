@@ -23,14 +23,20 @@ import (
 )
 
 // fetchImageByTag contains combined logic of image handling: heading, downloading, verifying signatures, and exporting.
+// Uses the default image registry.
 func (m *Manager) fetchImageByTag(imageName, tag string, architecture Arch, imageHandler imagehandler.Handler) error {
+	return m.fetchImageByTagWithRepo(imageName, tag, m.imageRegistry, architecture, imageHandler)
+}
+
+// fetchImageByTag contains combined logic of image handling: heading, downloading, verifying signatures, and exporting.
+func (m *Manager) fetchImageByTagWithRepo(imageName, tag string, reg name.Registry, architecture Arch, imageHandler imagehandler.Handler) error {
 	// set a timeout for fetching, but don't bind it to any context, as we want fetch operation to finish
 	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
 	defer cancel()
 
 	// light check first - if the image exists, and resolve the digest
 	// it's important to do further checks by digest exactly
-	repoRef := m.imageRegistry.Repo(imageName).Tag(tag)
+	repoRef := reg.Repo(imageName).Tag(tag)
 
 	m.logger.Debug("heading the image", zap.Stringer("image", repoRef))
 

@@ -10,6 +10,12 @@ pre_release = false
 
 [notes]
 
+    [notes.extra_extensions]
+        title = "Extra Extensions (enterprise only)"
+        description = """\
+Image factory can now be configured with an extra extensions manifest image allowing to easily add custom extensions in addition to the official Sidero extensions.
+"""
+
     [notes.scanner]
         title = "Embedded Machine Configuration"
         description = """\

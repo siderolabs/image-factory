@@ -31,6 +31,7 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	"github.com/siderolabs/image-factory/internal/mime"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 func downloadAsset(ctx context.Context, t *testing.T, baseURL string, schematicID, talosVersion, path string) *http.Response {
@@ -971,6 +972,31 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				},
 			)
 		})
+	})
+
+	t.Run("extra extensions", func(t *testing.T) {
+		t.Parallel()
+
+		if !enterprise.Enabled() {
+			t.Skip()
+		}
+
+		// the extra extension is built only for the v1.13.4 talos version
+		talosVersion := "v1.13.4"
+
+		downloadAssetAndMatchSize(
+			ctx, t, baseURL, extraExtensionsSchematicID, talosVersion, "metal-arm64.iso", "application/x-iso9660-image",
+			220*MiB,
+		)
+
+		downloadAssetAndValidateInitramfs(
+			ctx, t, baseURL, extraExtensionsSchematicID, talosVersion, "initramfs-arm64.xz",
+			initramfsSpec{
+				schematicID:        extraExtensionsSchematicID,
+				extensions:         []string{"my-extension"},
+				schematicExtraInfo: schematicExtraInfo(t, extraExtensionsSchematicID, talosVersion),
+			},
+		)
 	})
 
 	// special test for v1.3.7 which supports less features

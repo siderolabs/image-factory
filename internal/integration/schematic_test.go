@@ -41,6 +41,7 @@ var (
 	sdBootBootloaderOverrideSchematicID string
 	embeddedConfigSchematicID           string
 	diskImage4kSectorSchematicID        string
+	extraExtensionsSchematicID          string
 
 	testSchematics map[string]*schematic.Schematic
 )
@@ -71,6 +72,7 @@ func init() {
 		{Owner: owner, Customization: schematic.Customization{Bootloader: profile.BootLoaderKindSDBoot}},
 		{Owner: owner, Customization: schematic.Customization{EmbeddedMachineConfiguration: testEmbdeddedMachineConfiguration}},
 		{Owner: owner, Customization: schematic.Customization{DiskImage: schematic.DiskImageCustomization{SectorSize: 4096}}},
+		{Owner: owner, Customization: schematic.Customization{SystemExtensions: schematic.SystemExtensions{OfficialExtensions: []string{"extension-testing/my-extension"}}}},
 	}
 
 	testSchematics = make(map[string]*schematic.Schematic, len(raw))
@@ -85,6 +87,7 @@ func init() {
 	sdBootBootloaderOverrideSchematicID = mustSchematicID(raw[7])
 	embeddedConfigSchematicID = mustSchematicID(raw[8])
 	diskImage4kSectorSchematicID = mustSchematicID(raw[9])
+	extraExtensionsSchematicID = mustSchematicID(raw[10])
 
 	testSchematics[emptySchematicID] = raw[0]
 	testSchematics[extraArgsSchematicID] = raw[1]
@@ -96,6 +99,7 @@ func init() {
 	testSchematics[sdBootBootloaderOverrideSchematicID] = raw[7]
 	testSchematics[embeddedConfigSchematicID] = raw[8]
 	testSchematics[diskImage4kSectorSchematicID] = raw[9]
+	testSchematics[extraExtensionsSchematicID] = raw[10]
 }
 
 func createSchematicGetID(ctx context.Context, t *testing.T, c *client.Client, schematic schematic.Schematic) string {
@@ -167,6 +171,10 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 
 	t.Run("embedded config", func(t *testing.T) {
 		assert.Equal(t, embeddedConfigSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[embeddedConfigSchematicID]))
+	})
+
+	t.Run("extra extensions", func(t *testing.T) {
+		assert.Equal(t, extraExtensionsSchematicID, createSchematicGetID(ctx, t, c, *testSchematics[extraExtensionsSchematicID]))
 	})
 
 	t.Run("disk 4k sector", func(t *testing.T) {
