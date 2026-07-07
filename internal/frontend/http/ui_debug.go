@@ -24,6 +24,15 @@ var (
 	localesFS   = os.DirFS(basePath).(fs.ReadDirFS)
 )
 
+func getLLMsTxt() []byte {
+	content, err := os.ReadFile(basePath + "templates/llms.txt")
+	if err != nil {
+		panic(err)
+	}
+
+	return content
+}
+
 func getTemplates() *template.Template {
 	// reload templates each time
 	return template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS, "templates/*.html"))

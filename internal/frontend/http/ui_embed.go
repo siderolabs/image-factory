@@ -29,6 +29,11 @@ var templatesFS embed.FS
 //go:embed locales/*.yaml
 var localesFS embed.FS
 
+//go:embed templates/llms.txt
+var llmsTxtContent []byte
+
+func getLLMsTxt() []byte { return llmsTxtContent }
+
 var templatesOnce = sync.OnceValue(func() *template.Template {
 	return template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS, "templates/*.html"))
 })

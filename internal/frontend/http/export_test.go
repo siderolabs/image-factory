@@ -19,3 +19,8 @@ func NewTestFrontend(logger *zap.Logger) *Frontend {
 func (f *Frontend) WrapHandler(h Handler) httprouter.Handle {
 	return f.wrapper(h)
 }
+
+// HandleLLMsTxt exposes the llms.txt handler for external tests.
+func (f *Frontend) HandleLLMsTxt() Handler {
+	return f.handleLLMsTxt
+}
