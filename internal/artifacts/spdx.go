@@ -13,7 +13,7 @@ import (
 
 // ExtractExtensionSPDX extracts SPDX files from an extension image.
 func (m *Manager) ExtractExtensionSPDX(ctx context.Context, arch Arch, ref ExtensionRef) ([]imagehandler.SPDXFile, error) {
-	imageRef := ref.TaggedReference.Digest(ref.Digest)
+	imageRef := ref.pullReference.Digest(ref.Digest)
 
 	var files []imagehandler.SPDXFile
 

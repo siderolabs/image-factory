@@ -18,3 +18,12 @@ artifacts:
   core:
     registry: localhost:5000
 ```
+
+If the local registry prefixes the upstream repository path (e.g. a Harbor proxy-cache project for `ghcr.io` named `ghcrio`), set the namespace so it is prepended to every pulled image, including the extension and overlay images referenced by the manifests:
+
+```yaml
+artifacts:
+  core:
+    registry: harbor.example.com
+    namespace: ghcrio
+```

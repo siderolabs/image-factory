@@ -20,6 +20,10 @@ type Options struct { //nolint:govet
 	//
 	// For official images, this is "ghcr.io".
 	ImageRegistry string
+	// ImageRegistryNamespace is an optional repository path prefix (e.g. a Harbor
+	// proxy-cache project) prepended to every image pulled from ImageRegistry,
+	// including extension and overlay images discovered via the manifests.
+	ImageRegistryNamespace string
 	// Repository to source extra extensions from.
 	ExtraExtensionsImageRegistry string
 	// Allow using an image registry without TLS.

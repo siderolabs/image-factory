@@ -463,6 +463,15 @@ type CoreImagesOptions struct {
 	// E.g., "ghcr.io".
 	Registry string `koanf:"registry"`
 
+	// Namespace is an optional repository path prefix prepended to every image pulled from
+	// the registry: both the component images below and the extension/overlay images
+	// discovered via the manifests.
+	//
+	// Useful for pull-through caches which prefix the upstream repository path, e.g. a Harbor
+	// proxy-cache project: with registry "harbor.example.com" and namespace "ghcrio",
+	// "siderolabs/imager" is pulled from "harbor.example.com/ghcrio/siderolabs/imager".
+	Namespace string `koanf:"namespace"`
+
 	// Components defines the names of images used by the image factory.
 	// This typically maps to repositories and tags for core components.
 	Components ComponentsOptions `koanf:"components"`

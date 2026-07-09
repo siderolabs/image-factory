@@ -58,6 +58,10 @@ config:
       # insecure: false
       ## OCI registry host for base images and extensions (e.g., ghcr.io)
       # registry: ghcr.io
+      ## Optional repository path prefix prepended to every image pulled from the registry,
+      ## including extension/overlay images discovered via the manifests
+      ## (e.g. a Harbor proxy-cache project name)
+      # namespace: ""
 
     ## Installer image configuration
     # installer:

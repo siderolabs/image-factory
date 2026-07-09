@@ -582,6 +582,21 @@ E.g., "ghcr.io".
 
 ---
 
+### `artifacts.core.namespace`
+
+- **Type:** `string`
+- **Env:** `ARTIFACTS_CORE_NAMESPACE`
+
+Namespace is an optional repository path prefix prepended to every image pulled from
+the registry: both the component images below and the extension/overlay images
+discovered via the manifests.
+
+Useful for pull-through caches which prefix the upstream repository path, e.g. a Harbor
+proxy-cache project: with registry "harbor.example.com" and namespace "ghcrio",
+"siderolabs/imager" is pulled from "harbor.example.com/ghcrio/siderolabs/imager".
+
+---
+
 ### `artifacts.core.components`
 
 Components defines the names of images used by the image factory.
@@ -853,6 +868,59 @@ Enterprise contains configuration for enterprise-specific features.
 
 ---
 
+### `enterprise.extraExtensions`
+
+ExtraExtensions contains configuration for extra (custom) extensions.
+
+---
+
+### `enterprise.extraExtensions.manifest`
+
+Manifest specifies the OCI repository holding the extra extensions manifest image.
+
+It may live in a different registry than the official images.
+
+---
+
+### `enterprise.extraExtensions.manifest.registry`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REGISTRY`
+
+Registry is the hostname of the container registry, e.g., `ghcr.io`.
+This is where images are stored.
+
+---
+
+### `enterprise.extraExtensions.manifest.namespace`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_NAMESPACE`
+
+Namespace is the repository namespace or organization within the registry, e.g., `sidero-labs`.
+Some registries allow repositories without a namespace.
+
+---
+
+### `enterprise.extraExtensions.manifest.repository`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REPOSITORY`
+
+Repository is the name of the repository inside the namespace, e.g., `talos`.
+Combined with Registry and Namespace, it forms the fully qualified repository path.
+
+---
+
+### `enterprise.extraExtensions.manifest.insecure`
+
+- **Type:** `bool`
+- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_INSECURE`
+
+Insecure allows connections to registries over HTTP or with invalid TLS certificates.
+
+---
+
 ### `enterprise.scanner`
 
 Scanner contains configuration for the vulnerability scanner.
@@ -1017,59 +1085,6 @@ Capacity caps the number of cached objects before LRU eviction.
 
 ---
 
-### `enterprise.extraExtensions`
-
-ExtraExtensions contains configuration for extra (custom) extensions.
-
----
-
-### `enterprise.extraExtensions.manifest`
-
-Manifest specifies the OCI repository holding the extra extensions manifest image.
-
-It may live in a different registry than the official images.
-
----
-
-### `enterprise.extraExtensions.manifest.registry`
-
-- **Type:** `string`
-- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REGISTRY`
-
-Registry is the hostname of the container registry, e.g., `ghcr.io`.
-This is where images are stored.
-
----
-
-### `enterprise.extraExtensions.manifest.namespace`
-
-- **Type:** `string`
-- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_NAMESPACE`
-
-Namespace is the repository namespace or organization within the registry, e.g., `sidero-labs`.
-Some registries allow repositories without a namespace.
-
----
-
-### `enterprise.extraExtensions.manifest.repository`
-
-- **Type:** `string`
-- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REPOSITORY`
-
-Repository is the name of the repository inside the namespace, e.g., `talos`.
-Combined with Registry and Namespace, it forms the fully qualified repository path.
-
----
-
-### `enterprise.extraExtensions.manifest.insecure`
-
-- **Type:** `bool`
-- **Env:** `ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_INSECURE`
-
-Insecure allows connections to registries over HTTP or with invalid TLS certificates.
-
----
-
 ### `registry`
 
 Registry contains low-level tuning for the registry client (pull/push concurrency, debugging).
@@ -1117,6 +1132,7 @@ artifacts:
             overlayManifest: siderolabs/overlays
             talosctl: siderolabs/talosctl-all
         insecure: false
+        namespace: ""
         registry: ghcr.io
     installer:
         external:
@@ -1244,6 +1260,7 @@ IF_ARTIFACTS_CORE_COMPONENTS_INSTALLERBASE=siderolabs/installer-base
 IF_ARTIFACTS_CORE_COMPONENTS_OVERLAYMANIFEST=siderolabs/overlays
 IF_ARTIFACTS_CORE_COMPONENTS_TALOSCTL=siderolabs/talosctl-all
 IF_ARTIFACTS_CORE_INSECURE=false
+IF_ARTIFACTS_CORE_NAMESPACE=
 IF_ARTIFACTS_CORE_REGISTRY=ghcr.io
 IF_ARTIFACTS_INSTALLER_EXTERNAL_INSECURE=false
 IF_ARTIFACTS_INSTALLER_EXTERNAL_NAMESPACE=

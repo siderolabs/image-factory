@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -30,14 +31,26 @@ import (
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
+// registryWithNamespace couples a registry with an optional repository path prefix
+// (e.g. a Harbor proxy-cache project) prepended to every repository pulled from it.
+type registryWithNamespace struct {
+	registry  name.Registry
+	namespace string
+}
+
+// Repo returns a repository in the registry with the namespace prefix applied.
+func (r registryWithNamespace) Repo(repoPath string) name.Repository {
+	return r.registry.Repo(path.Join(r.namespace, repoPath))
+}
+
 // Manager supports loading, caching and serving Talos release artifacts.
 type Manager struct { //nolint:govet
 	options                 Options
 	storagePath             string
 	schematicsPath          string
 	logger                  *zap.Logger
-	imageRegistry           name.Registry
-	extraExtensionsRegistry name.Registry
+	imageRegistry           registryWithNamespace
+	extraExtensionsRegistry registryWithNamespace
 	pullers                 map[Arch]remotewrap.Puller
 
 	sf singleflight.Group
@@ -71,12 +84,17 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 		opts = append(opts, name.Insecure)
 	}
 
-	imageRegistry, err := name.NewRegistry(options.ImageRegistry, opts...)
+	registry, err := name.NewRegistry(options.ImageRegistry, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse image registry: %w", err)
 	}
 
-	var extraExtensionsImageRegistry name.Registry
+	imageRegistry := registryWithNamespace{
+		registry:  registry,
+		namespace: options.ImageRegistryNamespace,
+	}
+
+	var extraExtensionsImageRegistry registryWithNamespace
 
 	if options.ExtraExtensionsImageRegistry != "" {
 		opts = []name.Option{}
@@ -84,7 +102,7 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 			opts = append(opts, name.Insecure)
 		}
 
-		extraExtensionsImageRegistry, err = name.NewRegistry(options.ExtraExtensionsImageRegistry, opts...)
+		extraExtensionsImageRegistry.registry, err = name.NewRegistry(options.ExtraExtensionsImageRegistry, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse extra extensions image registry: %w", err)
 		}

@@ -29,7 +29,7 @@ func (m *Manager) fetchImageByTag(imageName, tag string, architecture Arch, imag
 }
 
 // fetchImageByTag contains combined logic of image handling: heading, downloading, verifying signatures, and exporting.
-func (m *Manager) fetchImageByTagWithRepo(imageName, tag string, reg name.Registry, architecture Arch, imageHandler imagehandler.Handler) error {
+func (m *Manager) fetchImageByTagWithRepo(imageName, tag string, reg registryWithNamespace, architecture Arch, imageHandler imagehandler.Handler) error {
 	// set a timeout for fetching, but don't bind it to any context, as we want fetch operation to finish
 	ctx, cancel := context.WithTimeout(context.Background(), FetchTimeout)
 	defer cancel()
@@ -121,7 +121,7 @@ func (m *Manager) extractOverlay(arch Arch, ref OverlayRef) error {
 
 // fetchExtensionImage fetches a specified extension image and exports it to the storage as OCI.
 func (m *Manager) fetchExtensionImage(arch Arch, ref ExtensionRef, destPath string) error {
-	imageRef := ref.TaggedReference.Digest(ref.Digest)
+	imageRef := ref.pullReference.Digest(ref.Digest)
 
 	if err := m.fetchImageByDigest(imageRef, arch, imagehandler.OCI(destPath+tmpSuffix)); err != nil {
 		return err

@@ -102,6 +102,10 @@ type ExtensionRef struct {
 	Author          string
 
 	imageDigest string
+	// pullReference is the reference the extension image is pulled from; unlike
+	// TaggedReference (which serves as the extension identity, e.g. "siderolabs/gvisor"),
+	// it includes the registry namespace prefix, if any.
+	pullReference name.Tag
 }
 
 // OverlayRef is a ref to the overlay for some Talos version.
@@ -133,7 +137,7 @@ type overlaysDescription struct {
 	Digest string `yaml:"digest"`
 }
 
-func (m *Manager) fetchExtensionList(image, tag string, registry name.Registry) ([]ExtensionRef, error) {
+func (m *Manager) fetchExtensionList(image, tag string, registry registryWithNamespace) ([]ExtensionRef, error) {
 	var extensions []ExtensionRef
 
 	err := m.fetchImageByTagWithRepo(image, tag, registry, ArchAmd64, imagehandler.Export(func(_ *zap.Logger, r io.Reader) error {
@@ -185,7 +189,7 @@ func (m *Manager) fetchTalosctlTuples(tag string) ([]TalosctlTuple, error) {
 }
 
 //nolint:gocognit
-func extractExtensionList(r io.Reader, imageRegistry name.Registry) ([]ExtensionRef, error) {
+func extractExtensionList(r io.Reader, imageRegistry registryWithNamespace) ([]ExtensionRef, error) {
 	var extensions []ExtensionRef
 
 	tr := tar.NewReader(r)
@@ -226,13 +230,14 @@ func extractExtensionList(r io.Reader, imageRegistry name.Registry) ([]Extension
 					return nil, fmt.Errorf("failed to parse tagged reference %s: %w", tagged, err)
 				}
 
-				taggedRef = imageRegistry.Repo(taggedRef.RepositoryStr()).Tag(taggedRef.TagStr())
+				repoPath, tag := taggedRef.RepositoryStr(), taggedRef.TagStr()
 
 				extensions = append(extensions, ExtensionRef{
-					TaggedReference: taggedRef,
+					TaggedReference: imageRegistry.registry.Repo(repoPath).Tag(tag),
 					Digest:          digest,
 
-					imageDigest: line,
+					imageDigest:   line,
+					pullReference: imageRegistry.Repo(repoPath).Tag(tag),
 				})
 			}
 

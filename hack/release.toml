@@ -34,6 +34,20 @@ Image Factory now generates disk images with Secure Boot supporting automaticall
 Image Factory now supports generating disk images with 4096 byte sector size (custom size), set via schematic customization.
 """
 
+    [notes.core_artifacts_namespace]
+        title = "Core Artifacts Namespace"
+        description = """\
+Image Factory now supports setting namespace for core artifacts - an optional
+repository path prefix prepended to every image pulled from the core registry:
+the component images as well as the extension and overlay images discovered
+via the manifests. Previously only the registry host could be overridden, so
+pull-through caches which prefix the upstream repository path (e.g. a Harbor
+proxy-cache project) could not be used.
+
+The prefix only affects pull references; extension identities (matched against
+schematics, the UI, and the meta API) are unchanged.
+"""
+
 [make_deps]
 
     [make_deps.pkgs]

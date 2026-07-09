@@ -472,6 +472,7 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 		MinVersion:                  minVersion,
 		BrokenVersions:              brokenVersions,
 		ImageRegistry:               opts.Artifacts.Core.Registry,
+		ImageRegistryNamespace:      opts.Artifacts.Core.Namespace,
 		InsecureImageRegistry:       opts.Artifacts.Core.Insecure,
 		ImageVerifyOptions:          imageVerifyOptions,
 		TalosVersionRecheckInterval: opts.Artifacts.TalosVersionRecheckInterval,
