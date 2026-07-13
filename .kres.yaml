@@ -2,10 +2,6 @@ kind: golang.Generate
 spec:
   versionPackagePath: internal/version
 ---
-kind: golang.GoVulnCheck
-spec:
-  ignore: []
----
 kind: golang.Build
 spec:
   outputs:
