@@ -1144,7 +1144,7 @@ File configures the "file" audit sink.
 - **Env:** `AUDIT_FILE_PATH`
 
 Path is the file to append audit records to, as newline-delimited JSON.
-Leave empty to write records to stdout (no rotation).
+Leave empty to write records to /tmp/audit.log.
 
 ---
 
@@ -1185,8 +1185,9 @@ artifacts:
     talosVersionRecheckInterval: 15m0s
 audit:
     file:
-        maxBackups: 0
-        maxSizeMB: 0
+        maxAge: 30
+        maxBackups: 16
+        maxSizeMB: 256
         path: ""
     mode: ""
 authentication:
@@ -1313,8 +1314,9 @@ IF_ARTIFACTS_SCHEMATIC_NAMESPACE=siderolabs/image-factory
 IF_ARTIFACTS_SCHEMATIC_REGISTRY=ghcr.io
 IF_ARTIFACTS_SCHEMATIC_REPOSITORY=schematics
 IF_ARTIFACTS_TALOSVERSIONRECHECKINTERVAL=15m0s
-IF_AUDIT_FILE_MAXBACKUPS=0
-IF_AUDIT_FILE_MAXSIZEMB=0
+IF_AUDIT_FILE_MAXAGE=30
+IF_AUDIT_FILE_MAXBACKUPS=16
+IF_AUDIT_FILE_MAXSIZEMB=256
 IF_AUDIT_FILE_PATH=
 IF_AUDIT_MODE=
 IF_AUTHENTICATION_ENABLED=false

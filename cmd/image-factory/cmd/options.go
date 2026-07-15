@@ -124,8 +124,11 @@ type AuditOptions struct {
 // AuditFileOptions configures the file-based audit sink.
 type AuditFileOptions struct {
 	// Path is the file to append audit records to, as newline-delimited JSON.
-	// Leave empty to write records to stdout (no rotation).
+	// Leave empty to write records to /tmp/audit.log.
 	Path string `koanf:"path"`
+
+	// MaxAge is the maximum number of days to retain rotated files.
+	MaxAge uint16 `koanf:"maxAge"`
 
 	// MaxSizeMB is the size in megabytes the file may reach before it is rotated.
 	MaxSizeMB uint16 `koanf:"maxSizeMB"`
@@ -681,6 +684,14 @@ var DefaultOptions = Options{
 				OverlayManifest:   "siderolabs/overlays",
 				Talosctl:          "siderolabs/talosctl-all",
 			},
+		},
+	},
+
+	Audit: AuditOptions{
+		File: AuditFileOptions{
+			MaxAge:     30,
+			MaxSizeMB:  256,
+			MaxBackups: 16,
 		},
 	},
 

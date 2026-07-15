@@ -132,6 +132,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	case AuditModeFile:
 		auditSink = auditfile.New(auditfile.Options{
 			Path:       opts.Audit.File.Path,
+			MaxAge:     opts.Audit.File.MaxAge,
 			MaxSizeMB:  opts.Audit.File.MaxSizeMB,
 			MaxBackups: opts.Audit.File.MaxBackups,
 		})

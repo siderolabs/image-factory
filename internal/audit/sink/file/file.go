@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
@@ -22,8 +23,11 @@ import (
 // Options configures the file audit sink.
 type Options struct {
 	// Path is the file to append audit records to.
-	// Empty writes to stdout without rotation.
+	// It uses /tmp/audit.log if empty.
 	Path string
+
+	// MaxAge is the maximum number of days to retain rotated files.
+	MaxAge uint16
 
 	// MaxSizeMB is the size in megabytes the file may reach before it is rotated.
 	MaxSizeMB uint16
@@ -38,15 +42,17 @@ type Sink struct {
 	mu sync.Mutex
 }
 
-// New creates a file audit sink. A Path of "" writes to stdout without rotation.
+// New creates a file audit sink.
 func New(opts Options) *Sink {
 	if opts.Path == "" {
-		return &Sink{w: os.Stdout}
+		opts.Path = filepath.Join(os.TempDir(), "audit.log")
 	}
 
 	lj := &lumberjack.Logger{
 		Filename:   opts.Path,
+		Compress:   true,
 		MaxSize:    int(opts.MaxSizeMB),
+		MaxAge:     int(opts.MaxAge),
 		MaxBackups: int(opts.MaxBackups),
 	}
 
@@ -68,8 +74,11 @@ func (s *Sink) Log(_ context.Context, r audit.Record) error {
 	// One Write per record keeps each record on a single line and prevents a
 	// record from being split across a rotation boundary.
 	_, err = s.w.Write(b)
+	if err != nil {
+		return fmt.Errorf("failed to write audit record: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 // Close implements audit.Sink.
