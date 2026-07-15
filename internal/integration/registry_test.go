@@ -35,7 +35,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/siderolabs/image-factory/internal/image/verify"
 	"github.com/siderolabs/image-factory/pkg/client"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -53,12 +55,7 @@ func ociRemoteAuthOpts() []remote.Option {
 	}
 }
 
-func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, talosVersion, schematic string, secureboot bool, platform v1.Platform, baseURL string, overlay bool) {
-	imageName := "installer"
-	if secureboot {
-		imageName += "-secureboot"
-	}
-
+func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registry, imageName, talosVersion, schematic string, secureboot bool, platform v1.Platform, baseURL string, overlay, proxied bool) {
 	ref := registry.Repo(imageName, schematic).Tag(talosVersion)
 
 	q := quirks.New(talosVersion)
@@ -127,6 +124,12 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 
 	assertImageContainsFiles(t, img, expectedFiles)
 
+	if proxied {
+		assertProxiedImageSignature(ctx, t, ref.Context().Digest(descriptor.Digest.String()))
+
+		return
+	}
+
 	// verify the image signature
 	assertImageSignature(ctx, t, ref, baseURL)
 
@@ -137,6 +140,44 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 	require.NoError(t, err)
 
 	assert.Less(t, time.Since(start), 1*time.Second)
+}
+
+func testInstallerBaseImage(ctx context.Context, t *testing.T, registry name.Registry, imageName, talosVersion string, platform v1.Platform) {
+	ref := registry.Repo(imageName).Tag(talosVersion)
+
+	_, err := remote.Head(ref, ociRemoteAuthOpts()...)
+	require.NoError(t, err)
+
+	descriptor, err := remote.Get(ref, append(ociRemoteAuthOpts(), remote.WithPlatform(platform))...)
+	require.NoError(t, err)
+
+	index, err := descriptor.ImageIndex()
+	require.NoError(t, err)
+
+	manifest, err := index.IndexManifest()
+	require.NoError(t, err)
+
+	platforms := xslices.Map(
+		xslices.Filter(manifest.Manifests, func(m v1.Descriptor) bool {
+			// Ignore BuildKit attestation manifests (published with platform unknown/unknown).
+			return m.Annotations["vnd.docker.reference.type"] != "attestation-manifest"
+		}),
+		func(m v1.Descriptor) string { return m.Platform.String() },
+	)
+
+	sort.Strings(platforms)
+
+	assert.Equal(t, []string{"linux/amd64", "linux/arm64"}, platforms)
+
+	img, err := descriptor.Image()
+	require.NoError(t, err)
+
+	layers, err := img.Layers()
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, layers)
+
+	assertProxiedImageSignature(ctx, t, ref.Context().Digest(descriptor.Digest.String()))
 }
 
 func assertImageContainsFiles(t *testing.T, img v1.Image, files map[string]struct{}) {
@@ -225,6 +266,39 @@ func assertImageSignature(ctx context.Context, t *testing.T, ref name.Reference,
 	assert.NoError(t, err)
 }
 
+// assertProxiedImageSignature verifies that a proxied image's siderolabs signature
+// can be fetched and validated through the proxy. Unlike assertImageSignature.
+// Check against siderolabs' keyless (Google OIDC) signing identity rather than the
+// factory's per-run cache key, since proxied images are forwarded unmodified.
+func assertProxiedImageSignature(ctx context.Context, t *testing.T, digestRef name.Reference) {
+	t.Helper()
+
+	trustedRoot, err := cosign.TrustedRoot()
+	require.NoError(t, err)
+
+	var registryClientOpts []ociremote.Option
+	if opts := ociRemoteAuthOpts(); len(opts) > 0 {
+		registryClientOpts = append(registryClientOpts, ociremote.WithRemoteOptions(opts...))
+	}
+
+	result, err := verify.VerifySignatures(ctx, digestRef, verify.VerifyOptions{
+		CheckOpts: []cosign.CheckOpts{
+			{
+				TrustedMaterial:    trustedRoot,
+				RegistryClientOpts: registryClientOpts,
+				Identities: []cosign.Identity{
+					{
+						Issuer:        "https://accounts.google.com",
+						SubjectRegExp: `(@siderolabs\.com$|^releasemgr-svc@talos-production\.iam\.gserviceaccount\.com$)`,
+					},
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.Verified)
+}
+
 func testLatestTagResolution(ctx context.Context, t *testing.T, registryAddr string, baseURL string) {
 	registry, err := name.NewRegistry(registryAddr)
 	require.NoError(t, err)
@@ -249,6 +323,105 @@ func testLatestTagResolution(ctx context.Context, t *testing.T, registryAddr str
 	require.NoError(t, err)
 
 	assert.NotEmpty(t, layers, "latest tag should resolve to a valid installer image with layers")
+}
+
+func testRegistryProxy(ctx context.Context, t *testing.T, registryAddr string, baseURL string) {
+	talosVersion := "v1.13.5"
+
+	registry, err := name.NewRegistry(registryAddr)
+	require.NoError(t, err)
+
+	t.Run("PullAndVerifySignature", func(t *testing.T) {
+		t.Parallel()
+
+		for _, platform := range []v1.Platform{
+			{
+				Architecture: "amd64",
+				OS:           "linux",
+			},
+			{
+				Architecture: "arm64",
+				OS:           "linux",
+			},
+		} {
+			t.Run(platform.String(), func(t *testing.T) {
+				t.Parallel()
+
+				testInstallerBaseImage(ctx, t, registry, "siderolabs/installer-base", talosVersion, platform)
+			})
+		}
+	})
+
+	t.Run("ListTags", func(t *testing.T) {
+		t.Parallel()
+
+		repo := registry.Repo("siderolabs", "installer-base")
+
+		// ensure the tag is present in the backing registry, then list through the proxy.
+		_, err := remote.Head(repo.Tag(talosVersion), ociRemoteAuthOpts()...)
+		require.NoError(t, err)
+
+		tags, err := remote.List(repo, ociRemoteAuthOpts()...)
+		require.NoError(t, err)
+
+		assert.Contains(t, tags, talosVersion, "tag listing through the proxy should include the pulled version")
+	})
+
+	t.Run("Authentication", func(t *testing.T) {
+		if !enterprise.Enabled() {
+			t.Skip()
+		}
+
+		repo := registry.Repo("siderolabs", "installer-base")
+
+		// No ociRemoteAuthOpts provided: expect error
+		_, err := remote.List(repo)
+		require.ErrorContains(t, err, "Unauthorized")
+	})
+
+	t.Run("RejectsUnknownImagesAndPaths", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range []struct {
+			name           string
+			path           string
+			expectedStatus int
+		}{
+			{
+				name:           "unknown proxied image",
+				path:           "/v2/siderolabs/nonexistent/manifests/" + talosVersion,
+				expectedStatus: http.StatusNotFound,
+			},
+			{
+				name:           "unregistered path shape",
+				path:           "/v2/a/b/c/manifests/v1",
+				expectedStatus: http.StatusNotFound,
+			},
+			{
+				name:           "tags resource without list reference",
+				path:           "/v2/siderolabs/installer/tags/v1",
+				expectedStatus: http.StatusNotFound,
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+tc.path, nil)
+				require.NoError(t, err)
+
+				addTestAuth(req)
+
+				resp, err := http.DefaultClient.Do(req)
+				require.NoError(t, err)
+
+				t.Cleanup(func() {
+					resp.Body.Close()
+				})
+
+				assert.Equal(t, tc.expectedStatus, resp.StatusCode)
+			})
+		}
+	})
 }
 
 func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string, baseURL string) {
@@ -311,7 +484,12 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 								t.Run(platform.String(), func(t *testing.T) {
 									t.Parallel()
 
-									testInstallerImage(ctx, t, registry, talosVersion, schematicID, secureboot, platform, baseURL, false)
+									imageName := "installer"
+									if secureboot {
+										imageName += "-secureboot"
+									}
+
+									testInstallerImage(ctx, t, registry, imageName, talosVersion, schematicID, secureboot, platform, baseURL, false, false)
 								})
 							}
 						})
@@ -349,7 +527,7 @@ func testRegistryFrontend(ctx context.Context, t *testing.T, registryAddr string
 					t.Run(platform.String(), func(t *testing.T) {
 						t.Parallel()
 
-						testInstallerImage(ctx, t, registry, talosVersion, schematicID, false, platform, baseURL, true)
+						testInstallerImage(ctx, t, registry, "installer", talosVersion, schematicID, false, platform, baseURL, true, false)
 					})
 				}
 			})

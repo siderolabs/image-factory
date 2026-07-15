@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver/v4"
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -35,6 +36,9 @@ import (
 // InvalidImageTag is an error tag for invalid image names.
 type InvalidImageTag struct{}
 
+// ProxyUnavailableTag is an error tag for when the backing registry cannot be proxied to.
+type ProxyUnavailableTag struct{}
+
 // handleHealth handles registry health and auth.
 func (f *Frontend) handleHealth(_ context.Context, _ http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
 	// always healthy, yay!
@@ -47,9 +51,7 @@ type requestedImage struct {
 	secureboot bool
 }
 
-func getRequestedImage(p httprouter.Params) (requestedImage, error) {
-	image := p.ByName("image")
-
+func getRequestedImage(image string) (requestedImage, error) {
 	switch image {
 	case "installer":
 		// defaults to metal image
@@ -86,57 +88,60 @@ func (img requestedImage) Name() string {
 // handleBlob handles image blob download.
 //
 // We always redirect to the external registry, as we assume the image has already been pushed.
-func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, req *http.Request, p httprouter.Params) error {
-	// verify that schematic exists
-	schematicID := p.ByName("schematic")
+func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, req *http.Request, route v2Route) error {
+	schematicID := route.schematic
 
+	// verify that schematic exists
 	_, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
 	if err != nil {
 		return err
 	}
 
-	img, err := getRequestedImage(p)
+	img, err := getRequestedImage(route.image)
 	if err != nil {
 		return err
 	}
 
-	digest := p.ByName("digest")
+	digest := route.reference
 
 	return f.handleExternalRegistry(ctx, w, req, img.Name(), schematicID, "blobs", digest)
 }
 
-func (f *Frontend) handleExternalRegistry(ctx context.Context, w http.ResponseWriter, req *http.Request, imageName, schematicID, manifestsOrBlobs, tagOrDigest string) error {
+// handleImageProxy proxies image requests to the backing registry.
+func (f *Frontend) handleImageProxy(ctx context.Context, w http.ResponseWriter, req *http.Request, route v2Route) error {
+	if f.options.ImageProxy.BackingRegistry.Scheme() != "http" {
+		return xerrors.NewTaggedf[ProxyUnavailableTag]("proxying to an authorized/secure backing registry is not possible")
+	}
+
+	repository, ok := f.options.ImageProxy.Images[route.image]
+	if !ok {
+		return xerrors.NewTaggedf[RouteNotFoundTag]("unknown image: %s", route.image)
+	}
+
 	var redirectURL url.URL
 
+	redirectURL.Scheme = f.options.ImageProxy.BackingRegistry.Scheme()
+	redirectURL.Host = f.options.ImageProxy.BackingRegistry.Name()
+	redirectURL.Path = "/"
+
+	location := redirectURL.JoinPath("v2", f.options.ImageProxy.Namespace, repository, route.resource, route.reference)
+
+	f.proxyRegistryRequest(ctx, location, w, req)
+
+	return nil
+}
+
+func (f *Frontend) handleExternalRegistry(ctx context.Context, w http.ResponseWriter, req *http.Request, imageName, schematicID, manifestsOrBlobs, tagOrDigest string) error {
 	repo := f.options.InstallerExternalRepository
 	if f.options.ProxyInstallerInternalRepository {
 		repo = f.options.InstallerInternalRepository
 	}
 
-	redirectURL.Scheme = repo.Scheme()
-	redirectURL.Host = repo.Registry.Name()
-	redirectURL.Path = "/"
-
-	location := redirectURL.JoinPath("v2", repo.RepositoryStr(), imageName, schematicID, manifestsOrBlobs, tagOrDigest)
+	location := craftRedirectURL(repo, imageName, schematicID, manifestsOrBlobs, tagOrDigest)
 
 	// When auth is active, always proxy - redirecting to the backing registry would bypass the auth boundary.
 	if f.options.ProxyInstallerInternalRepository || f.options.AuthProvider != nil {
-		f.reqLogger(ctx).Info("proxying manifest/blob", zap.Stringer("location", location))
-
-		proxy := &httputil.ReverseProxy{
-			Director: func(out *http.Request) {
-				out.URL.Scheme = location.Scheme
-				out.URL.Host = location.Host
-				out.URL.Path = location.Path
-				out.URL.RawPath = ""
-				out.URL.RawQuery = location.RawQuery
-				// we don't forward the host header to avoid TLS issues with some registries
-				out.Host = ""
-			},
-			Transport: remotewrap.GetTransport(),
-		}
-
-		proxy.ServeHTTP(w, req)
+		f.proxyRegistryRequest(ctx, location, w, req)
 
 		return nil
 	}
@@ -149,20 +154,55 @@ func (f *Frontend) handleExternalRegistry(ctx context.Context, w http.ResponseWr
 	return nil
 }
 
+func (f *Frontend) proxyRegistryRequest(ctx context.Context, location *url.URL, w http.ResponseWriter, req *http.Request) {
+	f.reqLogger(ctx).Info("proxying registry request", zap.Stringer("location", location))
+
+	proxy := &httputil.ReverseProxy{
+		Director: func(out *http.Request) {
+			out.URL.Scheme = location.Scheme
+			out.URL.Host = location.Host
+			out.URL.Path = location.Path
+			out.URL.RawPath = ""
+
+			if location.RawQuery != "" {
+				out.URL.RawQuery = location.RawQuery
+			}
+			// we don't forward the host header to avoid TLS issues with some registries
+			out.Host = ""
+			out.Header.Del("Authorization")
+		},
+		Transport: remotewrap.GetTransport(),
+	}
+
+	proxy.ServeHTTP(w, req)
+}
+
+func craftRedirectURL(repo name.Repository, imageName string, schematicID string, manifestsOrBlobs string, tagOrDigest string) *url.URL {
+	var redirectURL url.URL
+
+	redirectURL.Scheme = repo.Scheme()
+	redirectURL.Host = repo.Registry.Name()
+	redirectURL.Path = "/"
+
+	location := redirectURL.JoinPath("v2", repo.RepositoryStr(), imageName, schematicID, manifestsOrBlobs, tagOrDigest)
+
+	return location
+}
+
 // handleManifest handles image manifest download.
 //
 // If the manifest is for the tag, we check if the image already exists, and either redirect, or build, push and redirect.
-func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, req *http.Request, p httprouter.Params) error {
-	schematicID := p.ByName("schematic")
+func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, req *http.Request, route v2Route) error {
+	schematicID := route.schematic
 
 	schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
 	if err != nil {
 		return err
 	}
 
-	versionTag := p.ByName("tag")
+	versionTag := route.reference
 
-	img, err := getRequestedImage(p)
+	img, err := getRequestedImage(route.image)
 	if err != nil {
 		return err
 	}

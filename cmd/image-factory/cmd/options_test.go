@@ -5,6 +5,8 @@
 package cmd_test
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -284,5 +286,43 @@ func TestOptionsValidate(t *testing.T) {
 
 			assert.ErrorContains(t, err, tc.expectError)
 		})
+	}
+}
+
+// Test that every cmd.ComponentsOptions field is mapped in the ImageMap method,
+// and that the map contains no unknown keys.
+func TestComponentsImageMap(t *testing.T) {
+	t.Parallel()
+
+	var componentsOptions cmd.ComponentsOptions
+
+	v := reflect.ValueOf(&componentsOptions).Elem()
+	typ := v.Type()
+
+	// give every field a unique sentinel value so map entries can be matched back to fields.
+	fieldByValue := make(map[string]string, v.NumField())
+
+	for i := range v.NumField() {
+		value := fmt.Sprintf("field %d", i)
+
+		v.Field(i).SetString(value)
+		fieldByValue[value] = typ.Field(i).Name
+	}
+
+	imageMap := componentsOptions.ImageMap()
+
+	mapped := make(map[string]struct{}, len(imageMap))
+
+	for key, val := range imageMap {
+		mapped[val] = struct{}{}
+
+		assert.Containsf(t, fieldByValue, val, "ImageMap key %q is not backed by any ComponentsOptions field", key)
+	}
+
+	assert.Equal(t, len(fieldByValue), len(mapped), "ImageMap must be the same length as ComponentsOptions")
+
+	for value, fieldName := range fieldByValue {
+		_, ok := mapped[value]
+		assert.Truef(t, ok, "field %s is not represented in ComponentsOptions.ImageMap()", fieldName)
 	}
 }

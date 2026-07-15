@@ -353,6 +353,12 @@ func commonTest(t *testing.T, options cmd.Options) {
 		testRegistryFrontend(ctx, t, listenAddr, baseURL)
 	})
 
+	t.Run("TestRegistryProxy", func(t *testing.T) {
+		t.Parallel()
+
+		testRegistryProxy(ctx, t, listenAddr, baseURL)
+	})
+
 	t.Run("TestLatestTagResolution", func(t *testing.T) {
 		t.Parallel()
 

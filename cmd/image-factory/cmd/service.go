@@ -324,6 +324,23 @@ func buildFrontendOptions(cacheImageSigner signer.Signer, authProvider enterpris
 		}
 	}
 
+	var registryOpts []name.Option
+
+	if opts.Artifacts.Core.Insecure {
+		registryOpts = append(registryOpts, name.Insecure)
+	}
+
+	imageProxyRegistry, err := name.NewRegistry(opts.Artifacts.Core.Registry, registryOpts...)
+	if err != nil {
+		return frontendhttp.Options{}, fmt.Errorf("failed to parse image proxy registry: %w", err)
+	}
+
+	frontendOptions.ImageProxy = frontendhttp.ImageProxyOptions{
+		BackingRegistry: imageProxyRegistry,
+		Images:          opts.Artifacts.Core.Components.ImageMap(),
+		Namespace:       opts.Artifacts.Core.Namespace,
+	}
+
 	frontendOptions.RemoteOptions = append(frontendOptions.RemoteOptions, remoteOptions()...)
 	frontendOptions.RegistryRefreshInterval = opts.Artifacts.RefreshInterval
 	frontendOptions.MetricsNamespace = opts.Metrics.Namespace

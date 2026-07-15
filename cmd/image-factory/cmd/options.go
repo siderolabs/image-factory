@@ -543,8 +543,20 @@ type ComponentsOptions struct {
 	// OverlayManifest is the image manifest for overlays.
 	OverlayManifest string `koanf:"overlayManifest"`
 
-	// Talosctl is the image containing the Talos CLI tool.
+	// Talosctl is the image containing the Talos CLI tool (talosctl-all).
 	Talosctl string `koanf:"talosctl"`
+}
+
+// ImageMap maps each component to its registry-facing image name.
+func (c ComponentsOptions) ImageMap() map[string]string {
+	return map[string]string{
+		"installer-base": c.InstallerBase,
+		"installer":      c.Installer,
+		"imager":         c.Imager,
+		"extensions":     c.ExtensionManifest,
+		"overlays":       c.OverlayManifest,
+		"talosctl-all":   c.Talosctl,
+	}
 }
 
 // AuthenticationOptions holds authentication settings.

@@ -654,7 +654,7 @@ OverlayManifest is the image manifest for overlays.
 - **Type:** `string`
 - **Env:** `ARTIFACTS_CORE_COMPONENTS_TALOSCTL`
 
-Talosctl is the image containing the Talos CLI tool.
+Talosctl is the image containing the Talos CLI tool (talosctl-all).
 
 ---
 

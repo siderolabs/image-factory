@@ -10,6 +10,14 @@ pre_release = false
 
 [notes]
 
+    [notes.image_proxy]
+        title = "Source Image Proxy"
+        description = """\
+Allow pulling source images through the Image Factory.
+
+E.g. `siderolabs/imager` image can be pulled as `factory.talos.dev/siderolabs/imager`.
+"""
+
     [notes.extra_extensions]
         title = "Extra Extensions (enterprise only)"
         description = """\

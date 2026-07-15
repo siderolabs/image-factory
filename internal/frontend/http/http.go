@@ -64,10 +64,11 @@ type Frontend struct {
 
 // Options configures the HTTP frontend.
 type Options struct {
+	ImageProxy                       ImageProxyOptions
 	CacheImageSigner                 signer.Signer
+	AuthProvider                     enterprise.AuthProvider
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
-	AuthProvider                     enterprise.AuthProvider
 	AuditSink                        audit.Sink
 	InstallerInternalRepository      name.Repository
 	InstallerExternalRepository      name.Repository
@@ -76,6 +77,12 @@ type Options struct {
 	RemoteOptions                    []remote.Option
 	RegistryRefreshInterval          time.Duration
 	ProxyInstallerInternalRepository bool
+}
+
+type ImageProxyOptions struct {
+	Images          map[string]string
+	BackingRegistry name.Registry
+	Namespace       string
 }
 
 // Handler is a custom handler type that includes the context and httprouter params, and returns an error.
@@ -172,13 +179,9 @@ func NewFrontend(
 
 	// registry - /v2 requires auth (OCI spec: 401 challenge when auth enabled)
 	registerRoute(frontend.router.GET, "/v2", frontend.handleHealth)
-	registerRoute(frontend.router.GET, "/v2/", frontend.handleHealth)
 	registerRoute(frontend.router.HEAD, "/v2", frontend.handleHealth)
-	registerRoute(frontend.router.HEAD, "/v2/", frontend.handleHealth)
-	registerRoute(frontend.router.GET, "/v2/:image/:schematic/blobs/:digest", frontend.handleBlob)
-	registerRoute(frontend.router.HEAD, "/v2/:image/:schematic/blobs/:digest", frontend.handleBlob)
-	registerRoute(frontend.router.GET, "/v2/:image/:schematic/manifests/:tag", frontend.handleManifest)
-	registerRoute(frontend.router.HEAD, "/v2/:image/:schematic/manifests/:tag", frontend.handleManifest)
+	registerRoute(frontend.router.GET, "/v2/*path", frontend.handleV2)
+	registerRoute(frontend.router.HEAD, "/v2/*path", frontend.handleV2)
 	registerPublicRoute(frontend.router.GET, "/oci/cosign/signing-key.pub", frontend.handleCosignSigningKeyPub)
 
 	// schematic - both POST and GET require auth
@@ -355,8 +358,14 @@ func MatchError(err error, callback func(message string, code int)) (zapcore.Lev
 		status = http.StatusServiceUnavailable
 
 		callback("service temporarily unavailable", http.StatusServiceUnavailable)
+	case xerrors.TagIs[ProxyUnavailableTag](err):
+		level = zap.WarnLevel
+		status = http.StatusServiceUnavailable
+
+		callback(err.Error(), http.StatusServiceUnavailable)
 	case xerrors.TagIs[storage.ErrNotFoundTag](err),
-		xerrors.TagIs[artifacts.ErrNotFoundTag](err):
+		xerrors.TagIs[artifacts.ErrNotFoundTag](err),
+		xerrors.TagIs[RouteNotFoundTag](err):
 		level = zap.WarnLevel
 		status = http.StatusNotFound
 

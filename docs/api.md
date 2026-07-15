@@ -334,6 +334,28 @@ The `latest` tag automatically resolves to the latest stable (non-prerelease) Ta
 
 This is equivalent to pulling with an explicit stable version, ensuring that prerelease versions (e.g. `v1.5.0-alpha.1`) are not used.
 
+### Source Image Proxy
+
+Image Factory proxies the core Talos Linux source images from its backing registry under the `siderolabs/` prefix.
+The images are pulled through the backing registry specified with the `artifacts.core.registry` option.
+This feature only works if the backing registry is insecure (a local pull-through cache registry is recommended).
+The image mapping is defined via the `artifacts.core.components` option.
+This lets clients pull them through the factory.
+Images are forwarded as-is, keeping their original signatures.
+
+#### `docker pull <registry>/siderolabs/<image>:<version>`
+
+`<image>` is one of:
+
+* `installer-base`
+* `installer`
+* `imager`
+* `extensions`
+* `overlays`
+* `talosctl-all`
+
+Example: `docker pull factory.talos.dev/siderolabs/installer-base:v1.13.5`
+
 ### `GET /oci/cosign/signing-key.pub`
 
 Returns PEM-encoded public key used to sign the Talos Linux `installer` images.
