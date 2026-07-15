@@ -1117,6 +1117,37 @@ Set via config or the IF_REGISTRY_DEBUG environment variable.
 
 ---
 
+### `audit`
+
+Audit configures the audit log of authenticated requests.
+
+---
+
+### `audit.mode`
+
+- **Type:** `string`
+- **Env:** `AUDIT_MODE`
+
+Mode selects the audit sink: "" (none, default), "file", or "log".
+
+---
+
+### `audit.file`
+
+File configures the "file" audit sink.
+
+---
+
+### `audit.file.path`
+
+- **Type:** `string`
+- **Env:** `AUDIT_FILE_PATH`
+
+Path is the file to append audit records to, as newline-delimited JSON.
+Leave empty to write records to stdout (no rotation).
+
+---
+
 ## Default Configuration
 
 ### YAML
@@ -1152,6 +1183,12 @@ artifacts:
         registry: ghcr.io
         repository: schematics
     talosVersionRecheckInterval: 15m0s
+audit:
+    file:
+        maxBackups: 0
+        maxSizeMB: 0
+        path: ""
+    mode: ""
 authentication:
     enabled: false
     htpasswdPath: ""
@@ -1276,6 +1313,10 @@ IF_ARTIFACTS_SCHEMATIC_NAMESPACE=siderolabs/image-factory
 IF_ARTIFACTS_SCHEMATIC_REGISTRY=ghcr.io
 IF_ARTIFACTS_SCHEMATIC_REPOSITORY=schematics
 IF_ARTIFACTS_TALOSVERSIONRECHECKINTERVAL=15m0s
+IF_AUDIT_FILE_MAXBACKUPS=0
+IF_AUDIT_FILE_MAXSIZEMB=0
+IF_AUDIT_FILE_PATH=
+IF_AUDIT_MODE=
 IF_AUTHENTICATION_ENABLED=false
 IF_AUTHENTICATION_HTPASSWDPATH=
 IF_BUILD_BROKENTALOSVERSIONS=[]

@@ -40,6 +40,9 @@ import (
 	"github.com/siderolabs/image-factory/internal/asset/cache/cdn"
 	assetcachereg "github.com/siderolabs/image-factory/internal/asset/cache/registry"
 	assetcaches3 "github.com/siderolabs/image-factory/internal/asset/cache/s3"
+	"github.com/siderolabs/image-factory/internal/audit"
+	auditfile "github.com/siderolabs/image-factory/internal/audit/sink/file"
+	auditlog "github.com/siderolabs/image-factory/internal/audit/sink/log"
 	frontendhttp "github.com/siderolabs/image-factory/internal/frontend/http"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
@@ -123,10 +126,31 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
+	var auditSink audit.Sink
+
+	switch opts.Audit.Mode {
+	case AuditModeFile:
+		auditSink = auditfile.New(auditfile.Options{
+			Path:       opts.Audit.File.Path,
+			MaxSizeMB:  opts.Audit.File.MaxSizeMB,
+			MaxBackups: opts.Audit.File.MaxBackups,
+		})
+	case AuditModeLog:
+		auditSink = auditlog.New(logger)
+	case AuditModeNone:
+		fallthrough
+	default:
+		auditSink = audit.Nop()
+	}
+
+	defer auditSink.Close() //nolint:errcheck
+
 	frontendOptions, err := buildFrontendOptions(cacheImageSigner, authProvider, opts)
 	if err != nil {
 		return err
 	}
+
+	frontendOptions.AuditSink = auditSink
 
 	frontendHTTP, err := frontendhttp.NewFrontend(
 		logger,

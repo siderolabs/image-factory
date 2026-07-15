@@ -7,6 +7,7 @@ package cmd
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -54,6 +55,10 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("registry.jobs must be >= %d if set, got %d", remotewrap.DefaultJobs, o.Registry.Jobs)
 	}
 
+	if !slices.Contains(auditModeOptions, o.Audit.Mode) {
+		return fmt.Errorf("audit.mode must be one of %v, got %q", auditModeOptions, o.Audit.Mode)
+	}
+
 	return nil
 }
 
@@ -90,6 +95,43 @@ type Options struct { //nolint:govet // keeping order for semantic clarity
 
 	// Registry contains low-level tuning for the registry client (pull/push concurrency, debugging).
 	Registry RegistryOptions `koanf:"registry"`
+
+	// Audit configures the audit log of authenticated requests.
+	Audit AuditOptions `koanf:"audit"`
+}
+
+// Audit modes select where audit records for authenticated requests are written.
+const (
+	// AuditModeNone disables audit logging. Default.
+	AuditModeNone = ""
+	// AuditModeFile writes records to a file (or stdout), rotated by size.
+	AuditModeFile = "file"
+	// AuditModeLog writes records through the application logger.
+	AuditModeLog = "log"
+)
+
+var auditModeOptions = []string{AuditModeNone, AuditModeFile, AuditModeLog}
+
+// AuditOptions configures the audit log of authenticated requests.
+type AuditOptions struct {
+	// Mode selects the audit sink: "" (none, default), "file", or "log".
+	Mode string `koanf:"mode"`
+
+	// File configures the "file" audit sink.
+	File AuditFileOptions `koanf:"file"`
+}
+
+// AuditFileOptions configures the file-based audit sink.
+type AuditFileOptions struct {
+	// Path is the file to append audit records to, as newline-delimited JSON.
+	// Leave empty to write records to stdout (no rotation).
+	Path string `koanf:"path"`
+
+	// MaxSizeMB is the size in megabytes the file may reach before it is rotated.
+	MaxSizeMB uint16 `koanf:"maxSizeMB"`
+
+	// MaxBackups is the maximum number of rotated files to retain (0 keeps all).
+	MaxBackups uint16 `koanf:"maxBackups"`
 }
 
 // RegistryOptions tunes the shared registry client used for all pull/push operations.

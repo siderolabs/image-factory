@@ -9,6 +9,7 @@ volumes:
   if-registry-ghcr-io-data:
   if-registry-local-data:
   if-grype-db:
+  if-audit-log:
 services:
   registry.local:
     image: ghcr.io/distribution/distribution:edge
@@ -49,6 +50,7 @@ services:
       - "8080:8080"
     volumes:
       - if-grype-db:/var/lib/grype
+      - if-audit-log:/var/log/image-factory/audit
     configs:
       - source: if_config
         target: /etc/image-factory/config.yaml

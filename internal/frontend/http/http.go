@@ -31,6 +31,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
+	"github.com/siderolabs/image-factory/internal/audit"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/profile"
@@ -67,6 +68,7 @@ type Options struct {
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
 	AuthProvider                     enterprise.AuthProvider
+	AuditSink                        audit.Sink
 	InstallerInternalRepository      name.Repository
 	InstallerExternalRepository      name.Repository
 	MetricsNamespace                 string
@@ -233,29 +235,20 @@ func (f *Frontend) wrapperPublic(h Handler) httprouter.Handle {
 }
 
 func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
-	if requireAuth && f.options.AuthProvider != nil {
-		h = f.options.AuthProvider.Middleware(h)
-	}
-
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		ctx := r.Context()
-
-		requestID := r.Header.Get(RequestIDHeader)
-		if requestID == "" {
-			requestID = uuid.NewString()
-		}
-
-		ctx = ctxlog.WithRequestID(ctx, requestID)
-
+		requestID := requestIDFrom(r)
+		ctx := ctxlog.WithRequestID(r.Context(), requestID)
 		logger := ctxlog.Logger(ctx, f.logger)
-
-		start := time.Now()
 
 		w.Header().Set("Server", version.ServerString())
 		w.Header().Set(RequestIDHeader, requestID)
 
-		err := h(ctx, w, r, p)
+		var username string
 
+		handler := f.withAuth(h, requireAuth, &username)
+
+		start := time.Now()
+		err := handler(ctx, w, r, p)
 		duration := time.Since(start)
 
 		level, status := MatchError(err, func(message string, code int) {
@@ -274,7 +267,70 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 			zap.Duration("duration", duration),
 			zap.Error(err),
 		)
+
+		if requireAuth {
+			f.audit(ctx, logger, audit.Record{
+				Time:      start,
+				RequestID: requestID,
+				Username:  username,
+				ClientIP:  r.RemoteAddr,
+				Method:    r.Method,
+				Path:      r.URL.Path,
+				Status:    status,
+				Duration:  duration,
+				Error:     errString(err),
+			})
+		}
 	}
+}
+
+// requestIDFrom returns the incoming request ID, or a freshly generated one.
+func requestIDFrom(r *http.Request) string {
+	if id := r.Header.Get(RequestIDHeader); id != "" {
+		return id
+	}
+
+	return uuid.NewString()
+}
+
+// withAuth wraps h with the auth middleware when authentication is required.
+//
+// The middleware stores the username on a context it derives internally, which
+// never reaches wrapHandler's context; a thin capture layer reads it from inside
+// the middleware call stack and writes it to username.
+func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string) Handler {
+	if !requireAuth || f.options.AuthProvider == nil {
+		return h
+	}
+
+	authProvider := f.options.AuthProvider
+
+	return authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+		*username, _ = authProvider.UsernameFromContext(ctx)
+
+		return h(ctx, w, r, p)
+	})
+}
+
+// audit records one entry for an authenticated request; a sink failure is logged
+// but never fails the request.
+func (f *Frontend) audit(ctx context.Context, logger *zap.Logger, record audit.Record) {
+	if f.options.AuditSink == nil {
+		return
+	}
+
+	if err := f.options.AuditSink.Log(ctx, record); err != nil {
+		logger.Error("failed to write audit record", zap.Error(err))
+	}
+}
+
+// errString returns err's message, or "" when err is nil.
+func errString(err error) string {
+	if err != nil {
+		return err.Error()
+	}
+
+	return ""
 }
 
 // MatchError matches the error and returns the appropriate HTTP status code and log level.

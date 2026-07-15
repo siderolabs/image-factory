@@ -48,6 +48,16 @@ The prefix only affects pull references; extension identities (matched against
 schematics, the UI, and the meta API) are unchanged.
 """
 
+    [notes.audit]
+        title = "Audit Logging"
+        description = """\
+Image Factory now supports audit logging via a configurable sink. Two sinks are
+available: file and log. By default, no sink is configured. File sink writes
+audit log as JSON lines to a file configured via `audit.file.path` and rotates
+the log file based on the size. Log sink writes audit log to the standard log
+output.
+"""
+
 [make_deps]
 
     [make_deps.pkgs]
