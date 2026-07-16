@@ -465,7 +465,7 @@ func (m *Manager) GetTalosctlTuples(ctx context.Context, versionString string) (
 	}
 
 	if !quirks.New(versionString).SupportsFactoryTalosctlDownload() {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	}
 
 	return m.talosctlTuples.Get(ctx, tag)

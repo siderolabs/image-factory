@@ -8,10 +8,12 @@ package schematic
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
@@ -26,6 +28,7 @@ type OwnershipChecker interface {
 // Factory is the schematic factory.
 type Factory struct {
 	storage         storage.Storage
+	sf              singleflight.Group
 	metricGet       prometheus.Counter
 	metricCreate    prometheus.Counter
 	metricDuplicate prometheus.Counter
@@ -72,41 +75,71 @@ func (s *Factory) Put(ctx context.Context, cfg *schematic.Schematic) (string, er
 		return "", err
 	}
 
-	logger := ctxlog.Logger(ctx, s.logger)
+	return id, s.put(ctx, id, cfg)
+}
 
-	if err = s.storage.Head(ctx, id); err == nil {
-		logger.Info("schematic already exists", zap.String("id", id))
+func (s *Factory) put(ctx context.Context, id string, cfg *schematic.Schematic) error {
+	// carry the request ID into the detached call so its logs keep the request_id.
+	reqID := ctxlog.RequestID(ctx)
 
-		s.metricDuplicate.Inc()
+	_, err, _ := s.sf.Do(id, func() (any, error) { //nolint:contextcheck
+		dctx := ctxlog.WithRequestID(context.Background(), reqID)
 
-		return id, nil
-	}
+		logger := ctxlog.Logger(dctx, s.logger)
 
-	data, err := cfg.Marshal()
-	if err != nil {
-		return "", err
-	}
+		if err := s.storage.Head(dctx, id); err == nil {
+			logger.Info("schematic already exists", zap.String("id", id))
 
-	err = s.storage.Put(ctx, id, data)
-	if err == nil {
-		s.metricCreate.Inc()
+			s.metricDuplicate.Inc()
 
-		logger.Info("schematic created", zap.String("id", id), zap.Any("customization", cfg.Customization))
-	}
+			return nil, nil //nolint:nilnil
+		}
 
-	return id, err
+		data, err := cfg.Marshal()
+		if err != nil {
+			return nil, err
+		}
+
+		err = s.storage.Put(dctx, id, data)
+		if err == nil {
+			s.metricCreate.Inc()
+
+			logger.Info("schematic created", zap.String("id", id), zap.Any("customization", cfg.Customization))
+		}
+
+		return nil, err
+	})
+
+	return err
 }
 
 // Get retrieves the stored schematic.
 func (s *Factory) get(ctx context.Context, id string) (*schematic.Schematic, error) {
-	data, err := s.storage.Get(ctx, id)
+	// carry the request ID into the detached call so its logs keep the request_id.
+	reqID := ctxlog.RequestID(ctx)
+
+	sc, err, _ := s.sf.Do(id, func() (any, error) { //nolint:contextcheck
+		dctx := ctxlog.WithRequestID(context.Background(), reqID)
+
+		data, err := s.storage.Get(dctx, id)
+		if err != nil {
+			return nil, err
+		}
+
+		s.metricGet.Inc()
+
+		return schematic.Unmarshal(data)
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	s.metricGet.Inc()
+	sct, ok := sc.(*schematic.Schematic)
+	if !ok {
+		return nil, fmt.Errorf("unexpected result type: %T", sc)
+	}
 
-	return schematic.Unmarshal(data)
+	return sct, nil
 }
 
 // Get retrieves the stored schematic and enforces ownership.
