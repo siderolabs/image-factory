@@ -21,7 +21,7 @@
                 <a class="ml-1 underline" data-scan-link="table">Table</a>
         </p>
         {{ else }}
-        <p>{{ t .Localizer "final.scan.enterprise_feature" }}</p>
+        <p>{{ t .Localizer "final.scan.enterprise_feature" }}{{ template "enterprise-docs-link" .Localizer }}</p>
         {{ end }}
 </section>
 {{ if .Enterprise }}
@@ -361,7 +361,7 @@
         </dl>
         {{ else }}
         <dl>
-                <dd>{{ t .Localizer "final.extra.spdx_enterprise_feature" }}</dd>
+                <dd>{{ t .Localizer "final.extra.spdx_enterprise_feature" }}{{ template "enterprise-docs-link" .Localizer }}</dd>
         </dl>
         {{ end }}
         {{ end }}
@@ -374,7 +374,7 @@
         </dl>
         {{ else }}
         <dl>
-                <dd>{{ t .Localizer "final.extra.vex_enterprise_feature" }}</dd>
+                <dd>{{ t .Localizer "final.extra.vex_enterprise_feature" }}{{ template "enterprise-docs-link" .Localizer }}</dd>
         </dl>
         {{ end }}
         {{ end }}
@@ -543,6 +543,7 @@
 {{ end }}
 
 
+{{ define "enterprise-docs-link" }}<a href="https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory" class="underline ml-1" target="_blank" rel="noopener noreferrer">{{ t . "final.enterprise.learn_more" }}</a>{{ end }}
 {{ define "checksum-link" }}{{ if .Enterprise }}<a href="{{ printf "%s.sha256" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1">(sha256)</a><a href="{{ printf "%s.sha512" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1">(sha512)</a>{{ else }}<span class="text-xs ml-1 text-gray-400 cursor-not-allowed" title="{{ t .Localizer "final.extra.checksum_enterprise_feature" }}">(checksums)</span>{{ end }}{{ end }}
 
 {{ template "wizard-final" . }}

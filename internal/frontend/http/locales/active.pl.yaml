@@ -334,6 +334,9 @@
 - id: final.scan.enterprise_feature
   translation: "Raporty skanowania podatności są dostępne wyłącznie za pośrednictwem Talos Linux Image Factory Enterprise."
 
+- id: final.enterprise.learn_more
+  translation: "Dowiedz się więcej."
+
 - id: final.disk_image.secure_boot
   translation: "Obraz dysku SecureBoot"
 

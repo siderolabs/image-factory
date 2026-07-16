@@ -331,6 +331,9 @@
 - id: final.scan.enterprise_feature
   translation: "Отчёты сканирования уязвимостей доступны только через Talos Linux Image Factory Enterprise."
 
+- id: final.enterprise.learn_more
+  translation: "Подробнее."
+
 - id: final.disk_image.secure_boot
   translation: "Дисковый образ с SecureBoot"
 

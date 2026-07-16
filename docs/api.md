@@ -5,7 +5,7 @@
 ### `GET /spdx/:schematic/:version/:arch`
 
 > [!NOTE]
-> Enterprise feature: requires Talos Enterprise Image Factory.
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
 
 Returns an SPDX 2.3 JSON document containing all packages from the Talos and extensions for the given schematic and version.
 The response is a JSON-encoded SPDX document which can be consumed directly by vulnerability scanners such as grype:
@@ -19,7 +19,7 @@ SPDX bundles are available for Talos versions **v1.11.0** and later.
 ### `GET /vex/:version/vex.json`
 
 > [!NOTE]
-> Enterprise feature: requires Talos Enterprise Image Factory.
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory)..
 
 Returns a VEX JSON document containing vulnerability information for all packages in the Talos Linux release.
 The response is a JSON-encoded VEX document which can be consumed directly by vulnerability scanners such as grype:
@@ -31,7 +31,7 @@ grype sbom:talos.spdx.json --vex response.vex.json
 ### `GET /scans/:schematic/:version/:arch/:report`
 
 > [!NOTE]
-> Enterprise feature: requires Talos Enterprise Image Factory.
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory)..
 
 Returns a vulnerability scan report for the specified schematic, Talos Linux version and architecture.
 
@@ -149,7 +149,7 @@ Supported image paths:
 #### Checksums
 
 > [!NOTE]
-> Enterprise feature: requires Talos Enterprise Image Factory.
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory)..
 
 Appending a checksum suffix to any `:path` returns a checksum file instead of the asset itself.
 
@@ -262,6 +262,10 @@ Returns PEM-encoded SecureBoot signing certificate used by the Image Factory.
 
 It might be used to manually enroll the certificate into the UEFI firmware.
 Talos Linux SecureBoot ISOs come with an option for automatic enrollment of the certificate, but if that is not desired, the certificate can be manually enrolled.
+
+### `GET /llms.txt`
+
+Returns a `llms.txt` file describing Image Factory's API for LLM agents and AI tooling.
 
 ## PXE Frontend API
 

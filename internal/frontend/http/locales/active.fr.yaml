@@ -334,6 +334,9 @@
 - id: final.scan.enterprise_feature
   translation: "Les rapports d'analyse de vulnérabilités sont uniquement disponibles via la Talos Linux Image Factory Enterprise."
 
+- id: final.enterprise.learn_more
+  translation: "En savoir plus."
+
 - id: final.disk_image.secure_boot
   translation: "Image disque SecureBoot"
 

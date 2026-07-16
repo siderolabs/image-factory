@@ -22,8 +22,7 @@ The official Image Factory is available at [https://factory.talos.dev](https://f
 
 ## LLM Usage
 
-The Image Factory serves an [`llms.txt`](https://factory.talos.dev/llms.txt) file at `/llms.txt` describing its API for LLM agents and AI tooling.
-The file is maintained at [`internal/frontend/http/templates/llms.txt`](internal/frontend/http/templates/llms.txt) and was generated with the assistance of Claude Code.
+The file is maintained at [`internal/frontend/http/templates/llms.txt`](internal/frontend/http/templates/llms.txt) and was generated with the assistance of AI Agent.
 
 ## Documentation
 
