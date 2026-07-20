@@ -15,6 +15,7 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -42,6 +43,11 @@ func (f *Frontend) handleSchematicCreate(ctx context.Context, w http.ResponseWri
 
 			schematic.Owner = username
 		}
+	}
+
+	err = schematic.Validate(enterprise.Enabled())
+	if err != nil {
+		return err
 	}
 
 	id, err := f.schematicFactory.Put(ctx, schematic)

@@ -7,6 +7,7 @@ package schematic_test
 import (
 	"testing"
 
+	"github.com/siderolabs/gen/xerrors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/siderolabs/image-factory/pkg/schematic"
@@ -147,6 +148,59 @@ func TestUnmarshalID(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Equal(t, test.expectedID, id)
+		})
+	}
+}
+
+func TestValidate(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name        string
+		schematic   schematic.Schematic
+		enterprise  bool
+		expectError bool
+	}{
+		{
+			name:        "non-enterprise/empty owner",
+			enterprise:  false,
+			schematic:   schematic.Schematic{},
+			expectError: false,
+		},
+		{
+			name:       "non-enterprise/with owner",
+			enterprise: false,
+			schematic: schematic.Schematic{
+				Owner: "alice",
+			},
+			expectError: true,
+		},
+		{
+			name:        "enterprise/empty owner", // our handlers will inject the owner from credentials in authorized requests, so this is valid
+			enterprise:  true,
+			schematic:   schematic.Schematic{},
+			expectError: false,
+		},
+		{
+			name:       "enterprise/with owner",
+			enterprise: true,
+			schematic: schematic.Schematic{
+				Owner: "alice",
+			},
+			expectError: false,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := test.schematic.Validate(test.enterprise)
+
+			if test.expectError {
+				require.Error(t, err)
+				require.True(t, xerrors.TagIs[schematic.InvalidErrorTag](err))
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

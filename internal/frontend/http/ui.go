@@ -679,6 +679,11 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 		requestedSchematic.Customization.EmbeddedMachineConfiguration = params.EmbeddedConfig
 	}
 
+	err = requestedSchematic.Validate(enterprise.Enabled())
+	if err != nil {
+		return "", nil, nil, err
+	}
+
 	schematicID, err := f.schematicFactory.Put(ctx, &requestedSchematic)
 	if err != nil {
 		return "", nil, nil, err

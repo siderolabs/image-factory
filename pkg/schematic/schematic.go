@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/talos/pkg/machinery/imager/imageropts"
@@ -28,6 +29,29 @@ type Schematic struct {
 	Overlay Overlay `yaml:"overlay,omitempty"`
 	// Customization represents the Talos image customization.
 	Customization Customization `yaml:"customization"`
+}
+
+// Validate validates the schematic.
+func (s *Schematic) Validate(enterprise bool) error {
+	if enterprise {
+		return s.validateEnterprise()
+	}
+
+	return s.validate()
+}
+
+func (s *Schematic) validate() error {
+	var errs error
+
+	if s.Owner != "" {
+		errs = errors.Join(errs, xerrors.NewTaggedf[InvalidErrorTag]("owner field is only supported in Enterprise edition"))
+	}
+
+	return errs
+}
+
+func (s *Schematic) validateEnterprise() error {
+	return nil
 }
 
 // Customization represents the Talos image customization.

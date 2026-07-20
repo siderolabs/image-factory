@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/siderolabs/image-factory/pkg/client"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -191,6 +192,18 @@ func testSchematic(ctx context.Context, t *testing.T, baseURL string) {
 
 	t.Run("empty once again", func(t *testing.T) {
 		assert.Equal(t, emptySchematicID, createSchematicGetID(ctx, t, c, *testSchematics[emptySchematicID]))
+	})
+
+	t.Run("owner rejected in non-enterprise", func(t *testing.T) {
+		t.Parallel()
+
+		if enterprise.Enabled() {
+			t.Skip("enterprise build")
+		}
+
+		_, _, err := c.SchematicCreate(ctx, schematic.Schematic{Owner: "bob"})
+		require.Error(t, err)
+		require.True(t, client.IsInvalidSchematicError(err))
 	})
 
 	t.Run("invalid", func(t *testing.T) {
