@@ -1,3 +1,155 @@
+## [image-factory 1.4.0](https://github.com/siderolabs/image-factory/releases/tag/v1.4.0) (2026-07-20)
+
+Welcome to the v1.4.0 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Audit Logging
+
+Image Factory now supports audit logging via a configurable sink. Two sinks are
+available: file and log. By default, no sink is configured. File sink writes
+audit log as JSON lines to a file configured via `audit.file.path` and rotates
+the log file based on the size. Log sink writes audit log to the standard log
+output.
+
+
+### Core Artifacts Namespace
+
+Image Factory now supports setting namespace for core artifacts - an optional
+repository path prefix prepended to every image pulled from the core registry:
+the component images as well as the extension and overlay images discovered
+via the manifests. Previously only the registry host could be overridden, so
+pull-through caches which prefix the upstream repository path (e.g. a Harbor
+proxy-cache project) could not be used.
+
+The prefix only affects pull references; extension identities (matched against
+schematics, the UI, and the meta API) are unchanged.
+
+
+### Disk Images
+
+Image Factory now supports generating disk images with 4096 byte sector size (custom size), set via schematic customization.
+
+
+### Extra Extensions (enterprise only)
+
+Image factory can now be configured with an extra extensions manifest image allowing to easily add custom extensions in addition to the official Sidero extensions.
+
+
+### Embedded Machine Configuration
+
+Image Factory now supports embedding machine configuration into generated images starting with Talos version 1.2.0 onwards.
+
+
+### Secure Boot Disk Images
+
+Image Factory now generates disk images with Secure Boot supporting automatically enrolling keys (with if-safe setting, enabled for VMs in setup mode).
+
+
+### Contributors
+
+* Mateusz Urbanek
+* Maja Bojarska
+* Noel Georgi
+* Andrey Smirnov
+* Orzelius
+* Rokoucha
+* Justin Garrison
+* Mark Glants
+* Mickaël Canévet
+* Rowan Voermans
+
+### Changes
+<details><summary>20 commits</summary>
+<p>
+
+* [`9c64235`](https://github.com/siderolabs/image-factory/commit/9c6423572ac34132753a52b881771312fdd744a2) feat: add schematic owner validation
+* [`ca87d23`](https://github.com/siderolabs/image-factory/commit/ca87d2388929bc3f391ac138f5d60e6254abc365) fix: add single-flight around schematic factory
+* [`d45b5ac`](https://github.com/siderolabs/image-factory/commit/d45b5ac58987ccc6ea1d75b228937e228903fe54) docs: link to Image Factory Enterprise docs page
+* [`490a993`](https://github.com/siderolabs/image-factory/commit/490a993a322bbe292d98cd36f3e1cc40c3f85e2e) chore: bump pkgs revision to match talos v1.14.0-alpha.2
+* [`f9ff935`](https://github.com/siderolabs/image-factory/commit/f9ff935e8319c73c5877ee05b32fe556b664fea9) chore: bump go pkgs
+* [`12cd647`](https://github.com/siderolabs/image-factory/commit/12cd6471ad76cef7a0be82192a2555f1dbc0d5b7) feat: add llms.txt for better LLM usage
+* [`f65960f`](https://github.com/siderolabs/image-factory/commit/f65960f064fd9776725a0990bf90710ed2c2acd1) fix: audit file defaults
+* [`f26e5e2`](https://github.com/siderolabs/image-factory/commit/f26e5e25e0de055906268406f36bb3a7f514f735) feat: add audit log for authenticated requests
+* [`beff6e2`](https://github.com/siderolabs/image-factory/commit/beff6e26c30feb1f8e45646066e014808180c83a) feat: support registry namespace prefix for core artifacts
+* [`8c489d0`](https://github.com/siderolabs/image-factory/commit/8c489d08f1c880bf5de022deba7fea6cc736eca4) chore: update dependencies
+* [`026f8a8`](https://github.com/siderolabs/image-factory/commit/026f8a8887508d39b29a7dc89a2455bffed16ff8) feat: extra extensions (enterprise only)
+* [`915ef76`](https://github.com/siderolabs/image-factory/commit/915ef76a1b0210728d266e9342b17fe1a3b0d3e3) chore: add insecure flag to dev config
+* [`3bccbe1`](https://github.com/siderolabs/image-factory/commit/3bccbe1286dde26f81fa084206a44e633f3c0324) fix: handle single arch images
+* [`6b1c855`](https://github.com/siderolabs/image-factory/commit/6b1c8556657df805955f57738872845f920987fd) refactor: prepare for more than one artifact registry
+* [`bee4fe3`](https://github.com/siderolabs/image-factory/commit/bee4fe39d89b854eb09aab68c146eb55164f9377) feat: narrow sbom cache key to extension list only
+* [`e0e4a44`](https://github.com/siderolabs/image-factory/commit/e0e4a4469448dc0eec828fc9a5f8a0db0a0cf3a6) refactor: abstract versioned cache
+* [`3359f6c`](https://github.com/siderolabs/image-factory/commit/3359f6c6b8f1fabda0ed0c8b8487687432ee155d) feat: add secureboot enrollKeys schematic option
+* [`805c51c`](https://github.com/siderolabs/image-factory/commit/805c51cb53287923c41070344e25194c1b30a008) feat: add per-request correlation ID to logs
+* [`8cee96d`](https://github.com/siderolabs/image-factory/commit/8cee96d4e7b51a233529f0d6c423890ba65c455c) feat: assert pxe cache in tests
+* [`4ec0789`](https://github.com/siderolabs/image-factory/commit/4ec07895de9bda8df7c799472f9fb808a7fec920) feat: bump go-conainerregistry
+</p>
+</details>
+
+### Changes from siderolabs/gen
+<details><summary>1 commit</summary>
+<p>
+
+* [`c526410`](https://github.com/siderolabs/gen/commit/c526410f8c26b75ab386877036d4855098f9c429) fix: skip unknown-key check for types with custom YAML unmarshaler
+</p>
+</details>
+
+### Changes from siderolabs/pkgs
+<details><summary>18 commits</summary>
+<p>
+
+* [`ea48e8b`](https://github.com/siderolabs/pkgs/commit/ea48e8b66153a7909eef240bec10949783b6ac87) fix: patch Linux kernel for tunnel metadata buffer overflow
+* [`ff80d88`](https://github.com/siderolabs/pkgs/commit/ff80d88660cde1e201ca9bd039e058bbf87f9a4f) feat: add support for AMD XGBE driver
+* [`9f8ab22`](https://github.com/siderolabs/pkgs/commit/9f8ab22a224f16d30adba8a0b4c980866866abd0) feat: enable NF_TABLES_ARP option
+* [`bedfbeb`](https://github.com/siderolabs/pkgs/commit/bedfbeb545665f6fe8678aa0729dae49f9c1815e) feat: update Linux to 6.18.36
+* [`a9f2bb3`](https://github.com/siderolabs/pkgs/commit/a9f2bb37ad8c8958276e3da8bffa366001042227) chore: bump containerd to 2.3.2
+* [`73e76f8`](https://github.com/siderolabs/pkgs/commit/73e76f8ec71d93a963d80710706b2138de2c6d74) chore: upgrade runc to 1.5.0-rc.3
+* [`28db1ca`](https://github.com/siderolabs/pkgs/commit/28db1ca7b99651482597c0a69445be47f61bca38) chore: update nvidia driver lts to 580.167.08
+* [`5df1a44`](https://github.com/siderolabs/pkgs/commit/5df1a442eb041df2ae4e484798d5c28e518f8b36) chore: update zfs to 2.4.3
+* [`cd77c4f`](https://github.com/siderolabs/pkgs/commit/cd77c4f0dfd611a67afd2656fde11c5bf197a004) chore: update dependencies 2026-06-16
+* [`0f27ecc`](https://github.com/siderolabs/pkgs/commit/0f27ecc3f22c2c526037be262a2678a539e29708) feat: bump runc
+* [`d213ff5`](https://github.com/siderolabs/pkgs/commit/d213ff5e7d88436fd4082fb4defdf4c17c23a8ac) feat: bump OpenSSL to 3.6.3
+* [`cb713ae`](https://github.com/siderolabs/pkgs/commit/cb713ae48611f7c8ae31a08232cda482f2d6bfc1) feat: bump kernel to 6.18.35
+* [`09cb04e`](https://github.com/siderolabs/pkgs/commit/09cb04e048191a92de49261be6291595eda0ffda) fix: avoid page_table_check BUG on time namespace VVAR page
+* [`bfb88f6`](https://github.com/siderolabs/pkgs/commit/bfb88f6eac299390bee7a112f01803b1d27fe7e5) feat: add nvidia-fs kernel module
+* [`f2850d1`](https://github.com/siderolabs/pkgs/commit/f2850d169be4a440103ac30a8cd82be6ee05110b) feat: enable USB hiddev for apcupsd support
+* [`55aa64f`](https://github.com/siderolabs/pkgs/commit/55aa64fa75a804ece0d356d913382b03e198af5e) feat: bump go to 1.26.4
+* [`f27dbe1`](https://github.com/siderolabs/pkgs/commit/f27dbe1f053adf9eb1def340fe5fd801f514daa9) feat: bump kernel to 6.18.34
+* [`aa9fe00`](https://github.com/siderolabs/pkgs/commit/aa9fe0089646c4917c5968e7b99d2609fd7e7fc3) feat: add DVB USB Modules
+</p>
+</details>
+
+### Dependency Changes
+
+* **cloud.google.com/go/auth**                 v0.20.0 -> v0.22.0
+* **github.com/anchore/clio**                  v0.1.0 -> v0.1.1
+* **github.com/anchore/grype**                 v0.112.0 -> v0.115.0
+* **github.com/anchore/syft**                  v1.44.0 -> v1.46.0
+* **github.com/google/go-containerregistry**   v0.21.6 -> v0.21.7
+* **github.com/google/uuid**                   v1.6.0 **_new_**
+* **github.com/jellydator/ttlcache/v3**        v3.4.0 -> v3.4.1
+* **github.com/klauspost/compress**            v1.18.6 -> v1.19.0
+* **github.com/knadh/koanf/v2**                v2.3.4 -> v2.3.5
+* **github.com/minio/minio-go/v7**             v7.2.0 -> v7.2.1
+* **github.com/siderolabs/gen**                v0.8.6 -> v0.8.7
+* **github.com/siderolabs/go-blockdevice/v2**  v2.0.29 -> v2.0.32
+* **github.com/siderolabs/pkgs**               v1.14.0-alpha.0-70-g0870a4b -> v1.14.0-alpha.0-88-gea48e8b
+* **github.com/sigstore/cosign/v3**            v3.0.6 -> v3.1.1
+* **github.com/sigstore/rekor**                v1.5.2 -> v1.5.3
+* **github.com/sigstore/sigstore**             v1.10.7 -> v1.10.8
+* **github.com/sigstore/sigstore-go**          v1.1.4 -> v1.2.2
+* **github.com/spdx/tools-golang**             v0.5.7 -> v0.6.0-rc4
+* **golang.org/x/crypto**                      v0.52.0 -> v0.54.0
+* **golang.org/x/sync**                        v0.20.0 -> v0.22.0
+* **golang.org/x/sys**                         v0.45.0 -> v0.47.0
+* **golang.org/x/text**                        v0.37.0 -> v0.40.0
+* **gopkg.in/natefinch/lumberjack.v2**         v2.2.1 **_new_**
+
+Previous release can be found at [v1.3.3](https://github.com/siderolabs/image-factory/releases/tag/v1.3.3)
+
 ## [image-factory 1.3.3](https://github.com/siderolabs/image-factory/releases/tag/v1.3.3) (2026-06-01)
 
 Welcome to the v1.3.3 release of image-factory!
@@ -7274,4 +7426,3 @@ https://github.com/siderolabs/image-factory/issues.
 ### Dependency Changes
 
 This release has no dependency changes
-
