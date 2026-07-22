@@ -175,6 +175,24 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 	return versions, nil
 }
 
+// PresignImageURL requests a short-lived presigned URL for downloading an image artifact.
+// The returned URL carries an HMAC signature so the download needs no credentials.
+func (c *Client) PresignImageURL(ctx context.Context, schematicID, version, path string) (string, error) {
+	var response struct {
+		URL string `json:"url"`
+	}
+
+	if err := c.do(
+		ctx, http.MethodPost,
+		fmt.Sprintf("/presign/image/%s/%s/%s", schematicID, version, path),
+		&response,
+	); err != nil {
+		return "", err
+	}
+
+	return response.URL, nil
+}
+
 // ScanReport downloads a vulnerability scan report for the given schematic, Talos version,
 // architecture, and report filename. The filename extension selects the report format:
 // ".sarif" → SARIF, ".cdx" → CycloneDX, ".json" → JSON, ".table" → plain-text table.

@@ -9,6 +9,7 @@ package integration_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -56,6 +57,12 @@ func testAuthFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	})
 
 	t.Run("Reload", testAuthReload)
+
+	t.Run("PresignedURLs", func(t *testing.T) {
+		t.Parallel()
+
+		testPresignedURLs(ctx, t, baseURL)
+	})
 }
 
 func testAuthEnforcement(ctx context.Context, t *testing.T, baseURL string) {
@@ -468,6 +475,109 @@ func testAuthCDNNoRedirect(t *testing.T, pool *dockertest.Pool) {
 	t.Cleanup(func() { resp2.Body.Close() }) //nolint:errcheck
 
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
+}
+
+// testPresignedURLs verifies the presign endpoint: create a schematic, request a
+// presigned URL with auth, then download using only the presigned URL (no auth).
+func testPresignedURLs(ctx context.Context, t *testing.T, baseURL string) {
+	t.Helper()
+
+	// Create a schematic with auth.
+	c, err := client.New(baseURL, clientAuthCredentials()...)
+	require.NoError(t, err)
+
+	schematicID, _, err := c.SchematicCreate(ctx, schematicpkg.Schematic{})
+	require.NoError(t, err)
+
+	t.Run("PresignEndpointRequiresAuth", func(t *testing.T) {
+		t.Parallel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/presign/image/"+schematicID+"/v1.9.0/kernel-amd64", nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assertRequiresAuth(t, resp)
+	})
+
+	t.Run("PresignAndDownload", func(t *testing.T) {
+		t.Parallel()
+
+		presignedURL := getPresignedURL(ctx, t, baseURL, schematicID, "v1.9.0", "kernel-amd64")
+
+		// Download with the presigned URL — no auth headers.
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, presignedURL, nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
+		assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("TamperedSignatureRejected", func(t *testing.T) {
+		t.Parallel()
+
+		presignedURL := getPresignedURL(ctx, t, baseURL, schematicID, "v1.9.0", "kernel-amd64")
+
+		// Tamper with the signature.
+		tampered := presignedURL[:len(presignedURL)-1] + "0"
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, tampered, nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assertRequiresAuth(t, resp)
+	})
+
+	t.Run("ClientPresignImageURL", func(t *testing.T) {
+		t.Parallel()
+
+		presignedURL, err := c.PresignImageURL(ctx, schematicID, "v1.9.0", "kernel-amd64")
+		require.NoError(t, err)
+		assert.Contains(t, presignedURL, "signature=")
+		assert.Contains(t, presignedURL, "expires=")
+	})
+}
+
+// getPresignedURL calls the presign endpoint with htpasswd auth and returns the presigned URL.
+func getPresignedURL(ctx context.Context, t *testing.T, baseURL, schematicID, version, path string) string {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		baseURL+"/presign/image/"+schematicID+"/"+version+"/"+path, nil)
+	require.NoError(t, err)
+
+	addTestAuth(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close() //nolint:errcheck
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	var result struct {
+		URL string `json:"url"`
+	}
+
+	require.NoError(t, json.Unmarshal(body, &result))
+	require.NotEmpty(t, result.URL)
+
+	return result.URL
 }
 
 // assertRequiresAuth checks that the response is 401 with WWW-Authenticate set,

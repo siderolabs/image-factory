@@ -142,6 +142,14 @@ func (s *Factory) get(ctx context.Context, id string) (*schematic.Schematic, err
 	return sct, nil
 }
 
+// GetUnchecked retrieves the stored schematic without ownership checks.
+//
+// This is intended for pre-authorized code paths (e.g. presigned URL downloads)
+// where authorization was already verified at an earlier stage.
+func (s *Factory) GetUnchecked(ctx context.Context, id string) (*schematic.Schematic, error) {
+	return s.get(ctx, id)
+}
+
 // Get retrieves the stored schematic and enforces ownership.
 //
 // If auth is non-nil and the caller is unauthenticated, RequiresAuthenticationTag is returned

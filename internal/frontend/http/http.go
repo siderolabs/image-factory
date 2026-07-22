@@ -34,6 +34,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/audit"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/image/signer"
+	"github.com/siderolabs/image-factory/internal/presign"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic"
@@ -67,6 +68,7 @@ type Options struct {
 	ImageProxy                       ImageProxyOptions
 	CacheImageSigner                 signer.Signer
 	AuthProvider                     enterprise.AuthProvider
+	PresignedURLSigner               *presign.Signer
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
 	AuditSink                        audit.Sink
@@ -170,9 +172,12 @@ func NewFrontend(
 	registerPublicRoute(frontend.router.GET, "/readyz", frontend.handleReady)
 	registerPublicRoute(frontend.router.HEAD, "/readyz", frontend.handleReady)
 
-	// images - require auth
+	// images - require auth (presigned URLs bypass auth via signature verification)
 	registerRoute(frontend.router.GET, "/image/:schematic/:version/:path", frontend.handleImage)
 	registerRoute(frontend.router.HEAD, "/image/:schematic/:version/:path", frontend.handleImage)
+
+	// presign - auth-protected endpoint that issues presigned URLs
+	registerRoute(frontend.router.POST, "/presign/image/:schematic/:version/:path", frontend.handlePresign)
 
 	// PXE - require auth
 	registerRoute(frontend.router.GET, "/pxe/:schematic/:version/:path", frontend.handlePXE)
@@ -299,6 +304,20 @@ func requestIDFrom(r *http.Request) string {
 	return uuid.NewString()
 }
 
+// presignedUsername is the synthetic username recorded in audit logs for
+// requests authorized via presigned URL (no real user identity is available).
+const presignedUsername = "presigned"
+
+// presignedKey is a context key marking a request as authorized via presigned URL.
+type presignedKey struct{}
+
+// isPresigned reports whether the request context was authorized via a presigned URL.
+func isPresigned(ctx context.Context) bool {
+	v, ok := ctx.Value(presignedKey{}).(bool)
+
+	return ok && v
+}
+
 // withAuth wraps h with the auth middleware when authentication is required.
 //
 // The middleware stores the username on a context it derives internally, which
@@ -311,11 +330,33 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string) Handl
 
 	authProvider := f.options.AuthProvider
 
-	return authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-		*username, _ = authProvider.UsernameFromContext(ctx)
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+		// Presigned URL: if the request carries a valid signature, bypass auth.
+		// Verify parses the query internally, so just check for a non-empty query string
+		// to avoid a redundant r.URL.Query() allocation on non-presigned requests.
+		if f.options.PresignedURLSigner != nil && r.URL.RawQuery != "" {
+			if f.options.PresignedURLSigner.Verify(r) == nil {
+				*username = presignedUsername
 
-		return h(ctx, w, r, p)
-	})
+				return h(context.WithValue(ctx, presignedKey{}, true), w, r, p)
+			}
+		}
+
+		return authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+			*username, _ = authProvider.UsernameFromContext(ctx)
+
+			return h(ctx, w, r, p)
+		})(ctx, w, r, p)
+	}
+}
+
+// getSchematic retrieves a schematic, skipping ownership checks for presigned requests.
+func (f *Frontend) getSchematic(ctx context.Context, id string) (*schematicpkg.Schematic, error) {
+	if isPresigned(ctx) {
+		return f.schematicFactory.GetUnchecked(ctx, id)
+	}
+
+	return f.schematicFactory.Get(ctx, id, f.options.AuthProvider)
 }
 
 // audit records one entry for an authenticated request; a sink failure is logged

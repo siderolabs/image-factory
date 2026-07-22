@@ -61,7 +61,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return xerrors.NewTaggedf[enterrors.NotEnabledTag]("enterprise not enabled: checksum endpoint is not available")
 	}
 
-	schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
+	schematic, err := f.getSchematic(ctx, schematicID)
 	if err != nil {
 		return err
 	}

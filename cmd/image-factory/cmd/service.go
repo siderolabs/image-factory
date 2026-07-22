@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -45,6 +46,7 @@ import (
 	auditlog "github.com/siderolabs/image-factory/internal/audit/sink/log"
 	frontendhttp "github.com/siderolabs/image-factory/internal/frontend/http"
 	"github.com/siderolabs/image-factory/internal/image/signer"
+	"github.com/siderolabs/image-factory/internal/presign"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic"
 	schematiccache "github.com/siderolabs/image-factory/internal/schematic/storage/cache"
@@ -146,12 +148,18 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	defer auditSink.Close() //nolint:errcheck
 
+	presignSigner, err := buildPresignSigner(opts)
+	if err != nil {
+		return err
+	}
+
 	frontendOptions, err := buildFrontendOptions(cacheImageSigner, authProvider, opts)
 	if err != nil {
 		return err
 	}
 
 	frontendOptions.AuditSink = auditSink
+	frontendOptions.PresignedURLSigner = presignSigner
 
 	frontendHTTP, err := frontendhttp.NewFrontend(
 		logger,
@@ -213,6 +221,30 @@ func buildAuthProvider(logger *zap.Logger, opts Options) (enterprise.AuthProvide
 	}
 
 	return authProvider, nil
+}
+
+const defaultPresignedURLTTL = 5 * time.Minute
+
+func buildPresignSigner(opts Options) (*presign.Signer, error) {
+	if !enterprise.Enabled() || !opts.Authentication.Enabled {
+		return nil, nil //nolint:nilnil
+	}
+
+	ttl := opts.Authentication.PresignedURLTTL
+	if ttl == 0 {
+		ttl = defaultPresignedURLTTL
+	}
+
+	if key := opts.Authentication.PresignedURLKey; key != "" {
+		decoded, err := base64.StdEncoding.DecodeString(key)
+		if err != nil {
+			return nil, fmt.Errorf("presignedURLKey must be base64-encoded: %w", err)
+		}
+
+		return presign.NewSigner(decoded, ttl), nil
+	}
+
+	return presign.GenerateSigner(ttl)
 }
 
 func buildEnterprisePlugins(

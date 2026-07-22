@@ -571,6 +571,14 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 	//
 	// It is required if authentication is enabled.
 	HTPasswdPath string `koanf:"htpasswdPath"`
+
+	// PresignedURLKey is an optional base64-encoded 32-byte HMAC key for presigned URLs.
+	// If empty, a random key is generated on startup (single-replica deployments).
+	// Set explicitly for multi-replica deployments behind a shared load balancer.
+	PresignedURLKey string `koanf:"presignedURLKey"`
+
+	// PresignedURLTTL is the validity duration for presigned URLs. Defaults to 5 minutes.
+	PresignedURLTTL time.Duration `koanf:"presignedURLTTL"`
 }
 
 // EnterpriseOptions contains configuration for enterprise-specific features.
