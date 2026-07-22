@@ -209,7 +209,7 @@ func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, re
 			zap.Stringer("ref", imageRepository.Digest(extDesc.Digest.String())),
 		)
 
-		signatureErr := f.imageSigner.VerifyImage(ctx, imageRepository.Digest(extDesc.Digest.String()))
+		signatureErr := f.imageSigner.VerifyImage(ctx, imageRepository.Digest(extDesc.Digest.String()), f.puller)
 		if signatureErr == nil {
 			// redirect to the external registry, but use the digest directly to avoid tag changes
 			return f.handleExternalRegistry(ctx, w, req, img.Name(), schematicID, "manifests", extDesc.Digest.String())

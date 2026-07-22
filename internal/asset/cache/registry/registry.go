@@ -87,7 +87,7 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 
 	digestRef := c.cacheRepository.Digest(desc.Digest.String())
 
-	err = c.imageSigner.VerifyImage(ctx, digestRef)
+	err = c.imageSigner.VerifyImage(ctx, digestRef, c.puller)
 	if err != nil {
 		// signature doesn't validate, skip the cache, but keep building
 		c.logger.Info("cache image signature doesn't validate", zap.Error(err), zap.Stringer("ref", taggedRef))

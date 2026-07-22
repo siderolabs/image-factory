@@ -118,6 +118,10 @@ type Puller interface {
 	Get(ctx context.Context, ref name.Reference) (*remote.Descriptor, error)
 	List(ctx context.Context, repo name.Repository) ([]string, error)
 	Layer(ctx context.Context, ref name.Digest) (v1.Layer, error)
+	// RemoteOptions returns a fresh set of go-containerregistry remote options backed by
+	// the current (possibly refreshed) *remote.Puller instance. Use this when a library
+	// accepts []remote.Option directly so it shares authentication, transport and limits.
+	RemoteOptions() ([]remote.Option, error)
 }
 
 type pullerWrapper struct {
@@ -158,6 +162,15 @@ func (p *pullerWrapper) Layer(ctx context.Context, ref name.Digest) (v1.Layer, e
 	}
 
 	return instance.Layer(ctx, ref)
+}
+
+func (p *pullerWrapper) RemoteOptions() ([]remote.Option, error) {
+	instance, err := p.refresher.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	return []remote.Option{remote.Reuse(instance)}, nil
 }
 
 // NewPuller creates a new Puller with the given options.

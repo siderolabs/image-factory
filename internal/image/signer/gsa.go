@@ -224,8 +224,18 @@ func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, pusher 
 
 // VerifyImage verifies the OCI referrer bundle for imageRef against the GSA identity.
 // Implements Signer.VerifyImage.
-func (s *GSASigner) VerifyImage(ctx context.Context, imageRef name.Digest) error {
-	_, _, err := cosign.VerifyImageAttestations(ctx, imageRef, s.GetCheckOpts(), s.nameOpts...)
+func (s *GSASigner) VerifyImage(ctx context.Context, imageRef name.Digest, puller remotewrap.Puller) error {
+	remoteOpts, err := puller.RemoteOptions()
+	if err != nil {
+		return fmt.Errorf("failed to get remote options for verification: %w", err)
+	}
+
+	checkOpts := s.GetCheckOpts()
+	checkOpts.RegistryClientOpts = []ociremote.Option{
+		ociremote.WithRemoteOptions(append(remoteOpts, gcremote.WithContext(ctx))...),
+	}
+
+	_, _, err = cosign.VerifyImageAttestations(ctx, imageRef, checkOpts, s.nameOpts...)
 
 	return err
 }

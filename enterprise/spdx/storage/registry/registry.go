@@ -116,7 +116,7 @@ func (s *Storage) Get(ctx context.Context, cacheTag string) (storage.Bundle, err
 	digestRef := s.cacheRepository.Digest(desc.Digest.String())
 
 	// Verify signature
-	err = s.imageSigner.VerifyImage(ctx, digestRef)
+	err = s.imageSigner.VerifyImage(ctx, digestRef, s.puller)
 	if err != nil {
 		ctxlog.Logger(ctx, s.logger).Warn("SPDX bundle signature doesn't validate", zap.Error(err), zap.Stringer("ref", taggedRef))
 

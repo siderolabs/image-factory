@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	gcremote "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/sigstore/cosign/v3/pkg/oci/empty"
 	"github.com/sigstore/cosign/v3/pkg/oci/mutate"
@@ -28,7 +29,7 @@ type Signer interface {
 	// SignImage signs the image in the OCI repository.
 	SignImage(ctx context.Context, imageRef name.Digest, pusher remotewrap.Pusher) error
 	// VerifyImage verifies the signature of the image.
-	VerifyImage(ctx context.Context, imageRef name.Digest) error
+	VerifyImage(ctx context.Context, imageRef name.Digest, puller remotewrap.Puller) error
 	// GetCheckOpts returns cosign compatible image signature verification options.
 	GetCheckOpts() *cosign.CheckOpts
 	// GetPublicKeyPEM returns the public key in PEM format, or nil for keyless signers.
@@ -93,8 +94,18 @@ func (s *KeySigner) GetPublicKeyPEM() []byte {
 }
 
 // VerifyImage verifies the image signature using the key-based cosign tag format.
-func (s *KeySigner) VerifyImage(ctx context.Context, imageRef name.Digest) error {
-	_, _, err := cosign.VerifyImageSignatures(ctx, imageRef, s.GetCheckOpts())
+func (s *KeySigner) VerifyImage(ctx context.Context, imageRef name.Digest, puller remotewrap.Puller) error {
+	remoteOpts, err := puller.RemoteOptions()
+	if err != nil {
+		return fmt.Errorf("failed to get remote options for verification: %w", err)
+	}
+
+	checkOpts := s.GetCheckOpts()
+	checkOpts.RegistryClientOpts = []cosignremote.Option{
+		cosignremote.WithRemoteOptions(append(remoteOpts, gcremote.WithContext(ctx))...),
+	}
+
+	_, _, err = cosign.VerifyImageSignatures(ctx, imageRef, checkOpts)
 
 	return err
 }
