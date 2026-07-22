@@ -563,14 +563,23 @@ func (c ComponentsOptions) ImageMap() map[string]string {
 type AuthenticationOptions struct { //nolint:govet // keeping order for semantic clarity
 	// Enabled enables authentication.
 	Enabled bool `koanf:"enabled"`
+
+	// Provider selects the authentication backend.
+	// Valid values are "htpasswd" (default) and "auth0".
+	Provider string `koanf:"provider"`
+
 	// HTPasswdPath is the path to the htpasswd file containing user credentials.
 	//
 	// The file follows the standard htpasswd format (username:bcrypt_hash, one per line).
 	// Multiple entries with the same username are supported, allowing multiple API keys per user.
 	// Only bcrypt hashes ($2y$/$2a$/$2b$) are accepted.
 	//
-	// It is required if authentication is enabled.
+	// Used when provider is "htpasswd" (the default).
 	HTPasswdPath string `koanf:"htpasswdPath"`
+
+	// Auth0 holds configuration for the Auth0 JWT authentication provider.
+	// Used when provider is "auth0".
+	Auth0 Auth0Options `koanf:"auth0"`
 
 	// PresignedURLKey is an optional base64-encoded 32-byte HMAC key for presigned URLs.
 	// If empty, a random key is generated on startup (single-replica deployments).
@@ -579,6 +588,35 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 
 	// PresignedURLTTL is the validity duration for presigned URLs. Defaults to 5 minutes.
 	PresignedURLTTL time.Duration `koanf:"presignedURLTTL"`
+}
+
+// Auth0Options holds configuration for the Auth0 authentication provider.
+type Auth0Options struct {
+	// Domain is the Auth0 tenant domain, e.g. "mycompany.auth0.com".
+	Domain string `koanf:"domain"`
+
+	// Audience is the Auth0 API identifier (audience claim), e.g. "https://image-factory.example.com".
+	Audience string `koanf:"audience"`
+
+	// ClientID is the Auth0 application Client ID used for the browser login flow.
+	// Required only when browser login (authorization code + PKCE) is desired.
+	ClientID string `koanf:"clientID"`
+
+	// ClientSecret is the Auth0 application Client Secret.
+	// Inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET environment variable.
+	ClientSecret string `koanf:"clientSecret"`
+
+	// RedirectURL is the absolute callback URL registered in Auth0, e.g. "https://factory.example.com/callback".
+	RedirectURL string `koanf:"redirectURL"`
+
+	// SessionKey is the base64-encoded 32-byte AES-256 key used to encrypt session cookies.
+	// Inject via IF_AUTHENTICATION_AUTH0_SESSIONKEY environment variable.
+	// If empty, browser login is disabled and the provider operates in M2M-only mode.
+	SessionKey string `koanf:"sessionKey"`
+
+	// IssuerURLOverride replaces the default issuer URL constructed from Domain (not user-configurable, set by tests).
+	// It is used for both OIDC discovery and JWT issuer validation.
+	IssuerURLOverride string `koanf:"-"`
 }
 
 // EnterpriseOptions contains configuration for enterprise-specific features.

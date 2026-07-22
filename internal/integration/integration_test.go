@@ -256,8 +256,9 @@ func setupEnterprise(t *testing.T, options *cmd.Options) {
 	options.Enterprise.SPDX.Cache = spdxCacheRepositoryFlag.OCIRepositoryOptions
 
 	// Skip if the caller already configured auth (e.g. reload tests that need
-	// explicit control over the htpasswd file path).
-	if options.Authentication.Enabled && options.Authentication.HTPasswdPath != "" {
+	// explicit control over the htpasswd file path, or auth0 tests that configure
+	// the provider directly).
+	if options.Authentication.Enabled && (options.Authentication.HTPasswdPath != "" || options.Authentication.Provider != "") {
 		return
 	}
 

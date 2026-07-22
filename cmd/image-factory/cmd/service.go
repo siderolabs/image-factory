@@ -207,20 +207,46 @@ func buildSecureBootService(opts Options) (*secureboot.Service, error) {
 }
 
 func buildAuthProvider(logger *zap.Logger, opts Options) (enterprise.AuthProvider, error) {
-	if !enterprise.Enabled() {
+	if !enterprise.Enabled() || !opts.Authentication.Enabled {
 		return nil, nil //nolint:nilnil
 	}
 
-	if !opts.Authentication.Enabled {
-		return nil, nil //nolint:nilnil
-	}
+	switch opts.Authentication.Provider {
+	case "auth0":
+		var sessionKey []byte
 
-	authProvider, err := enterprise.NewAuthProvider(logger, opts.Authentication.HTPasswdPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize authentication provider: %w", err)
-	}
+		if sk := opts.Authentication.Auth0.SessionKey; sk != "" {
+			var err error
 
-	return authProvider, nil
+			sessionKey, err = base64.StdEncoding.DecodeString(sk)
+			if err != nil {
+				return nil, fmt.Errorf("auth0: session key must be base64-encoded: %w", err)
+			}
+		}
+
+		authProvider, err := enterprise.NewAuth0Provider(logger, enterprise.Auth0Config{
+			Domain:            opts.Authentication.Auth0.Domain,
+			Audience:          opts.Authentication.Auth0.Audience,
+			ClientID:          opts.Authentication.Auth0.ClientID,
+			ClientSecret:      opts.Authentication.Auth0.ClientSecret,
+			RedirectURL:       opts.Authentication.Auth0.RedirectURL,
+			ExternalURL:       opts.HTTP.ExternalURL,
+			SessionKey:        sessionKey,
+			IssuerURLOverride: opts.Authentication.Auth0.IssuerURLOverride,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize Auth0 authentication provider: %w", err)
+		}
+
+		return authProvider, nil
+	default: // "htpasswd" or empty string
+		authProvider, err := enterprise.NewAuthProvider(logger, opts.Authentication.HTPasswdPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize authentication provider: %w", err)
+		}
+
+		return authProvider, nil
+	}
 }
 
 const defaultPresignedURLTTL = 5 * time.Minute

@@ -220,6 +220,13 @@ func NewFrontend(
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
 	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 
+	// Browser login — registered only when the auth provider supports the OAuth2 PKCE flow.
+	if blp, ok := opts.AuthProvider.(enterprise.BrowserLoginProvider); ok && blp.BrowserLoginEnabled() {
+		registerPublicRoute(frontend.router.GET, "/login", blp.LoginHandler())
+		registerPublicRoute(frontend.router.GET, "/callback", blp.CallbackHandler())
+		registerPublicRoute(frontend.router.GET, "/logout", blp.LogoutHandler())
+	}
+
 	return frontend, nil
 }
 
@@ -264,7 +271,11 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 
 		level, status := MatchError(err, func(message string, code int) {
 			if code == http.StatusUnauthorized {
-				w.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise"`)
+				// Only set the fallback challenge header if the handler didn't already
+				// set one (e.g. the Auth0 middleware sets Bearer realm=...).
+				if w.Header().Get("WWW-Authenticate") == "" {
+					w.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise"`)
+				}
 			}
 
 			http.Error(w, message, code)

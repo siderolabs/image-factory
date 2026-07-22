@@ -126,3 +126,51 @@ type AuthProvider interface {
 	// UsernameFromContext retrieves the authenticated username stored by the middleware.
 	UsernameFromContext(ctx context.Context) (string, bool)
 }
+
+// Auth0Config holds configuration for the Auth0 authentication provider.
+// Defined here (not in cmd/) to avoid import cycles: pkg/enterprise imports
+// enterprise/auth/auth0, so auth0 cannot import pkg/enterprise.
+type Auth0Config struct {
+	Domain   string
+	Audience string
+
+	// Browser login via OAuth2 authorization code + PKCE flow.
+	// All four fields must be non-empty to enable browser login;
+	// if any are absent the provider operates in M2M-only mode.
+	ClientID     string
+	ClientSecret string // inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET
+	RedirectURL  string // e.g. https://factory.example.com/callback
+	ExternalURL  string // factory root, used as logout returnTo default
+
+	// IssuerURLOverride replaces the default issuer URL constructed from Domain.
+	// Used for both OIDC discovery and JWT issuer validation.
+	// Intended for testing only; leave empty in production.
+	IssuerURLOverride string
+
+	// SessionKey is a 32-byte AES-256 key for session-cookie encryption.
+	// Inject via IF_AUTHENTICATION_AUTH0_SESSIONKEY (base64-decoded by service.go).
+	// nil disables browser login.
+	SessionKey []byte
+}
+
+// BrowserLoginProvider is an optional extension of AuthProvider for providers
+// that support the OAuth2 authorization code + PKCE flow for browser users.
+// The HTTP frontend detects this interface at startup and registers public
+// /login, /callback, and /logout routes when BrowserLoginEnabled returns true.
+type BrowserLoginProvider interface {
+	// BrowserLoginEnabled reports whether all required browser-login fields are configured.
+	BrowserLoginEnabled() bool
+
+	// LoginHandler returns the handler for GET /login.
+	// It initiates the Auth0 authorization code flow with PKCE.
+	LoginHandler() Handler
+
+	// CallbackHandler returns the handler for GET /callback.
+	// It exchanges the authorization code for tokens, sets the session cookie,
+	// and redirects back to the originally requested URL.
+	CallbackHandler() Handler
+
+	// LogoutHandler returns the handler for GET /logout.
+	// It clears the session cookie and redirects to the Auth0 logout endpoint.
+	LogoutHandler() Handler
+}

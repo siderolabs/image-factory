@@ -43,3 +43,8 @@ func NewChecksummer() Checksummer {
 func NewAuthProvider(_ *zap.Logger, _ string) (AuthProvider, error) {
 	return nil, errors.New("authentication is not supported in the non-enterprise version")
 }
+
+// NewAuth0Provider creates a new Auth0 JWT authentication provider.
+func NewAuth0Provider(_ *zap.Logger, _ Auth0Config) (AuthProvider, error) {
+	return nil, errors.New("authentication is not supported in the non-enterprise version")
+}

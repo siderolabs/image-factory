@@ -1,7 +1,5 @@
 audit:
-  mode: file
-  file:
-    path: /var/log/image-factory/audit/audit.log
+  mode: log
 
 artifacts:
   # registry mirror for ghcr.io
@@ -39,8 +37,16 @@ http:
   externalURL: http://localhost:8080
 
 authentication:
-  enabled: false
-  htpasswdPath: /etc/image-factory/htpasswd
+  enabled: true
+  provider: auth0
+  auth0:
+    domain: image-factory-enterprise-dev.us.auth0.com
+    audience: https://image-factory-enterprise-dev
+    # Browser login fields (omit all four to run M2M-only):
+    clientID: obVSOQGWFFyEW9seAt95F5bjhwmQa8gJ
+    # clientSecret injected via IF_AUTHENTICATION_AUTH0_CLIENTSECRET env var
+    redirectURL: http://localhost:8080/callback
+    # sessionKey injected via IF_AUTHENTICATION_AUTH0_SESSIONKEY env var
 
 enterprise:
   # extraExtensions:
