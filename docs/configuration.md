@@ -862,6 +862,25 @@ It is required if authentication is enabled.
 
 ---
 
+### `authentication.downloadTokenKeyPath`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_DOWNLOADTOKENKEYPATH`
+
+DownloadTokenKeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing download tokens.
+If empty, a key pair is generated on startup (single-replica deployments only).
+
+---
+
+### `authentication.downloadTokenTTL`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_DOWNLOADTOKENTTL`
+
+DownloadTokenTTL is the validity duration for download tokens.
+
+---
+
 ### `enterprise`
 
 Enterprise contains configuration for enterprise-specific features.
@@ -1191,6 +1210,8 @@ audit:
         path: ""
     mode: ""
 authentication:
+    downloadTokenKeyPath: ""
+    downloadTokenTTL: 5m0s
     enabled: false
     htpasswdPath: ""
 build:
@@ -1319,6 +1340,8 @@ IF_AUDIT_FILE_MAXBACKUPS=16
 IF_AUDIT_FILE_MAXSIZEMB=256
 IF_AUDIT_FILE_PATH=
 IF_AUDIT_MODE=
+IF_AUTHENTICATION_DOWNLOADTOKENKEYPATH=
+IF_AUTHENTICATION_DOWNLOADTOKENTTL=5m0s
 IF_AUTHENTICATION_ENABLED=false
 IF_AUTHENTICATION_HTPASSWDPATH=
 IF_BUILD_BROKENTALOSVERSIONS=[]

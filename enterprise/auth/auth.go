@@ -195,6 +195,11 @@ func (provider *Provider) UsernameFromContext(ctx context.Context) (string, bool
 	return GetAuthUsername(ctx)
 }
 
+// ContextWithUsername implements enterprise.AuthProvider.
+func (provider *Provider) ContextWithUsername(ctx context.Context, username string) context.Context {
+	return WithAuthUsername(ctx, username)
+}
+
 func (provider *Provider) verifyCredentials(username, password string) bool {
 	users := provider.users.Load()
 	if users == nil {

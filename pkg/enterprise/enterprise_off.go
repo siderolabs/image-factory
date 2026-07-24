@@ -9,6 +9,7 @@ package enterprise
 import (
 	"context"
 	"errors"
+	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -42,4 +43,19 @@ func NewChecksummer() Checksummer {
 // NewAuthProvider creates a new authentication provider.
 func NewAuthProvider(_ *zap.Logger, _ string) (AuthProvider, error) {
 	return nil, errors.New("authentication is not supported in the non-enterprise version")
+}
+
+// NewDownloadTokenIssuer returns nil when enterprise is not enabled.
+func NewDownloadTokenIssuer(_ string, _ time.Duration) (DownloadTokenIssuer, error) {
+	return nil, errors.New("download tokens are not supported in the non-enterprise version")
+}
+
+// NewDownloadTokenFrontend returns nil when enterprise is not enabled.
+func NewDownloadTokenFrontend(_ DownloadTokenIssuer, _ AuthProvider) FrontendPlugin {
+	return nil
+}
+
+// NewJWKSFrontend returns nil when enterprise is not enabled.
+func NewJWKSFrontend(_ DownloadTokenIssuer) FrontendPlugin {
+	return nil
 }
