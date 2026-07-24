@@ -67,6 +67,7 @@ type Options struct {
 	ImageProxy                       ImageProxyOptions
 	CacheImageSigner                 signer.Signer
 	AuthProvider                     enterprise.AuthProvider
+	DownloadTokenIssuer              enterprise.DownloadTokenIssuer
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
 	AuditSink                        audit.Sink
@@ -177,7 +178,7 @@ func NewFrontend(
 	registerPublicRoute(frontend.router.GET, "/readyz", frontend.handleReady)
 	registerPublicRoute(frontend.router.HEAD, "/readyz", frontend.handleReady)
 
-	// images - require auth
+	// images - require auth (download tokens bypass auth via JWT verification)
 	registerRoute(frontend.router.GET, "/image/:schematic/:version/:path", frontend.handleImage)
 	registerRoute(frontend.router.HEAD, "/image/:schematic/:version/:path", frontend.handleImage)
 
@@ -318,11 +319,29 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string) Handl
 
 	authProvider := f.options.AuthProvider
 
-	return authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-		*username, _ = authProvider.UsernameFromContext(ctx)
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+		// Download token: if the request carries a valid JWT on a read-only
+		// method, extract the subject as the authenticated identity. Ownership
+		// is enforced normally by schematicFactory.Get() since the JWT subject
+		// is set on the context. Tokens are only accepted on GET/HEAD to
+		// prevent use on write endpoints (POST /schematics, etc.).
+		if f.options.DownloadTokenIssuer != nil && (r.Method == http.MethodGet || r.Method == http.MethodHead) && r.URL.RawQuery != "" {
+			if tokenStr := r.URL.Query().Get("token"); tokenStr != "" {
+				if sub, err := f.options.DownloadTokenIssuer.Verify(tokenStr); err == nil {
+					*username = sub
+					ctx = authProvider.ContextWithUsername(ctx, sub)
 
-		return h(ctx, w, r, p)
-	})
+					return h(ctx, w, r, p)
+				}
+			}
+		}
+
+		return authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+			*username, _ = authProvider.UsernameFromContext(ctx)
+
+			return h(ctx, w, r, p)
+		})(ctx, w, r, p)
+	}
 }
 
 // audit records one entry for an authenticated request; a sink failure is logged

@@ -121,7 +121,12 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		eg.Go(func() error { return authProvider.Run(ctx) })
 	}
 
-	enterprisePlugins, err := buildEnterprisePlugins(ctx, eg, logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, authProvider, opts)
+	downloadTokenIssuer, err := buildDownloadTokenIssuer(opts)
+	if err != nil {
+		return err
+	}
+
+	enterprisePlugins, err := buildEnterprisePlugins(ctx, eg, logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, authProvider, downloadTokenIssuer, opts)
 	if err != nil {
 		return err
 	}
@@ -152,6 +157,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	}
 
 	frontendOptions.AuditSink = auditSink
+	frontendOptions.DownloadTokenIssuer = downloadTokenIssuer
 
 	frontendHTTP, err := frontendhttp.NewFrontend(
 		logger,
@@ -215,6 +221,25 @@ func buildAuthProvider(logger *zap.Logger, opts Options) (enterprise.AuthProvide
 	return authProvider, nil
 }
 
+const defaultDownloadTokenTTL = 5 * time.Minute
+
+func buildDownloadTokenIssuer(opts Options) (enterprise.DownloadTokenIssuer, error) {
+	if !enterprise.Enabled() {
+		return nil, nil //nolint:nilnil
+	}
+
+	if !opts.Authentication.Enabled {
+		return nil, nil //nolint:nilnil
+	}
+
+	ttl := opts.Authentication.DownloadTokenTTL
+	if ttl == 0 {
+		ttl = defaultDownloadTokenTTL
+	}
+
+	return enterprise.NewDownloadTokenIssuer(opts.Authentication.DownloadTokenKeyPath, ttl)
+}
+
 func buildEnterprisePlugins(
 	ctx context.Context,
 	eg *errgroup.Group,
@@ -224,6 +249,7 @@ func buildEnterprisePlugins(
 	assetBuilder *asset.Builder,
 	cacheImageSigner signer.Signer,
 	authProvider enterprise.AuthProvider,
+	downloadTokenIssuer enterprise.DownloadTokenIssuer,
 	opts Options,
 ) ([]enterprise.FrontendPlugin, error) {
 	if !enterprise.Enabled() {
@@ -279,7 +305,17 @@ func buildEnterprisePlugins(
 		return nil, fmt.Errorf("failed to initialize scanner frontend: %w", err)
 	}
 
-	return []enterprise.FrontendPlugin{spdxFrontend, vexFrontend, scannerFrontend}, nil
+	plugins := []enterprise.FrontendPlugin{spdxFrontend, vexFrontend, scannerFrontend}
+
+	if downloadTokenIssuer != nil {
+		plugins = append(
+			plugins,
+			enterprise.NewDownloadTokenFrontend(downloadTokenIssuer, authProvider),
+			enterprise.NewJWKSFrontend(downloadTokenIssuer),
+		)
+	}
+
+	return plugins, nil
 }
 
 func buildFrontendOptions(cacheImageSigner signer.Signer, authProvider enterprise.AuthProvider, opts Options) (frontendhttp.Options, error) {

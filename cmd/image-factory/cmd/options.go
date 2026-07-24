@@ -571,6 +571,14 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 	//
 	// It is required if authentication is enabled.
 	HTPasswdPath string `koanf:"htpasswdPath"`
+
+	// DownloadTokenKeyPath is an optional path to a PEM-encoded ECDSA P-256 private key
+	// for signing download tokens. If empty, a key pair is generated on startup
+	// (single-replica deployments only).
+	DownloadTokenKeyPath string `koanf:"downloadTokenKeyPath"`
+
+	// DownloadTokenTTL is the validity duration for download tokens. Defaults to 5 minutes.
+	DownloadTokenTTL time.Duration `koanf:"downloadTokenTTL"`
 }
 
 // EnterpriseOptions contains configuration for enterprise-specific features.
