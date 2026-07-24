@@ -147,19 +147,26 @@ func NewFrontend(
 
 	// enterprise
 	for _, enterpriseRoute := range enterprisePlugins {
+		_, isPublic := enterpriseRoute.(enterprise.PublicRoute)
+
 		for _, method := range enterpriseRoute.Methods() {
+			var registrator func(string, httprouter.Handle)
+
 			switch method {
 			case http.MethodGet:
-				registerRoute(frontend.router.GET, enterpriseRoute.Path(), enterpriseRoute.Handle)
-
+				registrator = frontend.router.GET
 			case http.MethodHead:
-				registerRoute(frontend.router.HEAD, enterpriseRoute.Path(), enterpriseRoute.Handle)
-
+				registrator = frontend.router.HEAD
 			case http.MethodPost:
-				registerRoute(frontend.router.POST, enterpriseRoute.Path(), enterpriseRoute.Handle)
-
+				registrator = frontend.router.POST
 			default:
 				panic(fmt.Sprintf("unsupported method %s for enterprise route %s", method, enterpriseRoute.Path()))
+			}
+
+			if isPublic {
+				registerPublicRoute(registrator, enterpriseRoute.Path(), enterpriseRoute.Handle)
+			} else {
+				registerRoute(registrator, enterpriseRoute.Path(), enterpriseRoute.Handle)
 			}
 		}
 	}

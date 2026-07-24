@@ -28,6 +28,13 @@ type FrontendPlugin interface {
 	Handle(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error
 }
 
+// PublicRoute is implemented by FrontendPlugin instances whose routes should
+// be registered without authentication. Plugins that do not implement this
+// interface are registered as auth-protected routes.
+type PublicRoute interface {
+	PublicRoute()
+}
+
 // ReadinessChecker is implemented by FrontendPlugin instances whose readiness
 // must factor into the /readyz response. Plugins that do not implement this
 // interface are considered always ready.
