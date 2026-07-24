@@ -175,6 +175,21 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 	return versions, nil
 }
 
+// DownloadToken requests a short-lived JWT download token scoped to the
+// authenticated caller's identity. The token can be appended as ?token= to
+// any image download URL; one token covers all schematics owned by the caller.
+func (c *Client) DownloadToken(ctx context.Context) (string, error) {
+	var response struct {
+		Token string `json:"token"`
+	}
+
+	if err := c.do(ctx, http.MethodPost, "/download-token", &response); err != nil {
+		return "", err
+	}
+
+	return response.Token, nil
+}
+
 // ScanReport downloads a vulnerability scan report for the given schematic, Talos version,
 // architecture, and report filename. The filename extension selects the report format:
 // ".sarif" → SARIF, ".cdx" → CycloneDX, ".json" → JSON, ".table" → plain-text table.

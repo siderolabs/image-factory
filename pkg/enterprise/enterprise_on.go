@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/siderolabs/image-factory/enterprise/auth"
 	"github.com/siderolabs/image-factory/enterprise/checksum"
+	enterprisedt "github.com/siderolabs/image-factory/enterprise/downloadtoken"
 	"github.com/siderolabs/image-factory/enterprise/scanner"
 	scannerbuilder "github.com/siderolabs/image-factory/enterprise/scanner/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx"
@@ -26,6 +28,7 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/vex"
 	vexbuilder "github.com/siderolabs/image-factory/enterprise/vex/builder"
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/downloadtoken"
 )
 
 // Enabled indicates whether Enterprise features are enabled.
@@ -157,4 +160,25 @@ func NewChecksummer() Checksummer {
 // NewAuthProvider creates a new authentication provider.
 func NewAuthProvider(logger *zap.Logger, configPath string) (AuthProvider, error) {
 	return auth.NewProvider(configPath, logger)
+}
+
+// NewDownloadTokenIssuer creates a new download token issuer.
+// If keyPath is non-empty the key is loaded from the PEM file; otherwise a
+// fresh ECDSA P-256 key pair is generated (suitable for single-replica deployments).
+func NewDownloadTokenIssuer(keyPath string, ttl time.Duration) (DownloadTokenIssuer, error) {
+	if keyPath != "" {
+		return downloadtoken.LoadIssuer(keyPath, ttl)
+	}
+
+	return downloadtoken.GenerateIssuer(ttl)
+}
+
+// NewDownloadTokenFrontend returns the FrontendPlugin for download token issuance.
+func NewDownloadTokenFrontend(issuer DownloadTokenIssuer, authProvider AuthProvider) FrontendPlugin {
+	return enterprisedt.NewFrontend(issuer, authProvider)
+}
+
+// NewJWKSFrontend returns the FrontendPlugin for the JWKS public key endpoint.
+func NewJWKSFrontend(issuer DownloadTokenIssuer) FrontendPlugin {
+	return enterprisedt.NewJWKSFrontend(issuer)
 }

@@ -9,6 +9,7 @@ package integration_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -56,6 +57,12 @@ func testAuthFrontend(ctx context.Context, t *testing.T, baseURL string) {
 	})
 
 	t.Run("Reload", testAuthReload)
+
+	t.Run("DownloadTokens", func(t *testing.T) {
+		t.Parallel()
+
+		testDownloadTokens(ctx, t, baseURL)
+	})
 }
 
 func testAuthEnforcement(ctx context.Context, t *testing.T, baseURL string) {
@@ -190,6 +197,7 @@ func testPublicEndpoints(ctx context.Context, t *testing.T, baseURL string) {
 		{http.MethodGet, "/versions"},
 		{http.MethodGet, "/secureboot/signing-cert.pem"},
 		{http.MethodGet, "/oci/cosign/signing-key.pub"},
+		{http.MethodGet, "/.well-known/jwks.json"},
 	}
 
 	for _, ep := range publicEndpoints {
@@ -360,6 +368,195 @@ func testOwnership(ctx context.Context, t *testing.T, baseURL string) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "HTTP 403")
 	})
+}
+
+// testDownloadTokens verifies the download token endpoint: create a schematic,
+// request a download token with auth, then download using the token (no auth headers).
+func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
+	t.Helper()
+
+	// Create a schematic with auth.
+	c, err := client.New(baseURL, clientAuthCredentials()...)
+	require.NoError(t, err)
+
+	schematicID, _, err := c.SchematicCreate(ctx, schematicpkg.Schematic{})
+	require.NoError(t, err)
+
+	t.Run("DownloadTokenEndpointRequiresAuth", func(t *testing.T) {
+		t.Parallel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/download-token", nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assertRequiresAuth(t, resp)
+	})
+
+	t.Run("TokenAndDownload", func(t *testing.T) {
+		t.Parallel()
+
+		token := getDownloadToken(ctx, t, baseURL)
+		downloadURL := baseURL + "/image/" + schematicID + "/v1.9.0/kernel-amd64?token=" + token
+
+		// Download with the token — no auth headers.
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode)
+		assert.NotEqual(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("TokenReusableAcrossFiles", func(t *testing.T) {
+		t.Parallel()
+
+		token := getDownloadToken(ctx, t, baseURL)
+
+		// Same token works for multiple files under the same schematic.
+		for _, path := range []string{"kernel-amd64", "cmdline-metal-amd64"} {
+			downloadURL := baseURL + "/image/" + schematicID + "/v1.9.0/" + path + "?token=" + token
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+			require.NoError(t, err)
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+			assert.NotEqual(t, http.StatusUnauthorized, resp.StatusCode,
+				"token must be accepted for %s", path)
+			assert.NotEqual(t, http.StatusForbidden, resp.StatusCode,
+				"token must not be forbidden for %s", path)
+		}
+	})
+
+	t.Run("TamperedTokenRejected", func(t *testing.T) {
+		t.Parallel()
+
+		token := getDownloadToken(ctx, t, baseURL)
+
+		// Flip a character.
+		tampered := token[:len(token)-1] + "X"
+		downloadURL := baseURL + "/image/" + schematicID + "/v1.9.0/kernel-amd64?token=" + tampered
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assertRequiresAuth(t, resp)
+	})
+
+	t.Run("CrossOwnerRejected", func(t *testing.T) {
+		t.Parallel()
+
+		// alice's token should not access bob's schematic.
+		bobClient, err := client.New(baseURL, client.WithBasicAuth("bob", "bobsecret"))
+		require.NoError(t, err)
+
+		bobSchematicID, _, err := bobClient.SchematicCreate(ctx, schematicpkg.Schematic{})
+		require.NoError(t, err)
+
+		// Get alice's download token.
+		aliceToken := getDownloadToken(ctx, t, baseURL)
+		downloadURL := baseURL + "/image/" + bobSchematicID + "/v1.9.0/kernel-amd64?token=" + aliceToken
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("TokenRejectedOnWrite", func(t *testing.T) {
+		t.Parallel()
+
+		// Download tokens are only accepted on GET/HEAD. A POST with a
+		// token in the query string should fall through to regular auth,
+		// which rejects the request because no credentials are provided.
+		token := getDownloadToken(ctx, t, baseURL)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+			baseURL+"/download-token?token="+token, nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assertRequiresAuth(t, resp)
+	})
+
+	t.Run("JWKSEndpoint", func(t *testing.T) {
+		t.Parallel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/.well-known/jwks.json", nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+
+		var doc struct {
+			Keys []json.RawMessage `json:"keys"`
+		}
+
+		require.NoError(t, json.Unmarshal(body, &doc))
+		assert.NotEmpty(t, doc.Keys)
+	})
+}
+
+// getDownloadToken calls the download-token endpoint with htpasswd auth and returns the token.
+func getDownloadToken(ctx context.Context, t *testing.T, baseURL string) string {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/download-token", nil)
+	require.NoError(t, err)
+
+	addTestAuth(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close() //nolint:errcheck
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	var result struct {
+		Token string `json:"token"`
+	}
+
+	require.NoError(t, json.Unmarshal(body, &result))
+	require.NotEmpty(t, result.Token)
+
+	return result.Token
 }
 
 // testAuthS3NoRedirect asserts that the factory serves assets directly (no

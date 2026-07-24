@@ -116,6 +116,20 @@ type Checksummer interface {
 	WriteChecksum(ctx context.Context, w http.ResponseWriter, r *http.Request, reader io.ReadCloser, size int64, filename, suffix string) error
 }
 
+// DownloadTokenIssuer creates and verifies identity-scoped JWT download tokens.
+// The implementation lives behind the enterprise build tag; when enterprise is
+// not enabled the issuer is nil and the download-token routes are not registered.
+type DownloadTokenIssuer interface {
+	// Issue creates a signed JWT for the given subject (org_id or username).
+	Issue(subject string) (string, error)
+
+	// Verify parses and validates the JWT, returning the subject claim on success.
+	Verify(tokenStr string) (string, error)
+
+	// JWKS returns the pre-built JSON Web Key Set containing the public key.
+	JWKS() []byte
+}
+
 // Handler is the type of HTTP handlers used by the enterprise frontend.
 type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
 
@@ -132,4 +146,9 @@ type AuthProvider interface {
 
 	// UsernameFromContext retrieves the authenticated username stored by the middleware.
 	UsernameFromContext(ctx context.Context) (string, bool)
+
+	// ContextWithUsername returns a context carrying the given username as if
+	// the middleware had set it. Used by the download-token path to inject the
+	// JWT subject so that downstream ownership checks work normally.
+	ContextWithUsername(ctx context.Context, username string) context.Context
 }
