@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -112,7 +113,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	authProvider, err := buildAuthProvider(logger, opts)
+	authProvider, err := buildAuthProvider(ctx, logger, opts)
 	if err != nil {
 		return err
 	}
@@ -204,21 +205,49 @@ func buildSecureBootService(opts Options) (*secureboot.Service, error) {
 	return svc, nil
 }
 
-func buildAuthProvider(logger *zap.Logger, opts Options) (enterprise.AuthProvider, error) {
-	if !enterprise.Enabled() {
+func buildAuthProvider(ctx context.Context, logger *zap.Logger, opts Options) (enterprise.AuthProvider, error) {
+	if !enterprise.Enabled() || !opts.Authentication.Enabled {
 		return nil, nil //nolint:nilnil
 	}
 
-	if !opts.Authentication.Enabled {
-		return nil, nil //nolint:nilnil
-	}
+	switch opts.Authentication.Provider {
+	case AuthProviderAuth0:
+		var sessionKey []byte
 
-	authProvider, err := enterprise.NewAuthProvider(logger, opts.Authentication.HTPasswdPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize authentication provider: %w", err)
-	}
+		if sk := opts.Authentication.Auth0.SessionKey; sk != "" {
+			var err error
 
-	return authProvider, nil
+			sessionKey, err = base64.StdEncoding.DecodeString(sk)
+			if err != nil {
+				return nil, fmt.Errorf("auth0: session key must be base64-encoded: %w", err)
+			}
+		}
+
+		authProvider, err := enterprise.NewAuth0Provider(ctx, logger, enterprise.Auth0Config{
+			Domain:            opts.Authentication.Auth0.Domain,
+			Audience:          opts.Authentication.Auth0.Audience,
+			ClientID:          opts.Authentication.Auth0.ClientID,
+			ClientSecret:      opts.Authentication.Auth0.ClientSecret,
+			RedirectURL:       opts.Authentication.Auth0.RedirectURL,
+			ExternalURL:       opts.HTTP.ExternalURL,
+			SessionKey:        sessionKey,
+			IssuerURLOverride: opts.Authentication.Auth0.IssuerURLOverride,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize Auth0 authentication provider: %w", err)
+		}
+
+		return authProvider, nil
+	case AuthProviderHTPasswd:
+		authProvider, err := enterprise.NewHTPasswdProvider(logger, opts.Authentication.HTPasswdPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize htpasswd authentication provider: %w", err)
+		}
+
+		return authProvider, nil
+	default:
+		return nil, fmt.Errorf("unknown authentication provider %q", opts.Authentication.Provider)
+	}
 }
 
 func buildDownloadTokenIssuer(opts Options) (enterprise.DownloadTokenIssuer, error) {
