@@ -45,6 +45,11 @@ func NewAuthProvider(_ *zap.Logger, _ string) (AuthProvider, error) {
 	return nil, errors.New("authentication is not supported in the non-enterprise version")
 }
 
+// NewAuth0Provider creates a new Auth0 JWT authentication provider.
+func NewAuth0Provider(_ context.Context, _ *zap.Logger, _ Auth0Config) (AuthProvider, error) {
+	return nil, errors.New("authentication is not supported in the non-enterprise version")
+}
+
 // NewDownloadTokenIssuer returns nil when enterprise is not enabled.
 func NewDownloadTokenIssuer(_ string, _ time.Duration) (DownloadTokenIssuer, error) {
 	return nil, errors.New("download tokens are not supported in the non-enterprise version")
