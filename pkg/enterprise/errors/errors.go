@@ -14,3 +14,8 @@ type InvalidErrorTag struct{}
 
 // NotReadyTag tags errors that occur when an enterprise feature is.
 type NotReadyTag struct{}
+
+// RedirectedTag tags a sentinel returned by a handler that already wrote an HTTP
+// redirect itself, so it is logged and audited as a 302 rather than as the 200
+// a nil error implies.
+type RedirectedTag struct{}

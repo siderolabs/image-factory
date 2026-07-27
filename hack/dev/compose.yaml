@@ -46,6 +46,11 @@ services:
       - ALL
     cap_add:
       - DAC_OVERRIDE
+    # Only used when config.yaml selects the auth0 authentication provider;
+    # unset by default so the htpasswd dev setup needs no environment.
+    environment:
+      - IF_AUTHENTICATION_AUTH0_CLIENTSECRET=${IF_AUTHENTICATION_AUTH0_CLIENTSECRET:-}
+      - IF_AUTHENTICATION_AUTH0_SESSIONKEY=${IF_AUTHENTICATION_AUTH0_SESSIONKEY:-}
     ports:
       - "8080:8080"
     volumes:

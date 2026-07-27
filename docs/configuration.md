@@ -847,6 +847,16 @@ Enabled enables authentication.
 
 ---
 
+### `authentication.provider`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_PROVIDER`
+
+Provider selects the authentication backend.
+Valid values are "htpasswd" (default) and "auth0".
+
+---
+
 ### `authentication.htpasswdPath`
 
 - **Type:** `string`
@@ -858,7 +868,89 @@ The file follows the standard htpasswd format (username:bcrypt_hash, one per lin
 Multiple entries with the same username are supported, allowing multiple API keys per user.
 Only bcrypt hashes ($2y$/$2a$/$2b$) are accepted.
 
-It is required if authentication is enabled.
+It is required when provider is "htpasswd" (the default).
+
+---
+
+### `authentication.auth0`
+
+Auth0 holds configuration for the Auth0 JWT authentication provider.
+
+It is required when provider is "auth0", and ignored otherwise.
+Domain and audience alone validate machine-to-machine bearer tokens; the optional
+browser-login fields add /login, /callback and /logout, and must all be set together.
+
+---
+
+### `authentication.auth0.domain`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_DOMAIN`
+
+Domain is the Auth0 tenant domain, e.g. `mycompany.auth0.com`.
+
+Required.
+
+---
+
+### `authentication.auth0.audience`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_AUDIENCE`
+
+Audience is the Auth0 API identifier (audience claim), e.g. `https://image-factory.example.com`.
+
+Required.
+
+---
+
+### `authentication.auth0.clientID`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_CLIENTID`
+
+ClientID is the Auth0 application Client ID used for the browser login flow.
+
+Optional; part of the browser-login group.
+
+---
+
+### `authentication.auth0.clientSecret`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_CLIENTSECRET`
+
+ClientSecret is the Auth0 application Client Secret.
+Inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET environment variable.
+
+Optional; part of the browser-login group.
+
+---
+
+### `authentication.auth0.redirectURL`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_REDIRECTURL`
+
+RedirectURL is the absolute callback URL registered in Auth0, e.g. `https://factory.example.com/callback`.
+Its path is the route the factory serves the callback on, so it cannot be a bare host.
+
+Optional; part of the browser-login group.
+
+---
+
+### `authentication.auth0.sessionKey`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_SESSIONKEY`
+
+SessionKey is the base64-encoded 32-byte AES-256 key used to encrypt session cookies.
+Inject via IF_AUTHENTICATION_AUTH0_SESSIONKEY environment variable.
+Generate one with `openssl rand -base64 32`.
+All replicas must share the same key, since a session or in-progress login started
+on one replica has to be decrypted by whichever replica handles the next request.
+
+Optional; part of the browser-login group.
 
 ---
 
@@ -1210,10 +1302,18 @@ audit:
         path: ""
     mode: ""
 authentication:
+    auth0:
+        audience: ""
+        clientID: ""
+        clientSecret: ""
+        domain: ""
+        redirectURL: ""
+        sessionKey: ""
     downloadTokenKeyPath: ""
     downloadTokenTTL: 5m0s
     enabled: false
     htpasswdPath: ""
+    provider: htpasswd
 build:
     brokenTalosVersions: []
     maxConcurrency: 6
@@ -1340,10 +1440,17 @@ IF_AUDIT_FILE_MAXBACKUPS=16
 IF_AUDIT_FILE_MAXSIZEMB=256
 IF_AUDIT_FILE_PATH=
 IF_AUDIT_MODE=
+IF_AUTHENTICATION_AUTH0_AUDIENCE=
+IF_AUTHENTICATION_AUTH0_CLIENTID=
+IF_AUTHENTICATION_AUTH0_CLIENTSECRET=
+IF_AUTHENTICATION_AUTH0_DOMAIN=
+IF_AUTHENTICATION_AUTH0_REDIRECTURL=
+IF_AUTHENTICATION_AUTH0_SESSIONKEY=
 IF_AUTHENTICATION_DOWNLOADTOKENKEYPATH=
 IF_AUTHENTICATION_DOWNLOADTOKENTTL=5m0s
 IF_AUTHENTICATION_ENABLED=false
 IF_AUTHENTICATION_HTPASSWDPATH=
+IF_AUTHENTICATION_PROVIDER=htpasswd
 IF_BUILD_BROKENTALOSVERSIONS=[]
 IF_BUILD_MAXCONCURRENCY=6
 IF_BUILD_MINTALOSVERSION=1.2.0

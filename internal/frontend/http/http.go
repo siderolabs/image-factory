@@ -224,7 +224,34 @@ func NewFrontend(
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
 	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 
+	// Browser login — registered only when the auth provider supports the OAuth2 PKCE flow.
+	if blp, ok := opts.AuthProvider.(enterprise.BrowserLoginProvider); ok && blp.BrowserLoginEnabled() {
+		registerPublicRoute(frontend.router.GET, "/login", blp.LoginHandler())
+		registerPublicRoute(frontend.router.GET, "/logout", blp.LogoutHandler())
+
+		if err := registerCallbackRoute(blp.CallbackPath(), func(path string) {
+			registerPublicRoute(frontend.router.GET, path, blp.CallbackHandler())
+		}); err != nil {
+			return nil, err
+		}
+	}
+
 	return frontend, nil
+}
+
+// registerCallbackRoute runs register, converting the panic httprouter raises on a
+// route collision into an error. The callback path is operator config, so a collision
+// is a misconfiguration and not a bug.
+func registerCallbackRoute(path string, register func(string)) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("cannot serve the auth callback on %q, it conflicts with an existing route: %v", path, r)
+		}
+	}()
+
+	register(path)
+
+	return nil
 }
 
 // Handler returns the HTTP handler.
@@ -268,7 +295,10 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 
 		level, status := MatchError(err, func(message string, code int) {
 			if code == http.StatusUnauthorized {
-				w.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise"`)
+				// Fallback only: a provider that already picked its challenges keeps them.
+				if w.Header().Get("WWW-Authenticate") == "" {
+					w.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise", charset="UTF-8"`)
+				}
 			}
 
 			http.Error(w, message, code)
@@ -375,6 +405,9 @@ func MatchError(err error, callback func(message string, code int)) (zapcore.Lev
 	switch {
 	case err == nil:
 		// happy case
+	case xerrors.TagIs[enterrors.RedirectedTag](err):
+		// The handler already wrote the redirect, so there is no callback to make.
+		status = http.StatusFound
 	case xerrors.TagIs[enterrors.NotEnabledTag](err):
 		level = zap.WarnLevel
 		status = http.StatusPaymentRequired
