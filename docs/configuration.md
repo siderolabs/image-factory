@@ -291,7 +291,19 @@ Defaults to the public Sigstore instance.
 - **Env:** `CACHE_GSA_REKORURL`
 
 RekorURL is the Rekor transparency log endpoint.
-Defaults to the public Sigstore instance.
+It must point at a Rekor v2 (tile-backed) log; Rekor v1 is no longer supported for signing.
+Setting it requires TSAURL as well, since Rekor v2 does not timestamp entries.
+If FulcioURL, RekorURL and TSAURL are all empty, the Sigstore public-good signing config is fetched from TUF.
+
+---
+
+### `cache.gsa.tsaURL`
+
+- **Type:** `string`
+- **Env:** `CACHE_GSA_TSAURL`
+
+TSAURL is the RFC3161 timestamp authority endpoint.
+Required whenever RekorURL is set.
 
 ---
 
@@ -1228,6 +1240,7 @@ cache:
         keyFile: ""
         rekorURL: ""
         serviceAccountEmail: ""
+        tsaURL: ""
     oci:
         insecure: false
         namespace: siderolabs/image-factory
@@ -1354,6 +1367,7 @@ IF_CACHE_GSA_FULCIOURL=
 IF_CACHE_GSA_KEYFILE=
 IF_CACHE_GSA_REKORURL=
 IF_CACHE_GSA_SERVICEACCOUNTEMAIL=
+IF_CACHE_GSA_TSAURL=
 IF_CACHE_OCI_INSECURE=false
 IF_CACHE_OCI_NAMESPACE=siderolabs/image-factory
 IF_CACHE_OCI_REGISTRY=ghcr.io

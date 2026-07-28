@@ -354,8 +354,14 @@ type GSASigningOptions struct {
 	FulcioURL string `koanf:"fulcioURL"`
 
 	// RekorURL is the Rekor transparency log endpoint.
-	// Defaults to the public Sigstore instance.
+	// It must point at a Rekor v2 (tile-backed) log; Rekor v1 is no longer supported for signing.
+	// Setting it requires TSAURL as well, since Rekor v2 does not timestamp entries.
+	// If FulcioURL, RekorURL and TSAURL are all empty, the Sigstore public-good signing config is fetched from TUF.
 	RekorURL string `koanf:"rekorURL"`
+
+	// TSAURL is the RFC3161 timestamp authority endpoint.
+	// Required whenever RekorURL is set.
+	TSAURL string `koanf:"tsaURL"`
 }
 
 // CDNCacheOptions configures CDN-based cache for the image factory.

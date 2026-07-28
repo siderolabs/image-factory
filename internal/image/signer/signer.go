@@ -126,18 +126,24 @@ func (s *KeySigner) SignBlob(ctx context.Context, payload io.Reader) ([]byte, er
 		return nil, fmt.Errorf("error signing blob: %w", err)
 	}
 
-	bundle, err := cbundle.MakeProtobufBundle(s.BlobSigningIdentity(), nil, nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("error creating blob signature bundle: %w", err)
-	}
-
-	bundle.Content = &protobundle.Bundle_MessageSignature{
-		MessageSignature: &protocommon.MessageSignature{
-			MessageDigest: &protocommon.HashOutput{
-				Algorithm: protocommon.HashAlgorithm_SHA2_256,
-				Digest:    digest.Sum(nil),
+	// Key-based signing needs no Fulcio certificate, transparency log entry or
+	// timestamp, so the bundle is assembled directly instead of going through
+	// sigstore-go's signing helpers.
+	bundle := &protobundle.Bundle{
+		MediaType: cbundle.BundleV03MediaType,
+		VerificationMaterial: &protobundle.VerificationMaterial{
+			Content: &protobundle.VerificationMaterial_PublicKey{
+				PublicKey: &protocommon.PublicKeyIdentifier{Hint: s.BlobSigningIdentity()},
 			},
-			Signature: sig,
+		},
+		Content: &protobundle.Bundle_MessageSignature{
+			MessageSignature: &protocommon.MessageSignature{
+				MessageDigest: &protocommon.HashOutput{
+					Algorithm: protocommon.HashAlgorithm_SHA2_256,
+					Digest:    digest.Sum(nil),
+				},
+				Signature: sig,
+			},
 		},
 	}
 

@@ -97,7 +97,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	cacheImageSigner, err := buildCacheSigner(opts)
+	cacheImageSigner, err := buildCacheSigner(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("failed to build image signer: %w", err)
 	}
@@ -736,13 +736,14 @@ func remoteOptions() []remote.Option {
 // buildCacheSigner constructs the image signer from options.
 // If GSA options are configured (ServiceAccountEmail set), a keyless GSA signer is returned.
 // Otherwise, a static key signer is built from SigningKeyPath.
-func buildCacheSigner(opts Options) (signer.Signer, error) {
+func buildCacheSigner(ctx context.Context, opts Options) (signer.Signer, error) {
 	if opts.Cache.GSA.ServiceAccountEmail != "" {
-		return signer.NewGSASigner(signer.GSASignerOptions{
+		return signer.NewGSASigner(ctx, signer.GSASignerOptions{
 			ServiceAccountEmail: opts.Cache.GSA.ServiceAccountEmail,
 			KeyFile:             opts.Cache.GSA.KeyFile,
 			FulcioURL:           opts.Cache.GSA.FulcioURL,
 			RekorURL:            opts.Cache.GSA.RekorURL,
+			TSAURL:              opts.Cache.GSA.TSAURL,
 			Insecure:            opts.Artifacts.Installer.Internal.Insecure,
 		})
 	}

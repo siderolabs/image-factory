@@ -12,13 +12,11 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
-	"hash"
 	"math/big"
 	"testing"
 	"time"
 
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
-	"github.com/sigstore/rekor/pkg/generated/models"
 	sigsign "github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/require"
@@ -26,21 +24,19 @@ import (
 )
 
 func TestGSASignerSignBlobBuildsMessageSignatureBundle(t *testing.T) {
+	// No signingConfig: this unit test deliberately builds a bundle without a
+	// transparency-log entry or timestamp.
 	s := &GSASigner{
 		serviceAccount: "factory@example.iam.gserviceaccount.com",
-		rekorURL:       "https://rekor.example.com",
 		blobSigningIdentity: gsaBlobSigningIdentity(
 			"factory@example.iam.gserviceaccount.com",
-			"https://fulcio.example.com",
-			"https://rekor.example.com",
+			"https://fulcio.example.com|v1",
+			"https://rekor.example.com|v2",
 		),
 		getIdentityToken: func(context.Context) (string, error) {
 			return "identity-token", nil
 		},
-		getCertificate: issueTestCertificate,
-		uploadBlobSignature: func(context.Context, []byte, hash.Hash, []byte) (*models.LogEntryAnon, error) {
-			return nil, nil //nolint:nilnil // This unit test deliberately creates a bundle without a transparency-log entry.
-		},
+		certProvider: certificateProviderFunc(issueTestCertificate),
 	}
 
 	payload := []byte("boot asset")
@@ -66,6 +62,48 @@ func TestGSASignerBlobSigningIdentityIncludesServices(t *testing.T) {
 
 	require.NotEmpty(t, base.BlobSigningIdentity())
 	require.NotEqual(t, base.BlobSigningIdentity(), differentRekor.BlobSigningIdentity())
+}
+
+func TestGSASigningConfigExplicitEndpoints(t *testing.T) {
+	signingConfig, err := gsaSigningConfig(GSASignerOptions{
+		ServiceAccountEmail: "factory@example.iam.gserviceaccount.com",
+		RekorURL:            "https://rekor-v2.example.com",
+		TSAURL:              "https://tsa.example.com",
+	})
+	require.NoError(t, err)
+
+	require.Equal(t, []string{DefaultFulcioURL + "|v1"}, serviceURLs(signingConfig.FulcioCertificateAuthorityURLs()))
+	// Rekor v1 is gone from the cosign signing path, so an explicit log is always v2.
+	require.Equal(t, []string{"https://rekor-v2.example.com|v2"}, serviceURLs(signingConfig.RekorLogURLs()))
+	require.Equal(t, []string{"https://tsa.example.com|v1"}, serviceURLs(signingConfig.TimestampAuthorityURLs()))
+
+	opts, err := (&GSASigner{signingConfig: signingConfig}).bundleOptions(t.Context(), "token")
+	require.NoError(t, err)
+	require.Len(t, opts.TransparencyLogs, 1)
+	require.Len(t, opts.TimestampAuthorities, 1)
+	require.Equal(t, "token", opts.CertificateProviderOptions.IDToken)
+}
+
+func TestGSASigningConfigRekorV2RequiresTSA(t *testing.T) {
+	signingConfig, err := gsaSigningConfig(GSASignerOptions{
+		ServiceAccountEmail: "factory@example.iam.gserviceaccount.com",
+		RekorURL:            "https://rekor-v2.example.com",
+	})
+	require.NoError(t, err)
+
+	_, err = (&GSASigner{signingConfig: signingConfig}).bundleOptions(t.Context(), "token")
+	require.ErrorContains(t, err, "timestamp authority must be configured")
+}
+
+// certificateProviderFunc adapts a function to sigsign.CertificateProvider.
+type certificateProviderFunc func(context.Context, sigsign.Keypair, *sigsign.CertificateProviderOptions) ([]byte, error)
+
+func (f certificateProviderFunc) GetCertificate(
+	ctx context.Context,
+	keypair sigsign.Keypair,
+	opts *sigsign.CertificateProviderOptions,
+) ([]byte, error) {
+	return f(ctx, keypair, opts)
 }
 
 func issueTestCertificate(_ context.Context, keypair sigsign.Keypair, _ *sigsign.CertificateProviderOptions) ([]byte, error) {
