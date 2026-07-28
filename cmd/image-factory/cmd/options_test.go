@@ -273,6 +273,28 @@ func TestOptionsValidate(t *testing.T) {
 			},
 			expectError: "http.externalPXEURL must have a host",
 		},
+		{
+			name: "valid auth provider",
+			opts: cmd.Options{
+				HTTP:           cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{Enabled: true, Provider: "auth0"},
+			},
+		},
+		{
+			name: "unknown auth provider",
+			opts: cmd.Options{
+				HTTP:           cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{Enabled: true, Provider: "oidc"},
+			},
+			expectError: "authentication.provider must be one of",
+		},
+		{
+			name: "auth provider ignored when authentication disabled",
+			opts: cmd.Options{
+				HTTP:           cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{Provider: ""},
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

@@ -18,6 +18,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/siderolabs/image-factory/enterprise/auth"
+	"github.com/siderolabs/image-factory/enterprise/auth/auth0"
 	"github.com/siderolabs/image-factory/enterprise/checksum"
 	enterprisedt "github.com/siderolabs/image-factory/enterprise/downloadtoken"
 	"github.com/siderolabs/image-factory/enterprise/scanner"
@@ -157,9 +158,23 @@ func NewChecksummer() Checksummer {
 	return checksum.NewChecksummer()
 }
 
-// NewAuthProvider creates a new authentication provider.
-func NewAuthProvider(logger *zap.Logger, configPath string) (AuthProvider, error) {
+// NewHTPasswdProvider creates a new htpasswd-backed authentication provider.
+func NewHTPasswdProvider(logger *zap.Logger, configPath string) (AuthProvider, error) {
 	return auth.NewProvider(configPath, logger)
+}
+
+// NewAuth0Provider creates a new Auth0 JWT authentication provider.
+func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) (AuthProvider, error) {
+	return auth0.NewProvider(ctx, logger, auth0.Config{
+		Domain:            cfg.Domain,
+		Audience:          cfg.Audience,
+		ClientID:          cfg.ClientID,
+		ClientSecret:      cfg.ClientSecret,
+		RedirectURL:       cfg.RedirectURL,
+		ExternalURL:       cfg.ExternalURL,
+		SessionKey:        cfg.SessionKey,
+		IssuerURLOverride: cfg.IssuerURLOverride,
+	})
 }
 
 // NewDownloadTokenIssuer creates a new download token issuer.
