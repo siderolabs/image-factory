@@ -16,6 +16,8 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"hash"
+	"io"
 	"strings"
 
 	"cloud.google.com/go/auth"
@@ -27,8 +29,10 @@ import (
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	costypes "github.com/sigstore/cosign/v3/pkg/types"
+	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	rekorclient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 	sigstoreroot "github.com/sigstore/sigstore-go/pkg/root"
 	sigsign "github.com/sigstore/sigstore-go/pkg/sign"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -65,12 +69,16 @@ type GSASignerOptions struct {
 // GSASigner signs images using Google Service Account OIDC tokens via Sigstore keyless signing.
 // Signatures are stored in the new OCI referrer bundle format (application/vnd.dev.sigstore.bundle.v0.3+json).
 type GSASigner struct {
-	creds          *auth.Credentials
-	serviceAccount string
-	fulcio         *sigsign.Fulcio
-	trustedRoot    sigstoreroot.TrustedMaterial
-	rekorURL       string
-	nameOpts       []name.Option
+	trustedRoot         sigstoreroot.TrustedMaterial
+	getIdentityToken    func(context.Context) (string, error)
+	getCertificate      func(context.Context, sigsign.Keypair, *sigsign.CertificateProviderOptions) ([]byte, error)
+	uploadBlobSignature func(context.Context, []byte, hash.Hash, []byte) (*models.LogEntryAnon, error)
+	creds               *auth.Credentials
+	fulcio              *sigsign.Fulcio
+	serviceAccount      string
+	rekorURL            string
+	nameOpts            []name.Option
+	blobSigningIdentity [sha256.Size]byte
 }
 
 // NewGSASigner creates a new GSA-based keyless signer.
@@ -113,14 +121,35 @@ func NewGSASigner(opts GSASignerOptions) (*GSASigner, error) {
 		nameOpts = append(nameOpts, name.Insecure)
 	}
 
-	return &GSASigner{
-		creds:          creds,
-		serviceAccount: opts.ServiceAccountEmail,
-		fulcio:         fulcio,
-		trustedRoot:    trustedRoot,
-		rekorURL:       rekorURL,
-		nameOpts:       nameOpts,
-	}, nil
+	signer := &GSASigner{
+		creds:               creds,
+		serviceAccount:      opts.ServiceAccountEmail,
+		fulcio:              fulcio,
+		trustedRoot:         trustedRoot,
+		rekorURL:            rekorURL,
+		nameOpts:            nameOpts,
+		blobSigningIdentity: gsaBlobSigningIdentity(opts.ServiceAccountEmail, fulcioURL, rekorURL),
+	}
+
+	signer.getIdentityToken = func(ctx context.Context) (string, error) {
+		token, tokenErr := creds.Token(ctx)
+		if tokenErr != nil {
+			return "", tokenErr
+		}
+
+		return token.Value, nil
+	}
+	signer.getCertificate = fulcio.GetCertificate
+	signer.uploadBlobSignature = func(ctx context.Context, signatureBytes []byte, digest hash.Hash, certPEM []byte) (*models.LogEntryAnon, error) {
+		rekorClient, clientErr := rekorclient.GetRekorClient(rekorURL)
+		if clientErr != nil {
+			return nil, clientErr
+		}
+
+		return cosign.TLogUpload(ctx, rekorClient, signatureBytes, digest, certPEM)
+	}
+
+	return signer, nil
 }
 
 // GetCheckOpts returns cosign compatible verification options for the GSA signer.
@@ -140,6 +169,78 @@ func (s *GSASigner) GetCheckOpts() *cosign.CheckOpts {
 // GetPublicKeyPEM returns nil for keyless signers since there is no fixed public key.
 func (s *GSASigner) GetPublicKeyPEM() []byte {
 	return nil
+}
+
+// BlobSigningIdentity returns the stable GSA and Sigstore service identity used in blob signature cache keys.
+func (s *GSASigner) BlobSigningIdentity() string {
+	return base64.RawURLEncoding.EncodeToString(s.blobSigningIdentity[:])
+}
+
+func gsaBlobSigningIdentity(serviceAccount, fulcioURL, rekorURL string) [sha256.Size]byte {
+	identity := strings.Join([]string{"gsa-v1", serviceAccount, fulcioURL, rekorURL}, "\n")
+
+	return sha256.Sum256([]byte(identity))
+}
+
+// SignBlob signs payload using the GSA identity and returns a Sigstore message-signature bundle.
+func (s *GSASigner) SignBlob(ctx context.Context, payload io.Reader) ([]byte, error) {
+	identityToken, err := s.getIdentityToken(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get GSA OIDC token: %w", err)
+	}
+
+	ephemeralKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate ephemeral key: %w", err)
+	}
+
+	keypair := &ecdsaKeypair{key: ephemeralKey}
+
+	certDER, err := s.getCertificate(ctx, keypair, &sigsign.CertificateProviderOptions{IDToken: identityToken})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Fulcio certificate: %w", err)
+	}
+
+	sv, err := signature.LoadSignerVerifier(ephemeralKey, crypto.SHA256)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create ephemeral signer: %w", err)
+	}
+
+	digest := sha256.New()
+
+	signatureBytes, err := sv.SignMessage(io.TeeReader(payload, digest))
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign blob: %w", err)
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	rekorEntry, err := s.uploadBlobSignature(ctx, signatureBytes, digest, certPEM)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload blob signature to Rekor: %w", err)
+	}
+
+	bundle, err := cbundle.MakeProtobufBundle("", certDER, rekorEntry, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create blob signature bundle: %w", err)
+	}
+
+	bundle.Content = &protobundle.Bundle_MessageSignature{
+		MessageSignature: &protocommon.MessageSignature{
+			MessageDigest: &protocommon.HashOutput{
+				Algorithm: protocommon.HashAlgorithm_SHA2_256,
+				Digest:    digest.Sum(nil),
+			},
+			Signature: signatureBytes,
+		},
+	}
+
+	bundleJSON, err := protojson.Marshal(bundle)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal blob signature bundle: %w", err)
+	}
+
+	return bundleJSON, nil
 }
 
 // SignImage signs the image using GSA OIDC token-based keyless signing and stores

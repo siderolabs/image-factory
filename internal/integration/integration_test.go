@@ -389,6 +389,12 @@ func commonTest(t *testing.T, options cmd.Options) {
 		testChecksumFrontend(ctx, t, baseURL)
 	})
 
+	t.Run("TestAssetSignatureFrontend", func(t *testing.T) {
+		t.Parallel()
+
+		testAssetSignatureFrontend(ctx, t, baseURL)
+	})
+
 	t.Run("TestAuthFrontend", func(t *testing.T) {
 		t.Parallel()
 
@@ -427,6 +433,7 @@ func mustNewDefaultOCIRepository(s string) ociRepositoryFalg {
 }
 
 var (
+	cosignPath                     string
 	imageRegistryFlag              string
 	schematicFactoryRepositoryFlag = mustNewDefaultOCIRepository(cmd.DefaultOptions.Artifacts.Schematic.String())
 	installerExternalRepository    = mustNewDefaultOCIRepository(cmd.DefaultOptions.Artifacts.Installer.External.String())
@@ -439,6 +446,7 @@ var (
 )
 
 func init() {
+	flag.StringVar(&cosignPath, "test.cosign-path", "cosign", "path to the cosign binary")
 	flag.StringVar(&imageRegistryFlag, "test.image-registry", cmd.DefaultOptions.Artifacts.Core.Registry, "image registry")
 	flag.Var(&schematicFactoryRepositoryFlag, "test.schematic-service-repository", "schematic factory repository")
 	flag.Var(&installerExternalRepository, "test.installer-external-repository", "image repository for the installer (external)")

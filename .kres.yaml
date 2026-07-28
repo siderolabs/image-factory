@@ -103,6 +103,8 @@ spec:
       toplevel: true
     - name: talosctl
       toplevel: true
+    - name: cosign
+      toplevel: true
     - name: tools
       toplevel: true
     - name: chart-test
@@ -561,6 +563,7 @@ spec:
     phony: true
     depends:
       - integration.enterprise.test
+      - cosign
     variables:
       - name: RUN_TESTS_ENTERPRISE
         defaultValue: TestIntegrationDirect
@@ -575,7 +578,7 @@ spec:
       - docker rm -f local-if-proxy || true
       - $(if $(findstring -test.image-registry,$(TEST_FLAGS)),true,docker run -d -p 5000:5000 --name=local-if-proxy -e REGISTRY_PROXY_REMOTEURL=https://ghcr.io ghcr.io/distribution/distribution:edge)
       - "@$(MAKE) push-extra-extensions"
-      - docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=127.0.0.1:5000) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS_ENTERPRISE)
+      - docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.cosign-path=/out/cosign $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=127.0.0.1:5000) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS_ENTERPRISE)
       - docker rm -f local-if
       - docker rm -f local-if-proxy || true
   ghaction:
@@ -773,11 +776,27 @@ spec:
       - name: GOOS
         defaultValue: $(shell uname -s | tr "[:upper:]" "[:lower:]")
       - name: TALOS_VERSION
-        defaultValue: 1.12.2
+        defaultValue: 1.13.7
     script:
       - |
         curl -Lo $(ARTIFACTS)/talosctl https://github.com/siderolabs/talos/releases/download/v$(TALOS_VERSION)/talosctl-$(GOOS)-$(GOARCH)
         chmod +x $(ARTIFACTS)/talosctl
+---
+kind: custom.Step
+name: cosign
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    depends:
+      - $(ARTIFACTS)
+    variables:
+      - name: COSIGN_VERSION
+        defaultValue: 3.1.2
+    script:
+      - |
+        curl -Lo $(ARTIFACTS)/cosign https://github.com/sigstore/cosign/releases/download/v$(COSIGN_VERSION)/cosign-$(GOOS)-$(GOARCH)
+        chmod +x $(ARTIFACTS)/cosign
 ---
 kind: custom.Step
 name: tools
@@ -787,6 +806,7 @@ spec:
     phony: true
     depends:
       - talosctl
+      - cosign
   ghaction:
     enabled: true
     condition: on-pull-request
@@ -801,7 +821,7 @@ spec:
       - $(ARTIFACTS)
     variables:
       - name: K8S_VERSION
-        defaultValue: v1.35.0
+        defaultValue: v1.36.2
     script:
       - |
         $(ARTIFACTS)/talosctl cluster create docker \

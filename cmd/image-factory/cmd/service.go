@@ -102,7 +102,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return fmt.Errorf("failed to build image signer: %w", err)
 	}
 
-	assetBuilder, err := buildAssetBuilder(logger, artifactsManager, cacheImageSigner, opts)
+	assetBuilder, assetCache, err := buildAssetBuilder(logger, artifactsManager, cacheImageSigner, opts)
 	if err != nil {
 		return err
 	}
@@ -159,6 +159,11 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	frontendOptions.AuditSink = auditSink
 	frontendOptions.DownloadTokenIssuer = downloadTokenIssuer
 
+	signatureWriter, err := buildSignatureWriter(logger, frontendOptions.CacheImageSigner, assetCache)
+	if err != nil {
+		return err
+	}
+
 	frontendHTTP, err := frontendhttp.NewFrontend(
 		logger,
 		configFactory,
@@ -166,6 +171,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		artifactsManager,
 		secureBootService,
 		enterprise.NewChecksummer(),
+		signatureWriter,
 		enterprisePlugins,
 		frontendOptions,
 	)
@@ -219,6 +225,19 @@ func buildAuthProvider(logger *zap.Logger, opts Options) (enterprise.AuthProvide
 	}
 
 	return authProvider, nil
+}
+
+func buildSignatureWriter(logger *zap.Logger, imageSigner signer.Signer, cache assetcache.Cache) (enterprise.SignatureWriter, error) {
+	if !enterprise.Enabled() {
+		return nil, nil //nolint:nilnil
+	}
+
+	signatureWriter, err := enterprise.NewSignatureWriter(logger, imageSigner, cache)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize signature writer: %w", err)
+	}
+
+	return signatureWriter, nil
 }
 
 func buildDownloadTokenIssuer(opts Options) (enterprise.DownloadTokenIssuer, error) {
@@ -577,7 +596,7 @@ func buildArtifactsManager(logger *zap.Logger, opts Options) (*artifacts.Manager
 	return artifactsManager, nil
 }
 
-func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, imageSigner signer.Signer, opts Options) (*asset.Builder, error) {
+func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, imageSigner signer.Signer, opts Options) (*asset.Builder, assetcache.Cache, error) {
 	var (
 		cache assetcache.Cache
 		err   error
@@ -597,12 +616,12 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 
 	regOptions.CacheRepository, err = name.NewRepository(opts.Cache.OCI.String(), repoOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse cache repository: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse cache repository: %w", err)
 	}
 
 	cache, err = assetcachereg.New(logger, regOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize repository cache: %w", err)
+		return nil, nil, fmt.Errorf("failed to initialize repository cache: %w", err)
 	}
 
 	if opts.Cache.S3.Enabled {
@@ -616,7 +635,7 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 
 		cache, err = assetcaches3.New(logger, cache, s3Options)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize s3 cache: %w", err)
+			return nil, nil, fmt.Errorf("failed to initialize s3 cache: %w", err)
 		}
 	}
 
@@ -628,7 +647,7 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 
 		cache, err = cdn.New(logger, cache, cdnOptions)
 		if err != nil {
-			return nil, fmt.Errorf("failed to initialize CDN cache: %w", err)
+			return nil, nil, fmt.Errorf("failed to initialize CDN cache: %w", err)
 		}
 	}
 
@@ -640,12 +659,12 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 
 	builder, err := asset.NewBuilder(logger, artifactsManager, cache, builderOptions)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	prometheus.MustRegister(builder)
 
-	return builder, nil
+	return builder, cache, nil
 }
 
 func buildSchematicFactory(ctx context.Context, logger *zap.Logger, eg *errgroup.Group, opts Options) (*schematic.Factory, error) {

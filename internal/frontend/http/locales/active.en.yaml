@@ -319,6 +319,12 @@
 - id: final.extra.checksum_enterprise_feature
   translation: "Checksums are only available through the Talos Linux Enterprise Image Factory."
 
+- id: final.extra.signature_enterprise_feature
+  translation: "Signatures are only available through the Talos Linux Enterprise Image Factory."
+
+- id: final.extra.signature_hint
+  translation: "Detached Sigstore bundle for verification with cosign verify-blob."
+
 - id: final.scan.title
   translation: "Vulnerability Scan"
 

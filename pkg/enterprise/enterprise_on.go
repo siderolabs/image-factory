@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/siderolabs/image-factory/enterprise/assetsignature"
 	"github.com/siderolabs/image-factory/enterprise/auth"
 	"github.com/siderolabs/image-factory/enterprise/checksum"
 	enterprisedt "github.com/siderolabs/image-factory/enterprise/downloadtoken"
@@ -28,7 +29,9 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/vex"
 	vexbuilder "github.com/siderolabs/image-factory/enterprise/vex/builder"
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/downloadtoken"
+	"github.com/siderolabs/image-factory/internal/image/signer"
 )
 
 // Enabled indicates whether Enterprise features are enabled.
@@ -155,6 +158,16 @@ func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, SPDX
 // NewChecksummer returns an enterprise Checksummer implementation.
 func NewChecksummer() Checksummer {
 	return checksum.NewChecksummer()
+}
+
+// NewSignatureWriter returns a detached signature writer when imageSigner supports blob signing.
+func NewSignatureWriter(logger *zap.Logger, imageSigner signer.Signer, cache assetcache.Cache) (SignatureWriter, error) {
+	blobSigner, ok := imageSigner.(signer.BlobSigner)
+	if !ok {
+		return nil, fmt.Errorf("image signer does not support blob signing")
+	}
+
+	return assetsignature.NewWriter(logger, blobSigner, cache), nil
 }
 
 // NewAuthProvider creates a new authentication provider.

@@ -16,6 +16,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
+	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/image/verify"
 	"github.com/siderolabs/image-factory/internal/schematic"
@@ -114,6 +115,12 @@ type ScannerOptions struct {
 // ".sha256", ".md5") and determines both the algorithm and the output filename.
 type Checksummer interface {
 	WriteChecksum(ctx context.Context, w http.ResponseWriter, r *http.Request, reader io.ReadCloser, size int64, filename, suffix string) error
+}
+
+// SignatureWriter signs an asset and writes its detached Sigstore bundle to the HTTP response.
+// The implementation is enterprise-only and supports any configured blob signer.
+type SignatureWriter interface {
+	WriteSignature(ctx context.Context, w http.ResponseWriter, r *http.Request, asset assetcache.BootAsset, assetKey, filename string) error
 }
 
 // DownloadTokenIssuer creates and verifies identity-scoped JWT download tokens.

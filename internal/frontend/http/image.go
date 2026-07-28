@@ -29,6 +29,8 @@ var checksumSuffixes = map[string]struct{}{
 	".sha256": {},
 }
 
+const signatureSuffix = ".sigstore.json"
+
 // handleImage handles downloading of boot assets.
 //
 //nolint:gocyclo,cyclop
@@ -40,18 +42,23 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 
 	path := p.ByName("path")
 
-	// Detect a checksum suffix early: strip it and record which algorithm was
-	// requested so we compute a checksum instead of streaming the asset bytes.
-	// This check must happen before schematic/version lookup so that
-	// non-enterprise builds return 402 regardless of schematic availability.
+	// Detect enterprise sidecar suffixes before schematic/version lookup so
+	// non-enterprise builds reject them consistently regardless of asset validity.
+	wantSignature := strings.HasSuffix(path, signatureSuffix)
+	if wantSignature {
+		path = strings.TrimSuffix(path, signatureSuffix)
+	}
+
 	var checksumSuffix string
 
-	for suffix := range checksumSuffixes {
-		if strings.HasSuffix(path, suffix) {
-			checksumSuffix = suffix
-			path = strings.TrimSuffix(path, suffix)
+	if !wantSignature {
+		for suffix := range checksumSuffixes {
+			if strings.HasSuffix(path, suffix) {
+				checksumSuffix = suffix
+				path = strings.TrimSuffix(path, suffix)
 
-			break
+				break
+			}
 		}
 	}
 
@@ -59,6 +66,10 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 
 	if wantChecksum && f.checksummer == nil {
 		return xerrors.NewTaggedf[enterrors.NotEnabledTag]("enterprise not enabled: checksum endpoint is not available")
+	}
+
+	if wantSignature && f.signatureWriter == nil {
+		return xerrors.NewTaggedf[enterrors.NotEnabledTag]("enterprise signing is not enabled: signature endpoint is not available")
 	}
 
 	schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
@@ -97,6 +108,15 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 	asset, err := f.assetBuilder.Build(ctx, prof, version.String(), path, filename)
 	if err != nil {
 		return err
+	}
+
+	if wantSignature {
+		assetKey, hashErr := profile.Hash(prof)
+		if hashErr != nil {
+			return fmt.Errorf("error hashing asset profile: %w", hashErr)
+		}
+
+		return f.signatureWriter.WriteSignature(ctx, w, r, asset, assetKey, filename)
 	}
 
 	// Checksum path: delegate to the enterprise checksummer.

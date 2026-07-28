@@ -54,6 +54,7 @@ type Frontend struct {
 	artifactsManager  *artifacts.Manager
 	secureBootService *secureboot.Service
 	checksummer       enterprise.Checksummer
+	signatureWriter   enterprise.SignatureWriter
 	logger            *zap.Logger
 	puller            remotewrap.Puller
 	pusher            remotewrap.Pusher
@@ -98,6 +99,7 @@ func NewFrontend(
 	artifactsManager *artifacts.Manager,
 	secureBootService *secureboot.Service,
 	checksummer enterprise.Checksummer,
+	signatureWriter enterprise.SignatureWriter,
 	enterprisePlugins []enterprise.FrontendPlugin,
 	opts Options,
 ) (*Frontend, error) {
@@ -108,6 +110,7 @@ func NewFrontend(
 		artifactsManager:  artifactsManager,
 		secureBootService: secureBootService,
 		checksummer:       checksummer,
+		signatureWriter:   signatureWriter,
 		logger:            logger.With(zap.String("frontend", "http")),
 		options:           opts,
 	}

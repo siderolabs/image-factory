@@ -149,7 +149,7 @@ Supported image paths:
 #### Checksums
 
 > [!NOTE]
-> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory)..
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
 
 Appending a checksum suffix to any `:path` returns a checksum file instead of the asset itself.
 
@@ -186,6 +186,56 @@ With `wget`:
 wget https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz
 wget https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz.sha256
 sha256sum -c metal-amd64.raw.xz.sha256
+```
+
+#### Signatures
+
+> [!NOTE]
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+
+Appending a `.sigstore.json` suffix to any `:path` returns a detached Sigstore bundle instead of the asset itself.
+The response is a Sigstore bundle v0.3 JSON document with the `application/vnd.dev.sigstore.bundle.v0.3+json` content type.
+
+Download an image and its signature bundle:
+
+```shell
+curl -LO https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz
+curl -LO https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz.sigstore.json
+```
+
+Using `curl -JLO` (filename from `Content-Disposition` header):
+
+```shell
+curl -JLO https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz
+curl -JLO https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz.sigstore.json
+```
+
+With `wget`:
+
+```shell
+wget https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz
+wget https://factory.talos.dev/image/<schematic>/<version>/metal-amd64.raw.xz.sigstore.json
+```
+
+Verify a bundle produced by key-based cache signing:
+
+```shell
+curl -LO https://factory.talos.dev/oci/cosign/signing-key.pub
+cosign verify-blob \
+  --key signing-key.pub \
+  --bundle metal-amd64.raw.xz.sigstore.json \
+  --insecure-ignore-tlog \
+  metal-amd64.raw.xz
+```
+
+Verify a bundle produced by Google Service Account keyless signing:
+
+```shell
+cosign verify-blob \
+  --bundle metal-amd64.raw.xz.sigstore.json \
+  --certificate-identity <service-account-email> \
+  --certificate-oidc-issuer https://accounts.google.com \
+  metal-amd64.raw.xz
 ```
 
 ### `GET /versions`
@@ -358,7 +408,7 @@ Example: `docker pull factory.talos.dev/siderolabs/installer-base:v1.13.5`
 
 ### `GET /oci/cosign/signing-key.pub`
 
-Returns PEM-encoded public key used to sign the Talos Linux `installer` images.
+Returns the PEM-encoded public key used to sign the Talos Linux `installer` images and detached asset bundles when key-based cache signing is configured.
 
 The key can be used to verify the installer images with `cosign`:
 

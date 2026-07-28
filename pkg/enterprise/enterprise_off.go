@@ -13,6 +13,9 @@ import (
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+
+	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
+	"github.com/siderolabs/image-factory/internal/image/signer"
 )
 
 // Enabled indicates whether Enterprise features are enabled.
@@ -38,6 +41,11 @@ func NewSpdxFrontend(_ *zap.Logger, _ SPDXOptions) (FrontendPlugin, SPDXSource, 
 // NewChecksummer returns nil when enterprise is not enabled.
 func NewChecksummer() Checksummer {
 	return nil
+}
+
+// NewSignatureWriter returns nil when enterprise is not enabled.
+func NewSignatureWriter(_ *zap.Logger, _ signer.Signer, _ assetcache.Cache) (SignatureWriter, error) {
+	return nil, errors.New("signature writing is not supported in the non-enterprise version")
 }
 
 // NewAuthProvider creates a new authentication provider.

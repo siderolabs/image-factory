@@ -393,6 +393,7 @@
 <dd><a href="{{ .PlatformMeta.SecureBootISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.SecureBootISOPath
                 .Arch | $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.SecureBootISOPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.SecureBootISOPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
         (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/secureboot/"
                 target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
 </dd>
@@ -401,6 +402,7 @@
 <dd><a href="{{ .PlatformMeta.ISOPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.ISOPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.ISOPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.ISOPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 
         {{ if eq .Target "metal" }}
         (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/iso/"
@@ -417,6 +419,7 @@
                 .PlatformMeta.SecureBootDiskImageDefaultPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.SecureBootDiskImageDefaultPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.SecureBootDiskImageDefaultPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
         {{ if eq .Target "metal" }}
         (<a href="https://docs.siderolabs.com/talos/{{ short_version .Version }}/platform-specific-installations/bare-metal-platforms/secureboot/"
                 target="_blank">{{ t .Localizer "final.disk_image.secure_boot_docs" }}</a>)
@@ -429,12 +432,14 @@
                 .PlatformMeta.DiskImageDefaultPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.DiskImageDefaultPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.DiskImageDefaultPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 <dt>{{ t .Localizer "final.disk_image.all" }} (qcow2)</dt>
 <dd><a href="{{ .PlatformMeta.DiskImagePath .Arch "qcow2" | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.DiskImagePath
                 .Arch "qcow2" |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.DiskImagePath .Arch "qcow2") "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.DiskImagePath .Arch "qcow2") "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 {{ else }}
 <dt>{{ t .Localizer "final.disk_image.all" }}</dt>
@@ -442,6 +447,7 @@
                 .PlatformMeta.DiskImageDefaultPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.DiskImageDefaultPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.DiskImageDefaultPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 {{ end }}
 {{ end}}
@@ -482,6 +488,7 @@
 <dd><a href="{{ .BoardMeta.DiskImagePath .Version | $.ImageBaseURL.JoinPath }}">{{ .BoardMeta.DiskImagePath .Version |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.BoardMeta.DiskImagePath .Version) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.BoardMeta.DiskImagePath .Version) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 {{ end }}
 
@@ -506,21 +513,25 @@
 <dd><a href="{{ .PlatformMeta.KernelPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.KernelPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.KernelPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.KernelPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 <dt>{{ t .Localizer "final.extra.cmdline" }}</dt>
 <dd><a href="{{ .PlatformMeta.CmdlinePath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.CmdlinePath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.CmdlinePath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.CmdlinePath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 <dt>{{ t .Localizer "final.extra.initramfs" }}</dt>
 <dd><a href="{{ .PlatformMeta.InitramfsPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.InitramfsPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.InitramfsPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.InitramfsPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 <dt>UKI</dt>
 <dd><a href="{{ .PlatformMeta.UKIPath .Arch | $.ImageBaseURL.JoinPath }}">{{ .PlatformMeta.UKIPath .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.UKIPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.UKIPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 
 {{ if .TalosctlAvailable }}
@@ -539,11 +550,13 @@
                 .Arch |
                 $.ImageBaseURL.JoinPath }}</a>
         {{ template "checksum-link" (dict "Path" (.PlatformMeta.SecureBootUKIPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
+        {{ template "signature-link" (dict "Path" (.PlatformMeta.SecureBootUKIPath .Arch) "ChecksumBaseURL" $.ChecksumBaseURL "Enterprise" $.Enterprise "Localizer" $.Localizer) }}
 </dd>
 {{ end }}
 
 
 {{ define "enterprise-docs-link" }}<a href="https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory" class="underline ml-1" target="_blank" rel="noopener noreferrer">{{ t . "final.enterprise.learn_more" }}</a>{{ end }}
 {{ define "checksum-link" }}{{ if .Enterprise }}<a href="{{ printf "%s.sha256" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1">(sha256)</a><a href="{{ printf "%s.sha512" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1">(sha512)</a>{{ else }}<span class="text-xs ml-1 text-gray-400 cursor-not-allowed" title="{{ t .Localizer "final.extra.checksum_enterprise_feature" }}">(checksums)</span>{{ end }}{{ end }}
+{{ define "signature-link" }}{{ if .Enterprise }}<a href="{{ printf "%s.sigstore.json" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1" title="{{ t .Localizer "final.extra.signature_hint" }}">(sig)</a>{{ else }}<span class="text-xs ml-1 text-gray-400 cursor-not-allowed" title="{{ t .Localizer "final.extra.signature_enterprise_feature" }}">(signature)</span>{{ end }}{{ end }}
 
 {{ template "wizard-final" . }}

@@ -316,6 +316,12 @@
 - id: final.extra.checksum_enterprise_feature
   translation: "Контрольные суммы доступны только через Talos Linux Enterprise Image Factory."
 
+- id: final.extra.signature_enterprise_feature
+  translation: "Подписи доступны только через Talos Linux Enterprise Image Factory."
+
+- id: final.extra.signature_hint
+  translation: "Отсоединённый пакет Sigstore для проверки командой cosign verify-blob."
+
 - id: final.scan.title
   translation: "Сканирование уязвимостей"
 

@@ -5,7 +5,7 @@ project_name = "image-factory"
 github_repo = "siderolabs/image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v1.3.3"
+previous = "v1.4.0"
 pre_release = false
 
 [notes]
@@ -18,52 +18,13 @@ Allow pulling source images through the Image Factory.
 E.g. `siderolabs/imager` image can be pulled as `factory.talos.dev/siderolabs/imager`.
 """
 
-    [notes.extra_extensions]
-        title = "Extra Extensions (enterprise only)"
+    [notes.artifact_signatures]
+        title = "Artifact Signatures"
         description = """\
-Image factory can now be configured with an extra extensions manifest image allowing to easily add custom extensions in addition to the official Sidero extensions.
-"""
+Image Factory now serves detached Sigstore v0.3 bundles (.sigstore.json) alongside downloaded assets.
 
-    [notes.scanner]
-        title = "Embedded Machine Configuration"
-        description = """\
-Image Factory now supports embedding machine configuration into generated images starting with Talos version 1.2.0 onwards.
-"""
-
-    [notes.secureboot]
-        title = "Secure Boot Disk Images"
-        description = """\
-Image Factory now generates disk images with Secure Boot supporting automatically enrolling keys (with if-safe setting, enabled for VMs in setup mode).
-"""
-
-    [notes.diskimage4ksector]
-        title = "Disk Images"
-        description = """\
-Image Factory now supports generating disk images with 4096 byte sector size (custom size), set via schematic customization.
-"""
-
-    [notes.core_artifacts_namespace]
-        title = "Core Artifacts Namespace"
-        description = """\
-Image Factory now supports setting namespace for core artifacts - an optional
-repository path prefix prepended to every image pulled from the core registry:
-the component images as well as the extension and overlay images discovered
-via the manifests. Previously only the registry host could be overridden, so
-pull-through caches which prefix the upstream repository path (e.g. a Harbor
-proxy-cache project) could not be used.
-
-The prefix only affects pull references; extension identities (matched against
-schematics, the UI, and the meta API) are unchanged.
-"""
-
-    [notes.audit]
-        title = "Audit Logging"
-        description = """\
-Image Factory now supports audit logging via a configurable sink. Two sinks are
-available: file and log. By default, no sink is configured. File sink writes
-audit log as JSON lines to a file configured via `audit.file.path` and rotates
-the log file based on the size. Log sink writes audit log to the standard log
-output.
+Each bundle cryptographically signs the exact bytes returned by the asset endpoint using either a pinned local key or GSA keyless signing.
+Bundles are persisted in a shared asset cache partitioned by asset, signer, and evidence format, with single-flight deduplication and graceful handling of transient cache failures.
 """
 
 [make_deps]
