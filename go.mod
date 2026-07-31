@@ -33,11 +33,13 @@ require (
 	github.com/ory/dockertest v3.3.5+incompatible
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rs/cors v1.11.1
+	github.com/secure-systems-lab/go-securesystemslib v0.11.0
 	github.com/siderolabs/crypto v0.6.5
 	github.com/siderolabs/gen v0.8.7
 	github.com/siderolabs/go-blockdevice/v2 v2.0.32
 	github.com/siderolabs/go-debug v0.6.2
 	github.com/siderolabs/go-pointer v1.0.1
+	github.com/siderolabs/go-retry v0.3.3
 	github.com/siderolabs/go-vex v0.1.1
 	github.com/siderolabs/talos v1.14.0-alpha.1
 	github.com/siderolabs/talos/pkg/machinery v1.14.0-alpha.1
@@ -388,7 +390,6 @@ require (
 	github.com/sassoftware/relic v7.2.1+incompatible // indirect
 	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.36 // indirect
 	github.com/scylladb/go-set v1.0.3-0.20200225121959-cc7b2070d91e // indirect
-	github.com/secure-systems-lab/go-securesystemslib v0.11.0 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
@@ -397,7 +398,6 @@ require (
 	github.com/siderolabs/go-cmd v0.2.0 // indirect
 	github.com/siderolabs/go-copy v0.1.0 // indirect
 	github.com/siderolabs/go-procfs v0.1.2 // indirect
-	github.com/siderolabs/go-retry v0.3.3 // indirect
 	github.com/siderolabs/go-smbios v0.3.4 // indirect
 	github.com/siderolabs/net v0.4.0 // indirect
 	github.com/siderolabs/protoenc v0.2.4 // indirect

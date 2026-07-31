@@ -16,6 +16,7 @@ import (
 
 	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/image/signer"
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 // Enabled indicates whether Enterprise features are enabled.
@@ -36,6 +37,11 @@ func NewScannerFrontend(_ context.Context, _ *errgroup.Group, _ *zap.Logger, _ S
 // NewSpdxFrontend returns a new Spdx FrontendPlugin.
 func NewSpdxFrontend(_ *zap.Logger, _ SPDXOptions) (FrontendPlugin, SPDXSource, error) {
 	return nil, nil, errors.New("SPDX is not supported in the non-enterprise version")
+}
+
+// NewInstallerEvidencePublisher returns nil when Enterprise is not enabled.
+func NewInstallerEvidencePublisher(_ *zap.Logger, _ signer.Signer, _ SPDXSource, _ remotewrap.Pusher, _ remotewrap.Puller) (InstallerEvidencePublisher, error) {
+	return nil, nil //nolint:nilnil
 }
 
 // NewChecksummer returns nil when enterprise is not enabled.

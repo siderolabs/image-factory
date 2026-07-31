@@ -363,7 +363,7 @@ func commonTest(t *testing.T, options cmd.Options) {
 	t.Run("TestLatestTagResolution", func(t *testing.T) {
 		t.Parallel()
 
-		testLatestTagResolution(ctx, t, listenAddr, baseURL)
+		testLatestTagResolution(t, listenAddr)
 	})
 
 	t.Run("TestMetaFrontend", func(t *testing.T) {

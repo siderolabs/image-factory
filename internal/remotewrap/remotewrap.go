@@ -71,6 +71,8 @@ func ShutdownTransport() {
 // Pusher is an interface which is implemented by go-containerregistry's *remote.Pusher.
 type Pusher interface {
 	Push(ctx context.Context, ref name.Reference, t remote.Taggable) error
+	// NameOptions returns the configured name parsing options for the target registry.
+	NameOptions() []name.Option
 	// RemoteOptions returns a fresh set of go-containerregistry remote options backed by
 	// the current (possibly refreshed) *remote.Pusher instance. Use this when a library
 	// accepts []remote.Option directly (e.g. cosign's ociremote package) so that it
@@ -80,6 +82,7 @@ type Pusher interface {
 
 type pusherWrapper struct {
 	refresher *refresher.Refresher[*remote.Pusher]
+	nameOpts  []name.Option
 }
 
 func (p *pusherWrapper) Push(ctx context.Context, ref name.Reference, t remote.Taggable) error {
@@ -100,8 +103,12 @@ func (p *pusherWrapper) RemoteOptions() ([]remote.Option, error) {
 	return []remote.Option{remote.Reuse(instance)}, nil
 }
 
-// NewPusher creates a new Pusher with the given options.
-func NewPusher(refreshInterval time.Duration, opts ...remote.Option) (Pusher, error) {
+func (p *pusherWrapper) NameOptions() []name.Option {
+	return slices.Clone(p.nameOpts)
+}
+
+// NewPusher creates a new Pusher with the given registry name and remote options.
+func NewPusher(refreshInterval time.Duration, nameOpts []name.Option, opts []remote.Option) (Pusher, error) {
 	return &pusherWrapper{
 		refresher: refresher.New(
 			func() (*remote.Pusher, error) {
@@ -109,6 +116,7 @@ func NewPusher(refreshInterval time.Duration, opts ...remote.Option) (Pusher, er
 			},
 			refreshInterval,
 		),
+		nameOpts: slices.Clone(nameOpts),
 	}, nil
 }
 
@@ -118,6 +126,8 @@ type Puller interface {
 	Get(ctx context.Context, ref name.Reference) (*remote.Descriptor, error)
 	List(ctx context.Context, repo name.Repository) ([]string, error)
 	Layer(ctx context.Context, ref name.Digest) (v1.Layer, error)
+	// NameOptions returns the configured name parsing options for the target registry.
+	NameOptions() []name.Option
 	// RemoteOptions returns a fresh set of go-containerregistry remote options backed by
 	// the current (possibly refreshed) *remote.Puller instance. Use this when a library
 	// accepts []remote.Option directly so it shares authentication, transport and limits.
@@ -126,6 +136,7 @@ type Puller interface {
 
 type pullerWrapper struct {
 	refresher *refresher.Refresher[*remote.Puller]
+	nameOpts  []name.Option
 }
 
 func (p *pullerWrapper) Head(ctx context.Context, ref name.Reference) (*v1.Descriptor, error) {
@@ -173,8 +184,12 @@ func (p *pullerWrapper) RemoteOptions() ([]remote.Option, error) {
 	return []remote.Option{remote.Reuse(instance)}, nil
 }
 
-// NewPuller creates a new Puller with the given options.
-func NewPuller(refreshInterval time.Duration, opts ...remote.Option) (Puller, error) {
+func (p *pullerWrapper) NameOptions() []name.Option {
+	return slices.Clone(p.nameOpts)
+}
+
+// NewPuller creates a new Puller with the given registry name and remote options.
+func NewPuller(refreshInterval time.Duration, nameOpts []name.Option, opts []remote.Option) (Puller, error) {
 	return &pullerWrapper{
 		refresher: refresher.New(
 			func() (*remote.Puller, error) {
@@ -182,5 +197,6 @@ func NewPuller(refreshInterval time.Duration, opts ...remote.Option) (Puller, er
 			},
 			refreshInterval,
 		),
+		nameOpts: slices.Clone(nameOpts),
 	}, nil
 }

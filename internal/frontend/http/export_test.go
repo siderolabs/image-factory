@@ -5,6 +5,8 @@
 package http
 
 import (
+	"net/http"
+
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
 )
@@ -23,4 +25,8 @@ func (f *Frontend) WrapHandler(h Handler) httprouter.Handle {
 // HandleLLMsTxt exposes the llms.txt handler for external tests.
 func (f *Frontend) HandleLLMsTxt() Handler {
 	return f.handleLLMsTxt
+}
+
+func ApplyReferrersFilterHeader(header http.Header, artifactType string) {
+	applyReferrersFilterHeader(header, artifactType)
 }

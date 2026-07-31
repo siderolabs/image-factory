@@ -126,7 +126,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	enterprisePlugins, err := buildEnterprisePlugins(ctx, eg, logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, authProvider, downloadTokenIssuer, opts)
+	enterprisePlugins, spdxSource, err := buildEnterprisePlugins(ctx, eg, logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, authProvider, downloadTokenIssuer, opts)
 	if err != nil {
 		return err
 	}
@@ -158,6 +158,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	frontendOptions.AuditSink = auditSink
 	frontendOptions.DownloadTokenIssuer = downloadTokenIssuer
+	frontendOptions.InstallerSBOMSource = spdxSource
 
 	signatureWriter, err := buildSignatureWriter(logger, frontendOptions.CacheImageSigner, assetCache)
 	if err != nil {
@@ -281,9 +282,9 @@ func buildEnterprisePlugins(
 	authProvider enterprise.AuthProvider,
 	downloadTokenIssuer enterprise.DownloadTokenIssuer,
 	opts Options,
-) ([]enterprise.FrontendPlugin, error) {
+) ([]enterprise.FrontendPlugin, enterprise.SPDXSource, error) {
 	if !enterprise.Enabled() {
-		return nil, nil //nolint:nilnil
+		return nil, nil, nil //nolint:nilnil
 	}
 
 	spdxFrontend, spdxSource, err := enterprise.NewSpdxFrontend(logger, enterprise.SPDXOptions{
@@ -299,12 +300,12 @@ func buildEnterprisePlugins(
 		RegistryRefreshInterval: opts.Artifacts.RefreshInterval,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize SPDX frontend: %w", err)
+		return nil, nil, fmt.Errorf("failed to initialize SPDX frontend: %w", err)
 	}
 
 	imageVerifyOptions, err := buildImageVerifyOptions(logger, opts)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	vexFrontend, vexSource, err := enterprise.NewVEXFrontend(ctx, eg, logger, enterprise.VEXOptions{
@@ -318,7 +319,7 @@ func buildEnterprisePlugins(
 		VerifyOptions:    imageVerifyOptions,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize VEX frontend: %w", err)
+		return nil, nil, fmt.Errorf("failed to initialize VEX frontend: %w", err)
 	}
 
 	scannerFrontend, err := enterprise.NewScannerFrontend(ctx, eg, logger, enterprise.ScannerOptions{
@@ -332,7 +333,7 @@ func buildEnterprisePlugins(
 		CacheCapacity:    opts.Enterprise.Scanner.Cache.Capacity,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize scanner frontend: %w", err)
+		return nil, nil, fmt.Errorf("failed to initialize scanner frontend: %w", err)
 	}
 
 	plugins := []enterprise.FrontendPlugin{spdxFrontend, vexFrontend, scannerFrontend}
@@ -345,7 +346,7 @@ func buildEnterprisePlugins(
 		)
 	}
 
-	return plugins, nil
+	return plugins, spdxSource, nil
 }
 
 func buildFrontendOptions(cacheImageSigner signer.Signer, authProvider enterprise.AuthProvider, opts Options) (frontendhttp.Options, error) {
@@ -380,6 +381,8 @@ func buildFrontendOptions(cacheImageSigner signer.Signer, authProvider enterpris
 	if err != nil {
 		return frontendhttp.Options{}, fmt.Errorf("failed to parse internal installer repository: %w", err)
 	}
+
+	frontendOptions.InstallerInternalNameOptions = repoOpts
 
 	if opts.Artifacts.Installer.External.String() == "" {
 		frontendOptions.ProxyInstallerInternalRepository = true
@@ -628,6 +631,8 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 		repoOpts = append(repoOpts, name.Insecure)
 	}
 
+	regOptions.NameOptions = repoOpts
+
 	regOptions.CacheRepository, err = name.NewRepository(opts.Cache.OCI.String(), repoOpts...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse cache repository: %w", err)
@@ -747,7 +752,7 @@ func remoteOptions() []remote.Option {
 	return opts
 }
 
-// buildCacheSigner constructs the image signer from options.
+// buildCacheSigner constructs the configured image signer.
 // If GSA options are configured (ServiceAccountEmail set), a keyless GSA signer is returned.
 // Otherwise, a static key signer is built from SigningKeyPath.
 func buildCacheSigner(ctx context.Context, opts Options) (signer.Signer, error) {
@@ -758,7 +763,6 @@ func buildCacheSigner(ctx context.Context, opts Options) (signer.Signer, error) 
 			FulcioURL:           opts.Cache.GSA.FulcioURL,
 			RekorURL:            opts.Cache.GSA.RekorURL,
 			TSAURL:              opts.Cache.GSA.TSAURL,
-			Insecure:            opts.Artifacts.Installer.Internal.Insecure,
 		})
 	}
 

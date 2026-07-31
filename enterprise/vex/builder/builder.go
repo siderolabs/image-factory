@@ -63,7 +63,7 @@ type Options struct {
 
 // NewBuilder constructs a Builder.
 func NewBuilder(logger *zap.Logger, opts Options) (*Builder, error) {
-	puller, err := remotewrap.NewPuller(opts.RefreshInterval, opts.RemoteOptions...)
+	puller, err := remotewrap.NewPuller(opts.RefreshInterval, nil, opts.RemoteOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error creating puller: %w", err)
 	}

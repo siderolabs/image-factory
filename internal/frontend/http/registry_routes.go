@@ -16,39 +16,44 @@ import (
 // RouteNotFoundTag is an error tag for registry paths that match no known route.
 type RouteNotFoundTag struct{}
 
-type v2Target int
+// V2Target identifies the operation selected for an OCI Distribution route.
+type V2Target int
 
 const (
-	// v2TargetPing is the OCI base check (GET /v2/).
-	v2TargetPing v2Target = iota
-	// v2TargetManifest is a schematic manifest: /v2/<image>/<schematic>/manifests/<tag>.
-	v2TargetManifest
-	// v2TargetBlob is a schematic blob: /v2/<image>/<schematic>/blobs/<digest>.
-	v2TargetBlob
-	// v2TargetProxy is the image proxy: /v2/siderolabs/<image>/{manifests|blobs}/...,
+	// V2TargetPing is the OCI base check (GET /v2/).
+	V2TargetPing V2Target = iota
+	// V2TargetManifest is a schematic manifest: /v2/<image>/<schematic>/manifests/<tag>.
+	V2TargetManifest
+	// V2TargetBlob is a schematic blob: /v2/<image>/<schematic>/blobs/<digest>.
+	V2TargetBlob
+	// V2TargetReferrers is the OCI referrers API for a generated schematic image.
+	V2TargetReferrers
+	// V2TargetProxy is the image proxy: /v2/siderolabs/<image>/{manifests|blobs}/...,
 	// the tag listing /v2/siderolabs/<image>/tags/list, or the referrers API
 	// /v2/siderolabs/<image>/referrers/<digest>.
-	v2TargetProxy
+	V2TargetProxy
 )
 
-type v2Route struct {
-	image     string
-	schematic string
-	resource  string
-	reference string
-	target    v2Target
+// V2Route is a parsed OCI Distribution route.
+type V2Route struct {
+	Image     string
+	Schematic string
+	Resource  string
+	Reference string
+	Target    V2Target
 }
 
-func routeV2(path string) (v2Route, error) {
-	notFound := func() (v2Route, error) {
-		return v2Route{}, xerrors.NewTaggedf[RouteNotFoundTag]("unknown registry path: %q", path)
+// RouteV2 parses a path below /v2/ into a registry route.
+func RouteV2(path string) (V2Route, error) {
+	notFound := func() (V2Route, error) {
+		return V2Route{}, xerrors.NewTaggedf[RouteNotFoundTag]("unknown registry path: %q", path)
 	}
 
 	trimmed := strings.Trim(path, "/")
 
 	// GET /v2 health check
 	if trimmed == "" {
-		return v2Route{target: v2TargetPing}, nil
+		return V2Route{Target: V2TargetPing}, nil
 	}
 
 	segments := strings.Split(trimmed, "/")
@@ -90,17 +95,17 @@ func routeV2(path string) (v2Route, error) {
 			return notFound()
 		}
 
-		return v2Route{
-			target:    v2TargetProxy,
-			image:     name,
-			resource:  resource,
-			reference: reference,
+		return V2Route{
+			Target:    V2TargetProxy,
+			Image:     name,
+			Resource:  resource,
+			Reference: reference,
 		}, nil
 	}
 
-	// Schematic image: only manifest/blob pulls, repository name is exactly
+	// Schematic image: manifest/blob pulls and OCI referrer discovery, repository name is exactly
 	// "<image>/<schematic>".
-	if resource != "manifests" && resource != "blobs" {
+	if resource != "manifests" && resource != "blobs" && resource != "referrers" {
 		return notFound()
 	}
 
@@ -108,37 +113,43 @@ func routeV2(path string) (v2Route, error) {
 		return notFound()
 	}
 
-	target := v2TargetManifest
-	if resource == "blobs" {
-		target = v2TargetBlob
+	target := V2TargetManifest
+
+	switch resource {
+	case "blobs":
+		target = V2TargetBlob
+	case "referrers":
+		target = V2TargetReferrers
 	}
 
-	return v2Route{
-		target:    target,
-		image:     repo[0],
-		schematic: repo[1],
-		resource:  resource,
-		reference: reference,
+	return V2Route{
+		Target:    target,
+		Image:     repo[0],
+		Schematic: repo[1],
+		Resource:  resource,
+		Reference: reference,
 	}, nil
 }
 
 // handleV2 is the catch-all entry point for /v2/ registry requests.
 // Either serves an image via image factory or proxies the request to the backing image repository.
 func (f *Frontend) handleV2(ctx context.Context, w http.ResponseWriter, req *http.Request, p httprouter.Params) error {
-	route, err := routeV2(p.ByName("path"))
+	route, err := RouteV2(p.ByName("path"))
 	if err != nil {
 		return err
 	}
 
-	switch route.target {
-	case v2TargetPing:
+	switch route.Target {
+	case V2TargetPing:
 		// always healthy :)
 		return nil
-	case v2TargetManifest:
+	case V2TargetManifest:
 		return f.handleManifest(ctx, w, req, route)
-	case v2TargetBlob:
+	case V2TargetBlob:
 		return f.handleBlob(ctx, w, req, route)
-	case v2TargetProxy:
+	case V2TargetReferrers:
+		return f.handleReferrers(ctx, w, req, route)
+	case V2TargetProxy:
 		return f.handleImageProxy(ctx, w, req, route)
 	default:
 		return xerrors.NewTaggedf[RouteNotFoundTag]("unknown registry route")

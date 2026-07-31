@@ -40,6 +40,7 @@ const SPDXBundleMediaType types.MediaType = "application/vnd.sidero.dev-image.sp
 type Options struct {
 	CacheImageSigner        signer.Signer
 	CacheRepository         name.Repository
+	NameOptions             []name.Option
 	RemoteOptions           []remote.Option
 	RegistryRefreshInterval time.Duration
 }
@@ -65,12 +66,12 @@ func NewStorage(logger *zap.Logger, options Options) (*Storage, error) {
 
 	var err error
 
-	s.puller, err = remotewrap.NewPuller(options.RegistryRefreshInterval, options.RemoteOptions...)
+	s.puller, err = remotewrap.NewPuller(options.RegistryRefreshInterval, options.NameOptions, options.RemoteOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error creating puller: %w", err)
 	}
 
-	s.pusher, err = remotewrap.NewPusher(options.RegistryRefreshInterval, options.RemoteOptions...)
+	s.pusher, err = remotewrap.NewPusher(options.RegistryRefreshInterval, options.NameOptions, options.RemoteOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error creating pusher: %w", err)
 	}

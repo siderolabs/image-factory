@@ -15,11 +15,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -35,6 +39,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
+	registryhttp "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/image/attestation"
 	"github.com/siderolabs/image-factory/internal/image/verify"
 	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
@@ -132,6 +138,26 @@ func testInstallerImage(ctx context.Context, t *testing.T, registry name.Registr
 
 	// verify the image signature
 	assertImageSignature(ctx, t, ref, baseURL)
+
+	if enterprise.Enabled() && registryhttp.InstallerEvidenceSupported(semver.MustParse(strings.TrimPrefix(talosVersion, "v"))) {
+		var platformDescriptor *v1.Descriptor
+		for i := range manifest.Manifests {
+			if manifest.Manifests[i].Platform != nil && manifest.Manifests[i].Platform.Equals(platform) {
+				platformDescriptor = &manifest.Manifests[i]
+
+				break
+			}
+		}
+		require.NotNil(t, platformDescriptor)
+
+		assertInstallerAttestations(
+			ctx,
+			t,
+			ref.Context().Digest(descriptor.Digest.String()),
+			ref.Context().Digest(platformDescriptor.Digest.String()),
+			baseURL,
+		)
+	}
 
 	// try to get the image once again, it should be fast now, as the image got cached & signed
 	start := time.Now()
@@ -266,6 +292,60 @@ func assertImageSignature(ctx context.Context, t *testing.T, ref name.Reference,
 	assert.NoError(t, err)
 }
 
+func assertInstallerAttestations(ctx context.Context, t *testing.T, indexRef, platformRef name.Digest, baseURL string) {
+	t.Helper()
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/oci/cosign/signing-key.pub", nil)
+	require.NoError(t, err)
+	addTestAuth(request)
+
+	response, err := http.DefaultClient.Do(request)
+	require.NoError(t, err)
+	defer response.Body.Close() //nolint:errcheck
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	publicKey, err := io.ReadAll(response.Body)
+	require.NoError(t, err)
+	publicKeyPath := filepath.Join(t.TempDir(), "cosign.pub")
+	require.NoError(t, os.WriteFile(publicKeyPath, publicKey, 0o600))
+
+	for _, expected := range []struct {
+		name          string
+		predicateType string
+		reference     name.Digest
+	}{
+		{name: "platform SPDX", predicateType: attestation.SPDXPredicateType, reference: platformRef},
+		{name: "index SLSA provenance", predicateType: attestation.SLSAProvenancePredicateType, reference: indexRef},
+	} {
+		t.Run(expected.name, func(t *testing.T) {
+			args := []string{
+				"verify-attestation",
+				"--key", publicKeyPath,
+				"--type", expected.predicateType,
+				"--insecure-ignore-tlog",
+				"--allow-http-registry",
+				"--allow-insecure-registry",
+			}
+
+			if username, password := authCredentials(); username != "" {
+				args = append(
+					args,
+					"--registry-username", username,
+					"--registry-password", password,
+				)
+			}
+
+			args = append(args, expected.reference.String())
+
+			command := exec.CommandContext(ctx, cosignPath, args...)
+
+			output, err := command.CombinedOutput()
+			require.NoErrorf(t, err, "cosign verify-attestation failed for %s:\n%s", expected.reference, output)
+			require.NotEmpty(t, output)
+		})
+	}
+}
+
 // assertProxiedImageSignature verifies that a proxied image's siderolabs signature
 // can be fetched and validated through the proxy. Unlike assertImageSignature.
 // Check against siderolabs' keyless (Google OIDC) signing identity rather than the
@@ -299,7 +379,7 @@ func assertProxiedImageSignature(ctx context.Context, t *testing.T, digestRef na
 	assert.True(t, result.Verified)
 }
 
-func testLatestTagResolution(ctx context.Context, t *testing.T, registryAddr string, baseURL string) {
+func testLatestTagResolution(t *testing.T, registryAddr string) {
 	registry, err := name.NewRegistry(registryAddr)
 	require.NoError(t, err)
 

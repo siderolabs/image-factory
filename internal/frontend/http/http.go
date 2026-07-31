@@ -59,6 +59,7 @@ type Frontend struct {
 	puller            remotewrap.Puller
 	pusher            remotewrap.Pusher
 	imageSigner       signer.Signer
+	evidencePublisher enterprise.InstallerEvidencePublisher
 	readinessCheckers []enterprise.ReadinessChecker
 	sf                singleflight.Group
 	options           Options
@@ -68,12 +69,14 @@ type Frontend struct {
 type Options struct {
 	ImageProxy                       ImageProxyOptions
 	CacheImageSigner                 signer.Signer
+	InstallerSBOMSource              enterprise.SPDXSource
 	AuthProvider                     enterprise.AuthProvider
 	DownloadTokenIssuer              enterprise.DownloadTokenIssuer
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
 	AuditSink                        audit.Sink
 	InstallerInternalRepository      name.Repository
+	InstallerInternalNameOptions     []name.Option
 	InstallerExternalRepository      name.Repository
 	MetricsNamespace                 string
 	AllowedOrigins                   []string
@@ -123,17 +126,28 @@ func NewFrontend(
 
 	var err error
 
-	frontend.puller, err = remotewrap.NewPuller(opts.RegistryRefreshInterval, opts.RemoteOptions...)
+	frontend.puller, err = remotewrap.NewPuller(opts.RegistryRefreshInterval, opts.InstallerInternalNameOptions, opts.RemoteOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create puller: %w", err)
 	}
 
-	frontend.pusher, err = remotewrap.NewPusher(opts.RegistryRefreshInterval, opts.RemoteOptions...)
+	frontend.pusher, err = remotewrap.NewPusher(opts.RegistryRefreshInterval, opts.InstallerInternalNameOptions, opts.RemoteOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pusher: %w", err)
 	}
 
 	frontend.imageSigner = opts.CacheImageSigner
+
+	frontend.evidencePublisher, err = enterprise.NewInstallerEvidencePublisher(
+		frontend.logger,
+		frontend.imageSigner,
+		opts.InstallerSBOMSource,
+		frontend.pusher,
+		frontend.puller,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Installer evidence publisher: %w", err)
+	}
 
 	// monitoring middleware
 	mdlw := middleware.New(middleware.Config{

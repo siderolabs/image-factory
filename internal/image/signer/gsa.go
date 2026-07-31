@@ -23,10 +23,11 @@ import (
 
 	"cloud.google.com/go/auth/credentials/idtoken"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	gcremote "github.com/google/go-containerregistry/pkg/v1/remote"
-	intotov1 "github.com/in-toto/attestation/go/v1"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	cbundle "github.com/sigstore/cosign/v3/pkg/cosign/bundle"
+	"github.com/sigstore/cosign/v3/pkg/oci"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	costypes "github.com/sigstore/cosign/v3/pkg/types"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
@@ -37,8 +38,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/types/known/structpb"
 
+	"github.com/siderolabs/image-factory/internal/image/attestation"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
@@ -67,8 +68,6 @@ type GSASignerOptions struct {
 	RekorURL string
 	// TSAURL is the RFC3161 timestamp authority URL. Required whenever RekorURL is set.
 	TSAURL string
-	// Insecure allows pushing/pulling bundles to registries over plain HTTP.
-	Insecure bool
 }
 
 // GSASigner signs images using Google Service Account OIDC tokens via Sigstore keyless signing.
@@ -79,9 +78,15 @@ type GSASigner struct {
 	getIdentityToken    func(context.Context) (string, error)
 	certProvider        sigsign.CertificateProvider
 	serviceAccount      string
-	nameOpts            []name.Option
 	blobSigningIdentity [sha256.Size]byte
 }
+
+// Interface guards.
+var (
+	_ Signer        = (*GSASigner)(nil)
+	_ BlobSigner    = (*GSASigner)(nil)
+	_ ImageAttestor = (*GSASigner)(nil)
+)
 
 // NewGSASigner creates a new GSA-based keyless signer.
 func NewGSASigner(ctx context.Context, opts GSASignerOptions) (*GSASigner, error) {
@@ -112,12 +117,6 @@ func NewGSASigner(ctx context.Context, opts GSASignerOptions) (*GSASigner, error
 		return nil, fmt.Errorf("failed to select Fulcio service: %w", err)
 	}
 
-	var nameOpts []name.Option
-
-	if opts.Insecure {
-		nameOpts = append(nameOpts, name.Insecure)
-	}
-
 	// The cache key for detached blob signatures must change whenever any signing
 	// service changes, so fold every resolved endpoint into the identity.
 	signingServices := slices.Concat(
@@ -135,7 +134,6 @@ func NewGSASigner(ctx context.Context, opts GSASignerOptions) (*GSASigner, error
 			Retries: serviceRetries,
 		}),
 		serviceAccount:      opts.ServiceAccountEmail,
-		nameOpts:            nameOpts,
 		blobSigningIdentity: gsaBlobSigningIdentity(opts.ServiceAccountEmail, signingServices...),
 	}
 
@@ -422,6 +420,18 @@ func (s *GSASigner) SignBlob(ctx context.Context, payload io.Reader) ([]byte, er
 // SignImage signs the image using GSA OIDC token-based keyless signing and stores
 // the result as an OCI referrer bundle (new bundle format).
 func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, pusher remotewrap.Pusher) error {
+	return s.AttestImage(ctx, imageRef, []name.Digest{imageRef}, costypes.CosignSignPredicateType, []byte(`{}`), pusher)
+}
+
+// AttestImage signs a typed in-toto statement and stores it as a native OCI referrer.
+func (s *GSASigner) AttestImage(
+	ctx context.Context,
+	imageRef name.Digest,
+	subjects []name.Digest,
+	predicateType string,
+	predicate []byte,
+	pusher remotewrap.Pusher,
+) error {
 	identityToken, err := s.getIdentityToken(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get GSA OIDC token: %w", err)
@@ -432,20 +442,16 @@ func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, pusher 
 		return err
 	}
 
-	// Generate ephemeral ECDSA P-256 key pair for this signing operation.
 	ephemeralKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return fmt.Errorf("failed to generate ephemeral key: %w", err)
 	}
 
-	// Build the in-toto statement payload (new cosign bundle format).
-	payload, err := buildNewFormatPayload(imageRef)
+	payload, err := attestation.NewStatement(subjects, predicateType, predicate)
 	if err != nil {
 		return fmt.Errorf("failed to build signing payload: %w", err)
 	}
 
-	// sigsign.Bundle gets the Fulcio certificate, DSSE-signs PAE(payloadType, payload),
-	// logs to Rekor, timestamps, and verifies the result against the trusted root.
 	bundle, err := sigsign.Bundle(
 		&sigsign.DSSEData{Data: payload, PayloadType: costypes.IntotoPayloadType},
 		&ecdsaKeypair{key: ephemeralKey},
@@ -460,17 +466,15 @@ func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, pusher 
 		return fmt.Errorf("failed to marshal sigstore bundle: %w", err)
 	}
 
-	// Get fresh remote options from the refreshing pusher to avoid stale auth tokens.
 	pushRemoteOpts, err := pusher.RemoteOptions()
 	if err != nil {
 		return fmt.Errorf("failed to get remote options for push: %w", err)
 	}
 
-	// Push as an OCI 1.1 referrer of the signed image.
-	if err := ociremote.WriteAttestationNewBundleFormat(
-		imageRef, bundleBytes, costypes.CosignSignPredicateType,
+	if err = ociremote.WriteAttestationNewBundleFormat(
+		imageRef, bundleBytes, predicateType,
 		ociremote.WithRemoteOptions(append(pushRemoteOpts, gcremote.WithContext(ctx))...),
-		ociremote.WithNameOptions(s.nameOpts...),
+		ociremote.WithNameOptions(pusher.NameOptions()...),
 	); err != nil {
 		return fmt.Errorf("failed to push bundle referrer: %w", err)
 	}
@@ -481,38 +485,37 @@ func (s *GSASigner) SignImage(ctx context.Context, imageRef name.Digest, pusher 
 // VerifyImage verifies the OCI referrer bundle for imageRef against the GSA identity.
 // Implements Signer.VerifyImage.
 func (s *GSASigner) VerifyImage(ctx context.Context, imageRef name.Digest, puller remotewrap.Puller) error {
+	return s.VerifyImageAttestation(ctx, imageRef, costypes.CosignSignPredicateType, puller)
+}
+
+// VerifyImageAttestation verifies a typed OCI referrer bundle against the GSA identity.
+func (s *GSASigner) VerifyImageAttestation(
+	ctx context.Context,
+	imageRef name.Digest,
+	predicateType string,
+	puller remotewrap.Puller,
+) error {
 	remoteOpts, err := puller.RemoteOptions()
 	if err != nil {
 		return fmt.Errorf("failed to get remote options for verification: %w", err)
 	}
 
 	checkOpts := s.GetCheckOpts()
+	checkOpts.ClaimVerifier = gsaClaimVerifier(predicateType)
 	checkOpts.RegistryClientOpts = []ociremote.Option{
 		ociremote.WithRemoteOptions(append(remoteOpts, gcremote.WithContext(ctx))...),
+		ociremote.WithNameOptions(puller.NameOptions()...),
 	}
 
-	_, _, err = cosign.VerifyImageAttestations(ctx, imageRef, checkOpts, s.nameOpts...)
+	_, _, err = cosign.VerifyImageAttestations(ctx, imageRef, checkOpts, puller.NameOptions()...)
 
 	return err
 }
 
-// buildNewFormatPayload creates the in-toto v1 Statement payload for the new cosign bundle format.
-func buildNewFormatPayload(imageRef name.Digest) ([]byte, error) {
-	parts := strings.SplitN(imageRef.Identifier(), ":", 2)
-	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid digest format: %s", imageRef.Identifier())
+func gsaClaimVerifier(predicateType string) func(oci.Signature, v1.Hash, map[string]any) error {
+	return func(sig oci.Signature, imageDigest v1.Hash, _ map[string]any) error {
+		return attestation.VerifySubjectAndPredicate(sig, imageDigest, predicateType)
 	}
-
-	statement := &intotov1.Statement{
-		Type: intotov1.StatementTypeUri,
-		Subject: []*intotov1.ResourceDescriptor{
-			{Digest: map[string]string{parts[0]: parts[1]}},
-		},
-		PredicateType: costypes.CosignSignPredicateType,
-		Predicate:     &structpb.Struct{},
-	}
-
-	return protojson.Marshal(statement)
 }
 
 // ecdsaKeypair implements sigsign.Keypair for an ECDSA P-256 private key.

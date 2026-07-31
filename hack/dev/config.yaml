@@ -36,7 +36,7 @@ cache:
 
 http:
   # external URL the Image Factory is available at
-  externalURL: http://localhost:8080
+  externalURL: http://builder.cat-gacrux.ts.net:8080
 
 authentication:
   enabled: false

@@ -54,12 +54,12 @@ func NewStorage(repository name.Repository, registryRefreshInterval time.Duratio
 
 	var err error
 
-	s.pusher, err = remotewrap.NewPusher(registryRefreshInterval, append(remoteOpts, remote.WithNondistributable)...)
+	s.pusher, err = remotewrap.NewPusher(registryRefreshInterval, nil, append(remoteOpts, remote.WithNondistributable))
 	if err != nil {
 		return nil, err
 	}
 
-	s.puller, err = remotewrap.NewPuller(registryRefreshInterval, remoteOpts...)
+	s.puller, err = remotewrap.NewPuller(registryRefreshInterval, nil, remoteOpts)
 	if err != nil {
 		return nil, err
 	}

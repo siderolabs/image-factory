@@ -8,6 +8,7 @@ package enterprise
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/auth/auth0"
 	"github.com/siderolabs/image-factory/enterprise/checksum"
 	enterprisedt "github.com/siderolabs/image-factory/enterprise/downloadtoken"
+	"github.com/siderolabs/image-factory/enterprise/installerattestation"
 	"github.com/siderolabs/image-factory/enterprise/scanner"
 	scannerbuilder "github.com/siderolabs/image-factory/enterprise/scanner/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx"
@@ -33,6 +35,7 @@ import (
 	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/downloadtoken"
 	"github.com/siderolabs/image-factory/internal/image/signer"
+	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 
 // Enabled indicates whether Enterprise features are enabled.
@@ -118,6 +121,25 @@ func (b *BundleBuilder) Build(ctx context.Context, schematicID, versionTag strin
 	return bundle.Reader()
 }
 
+// BuildBytes returns the canonical merged SPDX 2.3 JSON document for an Installer platform.
+func (b *BundleBuilder) BuildBytes(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (data []byte, err error) {
+	reader, err := b.Build(ctx, schematicID, versionTag, arch)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = errors.Join(err, reader.Close())
+	}()
+
+	data, err = io.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read SPDX bundle: %w", err)
+	}
+
+	return data, nil
+}
+
 // NewSpdxFrontend returns a new SPDX FrontendPlugin and the underlying SPDX builder.
 //
 // The builder is exposed so that downstream enterprise components (e.g., the scanner
@@ -136,6 +158,7 @@ func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, SPDX
 
 	storage, err := registry.NewStorage(logger, registry.Options{
 		CacheRepository:         cacheRepository,
+		NameOptions:             repoOpts,
 		CacheImageSigner:        opts.CacheImageSigner,
 		RemoteOptions:           opts.RemoteOptions,
 		RegistryRefreshInterval: opts.RegistryRefreshInterval,
@@ -154,6 +177,27 @@ func NewSpdxFrontend(logger *zap.Logger, opts SPDXOptions) (FrontendPlugin, SPDX
 	})
 
 	return spdx.NewFrontend(opts.SchematicFactory, spdxBuilder, opts.AuthProvider), &BundleBuilder{spdxBuilder}, nil
+}
+
+// NewInstallerEvidencePublisher creates the mandatory Enterprise Installer evidence publisher.
+func NewInstallerEvidencePublisher(
+	logger *zap.Logger,
+	imageSigner signer.Signer,
+	spdxSource SPDXSource,
+	pusher remotewrap.Pusher,
+	puller remotewrap.Puller,
+) (InstallerEvidencePublisher, error) {
+	attestor, ok := imageSigner.(signer.ImageAttestor)
+	if !ok {
+		return nil, fmt.Errorf("image signer does not support typed attestations")
+	}
+
+	return installerattestation.NewPublisher(logger, installerattestation.Options{
+		Attestor:   attestor,
+		SBOMSource: spdxSource,
+		Pusher:     pusher,
+		Puller:     puller,
+	})
 }
 
 // NewChecksummer returns an enterprise Checksummer implementation.

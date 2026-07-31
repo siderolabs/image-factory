@@ -8,9 +8,11 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/talos/pkg/imager/profile"
 	"github.com/siderolabs/talos/pkg/machinery/constants"
@@ -298,6 +300,99 @@ func TestParseFromPath(t *testing.T) {
 }
 
 type mockArtifactProducer struct{}
+
+type dependencyArtifactProducer struct {
+	mockArtifactProducer
+
+	installerHex   string
+	installerCalls int
+	extensionCalls int
+}
+
+func (producer *dependencyArtifactProducer) GetInstallerDependency(_ context.Context, arch artifacts.Arch, _ string) (artifacts.ImageDependency, error) {
+	producer.installerCalls++
+
+	digestHex := producer.installerHex
+	if digestHex == "" {
+		digestHex = strings.Repeat("a", 64)
+	}
+
+	digest := v1.Hash{Algorithm: "sha256", Hex: digestHex}
+
+	return artifacts.ImageDependency{
+		OCIPath: "resolved-installer.oci",
+		Name:    "siderolabs/installer-base",
+		Ref:     ensure.Value(name.NewDigest("ghcr.io/siderolabs/installer-base@" + digest.String())),
+		Descriptor: v1.Descriptor{
+			Digest:   digest,
+			Platform: &v1.Platform{OS: "linux", Architecture: string(arch)},
+		},
+	}, nil
+}
+
+func (producer *dependencyArtifactProducer) GetExtensionDependency(_ context.Context, arch artifacts.Arch, ref artifacts.ExtensionRef) (artifacts.ImageDependency, error) {
+	producer.extensionCalls++
+
+	digest := v1.Hash{Algorithm: "sha256", Hex: strings.Repeat("b", 64)}
+
+	return artifacts.ImageDependency{
+		OCIPath: "resolved-extension.oci",
+		Name:    ref.TaggedReference.RepositoryStr(),
+		Ref:     ensure.Value(name.NewDigest(ref.TaggedReference.Context().Name() + "@" + digest.String())),
+		Descriptor: v1.Descriptor{
+			Digest:   digest,
+			Platform: &v1.Platform{OS: "linux", Architecture: string(arch)},
+		},
+	}, nil
+}
+
+func (producer *dependencyArtifactProducer) GetOverlayDependency(context.Context, artifacts.Arch, artifacts.OverlayRef) (artifacts.ImageDependency, error) {
+	return artifacts.ImageDependency{}, fmt.Errorf("unexpected overlay dependency resolution")
+}
+
+func TestEnhanceFromSchematicCapturesConsumedDependencies(t *testing.T) {
+	producer := &dependencyArtifactProducer{}
+	prof := imageprofile.InstallerProfile(false, artifacts.ArchAmd64, constants.PlatformMetal)
+	schematic := &schematic.Schematic{
+		Customization: schematic.Customization{
+			SystemExtensions: schematic.SystemExtensions{
+				OfficialExtensions: []string{"siderolabs/amd-ucode"},
+			},
+		},
+	}
+
+	result, err := imageprofile.EnhanceFromSchematicWithDependencies(
+		t.Context(),
+		prof,
+		schematic,
+		producer,
+		nil,
+		"v1.13.0",
+	)
+	require.NoError(t, err)
+	require.Equal(t, 1, producer.installerCalls)
+	require.Equal(t, 1, producer.extensionCalls)
+	require.Equal(t, "resolved-installer.oci", result.Profile.Input.BaseInstaller.OCIPath)
+	require.Equal(t, result.Dependencies[0].Image.Ref.String(), result.Profile.Input.BaseInstaller.ImageRef)
+	require.Equal(t, "resolved-extension.oci", result.Profile.Input.SystemExtensions[0].OCIPath)
+	require.Equal(t, []string{"base-installer", "extension"}, []string{result.Dependencies[0].Kind, result.Dependencies[1].Kind})
+
+	secondResult, err := imageprofile.EnhanceFromSchematicWithDependencies(
+		t.Context(),
+		imageprofile.InstallerProfile(false, artifacts.ArchAmd64, constants.PlatformMetal),
+		schematic,
+		&dependencyArtifactProducer{installerHex: strings.Repeat("c", 64)},
+		nil,
+		"v1.13.0",
+	)
+	require.NoError(t, err)
+
+	firstHash, err := imageprofile.Hash(result.Profile)
+	require.NoError(t, err)
+	secondHash, err := imageprofile.Hash(secondResult.Profile)
+	require.NoError(t, err)
+	require.NotEqual(t, firstHash, secondHash)
+}
 
 func (mockArtifactProducer) GetSchematicExtension(_ context.Context, _ string, schematic *schematic.Schematic) (string, error) {
 	id, err := schematic.ID()

@@ -19,6 +19,7 @@ import (
 	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/image/verify"
+	"github.com/siderolabs/image-factory/internal/installer"
 	"github.com/siderolabs/image-factory/internal/schematic"
 )
 
@@ -87,11 +88,21 @@ type VEXSource interface {
 type SPDXSource interface {
 	Build(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (io.ReadCloser, error)
 
+	// BuildBytes returns the canonical SPDX 2.3 JSON document used as an
+	// Installer image attestation predicate.
+	BuildBytes(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) ([]byte, error)
+
 	// PayloadHash returns a content-hash describing the inputs that determine
 	// the SPDX bundle content (extension list, version, architecture). Schematics
 	// with the same SBOM-relevant inputs share the same hash. Callers should use
 	// this hash as a cache key.
 	PayloadHash(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (string, error)
+}
+
+// InstallerEvidencePublisher publishes and verifies the mandatory evidence graph for an Installer index.
+type InstallerEvidencePublisher interface {
+	Publish(ctx context.Context, input installer.EvidenceInput) error
+	Verify(ctx context.Context, input installer.EvidenceInput) error
 }
 
 // ScannerOptions holds configuration options for the Scanner frontend.

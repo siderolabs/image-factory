@@ -376,6 +376,17 @@ Examples:
 Pulls the Talos Linux `installer` image with the specified schematic and Talos Linux version.
 The image platform (architecture) will be determined by the architecture of the Talos Linux Linux machine.
 
+Enterprise Installer images for stable Talos 1.13.0 and newer releases also publish per-platform SPDX SBOM attestations and index-level SLSA provenance through OCI referrers.
+Talos 1.13 prereleases are outside the evidence contract.
+Image Factory uses the native OCI 1.1 API when available and the OCI referrers-tag schema for registries such as `registry:2` and `registry:3`.
+See [Enterprise Installer Build Evidence v1](attestations/installer-build-v1.md) for the evidence contract and verification commands.
+
+#### `GET /v2/<installer>/<schematic>/referrers/<digest>`
+
+Discovers referrers for a generated Installer index or platform manifest.
+The response is an OCI image index regardless of whether the backing registry uses the native referrers API or the referrers-tag schema.
+The standard `artifactType` query parameter filters the returned descriptors.
+
 #### `latest` Tag Resolution
 
 The `latest` tag automatically resolves to the latest stable (non-prerelease) Talos Linux version available:

@@ -2,8 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//nolint:testpackage
-package http
+package http_test
 
 import (
 	"testing"
@@ -11,6 +10,8 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	registryhttp "github.com/siderolabs/image-factory/internal/frontend/http"
 )
 
 func TestRouteV2(t *testing.T) {
@@ -19,95 +20,106 @@ func TestRouteV2(t *testing.T) {
 	for _, test := range []struct {
 		name     string
 		path     string
-		expected v2Route
+		expected registryhttp.V2Route
 	}{
 		{
 			name:     "ping without trailing slash",
 			path:     "",
-			expected: v2Route{target: v2TargetPing},
+			expected: registryhttp.V2Route{Target: registryhttp.V2TargetPing},
 		},
 		{
 			name:     "ping with trailing slash",
 			path:     "/",
-			expected: v2Route{target: v2TargetPing},
+			expected: registryhttp.V2Route{Target: registryhttp.V2TargetPing},
 		},
 		{
 			name: "schematic manifest",
 			path: "/metal-installer/cf9b7aab9ed7c365d5384509b4d31c02fafe2e067dccf67d357a641aa1e50cf7/manifests/v1.7.0",
-			expected: v2Route{
-				target:    v2TargetManifest,
-				image:     "metal-installer",
-				schematic: "cf9b7aab9ed7c365d5384509b4d31c02fafe2e067dccf67d357a641aa1e50cf7",
-				resource:  "manifests",
-				reference: "v1.7.0",
+			expected: registryhttp.V2Route{
+				Target:    registryhttp.V2TargetManifest,
+				Image:     "metal-installer",
+				Schematic: "cf9b7aab9ed7c365d5384509b4d31c02fafe2e067dccf67d357a641aa1e50cf7",
+				Resource:  "manifests",
+				Reference: "v1.7.0",
 			},
 		},
 		{
 			name: "schematic blob",
 			path: "/installer/abc123/blobs/sha256:deadbeef",
-			expected: v2Route{
-				target:    v2TargetBlob,
-				image:     "installer",
-				schematic: "abc123",
-				resource:  "blobs",
-				reference: "sha256:deadbeef",
+			expected: registryhttp.V2Route{
+				Target:    registryhttp.V2TargetBlob,
+				Image:     "installer",
+				Schematic: "abc123",
+				Resource:  "blobs",
+				Reference: "sha256:deadbeef",
+			},
+		},
+		{
+			name: "schematic referrers",
+			path: "/installer/abc123/referrers/sha256:deadbeef",
+			expected: registryhttp.V2Route{
+				Target:    registryhttp.V2TargetReferrers,
+				Image:     "installer",
+				Schematic: "abc123",
+				Resource:  "referrers",
+				Reference: "sha256:deadbeef",
 			},
 		},
 		{
 			name: "proxy manifest",
 			path: "/siderolabs/talosctl/manifests/v1",
-			expected: v2Route{
-				target:    v2TargetProxy,
-				image:     "talosctl",
-				resource:  "manifests",
-				reference: "v1",
+			expected: registryhttp.V2Route{
+				Target:    registryhttp.V2TargetProxy,
+				Image:     "talosctl",
+				Resource:  "manifests",
+				Reference: "v1",
 			},
 		},
 		{
 			name: "proxy multi-segment manifest",
 			path: "/siderolabs/talosctl/v.13.5/manifests/latest",
-			expected: v2Route{
-				target:    v2TargetProxy,
-				image:     "talosctl/v.13.5",
-				resource:  "manifests",
-				reference: "latest",
+			expected: registryhttp.V2Route{
+				Target:    registryhttp.V2TargetProxy,
+				Image:     "talosctl/v.13.5",
+				Resource:  "manifests",
+				Reference: "latest",
 			},
 		},
 		{
 			name: "proxy blob",
 			path: "/siderolabs/talosctl/blobs/sha256:deadbeef",
-			expected: v2Route{
-				target:    v2TargetProxy,
-				image:     "talosctl",
-				resource:  "blobs",
-				reference: "sha256:deadbeef",
+			expected: registryhttp.V2Route{
+				Target:    registryhttp.V2TargetProxy,
+				Image:     "talosctl",
+				Resource:  "blobs",
+				Reference: "sha256:deadbeef",
 			},
 		},
 		{
 			name: "proxy tags list",
 			path: "/siderolabs/talosctl/tags/list",
-			expected: v2Route{
-				target:    v2TargetProxy,
-				image:     "talosctl",
-				resource:  "tags",
-				reference: "list",
+			expected: registryhttp.V2Route{
+				Target:    registryhttp.V2TargetProxy,
+				Image:     "talosctl",
+				Resource:  "tags",
+				Reference: "list",
 			},
 		},
 		{
 			name: "proxy referrers",
 			path: "/siderolabs/installer/referrers/sha256:deadbeef",
-			expected: v2Route{
-				target:    v2TargetProxy,
-				image:     "installer",
-				resource:  "referrers",
-				reference: "sha256:deadbeef",
+			expected: registryhttp.V2Route{
+				Target:    registryhttp.V2TargetProxy,
+				Image:     "installer",
+				Resource:  "referrers",
+				Reference: "sha256:deadbeef",
 			},
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			route, err := routeV2(test.path)
+			route, err := registryhttp.RouteV2(test.path)
 			require.NoError(t, err)
 			assert.Equal(t, test.expected, route)
 		})
@@ -132,9 +144,9 @@ func TestRouteV2NotFound(t *testing.T) {
 		t.Run(path, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := routeV2(path)
+			_, err := registryhttp.RouteV2(path)
 			require.Error(t, err)
-			assert.True(t, xerrors.TagIs[RouteNotFoundTag](err), "expected RouteNotFoundTag for %q", path)
+			assert.True(t, xerrors.TagIs[registryhttp.RouteNotFoundTag](err), "expected registryhttp.RouteNotFoundTag for %q", path)
 		})
 	}
 }

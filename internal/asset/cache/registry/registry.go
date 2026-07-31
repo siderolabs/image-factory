@@ -27,6 +27,7 @@ import (
 // Options contains options for the registry cache.
 type Options struct {
 	CacheRepository         name.Repository
+	NameOptions             []name.Option
 	CacheImageSigner        signer.Signer
 	RemoteOptions           []remote.Option
 	RegistryRefreshInterval time.Duration
@@ -53,12 +54,12 @@ func New(logger *zap.Logger, options Options) (*Cache, error) {
 
 	var err error
 
-	c.puller, err = remotewrap.NewPuller(options.RegistryRefreshInterval, options.RemoteOptions...)
+	c.puller, err = remotewrap.NewPuller(options.RegistryRefreshInterval, options.NameOptions, options.RemoteOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error creating puller: %w", err)
 	}
 
-	c.pusher, err = remotewrap.NewPusher(options.RegistryRefreshInterval, options.RemoteOptions...)
+	c.pusher, err = remotewrap.NewPusher(options.RegistryRefreshInterval, options.NameOptions, options.RemoteOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error creating pusher: %w", err)
 	}

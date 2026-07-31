@@ -9,7 +9,12 @@ import (
 	"errors"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	costypes "github.com/sigstore/cosign/v3/pkg/types"
+
+	"github.com/siderolabs/image-factory/internal/image/attestation"
 )
 
 // VerifyResult contains the result of image signature verification.
@@ -80,6 +85,16 @@ func verifyLegacySignature(ctx context.Context, digestRef name.Reference, ivo co
 
 func verifyBundledSignature(ctx context.Context, digestRef name.Reference, ivo cosign.CheckOpts, nameOptions ...name.Option) (VerifyResult, error) {
 	ivo.NewBundleFormat = true
+	existingClaimVerifier := ivo.ClaimVerifier
+	ivo.ClaimVerifier = func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]any) error {
+		if existingClaimVerifier != nil {
+			if err := existingClaimVerifier(sig, imageDigest, annotations); err != nil {
+				return err
+			}
+		}
+
+		return attestation.VerifySubjectAndPredicate(sig, imageDigest, costypes.CosignSignPredicateType)
+	}
 
 	_, bundleVerified, err := cosign.VerifyImageAttestations(ctx, digestRef, &ivo, nameOptions...)
 	if err == nil {

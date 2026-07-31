@@ -21,6 +21,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/klauspost/compress/zstd"
 	"github.com/siderolabs/gen/value"
+	"github.com/siderolabs/gen/xerrors"
 	"github.com/u-root/u-root/pkg/cpio"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
@@ -121,11 +122,18 @@ func (b *Builder) Build(ctx context.Context, schematicID, versionTag string, arc
 	// in other fields share the same cached bundle.
 	sbomHash := Hash(sc.Customization.SystemExtensions.OfficialExtensions, versionTag, string(arch))
 
-	// Check cache first
-	if err := b.storage.Head(ctx, sbomHash); err == nil {
+	// Read and verify the cache entry before declaring a hit. A concurrent
+	// builder may have pushed the image but not signed it yet; treating that
+	// transient state as a miss makes this request join the same singleflight.
+	cachedBundle, err := b.storage.Get(ctx, sbomHash)
+	if err == nil {
 		ctxlog.Logger(ctx, b.logger).Debug("SPDX bundle cache hit", zap.String("schematic", schematicID), zap.String("version", versionTag), zap.String("arch", string(arch)))
 
-		return b.storage.Get(ctx, sbomHash)
+		return cachedBundle, nil
+	}
+
+	if !xerrors.TagIs[storage.ErrNotFoundTag](err) {
+		return nil, fmt.Errorf("failed to get cached SPDX bundle: %w", err)
 	}
 
 	// Build the bundle using singleflight to prevent duplicate work
@@ -238,7 +246,7 @@ func (b *Builder) extractTalosSPDX(ctx context.Context, bundle *Bundle, versionT
 }
 
 // extractSPDXFromInitramfs extracts SPDX files from the embedded SquashFS
-// inside the zstd-compressed CPIO initramfs asset, adding them to the bundle.
+// inside the compressed CPIO initramfs asset, adding them to the bundle.
 //
 //nolint:gocognit
 func (b *Builder) extractSPDXFromInitramfs(bundle *Bundle, bootAsset asset.BootAsset) error {
@@ -249,19 +257,19 @@ func (b *Builder) extractSPDXFromInitramfs(bundle *Bundle, bootAsset asset.BootA
 	}
 	defer assetReader.Close() //nolint:errcheck
 
-	// 2. Initialize the zstd decompressor
-	zr, err := zstd.NewReader(assetReader)
+	// 2. Initialize the decompressor used by this Talos version.
+	compressedReader, err := zstd.NewReader(assetReader)
 	if err != nil {
 		return fmt.Errorf("failed to create zstd reader: %w", err)
 	}
-	defer zr.Close() //nolint:errcheck
+	defer compressedReader.Close()
 
 	// 3. Decompress the entire CPIO archive into memory.
 	// Since both u-root's cpio and standard squashfs parsers require io.ReaderAt
 	// for random access, we must load the uncompressed stream.
-	uncompressedCPIO, err := io.ReadAll(zr)
+	uncompressedCPIO, err := io.ReadAll(compressedReader)
 	if err != nil {
-		return fmt.Errorf("failed to decompress zstd initramfs: %w", err)
+		return fmt.Errorf("failed to decompress initramfs: %w", err)
 	}
 
 	br := bytes.NewReader(uncompressedCPIO)
