@@ -21,12 +21,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// StartServer starts an in-process HTTP server serving the public key set at
-// GET /.well-known/jwks.json.
+// StartServer starts an in-process HTTP server that serves:
+//   - GET /.well-known/openid-configuration — OIDC discovery document
+//   - GET /.well-known/jwks.json            — public key set
 //
 // The returned URL is the server base URL, suitable for use as the
 // IssuerURLOverride and as the iss claim when signing test JWTs.
+//
+// Every other path 404s, which lets tests exercise the code exchange failure
+// branches without standing up a token endpoint.
 func StartServer(t *testing.T, privateKey *rsa.PrivateKey, keyID string) string {
+	t.Helper()
+
+	return StartServerWithRoutes(t, privateKey, keyID, nil)
+}
+
+// StartServerWithRoutes is StartServer with extra handlers, keyed by path, for tests
+// that need endpoints the discovery document does not cover, such as /oauth/token.
+func StartServerWithRoutes(t *testing.T, privateKey *rsa.PrivateKey, keyID string, routes map[string]http.HandlerFunc) string {
 	t.Helper()
 
 	keySet := jose.JSONWebKeySet{
@@ -40,20 +52,37 @@ func StartServer(t *testing.T, privateKey *rsa.PrivateKey, keyID string) string 
 		},
 	}
 
+	// The server URL isn't known until the server is started, so we capture it via closure.
+	var srvURL string
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/.well-known/jwks.json" {
-			http.NotFound(w, r)
-
-			return
-		}
-
+		// Set up front so route handlers inherit it; oauth2 needs it to parse token responses.
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(keySet) //nolint:errcheck
+
+		switch r.URL.Path {
+		case "/.well-known/openid-configuration":
+			// issuer must match srvURL, or go-oidc rejects the discovery document.
+			json.NewEncoder(w).Encode(map[string]string{ //nolint:errcheck
+				"issuer":   srvURL,
+				"jwks_uri": srvURL + "/.well-known/jwks.json",
+			})
+		case "/.well-known/jwks.json":
+			json.NewEncoder(w).Encode(keySet) //nolint:errcheck
+		default:
+			if handler, ok := routes[r.URL.Path]; ok {
+				handler(w, r)
+
+				return
+			}
+
+			http.NotFound(w, r)
+		}
 	}))
 
+	srvURL = srv.URL
 	t.Cleanup(srv.Close)
 
-	return srv.URL
+	return srvURL
 }
 
 // TokenOptions describes the JWT to sign. A struct rather than positional arguments

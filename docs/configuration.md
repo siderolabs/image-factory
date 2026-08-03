@@ -892,6 +892,8 @@ Tokens must carry an `org_id` claim, which becomes the caller identity in the sa
 In Auth0 this means issuing tokens to organization-scoped clients; tokens without the claim are rejected.
 
 It is required when provider is "auth0", and ignored otherwise.
+Domain and audience alone validate machine-to-machine bearer tokens; the optional
+browser-login fields add /login, /callback and /logout, and must all be set together.
 
 ---
 
@@ -929,6 +931,56 @@ Everything else is rejected with 403, including reading schematic definitions.
 Intended for the long-lived tokens provisioned onto Talos nodes, which need to pull installers but should not be able to inspect or create schematics.
 
 Optional; when empty every valid token has full access.
+
+---
+
+### `authentication.auth0.clientID`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_CLIENTID`
+
+ClientID is the Auth0 application Client ID used for the browser login flow.
+
+Optional; part of the browser-login group.
+
+---
+
+### `authentication.auth0.clientSecret`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_CLIENTSECRET`
+
+ClientSecret is the Auth0 application Client Secret.
+Inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET environment variable.
+
+Optional; part of the browser-login group.
+
+---
+
+### `authentication.auth0.redirectURL`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_REDIRECTURL`
+
+RedirectURL is the absolute callback URL registered in Auth0, e.g. `https://factory.example.com/callback`.
+Its path is the route the factory serves the callback on, so it cannot be a bare host.
+
+Optional; part of the browser-login group.
+
+---
+
+### `authentication.auth0.sessionKey`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_SESSIONKEY`
+
+SessionKey is the base64-encoded 32-byte AES-256 key used to encrypt session cookies.
+Inject via IF_AUTHENTICATION_AUTH0_SESSIONKEY environment variable.
+Generate one with `openssl rand -base64 32`.
+All replicas must share the same key, since a session or in-progress login started
+on one replica has to be decrypted by whichever replica handles the next request.
+
+Optional; part of the browser-login group.
 
 ---
 
@@ -1282,8 +1334,12 @@ audit:
 authentication:
     auth0:
         audience: ""
+        clientID: ""
+        clientSecret: ""
         domain: ""
         machineScope: ""
+        redirectURL: ""
+        sessionKey: ""
     downloadTokenKeyPath: ""
     downloadTokenTTL: 5m0s
     enabled: false
@@ -1417,8 +1473,12 @@ IF_AUDIT_FILE_MAXSIZEMB=256
 IF_AUDIT_FILE_PATH=
 IF_AUDIT_MODE=
 IF_AUTHENTICATION_AUTH0_AUDIENCE=
+IF_AUTHENTICATION_AUTH0_CLIENTID=
+IF_AUTHENTICATION_AUTH0_CLIENTSECRET=
 IF_AUTHENTICATION_AUTH0_DOMAIN=
 IF_AUTHENTICATION_AUTH0_MACHINESCOPE=
+IF_AUTHENTICATION_AUTH0_REDIRECTURL=
+IF_AUTHENTICATION_AUTH0_SESSIONKEY=
 IF_AUTHENTICATION_DOWNLOADTOKENKEYPATH=
 IF_AUTHENTICATION_DOWNLOADTOKENTTL=5m0s
 IF_AUTHENTICATION_ENABLED=false

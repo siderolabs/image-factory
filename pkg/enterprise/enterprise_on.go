@@ -182,6 +182,11 @@ func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) 
 		Domain:            cfg.Domain,
 		Audience:          cfg.Audience,
 		MachineScope:      cfg.MachineScope,
+		ClientID:          cfg.ClientID,
+		ClientSecret:      cfg.ClientSecret,
+		RedirectURL:       cfg.RedirectURL,
+		ExternalURL:       cfg.ExternalURL,
+		SessionKey:        cfg.SessionKey,
 		IssuerURLOverride: cfg.IssuerURLOverride,
 	})
 }

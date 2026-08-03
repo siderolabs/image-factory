@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -222,10 +223,24 @@ func buildAuthProvider(ctx context.Context, logger *zap.Logger, opts Options) (e
 
 	switch opts.Authentication.Provider {
 	case AuthProviderAuth0:
+		var sessionKey []byte
+
+		if sk := opts.Authentication.Auth0.SessionKey; sk != "" {
+			sessionKey, err = base64.StdEncoding.DecodeString(sk)
+			if err != nil {
+				return nil, fmt.Errorf("auth0: session key must be base64-encoded: %w", err)
+			}
+		}
+
 		authProvider, err = enterprise.NewAuth0Provider(ctx, logger, enterprise.Auth0Config{
 			Domain:            opts.Authentication.Auth0.Domain,
 			Audience:          opts.Authentication.Auth0.Audience,
 			MachineScope:      opts.Authentication.Auth0.MachineScope,
+			ClientID:          opts.Authentication.Auth0.ClientID,
+			ClientSecret:      opts.Authentication.Auth0.ClientSecret,
+			RedirectURL:       opts.Authentication.Auth0.RedirectURL,
+			ExternalURL:       opts.HTTP.ExternalURL,
+			SessionKey:        sessionKey,
 			IssuerURLOverride: opts.Authentication.Auth0.issuerURLOverride,
 		})
 	case AuthProviderHTPasswd:

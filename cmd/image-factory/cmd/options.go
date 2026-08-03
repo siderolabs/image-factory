@@ -627,6 +627,8 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 	// In Auth0 this means issuing tokens to organization-scoped clients; tokens without the claim are rejected.
 	//
 	// It is required when provider is "auth0", and ignored otherwise.
+	// Domain and audience alone validate machine-to-machine bearer tokens; the optional
+	// browser-login fields add /login, /callback and /logout, and must all be set together.
 	Auth0 Auth0Options `koanf:"auth0"`
 
 	// DownloadTokenKeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing download tokens.
@@ -657,6 +659,32 @@ type Auth0Options struct {
 	//
 	// Optional; when empty every valid token has full access.
 	MachineScope string `koanf:"machineScope"`
+
+	// ClientID is the Auth0 application Client ID used for the browser login flow.
+	//
+	// Optional; part of the browser-login group.
+	ClientID string `koanf:"clientID"`
+
+	// ClientSecret is the Auth0 application Client Secret.
+	// Inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET environment variable.
+	//
+	// Optional; part of the browser-login group.
+	ClientSecret string `koanf:"clientSecret"`
+
+	// RedirectURL is the absolute callback URL registered in Auth0, e.g. `https://factory.example.com/callback`.
+	// Its path is the route the factory serves the callback on, so it cannot be a bare host.
+	//
+	// Optional; part of the browser-login group.
+	RedirectURL string `koanf:"redirectURL"`
+
+	// SessionKey is the base64-encoded 32-byte AES-256 key used to encrypt session cookies.
+	// Inject via IF_AUTHENTICATION_AUTH0_SESSIONKEY environment variable.
+	// Generate one with `openssl rand -base64 32`.
+	// All replicas must share the same key, since a session or in-progress login started
+	// on one replica has to be decrypted by whichever replica handles the next request.
+	//
+	// Optional; part of the browser-login group.
+	SessionKey string `koanf:"sessionKey"`
 
 	// issuerURLOverride replaces the issuer URL constructed from Domain, for both the
 	// expected iss claim and the JWKS endpoint.

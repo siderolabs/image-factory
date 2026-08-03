@@ -117,6 +117,12 @@ func TestIntegrationAuth0(t *testing.T) {
 
 		testAuth0Ownership(ctx, t, baseURL, fixtures)
 	})
+
+	t.Run("BrowserRedirect", func(t *testing.T) {
+		t.Parallel()
+
+		testAuth0BrowserRedirect(ctx, t, baseURL)
+	})
 }
 
 // testAuth0Enforcement verifies that protected endpoints reject missing/invalid
@@ -294,5 +300,64 @@ func testAuth0Ownership(ctx context.Context, t *testing.T, baseURL string, fx au
 		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
 
 		assertRequiresAuth(t, resp)
+	})
+}
+
+// testAuth0BrowserRedirect verifies that browser requests without credentials
+// get a redirect to /login rather than a 401, and that /login returns 404 when
+// browser login is not configured (no ClientID/SessionKey).
+func testAuth0BrowserRedirect(ctx context.Context, t *testing.T, baseURL string) {
+	t.Helper()
+
+	// Browser login is NOT configured in this test (no ClientID/SessionKey),
+	// so /login and /logout should be 404.
+	t.Run("LoginRoute_404_WhenBrowserLoginDisabled", func(t *testing.T) {
+		t.Parallel()
+
+		for _, path := range []string{"/login", "/logout"} {
+			t.Run(path, func(t *testing.T) {
+				t.Parallel()
+
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+path, nil)
+				require.NoError(t, err)
+
+				noRedirectClient := &http.Client{
+					CheckRedirect: func(*http.Request, []*http.Request) error {
+						return http.ErrUseLastResponse
+					},
+				}
+
+				resp, err := noRedirectClient.Do(req)
+				require.NoError(t, err)
+
+				t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+				assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+			})
+		}
+	})
+
+	// Without browser login, a browser request to a protected endpoint
+	// should return 401 (no redirect available).
+	t.Run("BrowserRequest_NoLogin_401", func(t *testing.T) {
+		t.Parallel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/", nil)
+		require.NoError(t, err)
+
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+
+		noRedirectClient := &http.Client{
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
+
+		resp, err := noRedirectClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 }
