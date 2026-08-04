@@ -19,6 +19,7 @@ import (
 
 	"github.com/siderolabs/image-factory/enterprise/assetsignature"
 	"github.com/siderolabs/image-factory/enterprise/auth"
+	"github.com/siderolabs/image-factory/enterprise/auth/auth0"
 	"github.com/siderolabs/image-factory/enterprise/checksum"
 	enterprisedt "github.com/siderolabs/image-factory/enterprise/downloadtoken"
 	"github.com/siderolabs/image-factory/enterprise/scanner"
@@ -170,9 +171,19 @@ func NewSignatureWriter(logger *zap.Logger, imageSigner signer.Signer, cache ass
 	return assetsignature.NewWriter(logger, blobSigner, cache), nil
 }
 
-// NewAuthProvider creates a new authentication provider.
-func NewAuthProvider(logger *zap.Logger, configPath string) (AuthProvider, error) {
+// NewHTPasswdProvider creates a new htpasswd-backed authentication provider.
+func NewHTPasswdProvider(logger *zap.Logger, configPath string) (AuthProvider, error) {
 	return auth.NewProvider(configPath, logger)
+}
+
+// NewAuth0Provider creates a new Auth0 JWT authentication provider.
+func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) (AuthProvider, error) {
+	return auth0.NewProvider(ctx, logger, auth0.Config{
+		Domain:            cfg.Domain,
+		Audience:          cfg.Audience,
+		MachineScope:      cfg.MachineScope,
+		IssuerURLOverride: cfg.IssuerURLOverride,
+	})
 }
 
 // NewDownloadTokenIssuer creates a new download token issuer.

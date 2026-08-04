@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"slices"
@@ -57,6 +58,33 @@ func (o *Options) Validate() error {
 
 	if !slices.Contains(auditModeOptions, o.Audit.Mode) {
 		return fmt.Errorf("audit.mode must be one of %v, got %q", auditModeOptions, o.Audit.Mode)
+	}
+
+	return o.Authentication.validate()
+}
+
+// validate checks the settings required by the selected provider, so that a misconfiguration
+// fails at startup rather than on the first request.
+func (o AuthenticationOptions) validate() error {
+	if !o.Enabled {
+		return nil
+	}
+
+	switch o.Provider {
+	case AuthProviderHTPasswd:
+		if o.HTPasswdPath == "" {
+			return errors.New(`authentication.htpasswdPath is required when authentication.provider is "htpasswd"`)
+		}
+	case AuthProviderAuth0:
+		if o.Auth0.Domain == "" {
+			return errors.New(`authentication.auth0.domain is required when authentication.provider is "auth0"`)
+		}
+
+		if o.Auth0.Audience == "" {
+			return errors.New(`authentication.auth0.audience is required when authentication.provider is "auth0"`)
+		}
+	default:
+		return fmt.Errorf("authentication.provider must be one of %v, got %q", authProviderOptions, o.Provider)
 	}
 
 	return nil
@@ -565,18 +593,41 @@ func (c ComponentsOptions) ImageMap() map[string]string {
 	}
 }
 
+// Authentication providers select the backend that verifies caller identity.
+const (
+	// AuthProviderHTPasswd verifies credentials against a local htpasswd file. Default.
+	AuthProviderHTPasswd = "htpasswd"
+	// AuthProviderAuth0 validates Auth0-issued JWTs.
+	AuthProviderAuth0 = "auth0"
+)
+
+var authProviderOptions = []string{AuthProviderHTPasswd, AuthProviderAuth0}
+
 // AuthenticationOptions holds authentication settings.
 type AuthenticationOptions struct { //nolint:govet // keeping order for semantic clarity
 	// Enabled enables authentication.
 	Enabled bool `koanf:"enabled"`
+
+	// Provider selects the authentication backend.
+	// Valid values are "htpasswd" (default) and "auth0".
+	Provider string `koanf:"provider"`
+
 	// HTPasswdPath is the path to the htpasswd file containing user credentials.
 	//
 	// The file follows the standard htpasswd format (username:bcrypt_hash, one per line).
 	// Multiple entries with the same username are supported, allowing multiple API keys per user.
 	// Only bcrypt hashes ($2y$/$2a$/$2b$) are accepted.
 	//
-	// It is required if authentication is enabled.
+	// It is required when provider is "htpasswd" (the default).
 	HTPasswdPath string `koanf:"htpasswdPath"`
+
+	// Auth0 holds configuration for the Auth0 JWT authentication provider.
+	//
+	// Tokens must carry an `org_id` claim, which becomes the caller identity in the same way a username does for htpasswd.
+	// In Auth0 this means issuing tokens to organization-scoped clients; tokens without the claim are rejected.
+	//
+	// It is required when provider is "auth0", and ignored otherwise.
+	Auth0 Auth0Options `koanf:"auth0"`
 
 	// DownloadTokenKeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing download tokens.
 	// If empty, a key pair is generated on startup (single-replica deployments only).
@@ -584,6 +635,33 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 
 	// DownloadTokenTTL is the validity duration for download tokens.
 	DownloadTokenTTL time.Duration `koanf:"downloadTokenTTL"`
+}
+
+// Auth0Options holds configuration for the Auth0 authentication provider.
+type Auth0Options struct {
+	// Domain is the Auth0 tenant domain, e.g. `mycompany.auth0.com`.
+	//
+	// Required.
+	Domain string `koanf:"domain"`
+
+	// Audience is the Auth0 API identifier (audience claim), e.g. `https://image-factory.example.com`.
+	//
+	// Required.
+	Audience string `koanf:"audience"`
+
+	// MachineScope names a scope that marks a token as a machine credential, e.g. `factory:machine`.
+	//
+	// Tokens carrying it may only fetch artifacts: `GET`/`HEAD` on `/image/` and the `/v2/` OCI registry.
+	// Everything else is rejected with 403, including reading schematic definitions.
+	// Intended for the long-lived tokens provisioned onto Talos nodes, which need to pull installers but should not be able to inspect or create schematics.
+	//
+	// Optional; when empty every valid token has full access.
+	MachineScope string `koanf:"machineScope"`
+
+	// issuerURLOverride replaces the issuer URL constructed from Domain, for both the
+	// expected iss claim and the JWKS endpoint.
+	// Unexported so koanf cannot reach it; see SetAuth0IssuerURL, built only under the integration tag.
+	issuerURLOverride string
 }
 
 // EnterpriseOptions contains configuration for enterprise-specific features.
@@ -713,6 +791,7 @@ var DefaultOptions = Options{
 	},
 
 	Authentication: AuthenticationOptions{
+		Provider:         AuthProviderHTPasswd,
 		DownloadTokenTTL: 5 * time.Minute,
 	},
 

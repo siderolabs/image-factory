@@ -859,6 +859,16 @@ Enabled enables authentication.
 
 ---
 
+### `authentication.provider`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_PROVIDER`
+
+Provider selects the authentication backend.
+Valid values are "htpasswd" (default) and "auth0".
+
+---
+
 ### `authentication.htpasswdPath`
 
 - **Type:** `string`
@@ -870,7 +880,55 @@ The file follows the standard htpasswd format (username:bcrypt_hash, one per lin
 Multiple entries with the same username are supported, allowing multiple API keys per user.
 Only bcrypt hashes ($2y$/$2a$/$2b$) are accepted.
 
-It is required if authentication is enabled.
+It is required when provider is "htpasswd" (the default).
+
+---
+
+### `authentication.auth0`
+
+Auth0 holds configuration for the Auth0 JWT authentication provider.
+
+Tokens must carry an `org_id` claim, which becomes the caller identity in the same way a username does for htpasswd.
+In Auth0 this means issuing tokens to organization-scoped clients; tokens without the claim are rejected.
+
+It is required when provider is "auth0", and ignored otherwise.
+
+---
+
+### `authentication.auth0.domain`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_DOMAIN`
+
+Domain is the Auth0 tenant domain, e.g. `mycompany.auth0.com`.
+
+Required.
+
+---
+
+### `authentication.auth0.audience`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_AUDIENCE`
+
+Audience is the Auth0 API identifier (audience claim), e.g. `https://image-factory.example.com`.
+
+Required.
+
+---
+
+### `authentication.auth0.machineScope`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_AUTH0_MACHINESCOPE`
+
+MachineScope names a scope that marks a token as a machine credential, e.g. `factory:machine`.
+
+Tokens carrying it may only fetch artifacts: `GET`/`HEAD` on `/image/` and the `/v2/` OCI registry.
+Everything else is rejected with 403, including reading schematic definitions.
+Intended for the long-lived tokens provisioned onto Talos nodes, which need to pull installers but should not be able to inspect or create schematics.
+
+Optional; when empty every valid token has full access.
 
 ---
 
@@ -1222,10 +1280,15 @@ audit:
         path: ""
     mode: ""
 authentication:
+    auth0:
+        audience: ""
+        domain: ""
+        machineScope: ""
     downloadTokenKeyPath: ""
     downloadTokenTTL: 5m0s
     enabled: false
     htpasswdPath: ""
+    provider: htpasswd
 build:
     brokenTalosVersions: []
     maxConcurrency: 6
@@ -1353,10 +1416,14 @@ IF_AUDIT_FILE_MAXBACKUPS=16
 IF_AUDIT_FILE_MAXSIZEMB=256
 IF_AUDIT_FILE_PATH=
 IF_AUDIT_MODE=
+IF_AUTHENTICATION_AUTH0_AUDIENCE=
+IF_AUTHENTICATION_AUTH0_DOMAIN=
+IF_AUTHENTICATION_AUTH0_MACHINESCOPE=
 IF_AUTHENTICATION_DOWNLOADTOKENKEYPATH=
 IF_AUTHENTICATION_DOWNLOADTOKENTTL=5m0s
 IF_AUTHENTICATION_ENABLED=false
 IF_AUTHENTICATION_HTPASSWDPATH=
+IF_AUTHENTICATION_PROVIDER=htpasswd
 IF_BUILD_BROKENTALOSVERSIONS=[]
 IF_BUILD_MAXCONCURRENCY=6
 IF_BUILD_MINTALOSVERSION=1.2.0

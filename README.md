@@ -28,6 +28,7 @@ The file is maintained at [`internal/frontend/http/templates/llms.txt`](internal
 
 * [API reference](docs/api.md)
 * [Configuration](docs/configuration.md)
+* [Authentication](docs/authentication.md)
 * [Required Source Container Images](docs/sources.md)
 * [Air-gapped Deployment](docs/air-gapped.md)
 * [Cache](docs/cache.md)

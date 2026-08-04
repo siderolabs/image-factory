@@ -48,8 +48,13 @@ func NewSignatureWriter(_ *zap.Logger, _ signer.Signer, _ assetcache.Cache) (Sig
 	return nil, errors.New("signature writing is not supported in the non-enterprise version")
 }
 
-// NewAuthProvider creates a new authentication provider.
-func NewAuthProvider(_ *zap.Logger, _ string) (AuthProvider, error) {
+// NewHTPasswdProvider creates a new htpasswd-backed authentication provider.
+func NewHTPasswdProvider(_ *zap.Logger, _ string) (AuthProvider, error) {
+	return nil, errors.New("authentication is not supported in the non-enterprise version")
+}
+
+// NewAuth0Provider creates a new Auth0 JWT authentication provider.
+func NewAuth0Provider(_ context.Context, _ *zap.Logger, _ Auth0Config) (AuthProvider, error) {
 	return nil, errors.New("authentication is not supported in the non-enterprise version")
 }
 

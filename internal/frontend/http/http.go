@@ -271,7 +271,10 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 
 		level, status := MatchError(err, func(message string, code int) {
 			if code == http.StatusUnauthorized {
-				w.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise"`)
+				// Fallback only: a provider that already picked its challenges keeps them.
+				if w.Header().Get("WWW-Authenticate") == "" {
+					w.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise", charset="UTF-8"`)
+				}
 			}
 
 			http.Error(w, message, code)
@@ -340,11 +343,20 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string) Handl
 			}
 		}
 
-		return authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+		err := authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 			*username, _ = authProvider.UsernameFromContext(ctx)
 
 			return h(ctx, w, r, p)
 		})(ctx, w, r, p)
+
+		// A provider can authenticate the caller and then refuse the request, in which case
+		// the layer above never ran. The provider leaves the principal on the request so the
+		// denial is still attributable.
+		if *username == "" {
+			*username, _ = authProvider.UsernameFromContext(r.Context()) //nolint:contextcheck // the provider derived this context from ctx
+		}
+
+		return err
 	}
 }
 

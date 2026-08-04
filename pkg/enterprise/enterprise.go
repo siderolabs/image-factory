@@ -149,10 +149,11 @@ type AuthProvider interface {
 	Run(ctx context.Context) error
 
 	// Middleware returns an HTTP middleware that enforces authentication on the provided handler.
+	//
+	// A provider that authenticates a caller and then refuses the request must leave the
+	// principal on the request context, since the wrapped handler never runs and the audit
+	// record would otherwise attribute the denial to nobody.
 	Middleware(Handler) Handler
-
-	// VerifyCredentials checks if the username/password pair is valid.
-	VerifyCredentials(username, password string) bool
 
 	// UsernameFromContext retrieves the authenticated username stored by the middleware.
 	UsernameFromContext(ctx context.Context) (string, bool)
@@ -161,4 +162,19 @@ type AuthProvider interface {
 	// the middleware had set it. Used by the download-token path to inject the
 	// JWT subject so that downstream ownership checks work normally.
 	ContextWithUsername(ctx context.Context, username string) context.Context
+}
+
+// Auth0Config holds configuration for the Auth0 authentication provider.
+//
+// This restates cmd.Auth0Options rather than reusing it because auth0.Config lives behind
+// the enterprise build tag, so cmd cannot name it; this struct is the seam between them.
+type Auth0Config struct {
+	Domain       string
+	Audience     string
+	MachineScope string
+
+	// IssuerURLOverride replaces the default issuer URL constructed from Domain.
+	// It sets both the expected iss claim and the JWKS endpoint.
+	// Intended for testing only; leave empty in production.
+	IssuerURLOverride string
 }

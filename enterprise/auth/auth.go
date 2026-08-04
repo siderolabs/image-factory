@@ -185,11 +185,6 @@ func (provider *Provider) Middleware(handler Handler) Handler {
 	}
 }
 
-// VerifyCredentials implements enterprise.AuthProvider.
-func (provider *Provider) VerifyCredentials(username, password string) bool {
-	return provider.verifyCredentials(username, password)
-}
-
 // UsernameFromContext implements enterprise.AuthProvider.
 func (provider *Provider) UsernameFromContext(ctx context.Context) (string, bool) {
 	return GetAuthUsername(ctx)

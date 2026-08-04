@@ -273,6 +273,64 @@ func TestOptionsValidate(t *testing.T) {
 			},
 			expectError: "http.externalPXEURL must have a host",
 		},
+		{
+			name: "valid auth provider",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:  true,
+					Provider: "auth0",
+					Auth0:    cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
+				},
+			},
+		},
+		{
+			name: "auth0 provider without a domain",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:  true,
+					Provider: "auth0",
+					Auth0:    cmd.Auth0Options{Audience: "https://factory.sidero.dev"},
+				},
+			},
+			expectError: "authentication.auth0.domain is required",
+		},
+		{
+			name: "auth0 provider without an audience",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:  true,
+					Provider: "auth0",
+					Auth0:    cmd.Auth0Options{Domain: "tenant.auth0.com"},
+				},
+			},
+			expectError: "authentication.auth0.audience is required",
+		},
+		{
+			name: "unknown auth provider",
+			opts: cmd.Options{
+				HTTP:           cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{Enabled: true, Provider: "oidc"},
+			},
+			expectError: "authentication.provider must be one of",
+		},
+		{
+			name: "auth provider ignored when authentication disabled",
+			opts: cmd.Options{
+				HTTP:           cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{Provider: ""},
+			},
+		},
+		{
+			name: "htpasswd provider without a path",
+			opts: cmd.Options{
+				HTTP:           cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{Enabled: true, Provider: "htpasswd"},
+			},
+			expectError: "authentication.htpasswdPath is required",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

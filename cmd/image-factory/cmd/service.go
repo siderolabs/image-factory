@@ -112,7 +112,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	authProvider, err := buildAuthProvider(logger, opts)
+	authProvider, err := buildAuthProvider(ctx, logger, opts)
 	if err != nil {
 		return err
 	}
@@ -210,18 +210,32 @@ func buildSecureBootService(opts Options) (*secureboot.Service, error) {
 	return svc, nil
 }
 
-func buildAuthProvider(logger *zap.Logger, opts Options) (enterprise.AuthProvider, error) {
-	if !enterprise.Enabled() {
+func buildAuthProvider(ctx context.Context, logger *zap.Logger, opts Options) (enterprise.AuthProvider, error) {
+	if !enterprise.Enabled() || !opts.Authentication.Enabled {
 		return nil, nil //nolint:nilnil
 	}
 
-	if !opts.Authentication.Enabled {
-		return nil, nil //nolint:nilnil
+	var (
+		authProvider enterprise.AuthProvider
+		err          error
+	)
+
+	switch opts.Authentication.Provider {
+	case AuthProviderAuth0:
+		authProvider, err = enterprise.NewAuth0Provider(ctx, logger, enterprise.Auth0Config{
+			Domain:            opts.Authentication.Auth0.Domain,
+			Audience:          opts.Authentication.Auth0.Audience,
+			MachineScope:      opts.Authentication.Auth0.MachineScope,
+			IssuerURLOverride: opts.Authentication.Auth0.issuerURLOverride,
+		})
+	case AuthProviderHTPasswd:
+		authProvider, err = enterprise.NewHTPasswdProvider(logger, opts.Authentication.HTPasswdPath)
+	default:
+		return nil, fmt.Errorf("unknown authentication provider %q", opts.Authentication.Provider)
 	}
 
-	authProvider, err := enterprise.NewAuthProvider(logger, opts.Authentication.HTPasswdPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize authentication provider: %w", err)
+		return nil, fmt.Errorf("failed to initialize %q authentication provider: %w", opts.Authentication.Provider, err)
 	}
 
 	return authProvider, nil
