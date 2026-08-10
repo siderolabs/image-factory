@@ -328,6 +328,7 @@ func buildEnterprisePlugins(
 		SchematicFactory: configFactory,
 		AuthProvider:     authProvider,
 		DatabaseURL:      opts.Enterprise.Scanner.DatabaseURL,
+		DatabaseUpdateAt: opts.Enterprise.Scanner.DatabaseUpdateAt,
 		MetricsNamespace: opts.Metrics.Namespace,
 		CacheTTL:         opts.Enterprise.Scanner.Cache.TTL,
 		CacheCapacity:    opts.Enterprise.Scanner.Cache.Capacity,

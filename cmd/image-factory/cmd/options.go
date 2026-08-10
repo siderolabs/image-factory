@@ -707,6 +707,14 @@ type ScannerOptions struct {
 	// Set this to point at a mirror or air-gapped database service.
 	DatabaseURL string `koanf:"databaseURL"`
 
+	// DatabaseUpdateAt is the local time of day ("HH:MM") at which the Grype vulnerability database is updated.
+	// Empty disables the schedule, leaving the database at the build downloaded when the process started.
+	//
+	// Scan results depend on the database build, so replicas that started at different times otherwise disagree about the same report.
+	// Pick a time after the upstream database is published (Anchore publishes daily around 06:40 UTC) so every replica converges on the same build for the rest of the day.
+	// Times are interpreted in the process timezone (TZ, UTC in the container).
+	DatabaseUpdateAt string `koanf:"databaseUpdateAt"`
+
 	// Cache contains configuration for caching vulnerability scan results.
 	Cache LRUCacheOptions `koanf:"cache"`
 }
@@ -823,7 +831,8 @@ var DefaultOptions = Options{
 			},
 		},
 		Scanner: ScannerOptions{
-			DatabaseURL: "https://grype.anchore.io/databases",
+			DatabaseURL:      "https://grype.anchore.io/databases",
+			DatabaseUpdateAt: "07:00",
 			Cache: LRUCacheOptions{
 				TTL:      15 * time.Minute,
 				Capacity: 4096,

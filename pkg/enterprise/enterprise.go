@@ -112,6 +112,7 @@ type ScannerOptions struct {
 	SchematicFactory *schematic.Factory
 	AuthProvider     AuthProvider
 	DatabaseURL      string
+	DatabaseUpdateAt string
 	MetricsNamespace string
 	CacheTTL         time.Duration
 	CacheCapacity    uint64

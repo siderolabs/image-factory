@@ -1026,6 +1026,20 @@ Set this to point at a mirror or air-gapped database service.
 
 ---
 
+### `enterprise.scanner.databaseUpdateAt`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_SCANNER_DATABASEUPDATEAT`
+
+DatabaseUpdateAt is the local time of day ("HH:MM") at which the Grype vulnerability database is updated.
+Empty disables the schedule, leaving the database at the build downloaded when the process started.
+
+Scan results depend on the database build, so replicas that started at different times otherwise disagree about the same report.
+Pick a time after the upstream database is published (Anchore publishes daily around 06:40 UTC) so every replica converges on the same build for the rest of the day.
+Times are interpreted in the process timezone (TZ, UTC in the container).
+
+---
+
 ### `enterprise.scanner.cache`
 
 Cache contains configuration for caching vulnerability scan results.
@@ -1339,6 +1353,7 @@ enterprise:
             capacity: 4096
             ttl: 15m0s
         databaseURL: https://grype.anchore.io/databases
+        databaseUpdateAt: "07:00"
     spdx:
         cache:
             insecure: false
@@ -1460,6 +1475,7 @@ IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REGISTRY=
 IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REPOSITORY=
 IF_ENTERPRISE_SCANNER_CACHE_CAPACITY=4096
 IF_ENTERPRISE_SCANNER_CACHE_TTL=15m0s
+IF_ENTERPRISE_SCANNER_DATABASEUPDATEAT=07:00
 IF_ENTERPRISE_SCANNER_DATABASEURL=https://grype.anchore.io/databases
 IF_ENTERPRISE_SPDX_CACHE_INSECURE=false
 IF_ENTERPRISE_SPDX_CACHE_NAMESPACE=siderolabs/image-factory

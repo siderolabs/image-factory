@@ -85,14 +85,18 @@ func NewVEXFrontend(ctx context.Context, eg *errgroup.Group, logger *zap.Logger,
 // The cache eviction goroutine is started under eg and stopped when ctx is canceled,
 // mirroring the schematic cache lifecycle.
 func NewScannerFrontend(ctx context.Context, eg *errgroup.Group, logger *zap.Logger, opts ScannerOptions) (FrontendPlugin, error) {
-	b := scannerbuilder.NewBuilder(logger, scannerbuilder.Options{
+	b, err := scannerbuilder.NewBuilder(logger, scannerbuilder.Options{
 		VEXSource:        opts.VEXSource,
 		SPDXSource:       opts.SPDXSource,
 		DatabaseURL:      opts.DatabaseURL,
+		DatabaseUpdateAt: opts.DatabaseUpdateAt,
 		MetricsNamespace: opts.MetricsNamespace,
 		CacheTTL:         opts.CacheTTL,
 		Capacity:         opts.CacheCapacity,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("error creating scanner builder: %w", err)
+	}
 
 	eg.Go(b.Start)
 
