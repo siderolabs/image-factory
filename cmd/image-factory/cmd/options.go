@@ -715,6 +715,11 @@ type ScannerOptions struct {
 	// Times are interpreted in the process timezone (TZ, UTC in the container).
 	DatabaseUpdateAt string `koanf:"databaseUpdateAt"`
 
+	// DatabaseRootDir is where the Grype vulnerability database is installed.
+	// The Helm chart mounts a volume at the default path, so a persistent volume
+	// keeps the database (and the scan results it produces) across restarts.
+	DatabaseRootDir string `koanf:"databaseRootDir"`
+
 	// Cache contains configuration for caching vulnerability scan results.
 	Cache LRUCacheOptions `koanf:"cache"`
 }
@@ -833,6 +838,7 @@ var DefaultOptions = Options{
 		Scanner: ScannerOptions{
 			DatabaseURL:      "https://grype.anchore.io/databases",
 			DatabaseUpdateAt: "07:00",
+			DatabaseRootDir:  "/var/lib/grype",
 			Cache: LRUCacheOptions{
 				TTL:      15 * time.Minute,
 				Capacity: 4096,

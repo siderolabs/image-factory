@@ -1040,6 +1040,17 @@ Times are interpreted in the process timezone (TZ, UTC in the container).
 
 ---
 
+### `enterprise.scanner.databaseRootDir`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_SCANNER_DATABASEROOTDIR`
+
+DatabaseRootDir is where the Grype vulnerability database is installed.
+The Helm chart mounts a volume at the default path, so a persistent volume
+keeps the database (and the scan results it produces) across restarts.
+
+---
+
 ### `enterprise.scanner.cache`
 
 Cache contains configuration for caching vulnerability scan results.
@@ -1352,6 +1363,7 @@ enterprise:
         cache:
             capacity: 4096
             ttl: 15m0s
+        databaseRootDir: /var/lib/grype
         databaseURL: https://grype.anchore.io/databases
         databaseUpdateAt: "07:00"
     spdx:
@@ -1475,6 +1487,7 @@ IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REGISTRY=
 IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REPOSITORY=
 IF_ENTERPRISE_SCANNER_CACHE_CAPACITY=4096
 IF_ENTERPRISE_SCANNER_CACHE_TTL=15m0s
+IF_ENTERPRISE_SCANNER_DATABASEROOTDIR=/var/lib/grype
 IF_ENTERPRISE_SCANNER_DATABASEUPDATEAT=07:00
 IF_ENTERPRISE_SCANNER_DATABASEURL=https://grype.anchore.io/databases
 IF_ENTERPRISE_SPDX_CACHE_INSECURE=false

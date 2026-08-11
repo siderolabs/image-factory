@@ -48,5 +48,11 @@ func Hash(extensions []string, version, arch string) string {
 	// bundles. Add new entries below; never remove or reorder existing ones.
 	// Guard entries with conditions when the fix is scoped.
 
+	// Bundles cached before this point name the schematic that happened to build
+	// them, so there is no content hash in them to substitute on the way out and
+	// they would keep serving a foreign schematic ID.
+	hasher.Write([]byte("errata/document-identity"))
+	hasher.Write([]byte{0})
+
 	return hex.EncodeToString(hasher.Sum(nil))
 }

@@ -48,14 +48,19 @@ const (
 	// scannerID is the identifier embedded in scan reports.
 	scannerID = "image-factory"
 
-	// dbRootDir is where the Grype vulnerability database is installed. The Helm
-	// chart mounts a volume here, so with a persistent volume the DB (and
-	// therefore the scan results) survive a restart.
-	dbRootDir = "/var/lib/grype"
+	// defaultDBRootDir is where the Grype vulnerability database is installed
+	// unless Options says otherwise. The Helm chart mounts a volume here, so with
+	// a persistent volume the DB (and therefore the scan results) survive a
+	// restart.
+	defaultDBRootDir = "/var/lib/grype"
 )
 
 // ScanTimeout caps a single end-to-end scan (SBOM fetch + VEX fetch + Grype match).
 const ScanTimeout = 15 * time.Minute
+
+// dbRefreshRetryInterval is how long to wait before retrying a failed scheduled
+// DB refresh.
+const dbRefreshRetryInterval = 5 * time.Minute
 
 // VEXSource produces a VEX JSON document for a given Talos version tag.
 type VEXSource interface {
@@ -75,6 +80,7 @@ type Options struct {
 	SPDXSource       SPDXSource
 	DatabaseURL      string
 	DatabaseUpdateAt string
+	DatabaseRootDir  string
 	MetricsNamespace string
 	CacheTTL         time.Duration
 	Capacity         uint64
@@ -167,7 +173,11 @@ func dbConfig(opts Options) (distribution.Config, installation.Config) {
 	}
 
 	instConfig := installation.DefaultConfig(clio.Identification{Name: scannerID})
-	instConfig.DBRootDir = dbRootDir
+
+	instConfig.DBRootDir = opts.DatabaseRootDir
+	if instConfig.DBRootDir == "" {
+		instConfig.DBRootDir = defaultDBRootDir
+	}
 
 	// We decide when to update, so drop Grype's own low-pass filter: it would
 	// silently skip a scheduled update that follows a start-up download too closely.
@@ -203,7 +213,8 @@ func loadDB(opts Options) (*govexscanner.Scanner, time.Time, error) {
 func (b *Builder) initScanner(opts Options) {
 	defer close(b.initDone)
 
-	b.logger.Info("initializing grype scanner",
+	b.logger.Info(
+		"initializing grype scanner",
 		zap.String("databaseURL", opts.DatabaseURL),
 		zap.String("updateAt", opts.DatabaseUpdateAt),
 	)
@@ -221,31 +232,83 @@ func (b *Builder) initScanner(opts Options) {
 	b.logger.Info("grype scanner ready", zap.Time("dbBuilt", built))
 }
 
-// setScanner installs a freshly loaded scanner, closing the one it replaces.
+// setScanner installs the initial scanner.
 func (b *Builder) setScanner(sc *govexscanner.Scanner, built time.Time) {
 	b.dbMu.Lock()
 	defer b.dbMu.Unlock()
 
-	old := b.scanner.Swap(sc)
-
+	b.scanner.Store(sc)
 	b.metricDB.Set(float64(built.Unix()))
-
-	if old == nil {
-		return
-	}
-
-	// Cached documents were produced by the DB being replaced, so drop them.
-	// Scans already running still write their (old-DB) result afterwards; those
-	// age out with the normal cache TTL.
-	b.c.TTL.DeleteAll()
-
-	if err := old.Close(); err != nil {
-		b.logger.Warn("error closing previous grype DB", zap.Error(err))
-	}
 }
 
-// refreshLoop updates the vulnerability DB once a day at updateAt, keeping the
-// current DB if the update fails. It is a no-op when no schedule is configured.
+// refresh installs a newer vulnerability DB and reopens the scanner on it.
+func (b *Builder) refresh(opts Options) error {
+	// Download and install first, outside the lock: it is the slow part, and the
+	// currently loaded DB goes on serving scans while it runs.
+	if err := updateDB(opts); err != nil {
+		return err
+	}
+
+	b.dbMu.Lock()
+	defer b.dbMu.Unlock()
+
+	// Close the loaded DB before opening the new one. Grype hands a reader opened
+	// while another is still alive on the same directory the contents from before
+	// the update, so loading first and closing after installs the new DB on disk
+	// and then serves the old data from it indefinitely — the failure this
+	// ordering exists to prevent, covered by TestIntegrationScannerDBRotation.
+	if old := b.scanner.Swap(nil); old != nil {
+		if err := old.Close(); err != nil {
+			b.logger.Warn("error closing previous grype DB", zap.Error(err))
+		}
+	}
+
+	// Scans are blocked by the write lock until this returns. updateDB already
+	// installed the DB, so this only reopens it.
+	sc, built, err := loadDB(opts)
+	if err != nil {
+		// the scanner stays nil, so Ready reports not-ready and the caller retries
+		// rather than serving reports from a DB that is no longer on disk.
+		return err
+	}
+
+	b.scanner.Store(sc)
+	b.metricDB.Set(float64(built.Unix()))
+
+	// Cached documents came from the DB just replaced, so drop them. Scans already
+	// running still write their (old-DB) result afterwards; those age out with the
+	// normal cache TTL.
+	b.c.TTL.DeleteAll()
+
+	b.logger.Info("grype DB updated", zap.Time("dbBuilt", built))
+
+	return nil
+}
+
+// updateDB downloads and installs the current vulnerability DB without opening
+// it, so the download does not happen while scans are blocked.
+func updateDB(opts Options) error {
+	distConfig, instConfig := dbConfig(opts)
+
+	client, err := distribution.NewClient(distConfig)
+	if err != nil {
+		return fmt.Errorf("error creating grype distribution client: %w", err)
+	}
+
+	curator, err := installation.NewCurator(instConfig, client)
+	if err != nil {
+		return fmt.Errorf("error creating grype DB curator: %w", err)
+	}
+
+	if _, err = curator.Update(); err != nil {
+		return fmt.Errorf("error updating grype DB: %w", err)
+	}
+
+	return nil
+}
+
+// refreshLoop updates the vulnerability DB once a day at updateAt, retrying until
+// it succeeds. It is a no-op when no schedule is configured.
 func (b *Builder) refreshLoop(opts Options, updateAt time.Duration) {
 	defer close(b.refreshDone)
 
@@ -271,15 +334,27 @@ func (b *Builder) refreshLoop(opts Options, updateAt time.Duration) {
 		case <-time.After(delay):
 		}
 
-		sc, built, err := loadDB(opts)
-		if err != nil {
-			b.logger.Error("grype DB update failed, keeping current database", zap.Error(err))
+		// Retry until the DB is loaded: a refresh that fails after closing the old
+		// DB leaves nothing to scan with, and waiting a day to try again would
+		// leave the endpoint unavailable for that long.
+		for {
+			err := b.refresh(opts)
+			if err == nil {
+				break
+			}
 
-			continue
+			b.logger.Error(
+				"grype DB update failed",
+				zap.Error(err),
+				zap.Duration("retryIn", dbRefreshRetryInterval),
+			)
+
+			select {
+			case <-b.stop:
+				return
+			case <-time.After(dbRefreshRetryInterval):
+			}
 		}
-
-		b.setScanner(sc, built)
-		b.logger.Info("grype DB updated", zap.Time("dbBuilt", built))
 	}
 }
 

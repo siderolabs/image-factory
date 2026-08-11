@@ -113,6 +113,7 @@ type ScannerOptions struct {
 	AuthProvider     AuthProvider
 	DatabaseURL      string
 	DatabaseUpdateAt string
+	DatabaseRootDir  string
 	MetricsNamespace string
 	CacheTTL         time.Duration
 	CacheCapacity    uint64

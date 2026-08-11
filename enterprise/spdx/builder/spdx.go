@@ -40,8 +40,14 @@ type File struct {
 
 // Bundle represents a collection of SPDX files for a schematic+version+arch.
 type Bundle struct {
-	// SchematicID is the schematic identifier.
-	SchematicID string
+	// ID identifies the merged document in its name and namespace.
+	//
+	// Cached bundles are stored under the SBOM content hash and named by it,
+	// because one bundle is shared by every schematic with the same extension
+	// list, version and arch. Builder.Build swaps the hash for the requesting
+	// schematic ID on the way out, so no request ever sees another schematic's
+	// identifier.
+	ID string
 
 	// TalosVersion is the Talos version tag (e.g., "v1.7.4").
 	TalosVersion string
@@ -65,7 +71,7 @@ type Bundle struct {
 // The merged document's DESCRIBES relationships point from the new document
 // to every top-level package from the source documents.
 func BundleToJSON(bundle *Bundle) (io.Reader, int64, error) {
-	namespace, err := buildDocumentNamespace(bundle.ExternalURL, bundle.SchematicID, bundle.TalosVersion, bundle.Arch)
+	namespace, err := buildDocumentNamespace(bundle.ExternalURL, bundle.ID, bundle.TalosVersion, bundle.Arch)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to build document namespace: %w", err)
 	}
@@ -74,7 +80,7 @@ func BundleToJSON(bundle *Bundle) (io.Reader, int64, error) {
 		SPDXVersion:       spdx.Version,
 		DataLicense:       spdx.DataLicense,
 		SPDXIdentifier:    common.ElementID("DOCUMENT"),
-		DocumentName:      fmt.Sprintf("talos-%s-%s-%s", bundle.SchematicID, bundle.TalosVersion, bundle.Arch),
+		DocumentName:      documentName(bundle.ID, bundle.TalosVersion, bundle.Arch),
 		DocumentNamespace: namespace,
 		CreationInfo: &spdx.CreationInfo{
 			Creators: []common.Creator{
@@ -214,6 +220,12 @@ func prefixDocElementID(prefix string, id common.DocElementID) common.DocElement
 	return common.DocElementID{
 		ElementRefID: prefixElementID(prefix, id.ElementRefID),
 	}
+}
+
+// documentName assembles the SPDX DocumentName from the document identity plus
+// the version and architecture it describes.
+func documentName(id, talosVersion, arch string) string {
+	return fmt.Sprintf("talos-%s-%s-%s", id, talosVersion, arch)
 }
 
 // buildDocumentNamespace assembles the SPDX DocumentNamespace from the

@@ -90,6 +90,7 @@ func NewScannerFrontend(ctx context.Context, eg *errgroup.Group, logger *zap.Log
 		SPDXSource:       opts.SPDXSource,
 		DatabaseURL:      opts.DatabaseURL,
 		DatabaseUpdateAt: opts.DatabaseUpdateAt,
+		DatabaseRootDir:  opts.DatabaseRootDir,
 		MetricsNamespace: opts.MetricsNamespace,
 		CacheTTL:         opts.CacheTTL,
 		Capacity:         opts.CacheCapacity,

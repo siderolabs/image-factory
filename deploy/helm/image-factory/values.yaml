@@ -222,6 +222,13 @@ config:
         # ttl: 15m0s
       ## URL of the vulnerability database to use for scanning
       # databaseURL: https://grype.anchore.io/databases
+      ## Local time of day (HH:MM) at which the vulnerability database is updated.
+      ## Keep it after the upstream publish time (~06:40 UTC) so every replica serves
+      ## reports from the same database build. Empty disables the schedule.
+      # databaseUpdateAt: "07:00"
+      ## Directory the vulnerability database is installed into. The chart mounts the
+      ## grypeDB volume here, so a PVC keeps the database across restarts.
+      # databaseRootDir: /var/lib/grype
     ## Vulnerability Exploitability eXchange (VEX) configuration
     # vex:
       ## Cache configuration for VEX data

@@ -90,7 +90,7 @@ func TestBundleToJSON_DocumentNamespace(t *testing.T) {
 			t.Parallel()
 
 			bundle := &builder.Bundle{
-				SchematicID:  "sch",
+				ID:           "sch",
 				TalosVersion: "v1.13.0",
 				Arch:         "amd64",
 				ExternalURL:  tc.externalURL,
@@ -143,7 +143,7 @@ func TestBundleToJSON_SingleTalosRoot(t *testing.T) {
 	sourceDoc := minimalSourceSPDX(t, sourceID, sourceName, "v1.13.3")
 
 	bundle := &builder.Bundle{
-		SchematicID:  "sch",
+		ID:           "sch",
 		TalosVersion: "v1.13.3",
 		Arch:         "amd64",
 		ExternalURL:  "https://factory.sidero.dev",

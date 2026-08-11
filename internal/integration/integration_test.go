@@ -384,6 +384,12 @@ func commonTest(t *testing.T, options cmd.Options) {
 		testSPDXFrontend(ctx, t, baseURL)
 	})
 
+	t.Run("TestScannerDB", func(t *testing.T) {
+		t.Parallel()
+
+		testScannerDB(t, options)
+	})
+
 	t.Run("TestChecksumFrontend", func(t *testing.T) {
 		t.Parallel()
 
