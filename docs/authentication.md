@@ -33,8 +33,9 @@ Details that decide whether a request authenticates:
   With `htpasswd`, the response carries one `WWW-Authenticate: Basic` challenge.
   With `auth0`, it carries separate Basic and Bearer challenges, in that order.
   The Auth0 order is deliberate: OCI clients take the first scheme they recognize, and only the Basic form carries a usable token for those clients.
+  With [browser login](#browser-login) configured, a page navigation is sent to `/login` with a `303` instead, and an XHR gets the `401` with no challenge on it.
 
-The one alternative to this header is the [`?token=` query parameter](#the-token-query-parameter), accepted on image downloads only.
+There are two alternatives to this header: the [`?token=` query parameter](#the-token-query-parameter), accepted on image downloads only, and the session cookie [browser login](#browser-login) issues.
 
 ## htpasswd
 
@@ -51,8 +52,8 @@ Tokens without the claim are rejected, since there would be no principal to attr
 
 Tokens are accepted either as `Authorization: Bearer <token>` or in the password field of a Basic credential; see [The `Authorization` header](#the-authorization-header).
 
-There is no interactive login.
-A browser hitting an authenticated route gets a `401` with a Basic challenge, not a redirect to Auth0, so a person presents a token the same way a machine does.
+Interactive login is opt-in; see [Browser login](#browser-login).
+Until it is configured, a browser hitting an authenticated route gets a `401` with a Basic challenge, not a redirect to Auth0, so a person presents a token the same way a machine does.
 
 ### Obtaining a token
 
@@ -86,6 +87,38 @@ Because validation is offline (see [Revocation](#revocation)), the token's Auth0
 
 A machine-scoped token also cannot mint a [download token](#download-tokens), since `POST /download-token` is not an artifact fetch.
 A deployment that both provisions nodes and hands out download links needs two clients: one carrying the machine scope, one without it.
+
+### Browser login
+
+Without it, a person opening the factory in a browser gets a `401` and nothing else.
+Enabling it redirects them to the tenant's login page instead, using an OAuth2 authorization code flow with PKCE.
+
+It is opt-in: set `clientID`, `clientSecret` and `sessionKey` together, or leave all three empty.
+A partial set is rejected at startup rather than half-enabling the flow.
+Bearer token authentication is unaffected either way.
+
+One thing must be set up in the Auth0 tenant, which the factory cannot do for you: add `<http.externalURL>/callback` to the application's **Allowed Callback URLs**, and `http.externalURL` itself to its **Allowed Logout URLs**.
+Auth0 rejects the round trip outright otherwise.
+Both are derived from `http.externalURL`; the callback route is always `/callback` and is not configurable.
+
+A session lasts as long as the access token it was established with, whose lifetime is set on the API in the tenant.
+There are no refresh tokens: `offline_access` is not requested, so nothing renews a session in place.
+When the access token expires, the next page load is sent back through `/login`, and the tenant's own SSO session normally answers it without the person entering anything.
+The visible cost is that one navigation; an in-flight background request that lands on the expiry is redirected instead of completing, so the action is retried.
+Raise the API's token lifetime to make this rarer.
+
+`sessionKey` is a 32-byte AES-256 key, base64-encoded, injected through `IF_AUTHENTICATION_AUTH0_SESSIONKEY`.
+Generate one with `openssl rand -base64 32`; surrounding whitespace is trimmed, so a value read from a file or a mounted secret works as-is.
+Session cookies are encrypted with it, so every replica must be given the same one: a cookie issued by one replica is read by another.
+Changing it signs everyone out.
+
+Session cookies are `SameSite=Lax`, which is what stops a cross-site form from making a mutating request with the visitor's session.
+There is no separate CSRF token, so relaxing that attribute — to `None` for iframe embedding, say — would need one adding first.
+
+Responses authenticated by a session cookie are sent with `Cache-Control: no-store` and `Vary: Cookie`, since a shared cache that stored one would serve a visitor's session to whoever asked next.
+
+Sessions are held in an encrypted cookie rather than server-side, which is what lets any replica serve any request without shared session storage.
+The cookie is capped at the 4096 bytes browsers accept; a tenant configured to emit very large access tokens (a long `permissions` array, typically) can exceed it, which is reported at login rather than failing silently.
 
 ### Migrating from htpasswd
 

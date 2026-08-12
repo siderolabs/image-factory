@@ -181,6 +181,11 @@ type AuthProvider interface {
 	ContextWithUsername(ctx context.Context, username string) context.Context
 }
 
+// Auth0SessionKeySize is the AES-256 key length the Auth0 session cookies are sealed with.
+// Restated here rather than imported because this package imports the provider, not the
+// other way round.
+const Auth0SessionKeySize = 32
+
 // Auth0Config holds configuration for the Auth0 authentication provider.
 //
 // This restates cmd.Auth0Options rather than reusing it because auth0.Config lives behind
@@ -190,8 +195,42 @@ type Auth0Config struct {
 	Audience     string
 	MachineScope string
 
+	// Browser login, additive on top of the bearer-token validation Domain and Audience
+	// always enable. These two and SessionKey are all-or-nothing; a partial set fails at
+	// startup.
+	ClientID     string
+	ClientSecret string // inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET
+
+	// ExternalURL is http.externalURL, required regardless of the group above. The callback
+	// URL and the logout returnTo are derived from it.
+	ExternalURL string
+
 	// IssuerURLOverride replaces the default issuer URL constructed from Domain.
-	// It sets both the expected iss claim and the JWKS endpoint.
+	// It sets the expected iss claim and the JWKS, authorize and token endpoints.
 	// Intended for testing only; leave empty in production.
 	IssuerURLOverride string
+
+	// SessionKey is a 32-byte AES-256 key for the session and PKCE state cookies.
+	// Must be shared by all replicas, since cookies issued by one are read by another.
+	SessionKey []byte
+}
+
+// BrowserLoginProvider is an optional extension of AuthProvider for providers that can sign
+// a browser in. The frontend registers its routes as public.
+type BrowserLoginProvider interface {
+	// BrowserLoginEnabled reports whether the flow is configured.
+	BrowserLoginEnabled() bool
+
+	// LoginHandler returns the handler for GET /login.
+	LoginHandler() Handler
+
+	// CallbackHandler returns the handler the identity provider redirects back to.
+	CallbackHandler() Handler
+
+	// CallbackPath returns the route CallbackHandler must be registered on, fixed by the
+	// allow-listed redirect URL.
+	CallbackPath() string
+
+	// LogoutHandler returns the handler for /logout, registered on GET and POST.
+	LogoutHandler() Handler
 }

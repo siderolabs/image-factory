@@ -13,7 +13,6 @@ package integration_test
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"crypto/rsa"
 	"net/http"
 	"testing"
@@ -65,8 +64,7 @@ func auth0SignToken(t *testing.T, privateKey *rsa.PrivateKey, iss, aud, orgID st
 func setupEnterpriseAuth0(t *testing.T, opts *cmd.Options) auth0TokenFixtures {
 	t.Helper()
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
+	privateKey := testoidc.GenerateKey()
 
 	serverURL := testoidc.StartServer(t, privateKey, auth0TestKeyID)
 
@@ -116,6 +114,12 @@ func TestIntegrationAuth0(t *testing.T) {
 		t.Parallel()
 
 		testAuth0Ownership(ctx, t, baseURL, fixtures)
+	})
+
+	t.Run("BrowserRoutesAbsent", func(t *testing.T) {
+		t.Parallel()
+
+		testAuth0BrowserRoutesAbsent(ctx, t, baseURL)
 	})
 }
 
@@ -295,4 +299,32 @@ func testAuth0Ownership(ctx context.Context, t *testing.T, baseURL string, fx au
 
 		assertRequiresAuth(t, resp)
 	})
+}
+
+// testAuth0BrowserRoutesAbsent pins that a bearer-token-only deployment serves no
+// browser-login routes.
+func testAuth0BrowserRoutesAbsent(ctx context.Context, t *testing.T, baseURL string) {
+	t.Helper()
+
+	noRedirect := &http.Client{
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	for _, path := range []string{"/login", "/logout"} {
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+path, nil)
+			require.NoError(t, err)
+
+			resp, err := noRedirect.Do(req)
+			require.NoError(t, err)
+
+			t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		})
+	}
 }

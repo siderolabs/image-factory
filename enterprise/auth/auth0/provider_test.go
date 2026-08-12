@@ -14,6 +14,7 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -78,11 +79,29 @@ func captureHandler(capturedUsername *string) auth0.Handler {
 	}
 }
 
+// denyHandler fails the test if the middleware lets a request through.
+func denyHandler(t *testing.T) auth0.Handler {
+	return func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error {
+		t.Fatal("handler must not run for an unauthenticated request")
+
+		return nil
+	}
+}
+
+// requireNoSession checks a response did not sign anyone in. A cleared cookie is fine; a
+// populated one is not.
+func requireNoSession(t *testing.T, rec *httptest.ResponseRecorder) {
+	t.Helper()
+
+	if session := auth0.FindCookie(rec, "if_session"); session != nil {
+		require.Empty(t, session.Value, "this response must not establish a session")
+	}
+}
+
 func TestAuth0ProviderMiddleware(t *testing.T) {
 	t.Parallel()
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
+	privateKey := testoidc.GenerateKey()
 
 	p, issuerURL := setupProvider(t, privateKey)
 
@@ -299,9 +318,7 @@ func TestAuth0ProviderMachineScope(t *testing.T) {
 
 	const machineScope = "factory:machine"
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-
+	privateKey := testoidc.GenerateKey()
 	issuerURL := testoidc.StartServer(t, privateKey, testKeyID)
 
 	newProvider := func(scope string) *auth0.Provider {
@@ -390,10 +407,7 @@ func TestAuth0ProviderMachineScope(t *testing.T) {
 func TestAuth0ProviderChallengeOrder(t *testing.T) {
 	t.Parallel()
 
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-
-	p, _ := setupProvider(t, privateKey)
+	p, _ := setupProvider(t, testoidc.GenerateKey())
 
 	for _, test := range []struct {
 		setupFn func(*http.Request)
@@ -413,18 +427,52 @@ func TestAuth0ProviderChallengeOrder(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			next := func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error {
-				t.Fatal("handler must not run for an unauthenticated request")
-
-				return nil
-			}
-
-			require.Error(t, p.Middleware(next)(t.Context(), w, r, nil))
+			require.Error(t, p.Middleware(denyHandler(t))(t.Context(), w, r, nil))
 
 			require.Equal(t, []string{
 				`Basic realm="Image Factory Enterprise", charset="UTF-8"`,
 				`Bearer realm="Image Factory Enterprise"`,
 			}, w.Header().Values("WWW-Authenticate"))
+		})
+	}
+}
+
+// TestBearerOnlyDeniesBrowserWithChallenge pins deny's false branch: with no /login route to
+// reach, an html-shaped client gets the same 401 as any other.
+func TestBearerOnlyDeniesBrowserWithChallenge(t *testing.T) {
+	t.Parallel()
+
+	p, _ := setupProvider(t, testoidc.GenerateKey())
+	require.False(t, p.BrowserLoginEnabled())
+
+	for _, test := range []struct {
+		headers map[string]string
+		name    string
+	}{
+		{
+			name:    "browser navigation",
+			headers: map[string]string{"Accept": "text/html,application/xhtml+xml", "Sec-Fetch-Mode": "navigate"},
+		},
+		{
+			name:    "htmx request",
+			headers: map[string]string{"Hx-Request": "true", "Hx-Current-Url": "https://factory.example.com/"},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+			for k, v := range test.headers {
+				r.Header.Set(k, v)
+			}
+
+			w := httptest.NewRecorder()
+
+			require.Error(t, p.Middleware(denyHandler(t))(t.Context(), w, r, nil))
+
+			require.Empty(t, w.Header().Get("Location"), "there is no /login to redirect to")
+			require.Empty(t, w.Header().Get("Hx-Redirect"))
+			require.NotEmpty(t, w.Header().Values("WWW-Authenticate"), "a denied browser still gets the challenge")
 		})
 	}
 }
@@ -495,9 +543,85 @@ func TestNewProviderValidation(t *testing.T) {
 	}
 }
 
+// TestNewProviderBrowserLoginFields asserts the browser-login fields are all-or-nothing.
+func TestNewProviderBrowserLoginFields(t *testing.T) {
+	t.Parallel()
+
+	logger := zaptest.NewLogger(t)
+
+	base := auth0.Config{Domain: testDomain, Audience: testAudience}
+
+	full := base
+	full.ClientID = "client-id"
+	full.ClientSecret = "client-secret"
+	full.ExternalURL = "https://factory.example.com"
+	full.SessionKey = make([]byte, 32)
+
+	for _, tc := range []struct {
+		name    string
+		mutate  func(*auth0.Config)
+		missing string
+	}{
+		{"no clientID", func(c *auth0.Config) { c.ClientID = "" }, "clientID"},
+		{"no clientSecret", func(c *auth0.Config) { c.ClientSecret = "" }, "clientSecret"},
+		{"no sessionKey", func(c *auth0.Config) { c.SessionKey = nil }, "sessionKey"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := full
+			tc.mutate(&cfg)
+
+			_, err := auth0.NewProvider(t.Context(), logger, cfg)
+			require.Error(t, err, "partial browser login config should be rejected")
+			require.ErrorContains(t, err, tc.missing)
+		})
+	}
+
+	t.Run("all three present", func(t *testing.T) {
+		t.Parallel()
+
+		p, err := auth0.NewProvider(t.Context(), logger, full)
+		require.NoError(t, err)
+		require.True(t, p.BrowserLoginEnabled())
+		require.Equal(t, "/callback", p.CallbackPath(),
+			"the callback route is fixed, and Auth0 is told externalURL + this path")
+	})
+
+	t.Run("none present", func(t *testing.T) {
+		t.Parallel()
+
+		p, err := auth0.NewProvider(t.Context(), logger, base)
+		require.NoError(t, err)
+		require.False(t, p.BrowserLoginEnabled())
+	})
+
+	// The callback URL and the logout returnTo are both derived from externalURL, so a bad
+	// value must fail at startup rather than 404 the user after a successful Auth0 login.
+	for _, tc := range []struct {
+		name    string
+		mutate  func(*auth0.Config)
+		expects string
+	}{
+		{"no externalURL", func(c *auth0.Config) { c.ExternalURL = "" }, "externalURL must be absolute"},
+		{"relative externalURL", func(c *auth0.Config) { c.ExternalURL = "/factory" }, "externalURL must be absolute"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := full
+			tc.mutate(&cfg)
+
+			_, err := auth0.NewProvider(t.Context(), logger, cfg)
+			require.Error(t, err)
+			require.ErrorContains(t, err, tc.expects)
+		})
+	}
+}
+
 // TestExtractToken covers which Authorization headers yield a token candidate.
-// The Basic cases matter because OCI and Talos registry clients only speak Basic,
-// so the password field has to be accepted as a token.
+// The Basic cases are the point: treating any password as a token loops a browser's cached
+// credential through /login forever.
 func TestExtractToken(t *testing.T) {
 	t.Parallel()
 
@@ -514,8 +638,12 @@ func TestExtractToken(t *testing.T) {
 		{"bearer mixed case", "BeArEr " + jwt, jwt},
 		{"unsupported scheme", "Token " + jwt, ""},
 		{"scheme only", "Bearer", ""},
-		{"basic password", "Basic " + basicValue("ignored", jwt), jwt},
+		{"basic with JWT password", "Basic " + basicValue("ignored", jwt), jwt},
+		{"basic with htpasswd password", "Basic " + basicValue("developer", "SideroTest"), ""},
 		{"basic with empty password", "Basic " + basicValue("developer", ""), ""},
+		{"basic with two segments", "Basic " + basicValue("x", "header.payload"), ""},
+		{"basic with four segments", "Basic " + basicValue("x", "a.b.c.d"), ""},
+		{"basic with empty segment", "Basic " + basicValue("x", "a..c"), ""},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -533,4 +661,44 @@ func TestExtractToken(t *testing.T) {
 // basicValue builds the base64 credentials part of a Basic Authorization header.
 func basicValue(username, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
+}
+
+// TestSafeReturnTo asserts the post-login redirect is clamped to a site-relative path;
+// /login is unauthenticated, so ?return_to= is attacker controlled.
+func TestSafeReturnTo(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"empty", "", "/"},
+		{"root", "/", "/"},
+		{"path", "/image/abc/v1.12.0/metal-amd64.iso", "/image/abc/v1.12.0/metal-amd64.iso"},
+		{"path with query", "/ui/wizard?step=2", "/ui/wizard?step=2"},
+		{"absolute URL", "https://evil.example/x", "/x"},
+		{"protocol relative", "//evil.example/x", "/x"},
+		{"backslash", `/\evil.example`, "/%5Cevil.example"},
+		{"backslash slash", `/\/evil.example`, "/%5C/evil.example"},
+		{"javascript scheme", "javascript:alert(1)", "/"},
+		{"relative", "foo/bar", "/"},
+		{"userinfo", "https://user:pass@evil.example/x", "/x"},
+		// url.Parse skips authority parsing when the rest starts with "///", so these
+		// keep their leading slashes and stay protocol-relative to a browser.
+		{"triple slash", "///evil.example", "/"},
+		{"quadruple slash", "////evil.example", "/"},
+		{"scheme with extra slashes", "http:////evil.example", "/"},
+		{"scheme relative with path", "//evil.example", "/"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := auth0.SafeReturnTo(test.input)
+
+			require.Equal(t, test.expected, got)
+			require.True(t, strings.HasPrefix(got, "/"), "result must be site-relative")
+			require.False(t, strings.HasPrefix(got, "//"), "result must not be protocol-relative")
+		})
+	}
 }

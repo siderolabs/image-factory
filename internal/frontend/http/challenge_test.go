@@ -51,6 +51,15 @@ func TestUnauthorizedChallengeHeader(t *testing.T) {
 				`Bearer realm="Image Factory Enterprise"`,
 			},
 		},
+		{
+			// The provider skips the challenge on this path deliberately; adding one back
+			// would pop the browser's Basic auth dialog over the page htmx is leaving.
+			name: "an htmx redirect suppresses the fallback",
+			setHeader: func(w http.ResponseWriter) {
+				w.Header().Set("Hx-Redirect", "/login?return_to=%2F")
+			},
+			expected: nil,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()

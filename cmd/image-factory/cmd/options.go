@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/url"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/siderolabs/image-factory/internal/remotewrap"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 // Validate checks Options for inconsistencies that would otherwise produce
@@ -82,6 +84,18 @@ func (o AuthenticationOptions) validate() error {
 
 		if o.Auth0.Audience == "" {
 			return errors.New(`authentication.auth0.audience is required when authentication.provider is "auth0"`)
+		}
+
+		// Only the key's encoding is checked here; the provider validates the group.
+		if o.Auth0.SessionKey != "" {
+			key, err := o.Auth0.DecodedSessionKey()
+			if err != nil {
+				return fmt.Errorf("authentication.auth0.sessionKey must be base64-encoded: %w", err)
+			}
+
+			if len(key) != enterprise.Auth0SessionKeySize {
+				return fmt.Errorf("authentication.auth0.sessionKey must decode to %d bytes, got %d", enterprise.Auth0SessionKeySize, len(key))
+			}
 		}
 	default:
 		return fmt.Errorf("authentication.provider must be one of %v, got %q", authProviderOptions, o.Provider)
@@ -642,6 +656,9 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 	// In Auth0 this means issuing tokens to organization-scoped clients; tokens without the claim are rejected.
 	//
 	// It is required when provider is "auth0", and ignored otherwise.
+	//
+	// Domain and audience alone validate bearer tokens.
+	// The browser-login fields are optional, and add the sign-in routes on top when set.
 	Auth0 Auth0Options `koanf:"auth0"`
 
 	// DownloadTokenKeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing download tokens.
@@ -688,10 +705,40 @@ type Auth0Options struct {
 	// Optional; when empty every valid token has full access.
 	MachineScope string `koanf:"machineScope"`
 
-	// issuerURLOverride replaces the issuer URL constructed from Domain, for both the
-	// expected iss claim and the JWKS endpoint.
+	// ClientID is the Auth0 application Client ID used for the browser login flow.
+	//
+	// Optional; part of the browser-login group.
+	ClientID string `koanf:"clientID"`
+
+	// ClientSecret is the Auth0 application Client Secret.
+	// Inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET environment variable.
+	//
+	// Optional; part of the browser-login group.
+	ClientSecret string `koanf:"clientSecret"`
+
+	// SessionKey is the base64-encoded 32-byte AES-256 key used to encrypt session cookies.
+	// Inject via IF_AUTHENTICATION_AUTH0_SESSIONKEY environment variable.
+	// Generate one with `openssl rand -base64 32`.
+	// Surrounding whitespace is trimmed, so a file or mounted secret with a trailing newline works.
+	// All replicas must share the same key, since a session or in-progress login started
+	// on one replica has to be decrypted by whichever replica handles the next request.
+	//
+	// Optional; part of the browser-login group.
+	SessionKey string `koanf:"sessionKey"`
+
+	// issuerURLOverride replaces the issuer URL constructed from Domain, for the expected
+	// iss claim and for the JWKS, authorize and token endpoints.
 	// Unexported so koanf cannot reach it; see SetAuth0IssuerURL, built only under the integration tag.
 	issuerURLOverride string
+}
+
+// DecodedSessionKey returns the session key bytes, or nil when none is configured.
+func (o Auth0Options) DecodedSessionKey() ([]byte, error) {
+	if o.SessionKey == "" {
+		return nil, nil
+	}
+
+	return base64.StdEncoding.DecodeString(strings.TrimSpace(o.SessionKey))
 }
 
 // EnterpriseOptions contains configuration for enterprise-specific features.

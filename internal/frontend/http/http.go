@@ -241,6 +241,8 @@ func NewFrontend(
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
 	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 
+	frontend.registerBrowserLogin(registerPublicRoute)
+
 	return frontend, nil
 }
 
@@ -294,8 +296,9 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 			}
 
 			if code == http.StatusUnauthorized {
-				// Fallback only: a provider that already picked its challenges keeps them.
-				if sw.Header().Get("WWW-Authenticate") == "" {
+				// Fallback only: a provider that picked its own challenges keeps them, and one
+				// redirecting htmx wants none — a challenge pops the browser's Basic dialog.
+				if sw.Header().Get("WWW-Authenticate") == "" && sw.Header().Get("Hx-Redirect") == "" {
 					sw.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise", charset="UTF-8"`)
 				}
 			}

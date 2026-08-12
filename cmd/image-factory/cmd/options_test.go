@@ -5,6 +5,7 @@
 package cmd_test
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"testing"
@@ -14,6 +15,24 @@ import (
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 )
+
+// auth0OptsWithSessionKey is an otherwise valid auth0 configuration, so the session key is
+// the only thing under test.
+func auth0OptsWithSessionKey(sessionKey string) cmd.Options {
+	return cmd.Options{
+		HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+		Authentication: cmd.AuthenticationOptions{
+			Enabled:          true,
+			Provider:         "auth0",
+			DownloadTokenTTL: cmd.DefaultOptions.Authentication.DownloadTokenTTL,
+			Auth0: cmd.Auth0Options{
+				Domain:     "tenant.auth0.com",
+				Audience:   "https://factory.sidero.dev",
+				SessionKey: sessionKey,
+			},
+		},
+	}
+}
 
 func TestOCIRepositoryOptions(t *testing.T) {
 	t.Parallel()
@@ -379,6 +398,26 @@ func TestOptionsValidate(t *testing.T) {
 				Authentication: cmd.AuthenticationOptions{Enabled: true, Provider: "htpasswd"},
 			},
 			expectError: "authentication.htpasswdPath is required",
+		},
+		{
+			name:        "session key that is not base64",
+			opts:        auth0OptsWithSessionKey("not!base64"),
+			expectError: "authentication.auth0.sessionKey must be base64-encoded",
+		},
+		{
+			// A 16-byte key decodes fine but is AES-128, which the provider rejects later.
+			name:        "session key of the wrong length",
+			opts:        auth0OptsWithSessionKey(base64.StdEncoding.EncodeToString(make([]byte, 16))),
+			expectError: "authentication.auth0.sessionKey must decode to 32 bytes, got 16",
+		},
+		{
+			// A mounted secret or `openssl rand -base64 32` carries a trailing newline.
+			name: "session key with surrounding whitespace",
+			opts: auth0OptsWithSessionKey("  " + base64.StdEncoding.EncodeToString(make([]byte, 32)) + "\n"),
+		},
+		{
+			name: "no session key at all is the bearer-token-only setup",
+			opts: auth0OptsWithSessionKey(""),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

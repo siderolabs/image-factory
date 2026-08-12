@@ -10,6 +10,9 @@ When it is off, every registered endpoint in this reference is public, except th
 When it is on, each endpoint below carries an **Access** table with these four fields; endpoints that never take a credential are marked `Access: public` instead.
 See [Authentication](authentication.md) for the providers, the token formats and the scopes.
 
+With [browser login](authentication.md#browser-login) configured, every endpoint below also accepts the session cookie, and a browser navigation without a credential is redirected to `/login` rather than answered `401`.
+A client that does not ask for `text/html` gets the `401` described here.
+
 | Field             | Values                                                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Auth**          | `public` takes no credential, `required` takes an [`Authorization` header](authentication.md#the-authorization-header) for the configured provider, and a missing or invalid credential is `401`. |

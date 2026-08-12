@@ -223,10 +223,20 @@ func buildAuthProvider(ctx context.Context, logger *zap.Logger, opts Options) (e
 
 	switch opts.Authentication.Provider {
 	case AuthProviderAuth0:
+		// Options.Validate has already rejected an undecodable or wrong-length key.
+		sessionKey, decodeErr := opts.Authentication.Auth0.DecodedSessionKey()
+		if decodeErr != nil {
+			return nil, fmt.Errorf("auth0: session key must be base64-encoded: %w", decodeErr)
+		}
+
 		authProvider, err = enterprise.NewAuth0Provider(ctx, logger, enterprise.Auth0Config{
 			Domain:            opts.Authentication.Auth0.Domain,
 			Audience:          opts.Authentication.Auth0.Audience,
 			MachineScope:      opts.Authentication.Auth0.MachineScope,
+			ClientID:          opts.Authentication.Auth0.ClientID,
+			ClientSecret:      opts.Authentication.Auth0.ClientSecret,
+			ExternalURL:       opts.HTTP.ExternalURL,
+			SessionKey:        sessionKey,
 			IssuerURLOverride: opts.Authentication.Auth0.issuerURLOverride,
 		})
 	case AuthProviderHTPasswd:

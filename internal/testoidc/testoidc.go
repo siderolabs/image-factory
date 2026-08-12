@@ -101,6 +101,10 @@ type TokenOptions struct {
 	// OrgID is omitted when empty, producing a token without an org_id claim.
 	OrgID string
 
+	// Nonce binds an ID token to the login that requested it. Omitted when empty, which is
+	// what an access token carries.
+	Nonce string
+
 	// Scope is the space-delimited scope claim Auth0 issues for client credentials.
 	// Omitted when empty.
 	Scope string
@@ -144,6 +148,10 @@ func SignToken(t *testing.T, privateKey *rsa.PrivateKey, opts TokenOptions) stri
 
 	if opts.Scope != "" {
 		extra["scope"] = opts.Scope
+	}
+
+	if opts.Nonce != "" {
+		extra["nonce"] = opts.Nonce
 	}
 
 	if len(opts.Permissions) > 0 {
