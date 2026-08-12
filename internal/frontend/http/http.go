@@ -272,27 +272,44 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 		ctx := ctxlog.WithRequestID(r.Context(), requestID)
 		logger := ctxlog.Logger(ctx, f.logger)
 
-		w.Header().Set("Server", version.ServerString())
-		w.Header().Set(RequestIDHeader, requestID)
+		var state responseState
+
+		sw := wrapResponseWriter(w, &state)
+
+		sw.Header().Set("Server", version.ServerString())
+		sw.Header().Set(RequestIDHeader, requestID)
 
 		var username string
 
-		handler := f.withAuth(h, requireAuth, &username)
+		handler := f.withAuth(h, requireAuth, &username, &state)
 
 		start := time.Now()
-		err := handler(ctx, w, r, p)
+		err := handler(ctx, sw, r, p)
 		duration := time.Since(start)
 
 		level, status := MatchError(err, func(message string, code int) {
+			if state.status != 0 {
+				// The handler already responded; this error is only here to be logged.
+				return
+			}
+
 			if code == http.StatusUnauthorized {
 				// Fallback only: a provider that already picked its challenges keeps them.
-				if w.Header().Get("WWW-Authenticate") == "" {
-					w.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise", charset="UTF-8"`)
+				if sw.Header().Get("WWW-Authenticate") == "" {
+					sw.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise", charset="UTF-8"`)
 				}
 			}
 
-			http.Error(w, message, code)
+			http.Error(sw, message, code)
 		})
+
+		// A handler that answered for itself returns nil, which would log as a 200.
+		if state.status != 0 {
+			status = state.status
+		} else {
+			// Nothing was committed, so net/http sends an implicit 200 that reaches no hook.
+			state.applyCacheControlPin(sw)
+		}
 
 		logger.Log(
 			level, "request",
@@ -333,7 +350,7 @@ func requestIDFrom(r *http.Request) string {
 // The middleware stores the username on a context it derives internally, which
 // never reaches wrapHandler's context; a thin capture layer reads it from inside
 // the middleware call stack and writes it to username.
-func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string) Handler {
+func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state *responseState) Handler {
 	if !requireAuth || f.options.AuthProvider == nil {
 		return h
 	}
@@ -359,6 +376,9 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string) Handl
 
 		err := authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 			*username, _ = authProvider.UsernameFromContext(ctx)
+
+			// The provider has decided by now, so pin the Cache-Control it chose.
+			state.pinCacheControl(w)
 
 			return h(ctx, w, r, p)
 		})(ctx, w, r, p)
@@ -397,6 +417,9 @@ func errString(err error) string {
 
 // MatchError matches the error and returns the appropriate HTTP status code and log level.
 // It also calls the callback with the message and code to write the response.
+//
+// enterrors.RespondedTag is the exception: no callback, and the status is a placeholder that
+// callers replace with the one on the response writer.
 func MatchError(err error, callback func(message string, code int)) (zapcore.Level, int) {
 	status := http.StatusOK
 	level := zap.InfoLevel
@@ -404,6 +427,8 @@ func MatchError(err error, callback func(message string, code int)) (zapcore.Lev
 	switch {
 	case err == nil:
 		// happy case
+	case xerrors.TagIs[enterrors.RespondedTag](err):
+		level = zap.WarnLevel
 	case xerrors.TagIs[enterrors.NotEnabledTag](err):
 		level = zap.WarnLevel
 		status = http.StatusPaymentRequired

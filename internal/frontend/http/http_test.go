@@ -144,6 +144,16 @@ func TestMatchError(t *testing.T) {
 			callbackCode:   nethttp.StatusBadRequest,
 		},
 
+		{
+			// The handler already wrote its own response, so there is nothing to write and
+			// the status here is a placeholder: wrapHandler takes the real one off the writer.
+			name:           "handler already responded",
+			err:            xerrors.NewTagged[enterrors.RespondedTag](errors.New("redirected to login")),
+			expectedLevel:  zap.WarnLevel,
+			expectedStatus: nethttp.StatusOK,
+			expectCallback: false,
+		},
+
 		// --- context cancellation wrapping ---
 		{
 			name:           "wrapped context canceled",

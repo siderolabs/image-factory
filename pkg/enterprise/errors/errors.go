@@ -14,3 +14,7 @@ type InvalidErrorTag struct{}
 
 // NotReadyTag tags errors that occur when an enterprise feature is.
 type NotReadyTag struct{}
+
+// RespondedTag tags an error from a handler that already wrote its own response: the status
+// comes off the writer, the error only carries the reason into the log.
+type RespondedTag struct{}
