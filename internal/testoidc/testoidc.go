@@ -4,15 +4,17 @@
 
 //go:build enterprise || integration
 
-// Package testoidc provides an in-process OIDC discovery + JWKS server and
-// JWT signing helper for use in auth0 unit and integration tests.
+// Package testoidc provides an in-process JWKS server and JWT signing helper for use in
+// auth0 unit and integration tests.
 package testoidc
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,12 +23,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// StartServer starts an in-process HTTP server serving the public key set at
-// GET /.well-known/jwks.json.
-//
-// The returned URL is the server base URL, suitable for use as the
-// IssuerURLOverride and as the iss claim when signing test JWTs.
+// GenerateKey returns one shared, precomputed RSA-2048 signing key: generating one costs more
+// than the rest of these tests together. Tests needing an unrelated key generate their own.
+var GenerateKey = sync.OnceValue(func() *rsa.PrivateKey {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(err)
+	}
+
+	key.Precompute()
+
+	return key
+})
+
+// StartServer starts an in-process JWKS server. The returned URL serves as the
+// IssuerURLOverride and the iss claim; every other path 404s, for the failure branches.
 func StartServer(t *testing.T, privateKey *rsa.PrivateKey, keyID string) string {
+	t.Helper()
+
+	return StartServerWithRoutes(t, privateKey, keyID, nil)
+}
+
+// StartServerWithRoutes is StartServer with extra handlers, keyed by path, for tests that
+// need an endpoint the key set does not cover, such as /oauth/token.
+func StartServerWithRoutes(t *testing.T, privateKey *rsa.PrivateKey, keyID string, routes map[string]http.HandlerFunc) string {
 	t.Helper()
 
 	keySet := jose.JSONWebKeySet{
@@ -41,14 +61,22 @@ func StartServer(t *testing.T, privateKey *rsa.PrivateKey, keyID string) string 
 	}
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/.well-known/jwks.json" {
-			http.NotFound(w, r)
+		// Set up front so route handlers inherit it; oauth2 needs it to parse token responses.
+		w.Header().Set("Content-Type", "application/json")
+
+		if r.URL.Path == "/.well-known/jwks.json" {
+			json.NewEncoder(w).Encode(keySet) //nolint:errcheck
 
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(keySet) //nolint:errcheck
+		if handler, ok := routes[r.URL.Path]; ok {
+			handler(w, r)
+
+			return
+		}
+
+		http.NotFound(w, r)
 	}))
 
 	t.Cleanup(srv.Close)
