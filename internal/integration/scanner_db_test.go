@@ -241,15 +241,11 @@ func testGrypeDBMirror(t *testing.T) {
 // (RUN_TESTS_* in the Makefile), so a test that is not a subtest of one of those
 // is compiled and never run.
 func testScannerDB(t *testing.T, options cmd.Options) {
-	t.Run("mirror", func(t *testing.T) {
-		t.Parallel()
-
-		testGrypeDBMirror(t)
-	})
+	// Grype's archive builder changes the process working directory while it
+	// packages a database, so mirrors cannot be published concurrently.
+	t.Run("mirror", testGrypeDBMirror)
 
 	t.Run("rotation", func(t *testing.T) {
-		t.Parallel()
-
 		testScannerDBRotation(t, options)
 	})
 }
