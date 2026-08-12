@@ -9,12 +9,14 @@ package integration_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -439,10 +441,7 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("TamperedTokenRejected", func(t *testing.T) {
 		t.Parallel()
 
-		token := getDownloadToken(ctx, t, baseURL)
-
-		// Flip a character.
-		tampered := token[:len(token)-1] + "X"
+		tampered := tamperSignature(t, getDownloadToken(ctx, t, baseURL))
 		downloadURL := baseURL + "/image/" + schematicID + "/v1.9.0/kernel-amd64?token=" + tampered
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
@@ -666,6 +665,27 @@ func testAuthCDNNoRedirect(t *testing.T, pool dockertest.Pool) {
 	t.Cleanup(func() { resp2.Body.Close() }) //nolint:errcheck
 
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
+}
+
+// tamperSignature flips a bit in the token's signature, so it no longer matches the payload.
+//
+// Flipping the last character of the encoded signature instead changes nothing reliably:
+// base64url packs the 64-byte ES256 signature into 86 characters, so the final character
+// carries four significant bits and several values decode to the same bytes.
+func tamperSignature(t *testing.T, token string) string {
+	t.Helper()
+
+	parts := strings.Split(token, ".")
+	require.Len(t, parts, 3, "expected a three-segment JWT")
+
+	signature, err := base64.RawURLEncoding.DecodeString(parts[2])
+	require.NoError(t, err)
+	require.NotEmpty(t, signature)
+
+	signature[0] ^= 0xff
+	parts[2] = base64.RawURLEncoding.EncodeToString(signature)
+
+	return strings.Join(parts, ".")
 }
 
 // assertRequiresAuth checks that the response is 401 with WWW-Authenticate set,

@@ -237,7 +237,11 @@ func setupEnterprise(t *testing.T, options *cmd.Options) {
 
 	options.Enterprise.VEX.Data = vexDataRepositoryFlag.OCIRepositoryOptions
 
-	options.Enterprise.SPDX.Cache = spdxCacheRepositoryFlag.OCIRepositoryOptions
+	// Only when the caller has not chosen one: testScannerDBRotation runs a second factory
+	// that needs its own, and this would otherwise overwrite it.
+	if options.Enterprise.SPDX.Cache == cmd.DefaultOptions.Enterprise.SPDX.Cache {
+		options.Enterprise.SPDX.Cache = spdxCacheRepositoryFlag.OCIRepositoryOptions
+	}
 
 	// Skip if the caller already configured auth (e.g. reload tests that need
 	// explicit control over the htpasswd file path, or auth0 tests that configure

@@ -371,6 +371,16 @@ func testScannerDBRotation(t *testing.T, options cmd.Options) {
 	// holds the real one the other enterprise tests scan against.
 	options.Enterprise.Scanner.DatabaseRootDir = t.TempDir()
 
+	// Every factory gets a fresh cache signing key, so two of them sharing an SPDX cache
+	// reject each other's signatures: both build the same tag, whoever tags last wins, and
+	// the other one's read-back fails to verify. Production replicas share a key and do not
+	// have this problem, so give this factory its own repository rather than model it.
+	//
+	// Derived from the flag rather than the default, since CI points it at a local registry.
+	options.Enterprise.SPDX.Cache = mustNewDefaultOCIRepository(
+		spdxCacheRepositoryFlag.String() + "rotation",
+	).OCIRepositoryOptions
+
 	ctx, listenAddr, _ := setupFactory(t, options)
 	baseURL := "http://" + listenAddr
 
