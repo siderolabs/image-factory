@@ -1,11 +1,34 @@
 # API
 
+## Authentication
+
+Authentication is an Enterprise feature, enabled with `authentication.enabled`; when it is off, every endpoint is public.
+When it is on, each endpoint below carries an **Access** table with these four fields; endpoints that never take a credential are marked `Access: public` instead.
+See [Authentication](authentication.md) for the providers, the token formats and the scopes.
+
+| Field             | Values                                                                                                                                                                                                                      |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Auth**          | `public` takes no credential, `required` takes one for the configured provider (Basic for htpasswd, `Authorization: Bearer` or the same JWT in the Basic password for auth0), and a missing or invalid credential is `401`. |
+| **`?token=`**     | Whether a [download token](authentication.md#download-tokens) in the query string is accepted in place of a credential.                                                                                                     |
+| **Machine scope** | Whether a token carrying `authentication.auth0.machineScope` may call the endpoint. `denied` is `403`, even though the token itself is valid.                                                                               |
+| **Ownership**     | Whether the schematic's `owner` must match the caller identity, where a mismatch is `403`; an unauthenticated caller gets `401` whether or not the schematic exists, so existence is not leaked.                            |
+
+`machineScope` is the only scope the factory interprets.
+There is no per-endpoint scope model: a token either carries the machine scope, and is then limited to the endpoints that allow it, or it does not and has full access.
+The htpasswd provider has no scopes at all.
+
 ## Enterprise Frontend API
 
 ### `GET /spdx/:schematic/:version/:arch`
 
 > [!NOTE]
 > Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+
+Access:
+
+| Auth     | `?token=`    | Machine scope | Ownership |
+| -------- | ------------ | ------------- | --------- |
+| required | not accepted | denied        | enforced  |
 
 Returns an SPDX 2.3 JSON document containing all packages from the Talos and extensions for the given schematic and version.
 The response is a JSON-encoded SPDX document which can be consumed directly by vulnerability scanners such as grype:
@@ -19,7 +42,16 @@ SPDX bundles are available for Talos versions **v1.11.0** and later.
 ### `GET /vex/:version/vex.json`
 
 > [!NOTE]
-> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory)..
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+
+Access:
+
+| Auth     | `?token=`    | Machine scope | Ownership      |
+| -------- | ------------ | ------------- | -------------- |
+| required | not accepted | denied        | not applicable |
+
+The document describes a Talos Linux release, not a schematic: it is identical for every caller and contains nothing derived from a schematic, so there is no `owner` to match.
+Any authenticated caller can therefore read it for any version.
 
 Returns a VEX JSON document containing vulnerability information for all packages in the Talos Linux release.
 The response is a JSON-encoded VEX document which can be consumed directly by vulnerability scanners such as grype:
@@ -31,7 +63,13 @@ grype sbom:talos.spdx.json --vex response.vex.json
 ### `GET /scans/:schematic/:version/:arch/:report`
 
 > [!NOTE]
-> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory)..
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+
+Access:
+
+| Auth     | `?token=`    | Machine scope | Ownership |
+| -------- | ------------ | ------------- | --------- |
+| required | not accepted | denied        | enforced  |
 
 Returns a vulnerability scan report for the specified schematic, Talos Linux version and architecture.
 
@@ -42,11 +80,53 @@ Supported report formats:
 * `.sarif` - SARIF format
 * `.cdx` - CycloneDX format
 
+### `POST /download-token`
+
+> [!NOTE]
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+
+Access:
+
+| Auth     | `?token=`    | Machine scope | Ownership      |
+| -------- | ------------ | ------------- | -------------- |
+| required | not accepted | denied        | not applicable |
+
+Issues a short-lived JWT that authenticates image downloads through the URL alone.
+The token is scoped to the calling identity.
+
+```json
+{
+  "access_token": "eyJ...",
+  "token_type": "Bearer",
+  "expires_in": 300
+}
+```
+
+`expires_in` is `authentication.downloadTokenTTL` in seconds, `5m` by default.
+
+The token is appended to an image URL as `?token=<access_token>` and is accepted only on `GET` and `HEAD` under `/image/`.
+One token covers every schematic owned by the caller, not just the URL it is used with; see [Authentication](authentication.md#download-tokens).
+
+### `GET /.well-known/jwks.json`
+
+> [!NOTE]
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+
+Access: `public`.
+
+Returns the JSON Web Key Set containing the ECDSA P-256 public key that download tokens are signed with, so that a proxy can verify a token without holding the private key.
+
 ## HTTP Frontend API
 
 ### `POST /schematics`
 
 Create a new image schematic.
+
+Access:
+
+| Auth     | `?token=`    | Machine scope | Ownership    |
+| -------- | ------------ | ------------- | ------------ |
+| required | not accepted | denied        | sets `owner` |
 
 The request body is a YAML (JSON) encoded schematic description:
 
@@ -105,6 +185,9 @@ Well-known schematic IDs:
 
 * `376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba` - default schematic (without any customizations)
 
+The `owner` is part of the canonical body, so it changes the ID.
+A deployment with authentication enabled therefore has its own ID per identity for an otherwise identical schematic, and the well-known IDs above, which carry no owner, are not reachable there; see [Authentication](authentication.md#ownership).
+
 The schematic in Enterprise edition may contain an `owner` field, which restricts access to the schematic to the specified owner only.
 This requires authentication to be enabled.
 When authentication is enabled, the factory sets `owner` to the authenticated user.
@@ -114,6 +197,12 @@ If the request body specifies an `owner` that does not match the authenticated u
 
 Retrieve a specific schematic by its ID.
 
+Access:
+
+| Auth     | `?token=`    | Machine scope | Ownership |
+| -------- | ------------ | ------------- | --------- |
+| required | not accepted | denied        | enforced  |
+
 If the schematic is found, the response body contains the YAML-encoded schematic representation.
 Otherwise a `404 Not Found` status code is returned.
 
@@ -121,9 +210,17 @@ Otherwise a `404 Not Found` status code is returned.
 
 Download a Talos Linux boot image with the specified schematic and Talos Linux version.
 
+Access:
+
+| Auth     | `?token=` | Machine scope | Ownership |
+| -------- | --------- | ------------- | --------- |
+| required | accepted  | allowed       | enforced  |
+
 * `:schematic` is a schematic ID returned by `POST /schematic`
 * `:version` is a Talos Linux version, e.g. `v1.5.0`
 * `:path` is a specific image path (details below)
+
+In Enterprise edition this route also accepts a [download token](authentication.md#download-tokens) as `?token=<jwt>` in place of an `Authorization` header.
 
 Common used parameters:
 
@@ -240,6 +337,8 @@ cosign verify-blob \
 
 ### `GET /versions`
 
+Access: `public`.
+
 Returns a list of Talos Linux versions available for image generation.
 
 ```json
@@ -247,6 +346,8 @@ Returns a list of Talos Linux versions available for image generation.
 ```
 
 ### `GET /version/:version/extensions/official`
+
+Access: `public`.
 
 Returns a list of official system extensions available for the specified Talos Linux version.
 
@@ -263,6 +364,8 @@ Returns a list of official system extensions available for the specified Talos L
 
 ### `GET /version/:version/overlays/official`
 
+Access: `public`.
+
 Returns a list of official overlays available for the specified Talos Linux version.
 
 ```json
@@ -278,6 +381,8 @@ Returns a list of official overlays available for the specified Talos Linux vers
 ```
 
 ### `GET /talosctl/:version`
+
+Access: `public`.
 
 Returns a list of download URLs for `talosctl` binaries for the specified Talos Linux version.
 
@@ -301,6 +406,8 @@ Returns a list of download URLs for `talosctl` binaries for the specified Talos 
 
 ### `GET /talosctl/:version/:path`
 
+Access: `public`.
+
 Download a `talosctl` binary for the specified Talos Linux version and platform/architecture.
 
 * `:version` is a Talos Linux version, e.g. `v1.11.0`
@@ -308,12 +415,16 @@ Download a `talosctl` binary for the specified Talos Linux version and platform/
 
 ### `GET /secureboot/signing-cert.pem`
 
+Access: `public`.
+
 Returns PEM-encoded SecureBoot signing certificate used by the Image Factory.
 
 It might be used to manually enroll the certificate into the UEFI firmware.
 Talos Linux SecureBoot ISOs come with an option for automatic enrollment of the certificate, but if that is not desired, the certificate can be manually enrolled.
 
 ### `GET /llms.txt`
+
+Access: `public`.
 
 Returns a `llms.txt` file describing Image Factory's API for LLM agents and AI tooling.
 
@@ -330,6 +441,16 @@ chain --replace --autofree https://pxe.talos.dev/pxe/376567988ad370138ad8b269821
 ### `GET /pxe/:schematic/:version/:path`
 
 Returns an iPXE script which downloads and boots Talos Linux with the specified schematic and Talos Linux version, architecture and platform.
+
+Access:
+
+| Auth     | `?token=`    | Machine scope | Ownership |
+| -------- | ------------ | ------------- | --------- |
+| required | not accepted | denied        | enforced  |
+
+The script embeds the schematic's kernel command line, which is schematic-derived customization, so a machine-scoped token is denied here for the same reason it cannot read a schematic definition.
+Download tokens are not accepted either.
+iPXE cannot send request headers, so an authenticated boot puts the credential in the URL: `https://<user>:<password>@pxe.talos.dev/pxe/...`.
 
 * `:schematic` is a schematic ID returned by `POST /schematic`
 * `:version` is a Talos Linux version, e.g. `v1.5.0`
@@ -357,6 +478,20 @@ boot
 The Talos Linux `installer` image is used for the initial install and upgrades.
 It can be pulled from the Image Factory OCI registry.
 If the image hasn't been created yet, it will be built on demand automatically.
+
+Access, for every schematic-scoped `/v2/` route in this section, including `docker pull` and referrer discovery:
+
+| Auth     | `?token=`    | Machine scope | Ownership |
+| -------- | ------------ | ------------- | --------- |
+| required | not accepted | allowed       | enforced  |
+
+Registry clients speak Basic auth, so an Auth0 JWT is presented as the Basic password with any username.
+
+Two routes in this section differ from the table:
+
+* `GET`, `HEAD` `/v2` is the OCI ping.
+  It takes a credential, and answers with a `401` challenge without one, but carries no schematic, so ownership does not apply.
+* The [Source Image Proxy](#source-image-proxy) carries no schematic either; see the table in that section.
 
 ### Legacy `installer` Image
 
@@ -397,6 +532,15 @@ This is equivalent to pulling with an explicit stable version, ensuring that pre
 
 ### Source Image Proxy
 
+Access:
+
+| Auth     | `?token=`    | Machine scope | Ownership      |
+| -------- | ------------ | ------------- | -------------- |
+| required | not accepted | allowed       | not applicable |
+
+These are upstream Talos Linux images forwarded as-is, with nothing schematic-derived in them, so there is no `owner` to match and authentication alone gates them.
+Any authenticated caller can pull any proxied source image.
+
 Image Factory proxies the core Talos Linux source images from its backing registry under the `siderolabs/` prefix.
 The images are pulled through the backing registry specified with the `artifacts.core.registry` option.
 This feature only works if the backing registry is insecure (a local pull-through cache registry is recommended).
@@ -418,6 +562,8 @@ Images are forwarded as-is, keeping their original signatures.
 Example: `docker pull factory.talos.dev/siderolabs/installer-base:v1.13.5`
 
 ### `GET /oci/cosign/signing-key.pub`
+
+Access: `public`.
 
 Returns the PEM-encoded public key used to sign the Talos Linux `installer` images and detached asset bundles when key-based cache signing is configured.
 
