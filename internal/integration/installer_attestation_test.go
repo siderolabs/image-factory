@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,9 +27,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/ory/dockertest"
-	dc "github.com/ory/dockertest/docker"
-	"github.com/stretchr/testify/assert"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/ory/dockertest/v4"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
@@ -56,19 +57,22 @@ func testInstallerEvidencePublisherWithStockCosign(t *testing.T, registryVersion
 
 	pool := docker(t)
 	_, registryPort := findListenAddr(t, "127.0.0.1")
-	registryContainer, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository:   "registry",
-		Tag:          registryVersion,
-		ExposedPorts: []string{"5000/tcp"},
-		PortBindings: map[dc.Port][]dc.PortBinding{
-			"5000/tcp": {{HostIP: "127.0.0.1", HostPort: registryPort}},
-		},
-	})
-	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, pool.Purge(registryContainer)) })
+	// the host port is freshly allocated per subtest, so the container can't be shared
+	pool.RunT(
+		t,
+		"registry",
+		dockertest.WithoutReuse(),
+		dockertest.WithTag(registryVersion),
+		dockertest.WithContainerConfig(func(cfg *container.Config) {
+			cfg.ExposedPorts = network.PortSet{network.MustParsePort("5000/tcp"): struct{}{}}
+		}),
+		dockertest.WithPortBindings(network.PortMap{
+			network.MustParsePort("5000/tcp"): []network.PortBinding{{HostIP: netip.MustParseAddr("127.0.0.1"), HostPort: registryPort}},
+		}),
+	)
 
 	registryAddress := "127.0.0.1:" + registryPort
-	require.NoError(t, pool.Retry(healthcheck("http://"+registryAddress+"/v2/")))
+	require.NoError(t, pool.Retry(t.Context(), 30*time.Second, healthcheck("http://"+registryAddress+"/v2/")))
 	transport := http.DefaultTransport
 	repository, err := name.NewRepository(registryAddress+"/installer/test", name.Insecure)
 	require.NoError(t, err)

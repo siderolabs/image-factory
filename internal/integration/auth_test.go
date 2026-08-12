@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ory/dockertest"
+	"github.com/ory/dockertest/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -563,7 +563,7 @@ func getDownloadToken(ctx context.Context, t *testing.T, baseURL string) string 
 // testAuthS3NoRedirect asserts that the factory serves assets directly (no
 // HTTP 302) when both S3 caching and authentication are active.
 // S3 credentials must already be set in the environment by the caller.
-func testAuthS3NoRedirect(t *testing.T, pool *dockertest.Pool) {
+func testAuthS3NoRedirect(t *testing.T, pool dockertest.Pool) {
 	options := cmd.DefaultOptions
 	options.Cache.OCI = signingCacheRepository.OCIRepositoryOptions
 	options.Metrics.Namespace = "test_auth_s3_no_redirect"
@@ -616,7 +616,7 @@ func testAuthS3NoRedirect(t *testing.T, pool *dockertest.Pool) {
 // when authentication is active. CDN URLs are fully public (no auth) so they
 // must never be issued from an auth-gated factory.
 // S3 credentials must already be set in the environment by the caller.
-func testAuthCDNNoRedirect(t *testing.T, pool *dockertest.Pool) {
+func testAuthCDNNoRedirect(t *testing.T, pool dockertest.Pool) {
 	options := cmd.DefaultOptions
 	options.Cache.OCI = signingCacheRepository.OCIRepositoryOptions
 	options.Metrics.Namespace = "test_auth_cdn_no_redirect"

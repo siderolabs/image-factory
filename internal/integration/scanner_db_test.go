@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -112,7 +113,7 @@ func (m *grypeDBMirror) publish(t *testing.T, providerID string) time.Time {
 	require.NoError(t, writer.SetDBMetadata())
 	require.NoError(t, writer.Close())
 
-	require.NoError(t, v6build.CreateArchive(staging, "", nil))
+	require.NoError(t, createGrypeArchive(staging))
 
 	description, err := v6.ReadDescription(filepath.Join(staging, v6.VulnerabilityDBFileName))
 	require.NoError(t, err)
@@ -140,6 +141,23 @@ func (m *grypeDBMirror) publish(t *testing.T, providerID string) time.Time {
 	m.lastBuilt = description.Built.UTC()
 
 	return m.lastBuilt
+}
+
+// grypeArchiveMu serializes calls to v6build.CreateArchive.
+//
+// CreateArchive tars the database with a process-global os.Chdir into the build
+// directory, restoring the working directory it captured on entry. Two callers
+// overlapping is enough to poison it: the second captures the first's build
+// directory as the "original", restores the process into it, and the test that
+// owns it then deletes it on cleanup, leaving every later os.Getwd in the binary
+// failing with ENOENT. Subtests here run in parallel, so the overlap is real.
+var grypeArchiveMu sync.Mutex
+
+func createGrypeArchive(dbDir string) error {
+	grypeArchiveMu.Lock()
+	defer grypeArchiveMu.Unlock()
+
+	return v6build.CreateArchive(dbDir, "", nil)
 }
 
 // databaseURL is the value to configure as the scanner's database URL: the

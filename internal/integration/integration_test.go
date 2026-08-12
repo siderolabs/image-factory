@@ -21,10 +21,9 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"github.com/ory/dockertest"
-	dc "github.com/ory/dockertest/docker"
+	"github.com/moby/moby/api/types/network"
+	"github.com/ory/dockertest/v4"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"golang.org/x/sync/errgroup"
@@ -105,14 +104,8 @@ func setupCacheSigningKey(t *testing.T, options *cmd.Options) {
 	options.Cache.SigningKeyPath = optionsDir + "/cache-signing-key.pem"
 }
 
-func docker(t *testing.T) *dockertest.Pool {
-	pool, err := dockertest.NewPool("")
-	require.NoError(t, err)
-
-	err = pool.Client.Ping()
-	require.NoError(t, err)
-
-	return pool
+func docker(t *testing.T) dockertest.Pool {
+	return dockertest.NewPoolT(t, "")
 }
 
 func healthcheck(url string) func() error {
@@ -137,29 +130,25 @@ const (
 	s3Secret = "y1rE4xZnqO6xvM7L0jFD3EXAMPLEnG4K2vOfLp8Iv9"
 )
 
-func setupS3(t *testing.T, pool *dockertest.Pool, bucket string) string {
+func setupS3(t *testing.T, pool dockertest.Pool, bucket string) string {
 	t.Helper()
 
 	_, port := findListenAddr(t, "127.0.0.1")
 
-	res, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "minio/minio",
-		Tag:        "latest",
-		Cmd:        []string{"server", "/data"},
-		PortBindings: map[dc.Port][]dc.PortBinding{
-			"9000": {{HostPort: port}},
-		},
-		Env: []string{
+	// each call binds a freshly allocated host port, so the container can't be shared with another call
+	res := pool.RunT(
+		t,
+		"minio/minio",
+		dockertest.WithoutReuse(),
+		dockertest.WithCmd([]string{"server", "/data"}),
+		dockertest.WithPortBindings(network.PortMap{
+			network.MustParsePort("9000/tcp"): []network.PortBinding{{HostPort: port}},
+		}),
+		dockertest.WithEnv([]string{
 			fmt.Sprintf("MINIO_ROOT_USER=%s", s3Access),
 			fmt.Sprintf("MINIO_ROOT_PASSWORD=%s", s3Secret),
-		},
-	})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		err := pool.Purge(res)
-		assert.NoError(t, err)
-	})
+		}),
+	)
 
 	endpoint := net.JoinHostPort("127.0.0.1", res.GetPort("9000/tcp"))
 	t.Logf("running MinIO on %q", endpoint)
@@ -170,10 +159,9 @@ func setupS3(t *testing.T, pool *dockertest.Pool, bucket string) string {
 	})
 	require.NoError(t, err)
 
-	err = pool.Retry(func() error {
+	require.NoError(t, pool.Retry(t.Context(), 30*time.Second, func() error {
 		return s3cli.MakeBucket(t.Context(), bucket, minio.MakeBucketOptions{ForceCreate: true})
-	})
-	require.NoError(t, err)
+	}))
 
 	return endpoint
 }
@@ -181,33 +169,29 @@ func setupS3(t *testing.T, pool *dockertest.Pool, bucket string) string {
 //go:embed testdata/templates/nginx.sh
 var nginxConfigTemplate string
 
-func setupMockCDN(t *testing.T, pool *dockertest.Pool, s3, bucket string) string {
+func setupMockCDN(t *testing.T, pool dockertest.Pool, s3, bucket string) string {
 	t.Helper()
 
 	_, port := findListenAddr(t, "127.0.0.1")
 
 	inlineEntrypoint := fmt.Appendf([]byte{}, nginxConfigTemplate, s3, bucket)
 
-	res, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "nginx",
-		Tag:        "1",
-		Cmd:        []string{"sh", "-c", string(inlineEntrypoint)},
-		PortBindings: map[dc.Port][]dc.PortBinding{
-			"80": {{HostPort: port}},
-		},
-	})
-	require.NoError(t, err)
+	// the entrypoint is baked per-bucket and the host port is freshly allocated, so the container can't be shared
+	nginx := pool.RunT(
+		t,
+		"nginx",
+		dockertest.WithoutReuse(),
+		dockertest.WithTag("1"),
+		dockertest.WithCmd([]string{"sh", "-c", string(inlineEntrypoint)}),
+		dockertest.WithPortBindings(network.PortMap{
+			network.MustParsePort("80/tcp"): []network.PortBinding{{HostPort: port}},
+		}),
+	)
 
-	t.Cleanup(func() {
-		err := pool.Purge(res)
-		assert.NoError(t, err)
-	})
-
-	endpoint := net.JoinHostPort("127.0.0.1", res.GetPort("80/tcp"))
+	endpoint := net.JoinHostPort("127.0.0.1", nginx.GetPort("80/tcp"))
 	t.Logf("running Nginx on %q", endpoint)
 
-	err = pool.Retry(healthcheck(fmt.Sprintf("http://%s/health", endpoint)))
-	require.NoError(t, err)
+	require.NoError(t, pool.Retry(t.Context(), 30*time.Second, healthcheck(fmt.Sprintf("http://%s/health", endpoint))))
 
 	return endpoint
 }
