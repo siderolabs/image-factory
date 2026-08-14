@@ -17,7 +17,7 @@ func TestLoad(t *testing.T) {
 	document, err := Load(t.Context())
 	require.NoError(t, err)
 
-	assert.Equal(t, "3.1.0", document.OpenAPI)
+	assert.Equal(t, "3.2.0", document.OpenAPI)
 	assert.Equal(t, "https://json-schema.org/draft/2020-12/schema", document.JSONSchemaDialect)
 	require.NotNil(t, document.Info)
 	assert.Equal(t, "Image Factory API", document.Info.Title)

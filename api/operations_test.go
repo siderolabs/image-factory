@@ -70,33 +70,21 @@ func TestUserFacingOperations(t *testing.T) {
 			http.MethodGet:  "checkRegistrySlash",
 			http.MethodHead: "headRegistrySlash",
 		},
-		"/v2/{image}/{schematic}/blobs/{digest}": {
-			http.MethodGet:  "getInstallerBlob",
-			http.MethodHead: "headInstallerBlob",
+		"/v2/{name+}/blobs/{digest}": {
+			http.MethodGet:  "getRegistryBlob",
+			http.MethodHead: "headRegistryBlob",
 		},
-		"/v2/{image}/{schematic}/manifests/{reference}": {
-			http.MethodGet:  "getInstallerManifest",
-			http.MethodHead: "headInstallerManifest",
+		"/v2/{name+}/manifests/{reference}": {
+			http.MethodGet:  "getRegistryManifest",
+			http.MethodHead: "headRegistryManifest",
 		},
-		"/v2/{image}/{schematic}/referrers/{digest}": {
-			http.MethodGet:  "getInstallerReferrers",
-			http.MethodHead: "headInstallerReferrers",
+		"/v2/{name+}/referrers/{digest}": {
+			http.MethodGet:  "getRegistryReferrers",
+			http.MethodHead: "headRegistryReferrers",
 		},
-		"/v2/siderolabs/{image}/blobs/{digest}": {
-			http.MethodGet:  "getSourceImageBlob",
-			http.MethodHead: "headSourceImageBlob",
-		},
-		"/v2/siderolabs/{image}/manifests/{reference}": {
-			http.MethodGet:  "getSourceImageManifest",
-			http.MethodHead: "headSourceImageManifest",
-		},
-		"/v2/siderolabs/{image}/referrers/{digest}": {
-			http.MethodGet:  "getSourceImageReferrers",
-			http.MethodHead: "headSourceImageReferrers",
-		},
-		"/v2/siderolabs/{image}/tags/list": {
-			http.MethodGet:  "listSourceImageTags",
-			http.MethodHead: "headSourceImageTags",
+		"/v2/{name+}/tags/list": {
+			http.MethodGet:  "listRegistryTags",
+			http.MethodHead: "headRegistryTags",
 		},
 		"/version/{version}/extensions/official": {
 			http.MethodGet: "listOfficialExtensions",

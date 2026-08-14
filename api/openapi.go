@@ -8,8 +8,10 @@ package api
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -19,6 +21,8 @@ import (
 
 //go:embed openapi.yaml
 var specification []byte
+
+var greedyPathParameter = regexp.MustCompile(`\{([A-Za-z_][A-Za-z0-9_.-]*)\+\}`)
 
 // Contract binds the canonical document to its request router and validator.
 type Contract struct {
@@ -51,12 +55,64 @@ func NewContract(ctx context.Context) (*Contract, error) {
 		return nil, err
 	}
 
-	router, err := gorillamux.NewRouter(document)
+	routingDocument, err := newRoutingDocument(ctx, document)
+	if err != nil {
+		return nil, err
+	}
+
+	router, err := gorillamux.NewRouter(routingDocument)
 	if err != nil {
 		return nil, fmt.Errorf("build OpenAPI router: %w", err)
 	}
 
 	return &Contract{Document: document, Router: router}, nil
+}
+
+func newRoutingDocument(ctx context.Context, document *openapi3.T) (*openapi3.T, error) {
+	data, err := json.Marshal(document)
+	if err != nil {
+		return nil, fmt.Errorf("marshal OpenAPI routing document: %w", err)
+	}
+
+	loader := openapi3.NewLoader()
+	loader.Context = ctx
+
+	routingDocument, err := loader.LoadFromData(data)
+	if err != nil {
+		return nil, fmt.Errorf("load OpenAPI routing document: %w", err)
+	}
+
+	for path, pathItem := range routingDocument.Paths.Map() {
+		matches := greedyPathParameter.FindAllStringSubmatch(path, -1)
+		if len(matches) == 0 {
+			continue
+		}
+
+		routingPath := greedyPathParameter.ReplaceAllString(path, `{$1:.+}`)
+		for _, match := range matches {
+			normalizeGreedyParameter(pathItem, match[1])
+		}
+
+		routingDocument.Paths.Delete(path)
+		routingDocument.Paths.Set(routingPath, pathItem)
+	}
+
+	return routingDocument, nil
+}
+
+func normalizeGreedyParameter(pathItem *openapi3.PathItem, name string) {
+	normalize := func(parameters openapi3.Parameters) {
+		for _, parameter := range parameters {
+			if parameter.Value != nil && parameter.Value.Name == name+"+" {
+				parameter.Value.Name = name
+			}
+		}
+	}
+
+	normalize(pathItem.Parameters)
+	for _, operation := range pathItem.Operations() {
+		normalize(operation.Parameters)
+	}
 }
 
 // NewRouter builds a router from the canonical OpenAPI contract.

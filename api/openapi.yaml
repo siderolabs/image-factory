@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-openapi: 3.1.0
+openapi: 3.2.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Image Factory API
@@ -441,14 +441,13 @@ paths:
           $ref: "#/components/responses/EmptyResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
-  /v2/{image}/{schematic}/manifests/{reference}:
+  /v2/{name+}/manifests/{reference}:
     parameters:
-      - $ref: "#/components/parameters/InstallerImage"
-      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/RegistryNameTail"
       - $ref: "#/components/parameters/OCIReference"
     get:
-      operationId: getInstallerManifest
-      summary: Get or build an Installer manifest
+      operationId: getRegistryManifest
+      summary: Get, build, or proxy an OCI manifest
       responses:
         "200":
           $ref: "#/components/responses/OCIResponse"
@@ -462,9 +461,11 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        default:
+          $ref: "#/components/responses/OCIResponse"
     head:
-      operationId: headInstallerManifest
-      summary: Inspect an Installer manifest
+      operationId: headRegistryManifest
+      summary: Inspect an OCI manifest
       responses:
         "200":
           $ref: "#/components/responses/OCIResponse"
@@ -478,14 +479,15 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-  /v2/{image}/{schematic}/blobs/{digest}:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+  /v2/{name+}/blobs/{digest}:
     parameters:
-      - $ref: "#/components/parameters/InstallerImage"
-      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/RegistryNameTail"
       - $ref: "#/components/parameters/OCIDigest"
     get:
-      operationId: getInstallerBlob
-      summary: Get an Installer blob
+      operationId: getRegistryBlob
+      summary: Get or proxy an OCI blob
       responses:
         "200":
           $ref: "#/components/responses/OCIResponse"
@@ -497,9 +499,11 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        default:
+          $ref: "#/components/responses/OCIResponse"
     head:
-      operationId: headInstallerBlob
-      summary: Inspect an Installer blob
+      operationId: headRegistryBlob
+      summary: Inspect an OCI blob
       responses:
         "200":
           $ref: "#/components/responses/OCIResponse"
@@ -511,15 +515,31 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-  /v2/{image}/{schematic}/referrers/{digest}:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+  /v2/{name+}/tags/list:
     parameters:
-      - $ref: "#/components/parameters/InstallerImage"
-      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/RegistryNameTail"
+    get:
+      operationId: listRegistryTags
+      summary: List or proxy OCI repository tags
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+    head:
+      operationId: headRegistryTags
+      summary: Inspect an OCI repository tag listing
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+  /v2/{name+}/referrers/{digest}:
+    parameters:
+      - $ref: "#/components/parameters/RegistryNameTail"
       - $ref: "#/components/parameters/OCIDigest"
       - $ref: "#/components/parameters/ArtifactType"
     get:
-      operationId: getInstallerReferrers
-      summary: Discover Installer referrers
+      operationId: getRegistryReferrers
+      summary: Discover or proxy OCI referrers
       responses:
         "200":
           $ref: "#/components/responses/OCIIndexResponse"
@@ -529,9 +549,11 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        default:
+          $ref: "#/components/responses/OCIResponse"
     head:
-      operationId: headInstallerReferrers
-      summary: Inspect Installer referrers
+      operationId: headRegistryReferrers
+      summary: Inspect OCI referrers
       responses:
         "200":
           $ref: "#/components/responses/OCIIndexHeaders"
@@ -541,68 +563,6 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
-  /v2/siderolabs/{image}/manifests/{reference}:
-    parameters:
-      - $ref: "#/components/parameters/SourceImage"
-      - $ref: "#/components/parameters/OCIReference"
-    get:
-      operationId: getSourceImageManifest
-      summary: Proxy a source-image manifest
-      responses:
-        default:
-          $ref: "#/components/responses/OCIResponse"
-    head:
-      operationId: headSourceImageManifest
-      summary: Proxy source-image manifest headers
-      responses:
-        default:
-          $ref: "#/components/responses/OCIResponse"
-  /v2/siderolabs/{image}/blobs/{digest}:
-    parameters:
-      - $ref: "#/components/parameters/SourceImage"
-      - $ref: "#/components/parameters/OCIDigest"
-    get:
-      operationId: getSourceImageBlob
-      summary: Proxy a source-image blob
-      responses:
-        default:
-          $ref: "#/components/responses/OCIResponse"
-    head:
-      operationId: headSourceImageBlob
-      summary: Proxy source-image blob headers
-      responses:
-        default:
-          $ref: "#/components/responses/OCIResponse"
-  /v2/siderolabs/{image}/tags/list:
-    parameters:
-      - $ref: "#/components/parameters/SourceImage"
-    get:
-      operationId: listSourceImageTags
-      summary: Proxy source-image tag listing
-      responses:
-        default:
-          $ref: "#/components/responses/OCIResponse"
-    head:
-      operationId: headSourceImageTags
-      summary: Proxy source-image tag-listing headers
-      responses:
-        default:
-          $ref: "#/components/responses/OCIResponse"
-  /v2/siderolabs/{image}/referrers/{digest}:
-    parameters:
-      - $ref: "#/components/parameters/SourceImage"
-      - $ref: "#/components/parameters/OCIDigest"
-      - $ref: "#/components/parameters/ArtifactType"
-    get:
-      operationId: getSourceImageReferrers
-      summary: Proxy source-image referrer discovery
-      responses:
-        default:
-          $ref: "#/components/responses/OCIResponse"
-    head:
-      operationId: headSourceImageReferrers
-      summary: Proxy source-image referrer headers
-      responses:
         default:
           $ref: "#/components/responses/OCIResponse"
 components:
@@ -665,19 +625,15 @@ components:
       required: false
       schema:
         type: string
-    InstallerImage:
-      name: image
+    RegistryNameTail:
+      name: name+
       in: path
       required: true
+      description: Greedy repository-name path parameter containing one or more complete path segments.
+      x-greedy-path-parameter: true
       schema:
         type: string
-        pattern: "^[a-z0-9-]+installer(?:-secureboot)?$"
-    SourceImage:
-      name: image
-      in: path
-      required: true
-      schema:
-        type: string
+        pattern: "^[^/]+(?:/[^/]+)*$"
     OCIReference:
       name: reference
       in: path

@@ -52,6 +52,11 @@ func TestContractValidateRequest(t *testing.T) {
 			target:  "/schematics/not-a-digest",
 			wantErr: "does not match pattern",
 		},
+		{
+			name:   "greedy OCI repository name",
+			method: http.MethodGet,
+			target: "/v2/my-company/platform/backend/manifests/v1.12.0",
+		},
 	}
 
 	for _, test := range tests {

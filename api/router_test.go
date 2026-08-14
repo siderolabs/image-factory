@@ -45,23 +45,12 @@ func TestNewRouter(t *testing.T) {
 			},
 		},
 		{
-			name:        "generated OCI route",
+			name:        "nested OCI repository name",
 			method:      http.MethodGet,
-			target:      "/v2/metal-installer/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/manifests/v1.12.0",
-			operationID: "getInstallerManifest",
+			target:      "/v2/my-company/platform/backend/manifests/v1.12.0",
+			operationID: "getRegistryManifest",
 			pathParams: map[string]string{
-				"image":     "metal-installer",
-				"schematic": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-				"reference": "v1.12.0",
-			},
-		},
-		{
-			name:        "source OCI route precedes generated route",
-			method:      http.MethodGet,
-			target:      "/v2/siderolabs/installer/manifests/v1.12.0",
-			operationID: "getSourceImageManifest",
-			pathParams: map[string]string{
-				"image":     "installer",
+				"name":      "my-company/platform/backend",
 				"reference": "v1.12.0",
 			},
 		},
