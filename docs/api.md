@@ -104,7 +104,7 @@ The response is a JSON-encoded VEX document which can be consumed directly by vu
 * `HEAD` returns the same status and headers without the response body.
 
 ```shell
-grype sbom:talos.spdx.json --vex response.vex.json
+grype sbom:response.spdx.json --vex response.vex.json
 ```
 
 ### `GET /scans/:schematic/:version/:arch/:report`, `HEAD /scans/:schematic/:version/:arch/:report`
