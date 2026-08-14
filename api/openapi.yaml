@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-openapi: 3.2.0
+openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Image Factory API
@@ -299,11 +299,11 @@ paths:
   /openapi.yaml:
     get:
       operationId: getOpenAPI
-      summary: Get the canonical OpenAPI 3.2 document
+      summary: Get the canonical OpenAPI 3.1 document
       security: []
       responses:
         "200":
-          description: OpenAPI 3.2 YAML document.
+          description: OpenAPI 3.1 YAML document.
           content:
             application/yaml:
               schema:

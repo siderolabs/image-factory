@@ -30,6 +30,6 @@ func TestHandleOpenAPI(t *testing.T) {
 	require.Equal(t, http.StatusOK, result.StatusCode)
 	assert.Equal(t, "application/yaml", result.Header.Get("Content-Type"))
 	assert.Equal(t, "no-cache", result.Header.Get("Cache-Control"))
-	assert.Contains(t, response.Body.String(), "openapi: 3.2.0")
+	assert.Contains(t, response.Body.String(), "openapi: 3.1.0")
 	assert.Contains(t, response.Body.String(), "operationId: listVersions")
 }
