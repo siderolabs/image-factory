@@ -25,6 +25,8 @@ paths:
           $ref: "#/components/responses/JSONResponse"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /download-token:
     post:
       operationId: createDownloadToken
@@ -46,6 +48,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /schematics:
     post:
       operationId: createSchematic
@@ -77,6 +81,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /schematics/{schematic}:
     parameters:
       - $ref: "#/components/parameters/SchematicID"
@@ -96,6 +102,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /image/{schematic}/{version}/{path}:
     parameters:
       - $ref: "#/components/parameters/SchematicID"
@@ -125,6 +133,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headImage
       summary: Inspect an image artifact
@@ -145,6 +155,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /versions:
     get:
       operationId: listVersions
@@ -165,6 +177,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VersionList"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /version/{version}/extensions/official:
     parameters:
       - $ref: "#/components/parameters/TalosVersion"
@@ -224,6 +238,8 @@ paths:
                   format: uri
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /talosctl/{version}/{path}:
     parameters:
       - $ref: "#/components/parameters/TalosVersion"
@@ -237,6 +253,8 @@ paths:
           $ref: "#/components/responses/Artifact"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headTalosctl
       summary: Inspect a talosctl binary
@@ -246,6 +264,8 @@ paths:
           $ref: "#/components/responses/ArtifactHeaders"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /secureboot/signing-cert.pem:
     get:
       operationId: getSecureBootSigningCertificate
@@ -274,6 +294,8 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/TextResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /openapi.yaml:
     get:
       operationId: getOpenAPI
@@ -286,6 +308,8 @@ paths:
             application/yaml:
               schema:
                 type: string
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /pxe/{schematic}/{version}/{path}:
     parameters:
       - $ref: "#/components/parameters/SchematicID"
@@ -305,6 +329,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /spdx/{schematic}/{version}/{arch}:
     parameters:
       - $ref: "#/components/parameters/SchematicID"
@@ -325,6 +351,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headSPDX
       summary: Inspect a merged SPDX document
@@ -340,6 +368,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /vex/{version}/vex.json:
     parameters:
       - $ref: "#/components/parameters/TalosVersion"
@@ -356,6 +386,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headVEX
       summary: Inspect the Talos VEX document
@@ -369,6 +401,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /scans/{schematic}/{version}/{arch}/{report}:
     parameters:
       - $ref: "#/components/parameters/SchematicID"
@@ -407,6 +441,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headVulnerabilityScan
       summary: Inspect a vulnerability scan report
@@ -424,6 +460,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /v2:
     get:
       operationId: checkRegistry
@@ -433,6 +471,8 @@ paths:
           $ref: "#/components/responses/EmptyResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headRegistry
       summary: Check OCI registry availability without a body
@@ -441,6 +481,8 @@ paths:
           $ref: "#/components/responses/EmptyResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /v2/:
     get:
       operationId: checkRegistrySlash
@@ -450,6 +492,8 @@ paths:
           $ref: "#/components/responses/EmptyResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headRegistrySlash
       summary: Check the trailing-slash OCI registry alias without a body
@@ -458,6 +502,8 @@ paths:
           $ref: "#/components/responses/EmptyResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /v2/{name+}/manifests/{reference}:
     parameters:
       - $ref: "#/components/parameters/RegistryNameTail"
@@ -480,6 +526,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         default:
           $ref: "#/components/responses/OCIResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headRegistryManifest
       summary: Inspect an OCI manifest
@@ -498,6 +546,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         default:
           $ref: "#/components/responses/OCIResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /v2/{name+}/blobs/{digest}:
     parameters:
       - $ref: "#/components/parameters/RegistryNameTail"
@@ -518,6 +568,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         default:
           $ref: "#/components/responses/OCIResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headRegistryBlob
       summary: Inspect an OCI blob
@@ -534,6 +586,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         default:
           $ref: "#/components/responses/OCIResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /v2/{name+}/tags/list:
     parameters:
       - $ref: "#/components/parameters/RegistryNameTail"
@@ -543,12 +597,16 @@ paths:
       responses:
         default:
           $ref: "#/components/responses/OCIResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headRegistryTags
       summary: Inspect an OCI repository tag listing
       responses:
         default:
           $ref: "#/components/responses/OCIResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /v2/{name+}/referrers/{digest}:
     parameters:
       - $ref: "#/components/parameters/RegistryNameTail"
@@ -568,6 +626,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         default:
           $ref: "#/components/responses/OCIResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     head:
       operationId: headRegistryReferrers
       summary: Inspect OCI referrers
@@ -582,6 +642,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         default:
           $ref: "#/components/responses/OCIResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 components:
   securitySchemes:
     basicAuth:

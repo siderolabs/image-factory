@@ -116,6 +116,7 @@ func TestUserFacingOperations(t *testing.T) {
 			operation := pathItem.GetOperation(method)
 			require.NotNil(t, operation, "missing OpenAPI operation %s %s", method, path)
 			assert.Equal(t, operationID, operation.OperationID, "%s %s", method, path)
+			require.NotNil(t, operation.Responses.Value("500"), "missing 500 response for %s %s", method, path)
 		}
 	}
 
