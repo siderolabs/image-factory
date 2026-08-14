@@ -140,3 +140,25 @@ func TestWrapperLeavesPathValidationToHandlers(t *testing.T) {
 	assert.True(t, called)
 	assert.Equal(t, http.StatusOK, response.Code)
 }
+
+func TestWrapperValidatesSchematicBodyWithArbitraryContentType(t *testing.T) {
+	t.Parallel()
+
+	frontend := factoryhttp.NewTestFrontendWithContract(zaptest.NewLogger(t))
+	called := false
+	handler := frontend.WrapHandler(func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error {
+		called = true
+
+		return nil
+	})
+
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/schematics", strings.NewReader("unknown: true"))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	response := httptest.NewRecorder()
+	handler(response, request, nil)
+
+	assert.False(t, called)
+	assert.Equal(t, http.StatusBadRequest, response.Code)
+	assert.Equal(t, "application/x-www-form-urlencoded", request.Header.Get("Content-Type"))
+}
