@@ -11,6 +11,8 @@ import (
 	"fmt"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/getkin/kin-openapi/routers"
+	"github.com/getkin/kin-openapi/routers/gorillamux"
 )
 
 //go:embed openapi.yaml
@@ -32,4 +34,19 @@ func Load(ctx context.Context) (*openapi3.T, error) {
 	}
 
 	return document, nil
+}
+
+// NewRouter builds a router from the canonical OpenAPI contract.
+func NewRouter(ctx context.Context) (routers.Router, error) {
+	document, err := Load(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	router, err := gorillamux.NewRouter(document)
+	if err != nil {
+		return nil, fmt.Errorf("build OpenAPI router: %w", err)
+	}
+
+	return router, nil
 }
