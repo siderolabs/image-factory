@@ -27,6 +27,11 @@ func (f *Frontend) HandleLLMsTxt() Handler {
 	return f.handleLLMsTxt
 }
 
+// HandleOpenAPI exposes the OpenAPI handler for external tests.
+func (f *Frontend) HandleOpenAPI() Handler {
+	return f.handleOpenAPI
+}
+
 func ApplyReferrersFilterHeader(header http.Header, artifactType string) {
 	applyReferrersFilterHeader(header, artifactType)
 }

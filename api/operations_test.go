@@ -35,6 +35,9 @@ func TestUserFacingOperations(t *testing.T) {
 		"/oci/cosign/signing-key.pub": {
 			http.MethodGet: "getCosignSigningKey",
 		},
+		"/openapi.yaml": {
+			http.MethodGet: "getOpenAPI",
+		},
 		"/pxe/{schematic}/{version}/{path}": {
 			http.MethodGet: "getPXEScript",
 		},

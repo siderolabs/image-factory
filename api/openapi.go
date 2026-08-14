@@ -6,6 +6,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -23,6 +24,11 @@ import (
 var specification []byte
 
 var greedyPathParameter = regexp.MustCompile(`\{([A-Za-z_][A-Za-z0-9_.-]*)\+\}`)
+
+// Specification returns an isolated copy of the canonical OpenAPI YAML document.
+func Specification() []byte {
+	return bytes.Clone(specification)
+}
 
 // Contract binds the canonical document to its request router and validator.
 type Contract struct {

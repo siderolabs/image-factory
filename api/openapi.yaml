@@ -269,6 +269,18 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/TextResponse"
+  /openapi.yaml:
+    get:
+      operationId: getOpenAPI
+      summary: Get the canonical OpenAPI 3.2 document
+      security: []
+      responses:
+        "200":
+          description: OpenAPI 3.2 YAML document.
+          content:
+            application/yaml:
+              schema:
+                type: string
   /pxe/{schematic}/{version}/{path}:
     parameters:
       - $ref: "#/components/parameters/SchematicID"

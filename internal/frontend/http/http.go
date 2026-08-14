@@ -227,8 +227,9 @@ func NewFrontend(
 	registerPublicRoute(frontend.router.HEAD, "/talosctl/:version/:path", frontend.handleTalosctl)
 	registerPublicRoute(frontend.router.GET, "/talosctl/:version/:path", frontend.handleTalosctl)
 
-	// llms.txt - public
+	// machine-readable API documentation - public
 	registerPublicRoute(frontend.router.GET, "/llms.txt", frontend.handleLLMsTxt)
+	registerPublicRoute(frontend.router.GET, "/openapi.yaml", frontend.handleOpenAPI)
 
 	// UI - require auth (consistent with all other schematic-creating endpoints)
 	registerRoute(frontend.router.GET, "/", frontend.handleUI)
