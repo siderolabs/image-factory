@@ -437,6 +437,7 @@ spec:
     parallelJob:
       name: integration-direct
       runnerGroup: large
+      needsOverride: [default, lint, unit-tests]
     coverage:
       inputPaths:
         - coverage-integration-direct.txt
@@ -479,6 +480,7 @@ spec:
     parallelJob:
       name: integration-s3
       runnerGroup: large
+      needsOverride: [default, lint, unit-tests]
     coverage:
       inputPaths:
         - coverage-integration-s3.txt
@@ -521,6 +523,7 @@ spec:
     parallelJob:
       name: integration-cdn
       runnerGroup: large
+      needsOverride: [default, lint, unit-tests]
     coverage:
       inputPaths:
         - coverage-integration-cdn.txt
@@ -563,6 +566,7 @@ spec:
     parallelJob:
       name: integration-proxy-installer
       runnerGroup: large
+      needsOverride: [default, lint, unit-tests]
     coverage:
       inputPaths:
         - coverage-integration-proxy-installer.txt
@@ -607,6 +611,7 @@ spec:
     parallelJob:
       name: integration-enterprise
       runnerGroup: large
+      needsOverride: [default, lint, unit-tests]
     coverage:
       inputPaths:
         - coverage-integration-enterprise.txt
@@ -928,6 +933,7 @@ spec:
     parallelJob:
       name: chart-e2e
       runnerGroup: large
+      needsOverride: [default, lint, unit-tests]
     environment:
       REGISTRY: registry.dev.siderolabs.io
 ---
