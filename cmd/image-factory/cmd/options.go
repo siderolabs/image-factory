@@ -87,7 +87,22 @@ func (o AuthenticationOptions) validate() error {
 		return fmt.Errorf("authentication.provider must be one of %v, got %q", authProviderOptions, o.Provider)
 	}
 
-	return nil
+	return o.DownloadTokenTTL.validate()
+}
+
+// validate checks that the download token lifetime bounds are sane and contain the default,
+// so that a bad range fails at startup rather than on the first token request.
+func (o DownloadTokenTTL) validate() error {
+	switch {
+	case o.Min <= 0:
+		return fmt.Errorf("authentication.downloadTokenTTL.min must be positive, got %s", o.Min)
+	case o.Max < o.Min:
+		return fmt.Errorf("authentication.downloadTokenTTL.max %s is below .min %s", o.Max, o.Min)
+	case o.Default < o.Min || o.Default > o.Max:
+		return fmt.Errorf("authentication.downloadTokenTTL.default %s is outside [%s, %s]", o.Default, o.Min, o.Max)
+	default:
+		return nil
+	}
 }
 
 // Options configures the behavior of the image factory.
@@ -633,8 +648,23 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 	// If empty, a key pair is generated on startup (single-replica deployments only).
 	DownloadTokenKeyPath string `koanf:"downloadTokenKeyPath"`
 
-	// DownloadTokenTTL is the validity duration for download tokens.
-	DownloadTokenTTL time.Duration `koanf:"downloadTokenTTL"`
+	// DownloadTokenTTL defines the validity duration for download tokens.
+	DownloadTokenTTL DownloadTokenTTL `koanf:"downloadTokenTTL"`
+}
+
+// DownloadTokenTTL defines the validity duration for download tokens.
+//
+// A caller picks a lifetime with POST /download-token?ttl=<duration> (e.g. ?ttl=1h);
+// requests outside [min, max] are rejected with HTTP 400.
+type DownloadTokenTTL struct {
+	// Max is the longest validity duration a caller may request.
+	Max time.Duration `koanf:"max"`
+
+	// Min is the shortest validity duration a caller may request.
+	Min time.Duration `koanf:"min"`
+
+	// Default is the validity duration granted when the caller requests no explicit TTL.
+	Default time.Duration `koanf:"default"`
 }
 
 // Auth0Options holds configuration for the Auth0 authentication provider.
@@ -804,8 +834,12 @@ var DefaultOptions = Options{
 	},
 
 	Authentication: AuthenticationOptions{
-		Provider:         AuthProviderHTPasswd,
-		DownloadTokenTTL: 5 * time.Minute,
+		Provider: AuthProviderHTPasswd,
+		DownloadTokenTTL: DownloadTokenTTL{
+			Default: 5 * time.Minute,
+			Max:     8 * time.Hour,
+			Min:     30 * time.Second,
+		},
 	},
 
 	Audit: AuditOptions{

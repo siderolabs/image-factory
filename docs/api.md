@@ -161,7 +161,11 @@ A successful response is `200 OK` with `Content-Type: application/json` and `Cac
 }
 ```
 
-`expires_in` is `authentication.downloadTokenTTL` in seconds, `5m` by default.
+`expires_in` is `authentication.downloadTokenTTL.default` in seconds, `5m` by default.
+
+The lifetime can be requested with the `ttl` query parameter as a Go duration, e.g. `POST /download-token?ttl=1h`.
+It must fall within `authentication.downloadTokenTTL.min` and `authentication.downloadTokenTTL.max`
+(`30s` and `8h` by default); anything else is rejected with `400`.
 
 The token is appended to an image URL as `?token=<access_token>` and is accepted only on `GET` and `HEAD` under `/image/`.
 One token covers every schematic owned by the caller, not just the URL it is used with; see [Authentication](authentication.md#download-tokens).

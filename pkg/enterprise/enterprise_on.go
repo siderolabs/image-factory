@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/prometheus/client_golang/prometheus"
@@ -238,7 +237,7 @@ func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) 
 // NewDownloadTokenIssuer creates a new download token issuer.
 // If keyPath is non-empty the key is loaded from the PEM file; otherwise a
 // fresh ECDSA P-256 key pair is generated (suitable for single-replica deployments).
-func NewDownloadTokenIssuer(keyPath string, ttl time.Duration) (DownloadTokenIssuer, error) {
+func NewDownloadTokenIssuer(keyPath string, ttl DownloadTokenTTL) (DownloadTokenIssuer, error) {
 	if keyPath != "" {
 		return downloadtoken.LoadIssuer(keyPath, ttl)
 	}

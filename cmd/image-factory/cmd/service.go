@@ -264,11 +264,13 @@ func buildDownloadTokenIssuer(opts Options) (enterprise.DownloadTokenIssuer, err
 		return nil, nil //nolint:nilnil
 	}
 
-	if opts.Authentication.DownloadTokenTTL <= 0 {
-		return nil, fmt.Errorf("downloadTokenTTL must be positive, got %s", opts.Authentication.DownloadTokenTTL)
-	}
+	ttl := opts.Authentication.DownloadTokenTTL
 
-	return enterprise.NewDownloadTokenIssuer(opts.Authentication.DownloadTokenKeyPath, opts.Authentication.DownloadTokenTTL)
+	return enterprise.NewDownloadTokenIssuer(opts.Authentication.DownloadTokenKeyPath, enterprise.DownloadTokenTTL{
+		Default: ttl.Default,
+		Min:     ttl.Min,
+		Max:     ttl.Max,
+	})
 }
 
 func buildEnterprisePlugins(

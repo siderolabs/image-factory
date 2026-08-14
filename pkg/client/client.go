@@ -14,6 +14,7 @@ import (
 	"maps"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
@@ -178,12 +179,21 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 // DownloadToken requests a short-lived JWT download token scoped to the
 // authenticated caller's identity. The token can be appended as ?token= to
 // any image download URL; one token covers all schematics owned by the caller.
-func (c *Client) DownloadToken(ctx context.Context) (string, error) {
+//
+// A positive ttl requests that lifetime, which the server accepts only within its
+// configured bounds; zero or less takes the server default.
+func (c *Client) DownloadToken(ctx context.Context, ttl time.Duration) (string, error) {
 	var response struct {
 		AccessToken string `json:"access_token"`
 	}
 
-	if err := c.do(ctx, http.MethodPost, "/download-token", &response); err != nil {
+	var opts []requestOption
+
+	if ttl > 0 {
+		opts = append(opts, WithQueryParams(url.Values{"ttl": {ttl.String()}}))
+	}
+
+	if err := c.do(ctx, http.MethodPost, "/download-token", &response, opts...); err != nil {
 		return "", err
 	}
 

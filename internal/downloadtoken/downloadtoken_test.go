@@ -20,13 +20,15 @@ import (
 	"github.com/siderolabs/image-factory/internal/downloadtoken"
 )
 
+var defaultTTL = downloadtoken.TTL{Default: 5 * time.Minute, Min: 30 * time.Second, Max: 8 * time.Hour}
+
 func TestRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := downloadtoken.GenerateIssuer(5 * time.Minute)
+	issuer, err := downloadtoken.GenerateIssuer(defaultTTL)
 	require.NoError(t, err)
 
-	token, err := issuer.Issue("org_abc123")
+	token, _, err := issuer.Issue("org_abc123", 0)
 	require.NoError(t, err)
 
 	sub, err := issuer.Verify(token)
@@ -39,10 +41,10 @@ func TestExpiredToken(t *testing.T) {
 
 	// Negative TTL makes the token already expired at issuance, well past
 	// the 30s clock-skew leeway used by Verify.
-	issuer, err := downloadtoken.GenerateIssuer(-time.Minute)
+	issuer, err := downloadtoken.GenerateIssuer(downloadtoken.TTL{Default: -time.Minute, Min: time.Second, Max: time.Hour})
 	require.NoError(t, err)
 
-	token, err := issuer.Issue("org_abc123")
+	token, _, err := issuer.Issue("org_abc123", 0)
 	require.NoError(t, err)
 
 	_, err = issuer.Verify(token)
@@ -53,10 +55,10 @@ func TestExpiredToken(t *testing.T) {
 func TestTamperedToken(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := downloadtoken.GenerateIssuer(5 * time.Minute)
+	issuer, err := downloadtoken.GenerateIssuer(defaultTTL)
 	require.NoError(t, err)
 
-	token, err := issuer.Issue("org_abc123")
+	token, _, err := issuer.Issue("org_abc123", 0)
 	require.NoError(t, err)
 
 	// Corrupt the payload (second segment) so claims no longer match the signature.
@@ -72,13 +74,13 @@ func TestTamperedToken(t *testing.T) {
 func TestWrongKey(t *testing.T) {
 	t.Parallel()
 
-	issuer1, err := downloadtoken.GenerateIssuer(5 * time.Minute)
+	issuer1, err := downloadtoken.GenerateIssuer(defaultTTL)
 	require.NoError(t, err)
 
-	issuer2, err := downloadtoken.GenerateIssuer(5 * time.Minute)
+	issuer2, err := downloadtoken.GenerateIssuer(defaultTTL)
 	require.NoError(t, err)
 
-	token, err := issuer1.Issue("org_abc123")
+	token, _, err := issuer1.Issue("org_abc123", 0)
 	require.NoError(t, err)
 
 	_, err = issuer2.Verify(token)
@@ -91,10 +93,10 @@ func TestNewIssuerFromKey(t *testing.T) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 
-	issuer, err := downloadtoken.NewIssuer(key, 5*time.Minute)
+	issuer, err := downloadtoken.NewIssuer(key, defaultTTL)
 	require.NoError(t, err)
 
-	token, err := issuer.Issue("alice")
+	token, _, err := issuer.Issue("alice", 0)
 	require.NoError(t, err)
 
 	sub, err := issuer.Verify(token)
@@ -105,7 +107,7 @@ func TestNewIssuerFromKey(t *testing.T) {
 func TestJWKS(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := downloadtoken.GenerateIssuer(5 * time.Minute)
+	issuer, err := downloadtoken.GenerateIssuer(defaultTTL)
 	require.NoError(t, err)
 
 	jwksData := issuer.JWKS()
@@ -134,7 +136,7 @@ func TestJWKS(t *testing.T) {
 	assert.NotEmpty(t, doc.Keys[0].Kid, "JWKS should include a kid (key ID)")
 
 	// Verify the kid in the JWT header matches the JWKS kid.
-	token, err := issuer.Issue("test")
+	token, _, err := issuer.Issue("test", 0)
 	require.NoError(t, err)
 
 	var header struct {
@@ -149,6 +151,46 @@ func TestJWKS(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(headerBytes, &header))
 	assert.Equal(t, doc.Keys[0].Kid, header.Kid, "JWT kid header should match JWKS kid")
+}
+
+func TestRequestedTTL(t *testing.T) {
+	t.Parallel()
+
+	issuer, err := downloadtoken.GenerateIssuer(defaultTTL)
+	require.NoError(t, err)
+
+	for _, test := range []struct {
+		name      string
+		requested time.Duration
+		expected  time.Duration
+		expectErr bool
+	}{
+		{name: "unspecified", requested: 0, expected: defaultTTL.Default},
+		{name: "in range", requested: time.Hour, expected: time.Hour},
+		{name: "at min", requested: defaultTTL.Min, expected: defaultTTL.Min},
+		{name: "at max", requested: defaultTTL.Max, expected: defaultTTL.Max},
+		{name: "below min", requested: time.Second, expectErr: true},
+		{name: "above max", requested: 24 * time.Hour, expectErr: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			token, granted, err := issuer.Issue("org_abc123", test.requested)
+
+			if test.expectErr {
+				require.ErrorIs(t, err, downloadtoken.ErrTTLOutOfRange)
+
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, granted)
+
+			sub, err := issuer.Verify(token)
+			require.NoError(t, err)
+			assert.Equal(t, "org_abc123", sub)
+		})
+	}
 }
 
 func splitJWT(token string) []string {

@@ -398,6 +398,51 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 		assertRequiresAuth(t, resp)
 	})
 
+	t.Run("RequestedTTL", func(t *testing.T) {
+		t.Parallel()
+
+		for _, test := range []struct {
+			name       string
+			ttl        string
+			expectCode int
+			expiresIn  int
+		}{
+			{name: "in range", ttl: "1h", expectCode: http.StatusOK, expiresIn: 3600},
+			{name: "below min", ttl: "1s", expectCode: http.StatusBadRequest},
+			{name: "above max", ttl: "24h", expectCode: http.StatusBadRequest},
+			{name: "not a duration", ttl: "forever", expectCode: http.StatusBadRequest},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
+				req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/download-token?ttl="+test.ttl, nil)
+				require.NoError(t, err)
+
+				addTestAuth(req)
+
+				resp, err := http.DefaultClient.Do(req)
+				require.NoError(t, err)
+
+				t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+				require.Equal(t, test.expectCode, resp.StatusCode)
+
+				if test.expectCode != http.StatusOK {
+					return
+				}
+
+				var result struct {
+					AccessToken string `json:"access_token"`
+					ExpiresIn   int    `json:"expires_in"`
+				}
+
+				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+				assert.Equal(t, test.expiresIn, result.ExpiresIn)
+				assert.NotEmpty(t, result.AccessToken)
+			})
+		}
+	})
+
 	t.Run("TokenAndDownload", func(t *testing.T) {
 		t.Parallel()
 

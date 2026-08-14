@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -278,11 +279,59 @@ func TestOptionsValidate(t *testing.T) {
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
-					Enabled:  true,
-					Provider: "auth0",
-					Auth0:    cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
+					Enabled:          true,
+					Provider:         "auth0",
+					Auth0:            cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
+					DownloadTokenTTL: cmd.DefaultOptions.Authentication.DownloadTokenTTL,
 				},
 			},
+		},
+		{
+			name: "download token TTL without bounds",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:          true,
+					Provider:         "htpasswd",
+					HTPasswdPath:     "/etc/factory/htpasswd",
+					DownloadTokenTTL: cmd.DownloadTokenTTL{Default: 5 * time.Minute},
+				},
+			},
+			expectError: "authentication.downloadTokenTTL.min must be positive",
+		},
+		{
+			name: "download token TTL max below min",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:      true,
+					Provider:     "htpasswd",
+					HTPasswdPath: "/etc/factory/htpasswd",
+					DownloadTokenTTL: cmd.DownloadTokenTTL{
+						Default: 5 * time.Minute,
+						Min:     time.Hour,
+						Max:     time.Minute,
+					},
+				},
+			},
+			expectError: "is below .min",
+		},
+		{
+			name: "download token TTL default outside bounds",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:      true,
+					Provider:     "htpasswd",
+					HTPasswdPath: "/etc/factory/htpasswd",
+					DownloadTokenTTL: cmd.DownloadTokenTTL{
+						Default: 24 * time.Hour,
+						Min:     30 * time.Second,
+						Max:     8 * time.Hour,
+					},
+				},
+			},
+			expectError: "is outside [30s, 8h0m0s]",
 		},
 		{
 			name: "auth0 provider without a domain",

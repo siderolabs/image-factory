@@ -133,6 +133,13 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" https://factory.example.com/do
 {"access_token":"eyJ...","token_type":"Bearer","expires_in":300}
 ```
 
+A shorter or longer lifetime is requested with the `ttl` query parameter, as a Go duration:
+
+```shell
+curl -s -X POST -H "Authorization: Bearer $TOKEN" "https://factory.example.com/download-token?ttl=1h"
+{"access_token":"eyJ...","token_type":"Bearer","expires_in":3600}
+```
+
 Then append it to an image URL:
 
 ```shell
@@ -140,7 +147,8 @@ curl -LO "https://factory.example.com/image/<schematic>/v1.13.0/metal-amd64.iso?
 ```
 
 Tokens are signed with ECDSA P-256, and the public key is served unauthenticated at `/.well-known/jwks.json` so that a proxy in front of the factory can verify one without holding the private key.
-`authentication.downloadTokenTTL` sets the lifetime, default `5m`; verification allows a further 30s of clock leeway.
+`authentication.downloadTokenTTL.default` sets the lifetime granted when the caller asks for none, default `5m`; a requested lifetime outside `authentication.downloadTokenTTL.min` … `.max` (`30s` … `8h` by default) is rejected with `400`.
+Verification allows a further 30s of clock leeway.
 
 ### The `?token=` query parameter
 

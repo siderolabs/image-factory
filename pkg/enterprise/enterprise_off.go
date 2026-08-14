@@ -9,7 +9,6 @@ package enterprise
 import (
 	"context"
 	"errors"
-	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -65,7 +64,7 @@ func NewAuth0Provider(_ context.Context, _ *zap.Logger, _ Auth0Config) (AuthProv
 }
 
 // NewDownloadTokenIssuer returns nil when enterprise is not enabled.
-func NewDownloadTokenIssuer(_ string, _ time.Duration) (DownloadTokenIssuer, error) {
+func NewDownloadTokenIssuer(_ string, _ DownloadTokenTTL) (DownloadTokenIssuer, error) {
 	return nil, errors.New("download tokens are not supported in the non-enterprise version")
 }
 

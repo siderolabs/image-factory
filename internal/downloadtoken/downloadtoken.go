@@ -15,6 +15,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -28,16 +29,44 @@ const (
 	audience   = "image-factory:download"
 )
 
+// ErrTTLOutOfRange is returned by Issue when the requested token lifetime is
+// outside the configured [TTL.Min, TTL.Max] range.
+var ErrTTLOutOfRange = errors.New("downloadtoken: requested TTL out of range")
+
+// TTL bounds the lifetime of issued tokens.
+type TTL struct {
+	// Default is used when the caller does not request a lifetime.
+	Default time.Duration
+
+	// Min and Max bound the lifetime a caller may request.
+	Min time.Duration
+	Max time.Duration
+}
+
+// resolve maps a requested lifetime onto the configured bounds.
+// A non-positive request means "unspecified" and yields the default.
+func (t TTL) resolve(requested time.Duration) (time.Duration, error) {
+	if requested <= 0 {
+		return t.Default, nil
+	}
+
+	if requested < t.Min || requested > t.Max {
+		return 0, fmt.Errorf("%w: %s is outside [%s, %s]", ErrTTLOutOfRange, requested, t.Min, t.Max)
+	}
+
+	return requested, nil
+}
+
 // Issuer creates and verifies ECDSA-signed download tokens (JWTs).
 type Issuer struct {
 	key      jose.JSONWebKey
 	signer   jose.Signer
 	jwksJSON []byte
-	ttl      time.Duration
+	ttl      TTL
 }
 
 // GenerateIssuer creates an Issuer with a freshly generated ECDSA P-256 key pair.
-func GenerateIssuer(ttl time.Duration) (*Issuer, error) {
+func GenerateIssuer(ttl TTL) (*Issuer, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("downloadtoken: failed to generate ECDSA key: %w", err)
@@ -47,7 +76,7 @@ func GenerateIssuer(ttl time.Duration) (*Issuer, error) {
 }
 
 // NewIssuer creates an Issuer from an existing ECDSA private key.
-func NewIssuer(privateKey *ecdsa.PrivateKey, ttl time.Duration) (*Issuer, error) {
+func NewIssuer(privateKey *ecdsa.PrivateKey, ttl TTL) (*Issuer, error) {
 	pubJWK := jose.JSONWebKey{
 		Key:       &privateKey.PublicKey,
 		Use:       "sig",
@@ -86,7 +115,7 @@ func NewIssuer(privateKey *ecdsa.PrivateKey, ttl time.Duration) (*Issuer, error)
 }
 
 // LoadIssuer reads a PEM-encoded ECDSA private key from path and creates an Issuer.
-func LoadIssuer(path string, ttl time.Duration) (*Issuer, error) {
+func LoadIssuer(path string, ttl TTL) (*Issuer, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("downloadtoken: failed to read key file: %w", err)
@@ -109,8 +138,16 @@ func LoadIssuer(path string, ttl time.Duration) (*Issuer, error) {
 	return NewIssuer(key, ttl)
 }
 
-// Issue creates a signed JWT for the given subject (org_id or username).
-func (i *Issuer) Issue(subject string) (string, error) {
+// Issue creates a signed JWT for the given subject (org_id or username), valid for
+// the requested lifetime. A non-positive requested lifetime means "unspecified" and
+// selects the configured default; a request outside the configured bounds returns
+// ErrTTLOutOfRange. The granted lifetime is returned alongside the token.
+func (i *Issuer) Issue(subject string, requestedTTL time.Duration) (string, time.Duration, error) {
+	ttl, err := i.ttl.resolve(requestedTTL)
+	if err != nil {
+		return "", 0, err
+	}
+
 	now := time.Now()
 
 	claims := jwt.Claims{
@@ -118,15 +155,15 @@ func (i *Issuer) Issue(subject string) (string, error) {
 		Issuer:   issuerName,
 		Audience: jwt.Audience{audience},
 		IssuedAt: jwt.NewNumericDate(now),
-		Expiry:   jwt.NewNumericDate(now.Add(i.ttl)),
+		Expiry:   jwt.NewNumericDate(now.Add(ttl)),
 	}
 
 	signed, err := jwt.Signed(i.signer).Claims(claims).Serialize()
 	if err != nil {
-		return "", fmt.Errorf("downloadtoken: failed to sign token: %w", err)
+		return "", 0, fmt.Errorf("downloadtoken: failed to sign token: %w", err)
 	}
 
-	return signed, nil
+	return signed, ttl, nil
 }
 
 // Verify parses and validates the JWT, returning the subject claim on success.
@@ -155,11 +192,6 @@ func (i *Issuer) Verify(tokenStr string) (string, error) {
 	}
 
 	return claims.Subject, nil
-}
-
-// TTL returns the token validity duration.
-func (i *Issuer) TTL() time.Duration {
-	return i.ttl
 }
 
 // JWKS returns the pre-built JSON Web Key Set containing the public key.

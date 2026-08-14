@@ -944,10 +944,34 @@ If empty, a key pair is generated on startup (single-replica deployments only).
 
 ### `authentication.downloadTokenTTL`
 
-- **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_DOWNLOADTOKENTTL`
+DownloadTokenTTL defines the validity duration for download tokens.
 
-DownloadTokenTTL is the validity duration for download tokens.
+---
+
+### `authentication.downloadTokenTTL.max`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_DOWNLOADTOKENTTL_MAX`
+
+Max is the longest validity duration a caller may request.
+
+---
+
+### `authentication.downloadTokenTTL.min`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_DOWNLOADTOKENTTL_MIN`
+
+Min is the shortest validity duration a caller may request.
+
+---
+
+### `authentication.downloadTokenTTL.default`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_DOWNLOADTOKENTTL_DEFAULT`
+
+Default is the validity duration granted when the caller requests no explicit TTL.
 
 ---
 
@@ -1310,7 +1334,10 @@ authentication:
         domain: ""
         machineScope: ""
     downloadTokenKeyPath: ""
-    downloadTokenTTL: 5m0s
+    downloadTokenTTL:
+        default: 5m0s
+        max: 8h0m0s
+        min: 30s
     enabled: false
     htpasswdPath: ""
     provider: htpasswd
@@ -1447,7 +1474,9 @@ IF_AUTHENTICATION_AUTH0_AUDIENCE=
 IF_AUTHENTICATION_AUTH0_DOMAIN=
 IF_AUTHENTICATION_AUTH0_MACHINESCOPE=
 IF_AUTHENTICATION_DOWNLOADTOKENKEYPATH=
-IF_AUTHENTICATION_DOWNLOADTOKENTTL=5m0s
+IF_AUTHENTICATION_DOWNLOADTOKENTTL_DEFAULT=5m0s
+IF_AUTHENTICATION_DOWNLOADTOKENTTL_MAX=8h0m0s
+IF_AUTHENTICATION_DOWNLOADTOKENTTL_MIN=30s
 IF_AUTHENTICATION_ENABLED=false
 IF_AUTHENTICATION_HTPASSWDPATH=
 IF_AUTHENTICATION_PROVIDER=htpasswd

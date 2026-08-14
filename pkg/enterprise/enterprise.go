@@ -17,6 +17,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
+	"github.com/siderolabs/image-factory/internal/downloadtoken"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/image/verify"
 	"github.com/siderolabs/image-factory/internal/installer"
@@ -140,18 +141,21 @@ type SignatureWriter interface {
 // The implementation lives behind the enterprise build tag; when enterprise is
 // not enabled the issuer is nil and the download-token routes are not registered.
 type DownloadTokenIssuer interface {
-	// Issue creates a signed JWT for the given subject (org_id or username).
-	Issue(subject string) (string, error)
+	// Issue creates a signed JWT for the given subject (org_id or username), valid for
+	// the requested lifetime, and returns the token along with the granted lifetime.
+	// A non-positive request selects the configured default.
+	Issue(subject string, requestedTTL time.Duration) (string, time.Duration, error)
 
 	// Verify parses and validates the JWT, returning the subject claim on success.
 	Verify(tokenStr string) (string, error)
 
-	// TTL returns the token validity duration.
-	TTL() time.Duration
-
 	// JWKS returns the pre-built JSON Web Key Set containing the public key.
 	JWKS() []byte
 }
+
+// DownloadTokenTTL is the token lifetime configuration: the default granted when the
+// caller does not ask for one, and the bounds a caller may request within.
+type DownloadTokenTTL = downloadtoken.TTL
 
 // Handler is the type of HTTP handlers used by the enterprise frontend.
 type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
