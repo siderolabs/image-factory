@@ -7,8 +7,139 @@ jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
   title: Image Factory API
   version: 0.1.0
-  description: User-facing Image Factory HTTP, PXE, and OCI registry API.
+  description: |
+    User-facing Image Factory HTTP, PXE, and OCI registry API.
+    Authentication requirements apply when an authentication provider is configured.
+security:
+  - basicAuth: []
+  - bearerAuth: []
 paths:
+  /.well-known/jwks.json:
+    get:
+      operationId: getDownloadTokenJWKS
+      summary: Get download-token verification keys
+      security: []
+      x-enterprise: true
+      responses:
+        "200":
+          $ref: "#/components/responses/JSONResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /download-token:
+    post:
+      operationId: createDownloadToken
+      summary: Create a short-lived image download token
+      x-enterprise: true
+      responses:
+        "200":
+          description: A short-lived download token.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              example: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadToken"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /schematics:
+    post:
+      operationId: createSchematic
+      summary: Create an image schematic
+      requestBody:
+        required: true
+        content:
+          application/yaml:
+            schema:
+              $ref: "#/components/schemas/Schematic"
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Schematic"
+      responses:
+        "201":
+          description: The persisted canonical schematic and its ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchematicCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /schematics/{schematic}:
+    parameters:
+      - $ref: "#/components/parameters/SchematicID"
+    get:
+      operationId: getSchematic
+      summary: Get a canonical schematic
+      responses:
+        "200":
+          description: Canonical YAML schematic.
+          content:
+            application/yaml:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /image/{schematic}/{version}/{path}:
+    parameters:
+      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/TalosVersion"
+      - $ref: "#/components/parameters/ArtifactPath"
+      - $ref: "#/components/parameters/Filename"
+      - $ref: "#/components/parameters/DownloadToken"
+    get:
+      operationId: getImage
+      summary: Download an image artifact
+      security:
+        - basicAuth: []
+        - bearerAuth: []
+        - downloadToken: []
+      responses:
+        "200":
+          $ref: "#/components/responses/Artifact"
+        "302":
+          $ref: "#/components/responses/Found"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PaymentRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    head:
+      operationId: headImage
+      summary: Inspect an image artifact
+      security:
+        - basicAuth: []
+        - bearerAuth: []
+        - downloadToken: []
+      responses:
+        "200":
+          $ref: "#/components/responses/ArtifactHeaders"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "402":
+          $ref: "#/components/responses/PaymentRequired"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /versions:
     get:
       operationId: listVersions
@@ -28,6 +159,847 @@ paths:
           content:
             application/json:
               schema:
+                $ref: "#/components/schemas/VersionList"
+  /version/{version}/extensions/official:
+    parameters:
+      - $ref: "#/components/parameters/TalosVersion"
+    get:
+      operationId: listOfficialExtensions
+      summary: List official system extensions
+      security: []
+      responses:
+        "200":
+          description: Official system extensions for the Talos version.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Extension"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /version/{version}/overlays/official:
+    parameters:
+      - $ref: "#/components/parameters/TalosVersion"
+    get:
+      operationId: listOfficialOverlays
+      summary: List official overlays
+      security: []
+      responses:
+        "200":
+          description: Official overlays for the Talos version, or an empty array before overlay support.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Overlay"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /talosctl/{version}:
+    parameters:
+      - $ref: "#/components/parameters/TalosVersion"
+    get:
+      operationId: listTalosctlDownloads
+      summary: List talosctl download URLs
+      security: []
+      responses:
+        "200":
+          description: Absolute download URLs.
+          content:
+            application/json:
+              schema:
                 type: array
                 items:
                   type: string
+                  format: uri
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /talosctl/{version}/{path}:
+    parameters:
+      - $ref: "#/components/parameters/TalosVersion"
+      - $ref: "#/components/parameters/ArtifactPath"
+    get:
+      operationId: getTalosctl
+      summary: Download a talosctl binary
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/Artifact"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    head:
+      operationId: headTalosctl
+      summary: Inspect a talosctl binary
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/ArtifactHeaders"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /secureboot/signing-cert.pem:
+    get:
+      operationId: getSecureBootSigningCertificate
+      summary: Get the Secure Boot signing certificate
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/PEMResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /oci/cosign/signing-key.pub:
+    get:
+      operationId: getCosignSigningKey
+      summary: Get the OCI and artifact-signing public key
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/PEMResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /llms.txt:
+    get:
+      operationId: getLLMsText
+      summary: Get the LLM-oriented API reference
+      security: []
+      responses:
+        "200":
+          $ref: "#/components/responses/TextResponse"
+  /pxe/{schematic}/{version}/{path}:
+    parameters:
+      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/TalosVersion"
+      - $ref: "#/components/parameters/ArtifactPath"
+    get:
+      operationId: getPXEScript
+      summary: Get an iPXE boot script
+      responses:
+        "200":
+          $ref: "#/components/responses/TextResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /spdx/{schematic}/{version}/{arch}:
+    parameters:
+      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/TalosVersion"
+      - $ref: "#/components/parameters/Architecture"
+    get:
+      operationId: getSPDX
+      summary: Get a merged SPDX document
+      x-enterprise: true
+      responses:
+        "200":
+          $ref: "#/components/responses/SPDXResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    head:
+      operationId: headSPDX
+      summary: Inspect a merged SPDX document
+      x-enterprise: true
+      responses:
+        "200":
+          $ref: "#/components/responses/ArtifactHeaders"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /vex/{version}/vex.json:
+    parameters:
+      - $ref: "#/components/parameters/TalosVersion"
+    get:
+      operationId: getVEX
+      summary: Get the Talos VEX document
+      x-enterprise: true
+      responses:
+        "200":
+          $ref: "#/components/responses/JSONArtifact"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    head:
+      operationId: headVEX
+      summary: Inspect the Talos VEX document
+      x-enterprise: true
+      responses:
+        "200":
+          $ref: "#/components/responses/ArtifactHeaders"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /scans/{schematic}/{version}/{arch}/{report}:
+    parameters:
+      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/TalosVersion"
+      - $ref: "#/components/parameters/Architecture"
+      - $ref: "#/components/parameters/ScanReport"
+    get:
+      operationId: getVulnerabilityScan
+      summary: Get a vulnerability scan report
+      x-enterprise: true
+      responses:
+        "200":
+          description: SARIF, CycloneDX, JSON, or plain-text report selected by the filename suffix.
+          headers:
+            Content-Disposition:
+              $ref: "#/components/headers/ContentDisposition"
+            Content-Length:
+              $ref: "#/components/headers/ContentLength"
+          content:
+            application/sarif+json:
+              schema: {}
+            application/vnd.cyclonedx+json:
+              schema: {}
+            application/json:
+              schema: {}
+            text/plain:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    head:
+      operationId: headVulnerabilityScan
+      summary: Inspect a vulnerability scan report
+      x-enterprise: true
+      responses:
+        "200":
+          $ref: "#/components/responses/ArtifactHeaders"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /v2:
+    get:
+      operationId: checkRegistry
+      summary: Check OCI registry availability
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    head:
+      operationId: headRegistry
+      summary: Check OCI registry availability without a body
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v2/:
+    get:
+      operationId: checkRegistrySlash
+      summary: Check OCI registry availability through the trailing-slash alias
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    head:
+      operationId: headRegistrySlash
+      summary: Check the trailing-slash OCI registry alias without a body
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v2/{image}/{schematic}/manifests/{reference}:
+    parameters:
+      - $ref: "#/components/parameters/InstallerImage"
+      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/OCIReference"
+    get:
+      operationId: getInstallerManifest
+      summary: Get or build an Installer manifest
+      responses:
+        "200":
+          $ref: "#/components/responses/OCIResponse"
+        "307":
+          $ref: "#/components/responses/TemporaryRedirect"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    head:
+      operationId: headInstallerManifest
+      summary: Inspect an Installer manifest
+      responses:
+        "200":
+          $ref: "#/components/responses/OCIResponse"
+        "307":
+          $ref: "#/components/responses/TemporaryRedirect"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v2/{image}/{schematic}/blobs/{digest}:
+    parameters:
+      - $ref: "#/components/parameters/InstallerImage"
+      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/OCIDigest"
+    get:
+      operationId: getInstallerBlob
+      summary: Get an Installer blob
+      responses:
+        "200":
+          $ref: "#/components/responses/OCIResponse"
+        "307":
+          $ref: "#/components/responses/TemporaryRedirect"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    head:
+      operationId: headInstallerBlob
+      summary: Inspect an Installer blob
+      responses:
+        "200":
+          $ref: "#/components/responses/OCIResponse"
+        "307":
+          $ref: "#/components/responses/TemporaryRedirect"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v2/{image}/{schematic}/referrers/{digest}:
+    parameters:
+      - $ref: "#/components/parameters/InstallerImage"
+      - $ref: "#/components/parameters/SchematicID"
+      - $ref: "#/components/parameters/OCIDigest"
+      - $ref: "#/components/parameters/ArtifactType"
+    get:
+      operationId: getInstallerReferrers
+      summary: Discover Installer referrers
+      responses:
+        "200":
+          $ref: "#/components/responses/OCIIndexResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    head:
+      operationId: headInstallerReferrers
+      summary: Inspect Installer referrers
+      responses:
+        "200":
+          $ref: "#/components/responses/OCIIndexHeaders"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v2/siderolabs/{image}/manifests/{reference}:
+    parameters:
+      - $ref: "#/components/parameters/SourceImage"
+      - $ref: "#/components/parameters/OCIReference"
+    get:
+      operationId: getSourceImageManifest
+      summary: Proxy a source-image manifest
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+    head:
+      operationId: headSourceImageManifest
+      summary: Proxy source-image manifest headers
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+  /v2/siderolabs/{image}/blobs/{digest}:
+    parameters:
+      - $ref: "#/components/parameters/SourceImage"
+      - $ref: "#/components/parameters/OCIDigest"
+    get:
+      operationId: getSourceImageBlob
+      summary: Proxy a source-image blob
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+    head:
+      operationId: headSourceImageBlob
+      summary: Proxy source-image blob headers
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+  /v2/siderolabs/{image}/tags/list:
+    parameters:
+      - $ref: "#/components/parameters/SourceImage"
+    get:
+      operationId: listSourceImageTags
+      summary: Proxy source-image tag listing
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+    head:
+      operationId: headSourceImageTags
+      summary: Proxy source-image tag-listing headers
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+  /v2/siderolabs/{image}/referrers/{digest}:
+    parameters:
+      - $ref: "#/components/parameters/SourceImage"
+      - $ref: "#/components/parameters/OCIDigest"
+      - $ref: "#/components/parameters/ArtifactType"
+    get:
+      operationId: getSourceImageReferrers
+      summary: Proxy source-image referrer discovery
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+    head:
+      operationId: headSourceImageReferrers
+      summary: Proxy source-image referrer headers
+      responses:
+        default:
+          $ref: "#/components/responses/OCIResponse"
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: Htpasswd credentials, or an Auth0 JWT in the Basic password field.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    downloadToken:
+      type: apiKey
+      in: query
+      name: token
+  parameters:
+    SchematicID:
+      name: schematic
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[0-9a-f]{64}$"
+    TalosVersion:
+      name: version
+      in: path
+      required: true
+      schema:
+        type: string
+    ArtifactPath:
+      name: path
+      in: path
+      required: true
+      schema:
+        type: string
+    Architecture:
+      name: arch
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [amd64, arm64]
+    ScanReport:
+      name: report
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ".+\\.(json|table|sarif|cdx)$"
+    Filename:
+      name: filename
+      in: query
+      required: false
+      schema:
+        type: string
+    DownloadToken:
+      name: token
+      in: query
+      required: false
+      schema:
+        type: string
+    InstallerImage:
+      name: image
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-z0-9-]+installer(?:-secureboot)?$"
+    SourceImage:
+      name: image
+      in: path
+      required: true
+      schema:
+        type: string
+    OCIReference:
+      name: reference
+      in: path
+      required: true
+      schema:
+        type: string
+    OCIDigest:
+      name: digest
+      in: path
+      required: true
+      schema:
+        type: string
+    ArtifactType:
+      name: artifactType
+      in: query
+      required: false
+      schema:
+        type: string
+  headers:
+    ContentDisposition:
+      description: Suggested attachment filename.
+      schema:
+        type: string
+    ContentLength:
+      description: Response body size in bytes.
+      schema:
+        type: integer
+        format: int64
+    Location:
+      description: Redirect target.
+      schema:
+        type: string
+        format: uri
+  schemas:
+    VersionList:
+      type: array
+      items:
+        type: string
+    Extension:
+      type: object
+      additionalProperties: false
+      required: [name, ref, digest, author, description]
+      properties:
+        name:
+          type: string
+        ref:
+          type: string
+        digest:
+          type: string
+        author:
+          type: string
+        description:
+          type: string
+    Overlay:
+      type: object
+      additionalProperties: false
+      required: [name, image, ref, digest]
+      properties:
+        name:
+          type: string
+        image:
+          type: string
+        ref:
+          type: string
+        digest:
+          type: string
+    Schematic:
+      type: object
+      additionalProperties: false
+      properties:
+        owner:
+          type: string
+        customization:
+          $ref: "#/components/schemas/Customization"
+        overlay:
+          $ref: "#/components/schemas/OverlayConfiguration"
+    Customization:
+      type: object
+      additionalProperties: false
+      properties:
+        embeddedMachineConfiguration:
+          type: string
+        extraKernelArgs:
+          type: array
+          items:
+            type: string
+        meta:
+          type: array
+          items:
+            $ref: "#/components/schemas/MetaValue"
+        systemExtensions:
+          $ref: "#/components/schemas/SystemExtensions"
+        bootloader:
+          type: string
+          enum: [auto, dual-boot, grub, sd-boot]
+        secureboot:
+          $ref: "#/components/schemas/SecureBootCustomization"
+        diskImage:
+          $ref: "#/components/schemas/DiskImageCustomization"
+    MetaValue:
+      type: object
+      additionalProperties: false
+      required: [key, value]
+      properties:
+        key:
+          type: integer
+          minimum: 0
+          maximum: 255
+        value:
+          type: string
+    SystemExtensions:
+      type: object
+      additionalProperties: false
+      properties:
+        officialExtensions:
+          type: array
+          items:
+            type: string
+    SecureBootCustomization:
+      type: object
+      additionalProperties: false
+      properties:
+        enrollKeys:
+          type: string
+          enum: [off, manual, if-safe, force]
+        includeWellKnownCertificates:
+          type: boolean
+    DiskImageCustomization:
+      type: object
+      additionalProperties: false
+      properties:
+        sectorSize:
+          type: integer
+          minimum: 0
+    OverlayConfiguration:
+      type: object
+      additionalProperties: false
+      required: [image, name]
+      properties:
+        image:
+          type: string
+        name:
+          type: string
+        options:
+          type: object
+          additionalProperties: true
+    SchematicCreated:
+      type: object
+      additionalProperties: false
+      required: [id, schematic]
+      properties:
+        id:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+        schematic:
+          type: string
+    DownloadToken:
+      type: object
+      additionalProperties: false
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          const: Bearer
+        expires_in:
+          type: integer
+          minimum: 1
+  responses:
+    EmptyResponse:
+      description: Successful empty response.
+    JSONResponse:
+      description: JSON response whose detailed schema is owned by the referenced standard.
+      content:
+        application/json:
+          schema: {}
+    JSONArtifact:
+      description: Downloadable JSON artifact.
+      headers:
+        Content-Disposition:
+          $ref: "#/components/headers/ContentDisposition"
+        Content-Length:
+          $ref: "#/components/headers/ContentLength"
+      content:
+        application/json:
+          schema: {}
+    TextResponse:
+      description: Plain-text response.
+      content:
+        text/plain:
+          schema:
+            type: string
+    PEMResponse:
+      description: PEM-encoded public material.
+      content:
+        application/x-pem-file:
+          schema:
+            type: string
+    SPDXResponse:
+      description: Downloadable SPDX 2.3 JSON document.
+      headers:
+        Content-Disposition:
+          $ref: "#/components/headers/ContentDisposition"
+        Content-Length:
+          $ref: "#/components/headers/ContentLength"
+      content:
+        application/spdx+json:
+          schema: {}
+    Artifact:
+      description: Downloadable artifact selected by the path suffix.
+      headers:
+        Content-Disposition:
+          $ref: "#/components/headers/ContentDisposition"
+        Content-Length:
+          $ref: "#/components/headers/ContentLength"
+      content:
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary
+        text/plain:
+          schema:
+            type: string
+        application/vnd.dev.sigstore.bundle.v0.3+json:
+          schema: {}
+    ArtifactHeaders:
+      description: Artifact metadata without a response body.
+      headers:
+        Content-Disposition:
+          $ref: "#/components/headers/ContentDisposition"
+        Content-Length:
+          $ref: "#/components/headers/ContentLength"
+    OCIResponse:
+      description: Response forwarded from or generated for an OCI registry.
+      content:
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary
+        application/vnd.oci.image.manifest.v1+json:
+          schema: {}
+        application/vnd.oci.image.index.v1+json:
+          schema: {}
+    OCIIndexResponse:
+      description: OCI image index containing matching referrers.
+      headers:
+        Content-Length:
+          $ref: "#/components/headers/ContentLength"
+        Docker-Content-Digest:
+          schema:
+            type: string
+        Oci-Filters-Applied:
+          schema:
+            type: string
+      content:
+        application/vnd.oci.image.index.v1+json:
+          schema: {}
+    OCIIndexHeaders:
+      description: OCI referrer metadata without a response body.
+      headers:
+        Content-Length:
+          $ref: "#/components/headers/ContentLength"
+        Docker-Content-Digest:
+          schema:
+            type: string
+        Oci-Filters-Applied:
+          schema:
+            type: string
+    Found:
+      description: Artifact cache redirect.
+      headers:
+        Location:
+          $ref: "#/components/headers/Location"
+    TemporaryRedirect:
+      description: External OCI registry redirect.
+      headers:
+        Location:
+          $ref: "#/components/headers/Location"
+    BadRequest:
+      description: Invalid input.
+      content:
+        text/plain:
+          schema:
+            type: string
+    Unauthorized:
+      description: Authentication is configured and credentials are missing or invalid.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        text/plain:
+          schema:
+            type: string
+    PaymentRequired:
+      description: An Enterprise asset feature is unavailable.
+      content:
+        text/plain:
+          schema:
+            type: string
+    Forbidden:
+      description: The authenticated principal is outside its scope or does not own the schematic.
+      content:
+        text/plain:
+          schema:
+            type: string
+    NotFound:
+      description: The route or requested object does not exist.
+      content:
+        text/plain:
+          schema:
+            type: string
+    InternalServerError:
+      description: Unexpected server failure.
+      content:
+        text/plain:
+          schema:
+            type: string
+    ServiceUnavailable:
+      description: A required service is not ready.
+      content:
+        text/plain:
+          schema:
+            type: string
