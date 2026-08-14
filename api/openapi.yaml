@@ -1,0 +1,33 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: Image Factory API
+  version: 0.1.0
+  description: User-facing Image Factory HTTP, PXE, and OCI registry API.
+paths:
+  /versions:
+    get:
+      operationId: listVersions
+      summary: List Talos versions
+      description: Returns available Talos versions, or broken versions when `broken` is exactly `true`.
+      security: []
+      parameters:
+        - name: broken
+          in: query
+          required: false
+          description: The literal string `true` selects the configured broken-version list; every other value lists available versions.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Talos version strings with leading `v` prefixes.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
