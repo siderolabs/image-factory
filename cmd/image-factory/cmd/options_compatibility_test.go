@@ -20,7 +20,7 @@ import (
 func TestOptionsConfigurationShape(t *testing.T) {
 	t.Parallel()
 
-	actual := configurationShape(reflect.TypeOf(cmd.Options{}), "")
+	actual := configurationShape(reflect.TypeFor[cmd.Options](), "")
 	sort.Strings(actual)
 	actualShape := strings.Join(actual, "\n") + "\n"
 
@@ -37,8 +37,7 @@ func TestOptionsConfigurationShape(t *testing.T) {
 func configurationShape(typ reflect.Type, prefix string) []string {
 	var result []string
 
-	for fieldIndex := range typ.NumField() {
-		field := typ.Field(fieldIndex)
+	for field := range typ.Fields() {
 		key := field.Tag.Get("koanf")
 		if key == "" || key == "-" {
 			continue

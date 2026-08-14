@@ -10,6 +10,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -95,6 +96,7 @@ func newRoutingDocument(ctx context.Context, document *openapi3.T) (*openapi3.T,
 		}
 
 		routingPath := greedyPathParameter.ReplaceAllString(path, `{$1:.+}`)
+
 		for _, match := range matches {
 			normalizeGreedyParameter(pathItem, match[1])
 		}
@@ -116,6 +118,7 @@ func normalizeGreedyParameter(pathItem *openapi3.PathItem, name string) {
 	}
 
 	normalize(pathItem.Parameters)
+
 	for _, operation := range pathItem.Operations() {
 		normalize(operation.Parameters)
 	}
@@ -168,11 +171,16 @@ func (contract *Contract) ValidateRequest(
 
 // ValidateIfMatched validates requests described by the contract and leaves other frontend routes untouched.
 func (contract *Contract) ValidateIfMatched(ctx context.Context, request *http.Request) (bool, error) {
-	if _, _, err := contract.Router.FindRoute(request); err != nil {
-		return false, nil
+	_, _, err := contract.Router.FindRoute(request)
+	if err != nil {
+		if errors.Is(err, routers.ErrPathNotFound) || errors.Is(err, routers.ErrMethodNotAllowed) {
+			return false, nil //nolint:nilerr // Non-API frontend routes intentionally bypass contract validation.
+		}
+
+		return false, fmt.Errorf("match optional OpenAPI route: %w", err)
 	}
 
-	_, _, err := contract.ValidateRequest(ctx, request)
+	_, _, err = contract.ValidateRequest(ctx, request)
 
 	return true, err
 }

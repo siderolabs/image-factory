@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+
 	factoryapi "github.com/siderolabs/image-factory/api"
 )
 

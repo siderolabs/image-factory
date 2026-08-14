@@ -2,19 +2,21 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package api
+package api_test
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/siderolabs/image-factory/api"
 )
 
 func TestLoad(t *testing.T) {
 	t.Parallel()
 
-	document, err := Load(t.Context())
+	document, err := api.Load(t.Context())
 	require.NoError(t, err)
 
 	assert.Equal(t, "3.2.0", document.OpenAPI)

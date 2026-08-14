@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package api
+package api_test
 
 import (
 	"net/http"
@@ -11,12 +11,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/siderolabs/image-factory/api"
 )
 
 func TestContractValidateRequest(t *testing.T) {
 	t.Parallel()
 
-	contract, err := NewContract(t.Context())
+	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -63,7 +65,7 @@ func TestContractValidateRequest(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			request := httptest.NewRequest(test.method, test.target, strings.NewReader(test.body))
+			request := httptest.NewRequestWithContext(t.Context(), test.method, test.target, strings.NewReader(test.body))
 			for name, value := range test.headers {
 				request.Header.Set(name, value)
 			}
@@ -71,6 +73,7 @@ func TestContractValidateRequest(t *testing.T) {
 			_, _, validationErr := contract.ValidateRequest(request.Context(), request)
 			if test.wantErr == "" {
 				require.NoError(t, validationErr)
+
 				return
 			}
 

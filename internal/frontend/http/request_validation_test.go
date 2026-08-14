@@ -31,8 +31,9 @@ func TestWrapperValidatesDocumentedRequests(t *testing.T) {
 		return nil
 	})
 
-	request := httptest.NewRequest(http.MethodPost, "/schematics", strings.NewReader(`{"unknown":true}`))
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/schematics", strings.NewReader(`{"unknown":true}`))
 	request.Header.Set("Content-Type", "application/json")
+
 	response := httptest.NewRecorder()
 
 	handler(response, request, nil)
@@ -46,7 +47,9 @@ func TestWrapperPreservesValidatedRequestBody(t *testing.T) {
 	t.Parallel()
 
 	frontend := factoryhttp.NewTestFrontendWithContract(zaptest.NewLogger(t))
+
 	var body string
+
 	handler := frontend.WrapHandler(func(_ context.Context, _ http.ResponseWriter, request *http.Request, _ httprouter.Params) error {
 		data, err := io.ReadAll(request.Body)
 		require.NoError(t, err)
@@ -56,7 +59,7 @@ func TestWrapperPreservesValidatedRequestBody(t *testing.T) {
 		return nil
 	})
 
-	request := httptest.NewRequest(http.MethodPost, "/schematics", strings.NewReader(`{}`))
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/schematics", strings.NewReader(`{}`))
 	response := httptest.NewRecorder()
 
 	handler(response, request, nil)
@@ -76,7 +79,7 @@ func TestWrapperLeavesUndocumentedFrontendRoutesUntouched(t *testing.T) {
 		return nil
 	})
 
-	request := httptest.NewRequest(http.MethodPost, "/ui/wizard", strings.NewReader(`not an API body`))
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ui/wizard", strings.NewReader(`not an API body`))
 	response := httptest.NewRecorder()
 
 	handler(response, request, nil)

@@ -101,6 +101,7 @@ type InvalidRequestTag struct{}
 
 // NewFrontend creates a new HTTP frontend.
 func NewFrontend(
+	ctx context.Context,
 	logger *zap.Logger,
 	schematicFactory *schematic.Factory,
 	assetBuilder *asset.Builder,
@@ -131,7 +132,7 @@ func NewFrontend(
 
 	var err error
 
-	frontend.contract, err = api.NewContract(context.Background())
+	frontend.contract, err = api.NewContract(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OpenAPI contract: %w", err)
 	}
