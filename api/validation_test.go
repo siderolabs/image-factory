@@ -49,10 +49,9 @@ func TestContractValidateRequest(t *testing.T) {
 			wantErr: "property \"unknown\" is unsupported",
 		},
 		{
-			name:    "invalid schematic path parameter",
-			method:  http.MethodGet,
-			target:  "/schematics/not-a-digest",
-			wantErr: "does not match pattern",
+			name:   "handler-owned schematic path validation",
+			method: http.MethodGet,
+			target: "/schematics/not-a-digest",
 		},
 		{
 			name:   "greedy OCI repository name",

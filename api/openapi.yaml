@@ -49,7 +49,9 @@ paths:
   /schematics:
     post:
       operationId: createSchematic
-      summary: Create an image schematic
+      summary: Create or identify a schematic
+      description: The body is decoded as YAML, which also accepts JSON, independently of the Content-Type header.
+      x-image-factory-ignore-content-type: true
       requestBody:
         required: true
         content:
@@ -57,6 +59,9 @@ paths:
             schema:
               $ref: "#/components/schemas/Schematic"
           application/json:
+            schema:
+              $ref: "#/components/schemas/Schematic"
+          "*/*":
             schema:
               $ref: "#/components/schemas/Schematic"
       responses:

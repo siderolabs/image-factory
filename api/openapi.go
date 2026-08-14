@@ -105,7 +105,27 @@ func newRoutingDocument(ctx context.Context, document *openapi3.T) (*openapi3.T,
 		routingDocument.Paths.Set(routingPath, pathItem)
 	}
 
+	relaxRoutingPathValidation(routingDocument)
+
 	return routingDocument, nil
+}
+
+func relaxRoutingPathValidation(document *openapi3.T) {
+	relax := func(parameters openapi3.Parameters) {
+		for _, parameter := range parameters {
+			if parameter.Value != nil && parameter.Value.In == openapi3.ParameterInPath {
+				parameter.Value.Schema = &openapi3.SchemaRef{Value: openapi3.NewStringSchema()}
+			}
+		}
+	}
+
+	for _, pathItem := range document.Paths.Map() {
+		relax(pathItem.Parameters)
+
+		for _, operation := range pathItem.Operations() {
+			relax(operation.Parameters)
+		}
+	}
 }
 
 func normalizeGreedyParameter(pathItem *openapi3.PathItem, name string) {
@@ -145,10 +165,17 @@ func (contract *Contract) ValidateRequest(
 		return nil, nil, fmt.Errorf("match OpenAPI route: %w", err)
 	}
 
-	if request.Header.Get("Content-Type") == "" && route.Operation.RequestBody != nil && route.Operation.RequestBody.Value != nil {
-		if _, ok := route.Operation.RequestBody.Value.Content["application/yaml"]; ok {
-			request.Header.Set("Content-Type", "application/yaml")
-			defer request.Header.Del("Content-Type")
+	ignoreContentType := route.Operation.Extensions["x-image-factory-ignore-content-type"] == true
+	if ignoreContentType || request.Header.Get("Content-Type") == "" {
+		if route.Operation.RequestBody != nil && route.Operation.RequestBody.Value != nil {
+			if _, ok := route.Operation.RequestBody.Value.Content["application/yaml"]; ok {
+				originalHeader := request.Header.Clone()
+				request.Header.Set("Content-Type", "application/yaml")
+
+				defer func() {
+					request.Header = originalHeader
+				}()
+			}
 		}
 	}
 
