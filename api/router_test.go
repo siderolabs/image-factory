@@ -49,13 +49,42 @@ func TestNewRouter(t *testing.T) {
 		},
 	)
 	testRoute(
-		"nested OCI repository name",
+		"nested OCI manifest repository name",
 		http.MethodGet,
 		"/v2/my-company/platform/backend/manifests/v1.12.0",
 		"getRegistryManifest",
 		map[string]string{
 			"name":      "my-company/platform/backend",
 			"reference": "v1.12.0",
+		},
+	)
+	testRoute(
+		"nested OCI blob repository name",
+		http.MethodGet,
+		"/v2/my-company/platform/backend/blobs/sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		"getRegistryBlob",
+		map[string]string{
+			"name":   "my-company/platform/backend",
+			"digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		},
+	)
+	testRoute(
+		"nested OCI tags repository name",
+		http.MethodGet,
+		"/v2/my-company/platform/backend/tags/list",
+		"listRegistryTags",
+		map[string]string{
+			"name": "my-company/platform/backend",
+		},
+	)
+	testRoute(
+		"nested OCI referrers repository name",
+		http.MethodGet,
+		"/v2/my-company/platform/backend/referrers/sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		"getRegistryReferrers",
+		map[string]string{
+			"name":   "my-company/platform/backend",
+			"digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		},
 	)
 	testRoute("registry trailing slash", http.MethodHead, "/v2/", "headRegistrySlash", map[string]string{})
