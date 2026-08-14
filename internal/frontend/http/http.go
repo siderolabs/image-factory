@@ -30,6 +30,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/siderolabs/image-factory/api"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/audit"
@@ -49,6 +50,7 @@ import (
 // Frontend is the HTTP frontend.
 type Frontend struct {
 	router            *httprouter.Router
+	contract          *api.Contract
 	schematicFactory  *schematic.Factory
 	assetBuilder      *asset.Builder
 	artifactsManager  *artifacts.Manager
@@ -94,6 +96,9 @@ type ImageProxyOptions struct {
 // Handler is a custom handler type that includes the context and httprouter params, and returns an error.
 type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
 
+// InvalidRequestTag marks requests rejected by the OpenAPI contract.
+type InvalidRequestTag struct{}
+
 // NewFrontend creates a new HTTP frontend.
 func NewFrontend(
 	logger *zap.Logger,
@@ -125,6 +130,11 @@ func NewFrontend(
 	}
 
 	var err error
+
+	frontend.contract, err = api.NewContract(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OpenAPI contract: %w", err)
+	}
 
 	frontend.puller, err = remotewrap.NewPuller(opts.RegistryRefreshInterval, opts.InstallerInternalNameOptions, opts.RemoteOptions)
 	if err != nil {
@@ -278,7 +288,7 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 
 		var username string
 
-		handler := f.withAuth(h, requireAuth, &username)
+		handler := f.withAuth(f.withContractValidation(h), requireAuth, &username)
 
 		start := time.Now()
 		err := handler(ctx, w, r, p)
@@ -317,6 +327,19 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 				Error:     errString(err),
 			})
 		}
+	}
+}
+
+func (f *Frontend) withContractValidation(h Handler) Handler {
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+		if f.contract != nil {
+			_, err := f.contract.ValidateIfMatched(ctx, r)
+			if err != nil {
+				return xerrors.NewTagged[InvalidRequestTag](fmt.Errorf("invalid request: %w", err))
+			}
+		}
+
+		return h(ctx, w, r, p)
 	}
 }
 
@@ -430,7 +453,8 @@ func MatchError(err error, callback func(message string, code int)) (zapcore.Lev
 	case xerrors.TagIs[profile.InvalidErrorTag](err),
 		xerrors.TagIs[schematicpkg.InvalidErrorTag](err),
 		xerrors.TagIs[enterrors.InvalidErrorTag](err),
-		xerrors.TagIs[InvalidImageTag](err):
+		xerrors.TagIs[InvalidImageTag](err),
+		xerrors.TagIs[InvalidRequestTag](err):
 		level = zap.WarnLevel
 		status = http.StatusBadRequest
 

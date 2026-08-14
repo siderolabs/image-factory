@@ -142,6 +142,13 @@ func (contract *Contract) ValidateRequest(
 		return nil, nil, fmt.Errorf("match OpenAPI route: %w", err)
 	}
 
+	if request.Header.Get("Content-Type") == "" && route.Operation.RequestBody != nil && route.Operation.RequestBody.Value != nil {
+		if _, ok := route.Operation.RequestBody.Value.Content["application/yaml"]; ok {
+			request.Header.Set("Content-Type", "application/yaml")
+			defer request.Header.Del("Content-Type")
+		}
+	}
+
 	input := &openapi3filter.RequestValidationInput{
 		Request:    request,
 		PathParams: pathParams,
@@ -157,4 +164,15 @@ func (contract *Contract) ValidateRequest(
 	}
 
 	return route, pathParams, nil
+}
+
+// ValidateIfMatched validates requests described by the contract and leaves other frontend routes untouched.
+func (contract *Contract) ValidateIfMatched(ctx context.Context, request *http.Request) (bool, error) {
+	if _, _, err := contract.Router.FindRoute(request); err != nil {
+		return false, nil
+	}
+
+	_, _, err := contract.ValidateRequest(ctx, request)
+
+	return true, err
 }

@@ -5,16 +5,28 @@
 package http
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/siderolabs/gen/ensure"
 	"go.uber.org/zap"
+
+	"github.com/siderolabs/image-factory/api"
 )
 
 // NewTestFrontend builds a minimal Frontend wired only with a logger, for tests
 // in the external test package that need to exercise the request wrapper.
 func NewTestFrontend(logger *zap.Logger) *Frontend {
 	return &Frontend{logger: logger}
+}
+
+// NewTestFrontendWithContract builds a minimal Frontend with OpenAPI request validation enabled.
+func NewTestFrontendWithContract(logger *zap.Logger) *Frontend {
+	frontend := NewTestFrontend(logger)
+	frontend.contract = ensure.Value(api.NewContract(context.Background()))
+
+	return frontend
 }
 
 // WrapHandler exposes the unexported request wrapper for external tests.
