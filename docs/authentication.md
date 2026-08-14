@@ -9,6 +9,33 @@ See [Configuration](configuration.md) for the full list of settings.
 Only one provider is active at a time.
 There is no mode that accepts both htpasswd credentials and Auth0 tokens.
 
+## The `Authorization` header
+
+Every endpoint marked `Auth: required` in the [API reference](api.md#authentication) takes its credential in the `Authorization` request header.
+What that header may contain depends on the active provider:
+
+| Provider   | Accepted `Authorization` value                          | Credential is                                     |
+| ---------- | ------------------------------------------------------- | ------------------------------------------------- |
+| `htpasswd` | `Basic base64(<username>:<password>)`                   | a user from the `htpasswd` file                   |
+| `auth0`    | `Bearer <jwt>`, or `Basic base64(<any-username>:<jwt>)` | an Auth0 access token for the configured audience |
+
+Details that decide whether a request authenticates:
+
+- The scheme is matched case-insensitively, so `bearer <jwt>` works.
+  Any other scheme, `Token <jwt>` for example, is not a credential and the request is treated as unauthenticated.
+- Under `auth0` the Basic form carries the JWT in the **password** field and the username is ignored; it exists for OCI and Talos registry clients, which only speak Basic auth.
+  So `docker login -u unused -p <jwt> factory.example.com` is a valid way to present a token.
+- Only one `Authorization` value is read.
+  Sending Basic and Bearer as two separate header values authenticates with the first one only.
+- URL userinfo is the same header by another name: HTTP clients encode `https://<user>:<password>@factory.example.com/...` into `Authorization: Basic`.
+  That is how `GET /pxe/...` is authenticated, since iPXE cannot set request headers.
+- A missing or invalid credential is `401`.
+  With `htpasswd`, the response carries one `WWW-Authenticate: Basic` challenge.
+  With `auth0`, it carries separate Basic and Bearer challenges, in that order.
+  The Auth0 order is deliberate: OCI clients take the first scheme they recognize, and only the Basic form carries a usable token for those clients.
+
+The one alternative to this header is the [`?token=` query parameter](#the-token-query-parameter), accepted on image downloads only.
+
 ## htpasswd
 
 Basic authentication against an `htpasswd` file.
@@ -22,7 +49,7 @@ Tokens are validated locally against the tenant's JWKS: signature, issuer, audie
 The caller identity is the token's `org_id` claim, so tokens must be issued to organization-scoped clients.
 Tokens without the claim are rejected, since there would be no principal to attribute the request to.
 
-Tokens are accepted either as `Authorization: Bearer <token>` or in the password field of a Basic credential, because OCI and Talos registry clients only speak Basic auth.
+Tokens are accepted either as `Authorization: Bearer <token>` or in the password field of a Basic credential; see [The `Authorization` header](#the-authorization-header).
 
 There is no interactive login.
 A browser hitting an authenticated route gets a `401` with a Basic challenge, not a redirect to Auth0, so a person presents a token the same way a machine does.
@@ -112,11 +139,18 @@ Then append it to an image URL:
 curl -LO "https://factory.example.com/image/<schematic>/v1.13.0/metal-amd64.iso?token=eyJ..."
 ```
 
-The token is accepted only on `GET` and `HEAD` under `/image/`.
-It does not work on `/pxe/`, on the `/v2/` registry, on schematic routes, or on the SBOM, VEX and scan routes.
-
 Tokens are signed with ECDSA P-256, and the public key is served unauthenticated at `/.well-known/jwks.json` so that a proxy in front of the factory can verify one without holding the private key.
 `authentication.downloadTokenTTL` sets the lifetime, default `5m`; verification allows a further 30s of clock leeway.
+
+### The `?token=` query parameter
+
+- Its value is the `access_token` from `POST /download-token`, and nothing else.
+- It is accepted only on `GET` and `HEAD` under `/image/`.
+  It does not work on `/pxe/`, on the `/v2/` registry, on schematic routes, or on the SBOM, VEX and scan routes: elsewhere the parameter is ignored and the [`Authorization` header](#the-authorization-header) is the only credential.
+- It is not interchangeable with that header.
+  A download token is signed with the factory's own key rather than issued by the provider, so it is rejected as `Authorization: Bearer`; conversely an Auth0 JWT or an htpasswd password is not a download token and does not work as `?token=`.
+- It is checked before the header.
+  A valid token authenticates the request on its own; a missing, expired or malformed one falls back to the header, so a request carrying only a bad token gets the ordinary `401` rather than a distinct error.
 
 ### Scope
 

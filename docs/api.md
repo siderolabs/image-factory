@@ -1,25 +1,62 @@
 # API
 
+This reference covers the user-facing HTTP, PXE and OCI registry APIs.
+It intentionally excludes the HTML UI and its supporting routes and static assets, as well as the operational health, readiness and metrics endpoints.
+
 ## Authentication
 
-Authentication is an Enterprise feature, enabled with `authentication.enabled`; when it is off, every endpoint is public.
+Authentication is an Enterprise feature, enabled with `authentication.enabled`.
+When it is off, every registered endpoint in this reference is public, except that the download-token and JWKS routes are not registered at all.
 When it is on, each endpoint below carries an **Access** table with these four fields; endpoints that never take a credential are marked `Access: public` instead.
 See [Authentication](authentication.md) for the providers, the token formats and the scopes.
 
-| Field             | Values                                                                                                                                                                                                                      |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Auth**          | `public` takes no credential, `required` takes one for the configured provider (Basic for htpasswd, `Authorization: Bearer` or the same JWT in the Basic password for auth0), and a missing or invalid credential is `401`. |
-| **`?token=`**     | Whether a [download token](authentication.md#download-tokens) in the query string is accepted in place of a credential.                                                                                                     |
-| **Machine scope** | Whether a token carrying `authentication.auth0.machineScope` may call the endpoint. `denied` is `403`, even though the token itself is valid.                                                                               |
-| **Ownership**     | Whether the schematic's `owner` must match the caller identity, where a mismatch is `403`; an unauthenticated caller gets `401` whether or not the schematic exists, so existence is not leaked.                            |
+| Field             | Values                                                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Auth**          | `public` takes no credential, `required` takes an [`Authorization` header](authentication.md#the-authorization-header) for the configured provider, and a missing or invalid credential is `401`. |
+| **`?token=`**     | Whether a [download token](authentication.md#the-token-query-parameter) in the query string is accepted in place of the header.                                                                   |
+| **Machine scope** | Whether a token carrying `authentication.auth0.machineScope` may call the endpoint. `denied` is `403`, even though the token itself is valid.                                                     |
+| **Ownership**     | Whether the schematic's `owner` must match the caller identity, where a mismatch is `403`; an unauthenticated caller gets `401` whether or not the schematic exists, so existence is not leaked.  |
 
 `machineScope` is the only scope the factory interprets.
 There is no per-endpoint scope model: a token either carries the machine scope, and is then limited to the endpoints that allow it, or it does not and has full access.
 The htpasswd provider has no scopes at all.
 
+## Common HTTP behavior
+
+Responses handled directly by the factory include a `Server` header and an `X-Request-ID` correlation ID.
+An incoming `X-Request-ID` is echoed; otherwise the factory generates one.
+Unless an endpoint or proxied OCI response defines another representation, errors are plain-text bodies with a trailing newline.
+
+The common error statuses are:
+
+| Status | Meaning |
+| ------ | ------- |
+| `400 Bad Request` | An input explicitly classified as an invalid path, architecture, report format, image profile or schematic is invalid. |
+| `401 Unauthorized` | Authentication is enabled and the credential is missing or invalid. |
+| `402 Payment Required` | The requested Enterprise-only asset feature is not enabled. |
+| `403 Forbidden` | The credential is valid but its machine scope or schematic ownership denies access. |
+| `404 Not Found` | The schematic, Talos artifact or API/OCI route does not exist. |
+| `500 Internal Server Error` | The request failed unexpectedly. |
+| `503 Service Unavailable` | A required proxy or Enterprise service is temporarily unavailable. |
+
+Some core handlers currently wrap malformed semantic versions as unclassified errors and therefore return `500 Internal Server Error`, while the Enterprise SPDX, VEX and scan handlers classify malformed or too-old versions as `400 Bad Request`.
+This distinction is part of the current behavior to preserve or deliberately correct in the future OpenAPI-backed implementation.
+
+For configured cross-origin callers, CORS preflight advertises only `GET`, `HEAD` and `OPTIONS`.
+It permits the `Cache-Control` request header and exposes `Content-Disposition`, `Content-Length` and `Content-Type` response headers.
+
+## Edition and feature availability
+
+| Feature | Community build or disabled-feature behavior |
+| ------- | -------------------------------------------- |
+| `/spdx`, `/vex` and `/scans` | Enterprise plugins are not registered, so the routes return `404 Not Found`. |
+| `/download-token` and `/.well-known/jwks.json` | Registered only in an Enterprise build with authentication enabled; otherwise the routes return `404 Not Found`. |
+| `/image/.../<asset>.sha256` and `.sha512` suffixes | The image route remains registered but returns `402 Payment Required` without Enterprise checksum support. |
+| `/image/.../<asset>.sigstore.json` suffix | The image route remains registered but returns `402 Payment Required` when Enterprise asset signing is unavailable. |
+
 ## Enterprise Frontend API
 
-### `GET /spdx/:schematic/:version/:arch`
+### `GET /spdx/:schematic/:version/:arch`, `HEAD /spdx/:schematic/:version/:arch`
 
 > [!NOTE]
 > Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
@@ -30,8 +67,13 @@ Access:
 | -------- | ------------ | ------------- | --------- |
 | required | not accepted | denied        | enforced  |
 
-Returns an SPDX 2.3 JSON document containing all packages from the Talos and extensions for the given schematic and version.
+Returns an SPDX 2.3 JSON document containing all packages from Talos Linux and the configured system extensions for the given schematic and version.
 The response is a JSON-encoded SPDX document which can be consumed directly by vulnerability scanners such as grype:
+
+* `:version` accepts a Talos version with or without the leading `v`.
+* `:arch` is `amd64` or `arm64`.
+* A successful response is `200 OK` with `Content-Type: application/spdx+json`, `Content-Length` and an attachment `Content-Disposition`.
+* `HEAD` returns the same status and headers without the response body.
 
 ```shell
 grype sbom:response.spdx.json
@@ -39,7 +81,7 @@ grype sbom:response.spdx.json
 
 SPDX bundles are available for Talos versions **v1.11.0** and later.
 
-### `GET /vex/:version/vex.json`
+### `GET /vex/:version/vex.json`, `HEAD /vex/:version/vex.json`
 
 > [!NOTE]
 > Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
@@ -56,11 +98,16 @@ Any authenticated caller can therefore read it for any version.
 Returns a VEX JSON document containing vulnerability information for all packages in the Talos Linux release.
 The response is a JSON-encoded VEX document which can be consumed directly by vulnerability scanners such as grype:
 
+* `:version` accepts a Talos version with or without the leading `v`.
+* VEX documents are available for Talos versions **v1.13.0** and later.
+* A successful response is `200 OK` with `Content-Type: application/json`, `Content-Length` and an attachment `Content-Disposition`.
+* `HEAD` returns the same status and headers without the response body.
+
 ```shell
 grype sbom:talos.spdx.json --vex response.vex.json
 ```
 
-### `GET /scans/:schematic/:version/:arch/:report`
+### `GET /scans/:schematic/:version/:arch/:report`, `HEAD /scans/:schematic/:version/:arch/:report`
 
 > [!NOTE]
 > Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
@@ -73,17 +120,27 @@ Access:
 
 Returns a vulnerability scan report for the specified schematic, Talos Linux version and architecture.
 
+* `:version` accepts a Talos version with or without the leading `v`.
+* `:arch` is `amd64` or `arm64`.
+* `:report` is a filename whose extension selects the report format, for example `report.sarif`.
+* Scan reports are available for Talos versions **v1.13.0** and later.
+* A successful response is `200 OK` with `Content-Length` and an attachment `Content-Disposition`.
+* `HEAD` returns the same status and headers without the response body.
+
 Supported report formats:
 
-* `.json` - JSON-encoded report in the format provided by the underlying vulnerability scanner
-* `.table` - human-readable table format
-* `.sarif` - SARIF format
-* `.cdx` - CycloneDX format
+| Extension | Response content type            | Format                                                               |
+| --------- | -------------------------------- | -------------------------------------------------------------------- |
+| `.json`   | `application/json`               | JSON-encoded report in the format provided by the underlying scanner |
+| `.table`  | `text/plain; charset=utf-8`      | Human-readable table                                                 |
+| `.sarif`  | `application/sarif+json`         | SARIF                                                                |
+| `.cdx`    | `application/vnd.cyclonedx+json` | CycloneDX                                                            |
 
 ### `POST /download-token`
 
 > [!NOTE]
 > Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+> This route is registered only when authentication is enabled.
 
 Access:
 
@@ -93,6 +150,8 @@ Access:
 
 Issues a short-lived JWT that authenticates image downloads through the URL alone.
 The token is scoped to the calling identity.
+The request has no body.
+A successful response is `200 OK` with `Content-Type: application/json` and `Cache-Control: no-store`.
 
 ```json
 {
@@ -111,10 +170,12 @@ One token covers every schematic owned by the caller, not just the URL it is use
 
 > [!NOTE]
 > Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+> This route is registered only when authentication is enabled.
 
 Access: `public`.
 
 Returns the JSON Web Key Set containing the ECDSA P-256 public key that download tokens are signed with, so that a proxy can verify a token without holding the private key.
+The response has `Content-Type: application/json`.
 
 ## HTTP Frontend API
 
@@ -128,7 +189,10 @@ Access:
 | -------- | ------------ | ------------- | ------------ |
 | required | not accepted | denied        | sets `owner` |
 
-The request body is a YAML (JSON) encoded schematic description:
+The request body is a YAML or JSON encoded schematic description.
+Clients should send `Content-Type: application/yaml` for YAML.
+The current handler parses the body as YAML, of which JSON is a subset, and does not select parsing behavior from the `Content-Type` header.
+Unknown fields are rejected.
 
 ```yaml
 customization:
@@ -167,6 +231,23 @@ overlay: # optional
     data: "mydata"
 ```
 
+Schematic fields:
+
+| Field | Type and constraints |
+| ----- | -------------------- |
+| `owner` | Enterprise-only string; when authentication is enabled, the factory sets it to the caller identity and rejects a conflicting supplied value. |
+| `customization.embeddedMachineConfiguration` | String containing YAML-encoded Talos machine configuration documents. |
+| `customization.extraKernelArgs` | Array of strings. |
+| `customization.meta` | Array of objects with an unsigned 8-bit integer `key` (`0` through `255`) and string `value`. |
+| `customization.systemExtensions.officialExtensions` | Array of official extension names. |
+| `customization.bootloader` | `auto`, `dual-boot`, `grub` or `sd-boot`; an omitted value uses automatic selection. |
+| `customization.secureboot.enrollKeys` | `off`, `manual`, `if-safe` or `force`; defaults to `if-safe`. |
+| `customization.secureboot.includeWellKnownCertificates` | Boolean. |
+| `customization.diskImage.sectorSize` | Unsigned integer number of bytes; defaults to `512` when omitted. |
+| `overlay.image` | Overlay container image string. |
+| `overlay.name` | Overlay name string. |
+| `overlay.options` | Optional free-form YAML/JSON object interpreted by the selected overlay. |
+
 Output is a JSON object containing the schematic ID and the canonical schematic body as YAML:
 
 ```json
@@ -178,6 +259,7 @@ Output is a JSON object containing the schematic ID and the canonical schematic 
 
 The `schematic` field is the canonical representation used to compute the ID.
 Callers should treat it as authoritative, since the factory may modify or add fields to the submitted schematic, for example setting `owner` for authenticated requests.
+A successful response is `201 Created` with `Content-Type: application/json`.
 
 This ID can be used to download images with this schematic.
 
@@ -204,9 +286,10 @@ Access:
 | required | not accepted | denied        | enforced  |
 
 If the schematic is found, the response body contains the YAML-encoded schematic representation.
+The successful response is `200 OK` with `Content-Type: application/yaml`.
 Otherwise a `404 Not Found` status code is returned.
 
-### `GET /image/:schematic/:version/:path`
+### `GET /image/:schematic/:version/:path`, `HEAD /image/:schematic/:version/:path`
 
 Download a Talos Linux boot image with the specified schematic and Talos Linux version.
 
@@ -216,13 +299,17 @@ Access:
 | -------- | --------- | ------------- | --------- |
 | required | accepted  | allowed       | enforced  |
 
-* `:schematic` is a schematic ID returned by `POST /schematic`
+* `:schematic` is a schematic ID returned by `POST /schematics`
 * `:version` is a Talos Linux version, e.g. `v1.5.0`
 * `:path` is a specific image path (details below)
 
-In Enterprise edition this route also accepts a [download token](authentication.md#download-tokens) as `?token=<jwt>` in place of an `Authorization` header.
+The optional `filename` query parameter overrides the download filename used to build and serve the asset.
+On a direct response, the factory returns `200 OK` with `Content-Type`, `Content-Length` and an attachment `Content-Disposition`.
+A `GET` may instead return `302 Found` to a configured object-storage or CDN URL; `HEAD` is always served directly and returns the same headers as a direct `GET`, without a body.
 
-Common used parameters:
+In Enterprise edition this route is the only one that also accepts a [download token](authentication.md#download-tokens) as `?token=<access_token>` in place of the `Authorization` header; see [The `?token=` query parameter](authentication.md#the-token-query-parameter).
+
+Common parameters:
 
 * `<arch>` image architecture: `amd64` or `arm64`
 * `<platform>` Talos Linux platform, e.g. `metal`, `aws`, `gcp`, etc.
@@ -241,7 +328,7 @@ Supported image paths:
   * `metal-<arch>[-secureboot].raw.xz` (e.g. `metal-amd64.raw.xz`) - raw disk image for metal platform
   * `aws-<arch>.raw.xz` (e.g. `aws-amd64.raw.xz`) - raw disk image for AWS platform, that can be imported as an AMI
   * `gcp-<arch>.raw.tar.gz` (e.g. `gcp-amd64.raw.tar.gz`) - raw disk image for GCP platform, that can be imported as a GCE image
-  * ... other support image types
+  * ... other supported image types
 
 #### Checksums
 
@@ -249,6 +336,10 @@ Supported image paths:
 > Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
 
 Appending a checksum suffix to any `:path` returns a checksum file instead of the asset itself.
+The successful response is `200 OK` with `Content-Type: text/plain; charset=utf-8`, `Content-Length` and an attachment `Content-Disposition`.
+`HEAD` returns the same headers without the body.
+The `filename` query override changes the attachment filename and the filename written into the checksum line.
+Without Enterprise checksum support, these suffixes return `402 Payment Required`.
 
 | Suffix    | Algorithm | Verify with    |
 | --------- | --------- | -------------- |
@@ -292,6 +383,9 @@ sha256sum -c metal-amd64.raw.xz.sha256
 
 Appending a `.sigstore.json` suffix to any `:path` returns a detached Sigstore bundle instead of the asset itself.
 The response is a Sigstore bundle v0.3 JSON document with the `application/vnd.dev.sigstore.bundle.v0.3+json` content type.
+It also includes `Content-Length` and an attachment `Content-Disposition`; `HEAD` returns those headers without the body.
+The `filename` query override changes the attachment filename.
+When Enterprise asset signing is unavailable, the suffix returns `402 Payment Required`.
 
 Download an image and its signature bundle:
 
@@ -341,6 +435,9 @@ Access: `public`.
 
 Returns a list of Talos Linux versions available for image generation.
 
+The optional `broken=true` query parameter returns the separately configured list of Talos versions marked as broken instead of the available versions.
+Other values are treated as absent.
+
 ```json
 ["v1.5.0","v1.5.1", "v1.5.2"]
 ```
@@ -357,8 +454,9 @@ Returns a list of official system extensions available for the specified Talos L
     "name": "siderolabs/amd-ucode",
     "ref": "ghcr.io/siderolabs/amd-ucode:20230804",
     "digest": "sha256:761a5290a4bae9ceca11468d2ba8ca7b0f94e6e3a107ede2349ae26520682832",
-  },
-
+    "author": "<extension author>",
+    "description": "<extension description>"
+  }
 ]
 ```
 
@@ -367,6 +465,7 @@ Returns a list of official system extensions available for the specified Talos L
 Access: `public`.
 
 Returns a list of official overlays available for the specified Talos Linux version.
+Talos versions that predate overlay support return an empty JSON array.
 
 ```json
 [
@@ -374,9 +473,8 @@ Returns a list of official overlays available for the specified Talos Linux vers
     "name": "rpi_generic",
     "image": "siderolabs/sbc-raspberrypi",
     "ref": "ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0",
-    "digest": "sha256:849ace01b9af514d817b05a9c5963a35202e09a4807d12f8a3ea83657c76c863",
-  },
-
+    "digest": "sha256:849ace01b9af514d817b05a9c5963a35202e09a4807d12f8a3ea83657c76c863"
+  }
 ]
 ```
 
@@ -404,7 +502,7 @@ Returns a list of download URLs for `talosctl` binaries for the specified Talos 
 ]
 ```
 
-### `GET /talosctl/:version/:path`
+### `GET /talosctl/:version/:path`, `HEAD /talosctl/:version/:path`
 
 Access: `public`.
 
@@ -413,11 +511,15 @@ Download a `talosctl` binary for the specified Talos Linux version and platform/
 * `:version` is a Talos Linux version, e.g. `v1.11.0`
 * `:path` is a binary name, e.g. `talosctl-linux-amd64` (use `GET /talosctl/:version` to list available paths)
 
+A successful response is `200 OK` with `Content-Length` and an attachment `Content-Disposition`.
+`HEAD` returns the same status and headers without the binary body.
+
 ### `GET /secureboot/signing-cert.pem`
 
 Access: `public`.
 
 Returns PEM-encoded SecureBoot signing certificate used by the Image Factory.
+The response has `Content-Type: application/x-pem-file`.
 
 It might be used to manually enroll the certificate into the UEFI firmware.
 Talos Linux SecureBoot ISOs come with an option for automatic enrollment of the certificate, but if that is not desired, the certificate can be manually enrolled.
@@ -427,6 +529,7 @@ Talos Linux SecureBoot ISOs come with an option for automatic enrollment of the 
 Access: `public`.
 
 Returns a `llms.txt` file describing Image Factory's API for LLM agents and AI tooling.
+The response has `Content-Type: text/plain; charset=utf-8`.
 
 ## PXE Frontend API
 
@@ -450,13 +553,13 @@ Access:
 
 The script embeds the schematic's kernel command line, which is schematic-derived customization, so a machine-scoped token is denied here for the same reason it cannot read a schematic definition.
 Download tokens are not accepted either.
-iPXE cannot send request headers, so an authenticated boot puts the credential in the URL: `https://<user>:<password>@pxe.talos.dev/pxe/...`.
+iPXE cannot send request headers, so an authenticated boot puts the credential in the URL: `https://<user>:<password>@pxe.talos.dev/pxe/...`, which the client encodes into `Authorization: Basic`.
 
-* `:schematic` is a schematic ID returned by `POST /schematic`
+* `:schematic` is a schematic ID returned by `POST /schematics`
 * `:version` is a Talos Linux version, e.g. `v1.5.0`
 * `:path` is a `<platform>-<arch>[-secureboot]` path, e.g. `metal-amd64`
 
-In non-SecureBoot schematic, the following iPXE script is returned:
+For a non-SecureBoot schematic, the following iPXE script is returned:
 
 ```text
 #!ipxe
@@ -485,13 +588,26 @@ Access, for every schematic-scoped `/v2/` route in this section, including `dock
 | -------- | ------------ | ------------- | --------- |
 | required | not accepted | allowed       | enforced  |
 
-Registry clients speak Basic auth, so an Auth0 JWT is presented as the Basic password with any username.
+Registry clients speak Basic auth, so an Auth0 JWT is presented as the Basic password with any username; see [The `Authorization` header](authentication.md#the-authorization-header).
 
 Two routes in this section differ from the table:
 
 * `GET`, `HEAD` `/v2` is the OCI ping.
-  It takes a credential, and answers with a `401` challenge without one, but carries no schematic, so ownership does not apply.
+  It returns an empty `200 OK`; when authentication is enabled it answers with a `401` challenge without a credential, but carries no schematic, so ownership does not apply.
 * The [Source Image Proxy](#source-image-proxy) carries no schematic either; see the table in that section.
+
+The registry implements the user-facing OCI Distribution `GET` and `HEAD` operations under `/v2/` for manifest, blob and referrer retrieval.
+It also forwards `GET` and `HEAD` tag listing and referrer requests for configured source images.
+
+Generated Installer repositories expose:
+
+* `GET`, `HEAD /v2/<installer>/<schematic>/manifests/<reference>`
+* `GET`, `HEAD /v2/<installer>/<schematic>/blobs/<digest>`
+* `GET`, `HEAD /v2/<installer>/<schematic>/referrers/<digest>`
+
+Manifest and blob requests return `307 Temporary Redirect` with `Location` when authentication is disabled and direct external-registry access is configured.
+When authentication is enabled, or internal repository proxying is configured, the factory reverse-proxies the backing registry instead so the authentication boundary is not bypassed.
+The proxied status, content type, body and OCI headers come from that registry, and the inbound `Authorization` header is not forwarded.
 
 ### Legacy `installer` Image
 
@@ -501,7 +617,7 @@ Example: `docker pull factory.talos.dev/installer/376567988ad370138ad8b269821236
 
 ### `installer` Image
 
-#### `docker pull <registry>/<platform>-installer[-secureboot]/<version>`
+#### `docker pull <registry>/<platform>-installer[-secureboot]/<schematic>:<version>`
 
 Examples:
 
@@ -509,18 +625,20 @@ Examples:
 * `docker pull factory.talos.dev/aws-installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba:v1.5.0`
 
 Pulls the Talos Linux `installer` image with the specified schematic and Talos Linux version.
-The image platform (architecture) will be determined by the architecture of the Talos Linux Linux machine.
+The image platform (architecture) will be determined by the architecture of the Talos Linux machine.
 
 Enterprise Installer images for stable Talos 1.13.0 and newer releases also publish per-platform SPDX SBOM attestations and index-level SLSA provenance through OCI referrers.
 Talos 1.13 prereleases are outside the evidence contract.
 Image Factory uses the native OCI 1.1 API when available and the OCI referrers-tag schema for registries such as `registry:2` and `registry:3`.
 See [Enterprise Installer Build Evidence v1](attestations/installer-build-v1.md) for the evidence contract and verification commands.
 
-#### `GET /v2/<installer>/<schematic>/referrers/<digest>`
+#### `GET /v2/<installer>/<schematic>/referrers/<digest>`, `HEAD /v2/<installer>/<schematic>/referrers/<digest>`
 
 Discovers referrers for a generated Installer index or platform manifest.
 The response is an OCI image index regardless of whether the backing registry uses the native referrers API or the referrers-tag schema.
 The standard `artifactType` query parameter filters the returned descriptors.
+A successful response is `200 OK` with the OCI image-index content type, `Docker-Content-Digest` and `Content-Length`.
+When `artifactType` is supplied, the response also includes `Oci-Filters-Applied: artifactType`.
 
 #### `latest` Tag Resolution
 
@@ -561,11 +679,22 @@ Images are forwarded as-is, keeping their original signatures.
 
 Example: `docker pull factory.talos.dev/siderolabs/installer-base:v1.13.5`
 
+The proxy forwards these OCI Distribution operations:
+
+* `GET`, `HEAD /v2/siderolabs/<image>/manifests/<reference>`
+* `GET`, `HEAD /v2/siderolabs/<image>/blobs/<digest>`
+* `GET`, `HEAD /v2/siderolabs/<image>/tags/list`
+* `GET`, `HEAD /v2/siderolabs/<image>/referrers/<digest>`
+
+Query parameters are preserved, including `artifactType` on referrer discovery.
+The proxied response status, content type, body and OCI headers come from the backing registry, and the inbound `Authorization` header is not forwarded.
+
 ### `GET /oci/cosign/signing-key.pub`
 
 Access: `public`.
 
 Returns the PEM-encoded public key used to sign the Talos Linux `installer` images and detached asset bundles when key-based cache signing is configured.
+The response has `Content-Type: application/x-pem-file`.
 
 The key can be used to verify the installer images with `cosign`:
 
