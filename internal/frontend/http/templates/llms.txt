@@ -18,7 +18,7 @@ The Image Factory builds and serves customized Talos Linux boot artifacts. Artif
 
 ## HTTP API (`https://factory.talos.dev`)
 
-**Authentication**: The official public instance (`factory.talos.dev`) does not require authentication. Self-hosted deployments may enable an auth provider, in which case all schematic and image endpoints require credentials (HTTP Basic Auth via htpasswd). If you receive a `401 Unauthorized`, check the deployment's authentication configuration. The `/versions`, `/version/:version/extensions/official`, `/version/:version/overlays/official`, `/secureboot/signing-cert.pem`, and `/oci/cosign/signing-key.pub` endpoints are typically public even when auth is enabled.
+**Authentication**: The official public instance (`factory.talos.dev`) does not require authentication. Enterprise deployments may enable either htpasswd Basic authentication or Auth0 access tokens. Auth0 tokens are accepted as Bearer credentials and as the password in Basic credentials for OCI clients. Schematic, image, PXE, generated Installer OCI, SBOM, VEX and scan routes require authentication when it is enabled. Version, extension, overlay, `talosctl`, SecureBoot certificate, signing key, JWKS and `llms.txt` routes remain public.
 
 ### POST /schematics
 
@@ -59,6 +59,7 @@ Retrieve schematic YAML by ID. Returns 404 if not found.
 ### GET /versions
 
 List available Talos Linux versions. Returns a JSON array of version strings.
+Use `GET /versions?broken=true` to list versions configured as broken instead.
 
 ```json
 ["v1.5.0","v1.5.1","v1.5.2"]
@@ -66,13 +67,13 @@ List available Talos Linux versions. Returns a JSON array of version strings.
 
 ### GET /version/:version/extensions/official
 
-List official system extensions for a version. Returns array of `{name, ref, digest}`.
+List official system extensions for a version. Returns array of `{name, ref, digest, author, description}`.
 
 ### GET /version/:version/overlays/official
 
 List official overlays (e.g. SBC support) for a version. Returns array of `{name, image, ref, digest}`.
 
-### GET /image/:schematic/:version/:path
+### GET, HEAD /image/:schematic/:version/:path
 
 Download a boot artifact. `:path` values:
 
@@ -90,14 +91,16 @@ Download a boot artifact. `:path` values:
 | `gcp-<arch>.raw.tar.gz` | Raw disk image for GCE import |
 
 `<arch>` is `amd64` or `arm64`. `<platform>` examples: `metal`, `aws`, `gcp`, `azure`, `vmware`.
+The optional `filename` query parameter overrides the download filename.
 
 Append `.sha256` or `.sha512` to any path to get a checksum file (Enterprise only).
+Append `.sigstore.json` to get a detached Sigstore bundle when Enterprise asset signing is configured.
 
 ### GET /talosctl/:version
 
 List `talosctl` binary download URLs for a version (available from v1.11.0+).
 
-### GET /talosctl/:version/:path
+### GET, HEAD /talosctl/:version/:path
 
 Download a `talosctl` binary. `:path` example: `talosctl-linux-amd64`.
 
@@ -144,19 +147,27 @@ cosign verify --offline --insecure-ignore-tlog --insecure-ignore-sct \
 
 ## Enterprise-Only APIs
 
-Requires Talos Enterprise Image Factory. Available from Talos v1.11.0+.
+Requires Talos Enterprise Image Factory.
 
-### GET /spdx/:schematic/:version/:arch
+### GET, HEAD /spdx/:schematic/:version/:arch
 
-Returns an SPDX 2.3 JSON SBOM for the given schematic and version.
+Returns an SPDX 2.3 JSON SBOM for the given schematic and version. Available from Talos v1.11.0.
 
-### GET /vex/:version/vex.json
+### GET, HEAD /vex/:version/vex.json
 
-Returns a VEX JSON document for vulnerability suppression.
+Returns a VEX JSON document for vulnerability suppression. Available from Talos v1.13.0.
 
-### GET /scans/:schematic/:version/:arch/:report
+### GET, HEAD /scans/:schematic/:version/:arch/:report
 
-Returns a vulnerability scan report. `:report` suffix: `.json`, `.table`, `.sarif`, `.cdx`.
+Returns a vulnerability scan report. `:report` suffix: `.json`, `.table`, `.sarif`, `.cdx`. Available from Talos v1.13.0.
+
+### POST /download-token
+
+Registered only when Enterprise authentication is enabled. Returns a short-lived `{access_token, token_type, expires_in}` JWT for authenticated image URLs. Append it as `?token=<access_token>` only on `GET` or `HEAD /image/...`.
+
+### GET /.well-known/jwks.json
+
+Registered only when Enterprise authentication is enabled. Returns the public JSON Web Key Set used to verify download tokens. This route is public when registered.
 
 ## Examples
 
