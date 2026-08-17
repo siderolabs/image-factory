@@ -27,6 +27,33 @@ Each bundle cryptographically signs the exact bytes returned by the asset endpoi
 Bundles are persisted in a shared asset cache partitioned by asset, signer, and evidence format, with single-flight deduplication and graceful handling of transient cache failures.
 """
 
+    [notes.download_tokens]
+        title = "Download Tokens (Enterprise only)"
+        description = """\
+Image Factory can now issue short-lived, identity-scoped JWTs for image downloads through `POST /download-token`.
+
+Tokens authenticate `GET` and `HEAD` requests under `/image/` through the `token` query parameter, and their public signing key is exposed through `/.well-known/jwks.json`.
+Callers can request a token lifetime within configurable minimum, maximum, and default bounds.
+"""
+
+    [notes.auth0]
+        title = "Auth0 Authentication (Enterprise only)"
+        description = """\
+Image Factory now supports Auth0 organization-scoped access tokens as an alternative to htpasswd authentication.
+
+Bearer tokens are validated against the tenant's JWKS and can also be supplied through Basic authentication for OCI and Talos clients.
+An optional OAuth2 authorization code flow with PKCE provides interactive browser login with encrypted, replica-safe session cookies.
+"""
+
+    [notes.installer_build_evidence]
+        title = "Installer Build Evidence (Enterprise only)"
+        description = """\
+Installer images built from stable Talos 1.13.0 and newer now carry signed build evidence.
+
+Each platform manifest has an SPDX 2.3 SBOM attestation, while the multi-platform index has a SLSA Provenance v1 attestation.
+Evidence is published as Sigstore bundles through OCI referrers, with automatic fallback to the OCI referrers-tag schema for registries without native OCI 1.1 referrers support.
+"""
+
 [make_deps]
 
     [make_deps.pkgs]
