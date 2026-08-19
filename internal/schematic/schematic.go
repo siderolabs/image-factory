@@ -27,8 +27,9 @@ type OwnershipChecker interface {
 
 // Factory is the schematic factory.
 type Factory struct {
-	storage         storage.Storage
-	sf              singleflight.Group
+	storage storage.Storage
+	sf      singleflight.Group
+
 	metricGet       prometheus.Counter
 	metricCreate    prometheus.Counter
 	metricDuplicate prometheus.Counter
@@ -82,7 +83,8 @@ func (s *Factory) put(ctx context.Context, id string, cfg *schematic.Schematic) 
 	// carry the request ID into the detached call so its logs keep the request_id.
 	reqID := ctxlog.RequestID(ctx)
 
-	_, err, _ := s.sf.Do(id, func() (any, error) { //nolint:contextcheck
+	// put always returns the schematic
+	put := func() (*schematic.Schematic, error) { //nolint:contextcheck
 		dctx := ctxlog.WithRequestID(context.Background(), reqID)
 
 		logger := ctxlog.Logger(dctx, s.logger)
@@ -92,25 +94,46 @@ func (s *Factory) put(ctx context.Context, id string, cfg *schematic.Schematic) 
 
 			s.metricDuplicate.Inc()
 
-			return nil, nil //nolint:nilnil
+			return cfg, nil
 		}
 
 		data, err := cfg.Marshal()
 		if err != nil {
-			return nil, err
+			return cfg, err
 		}
 
-		err = s.storage.Put(dctx, id, data)
-		if err == nil {
-			s.metricCreate.Inc()
-
-			logger.Info("schematic created", zap.String("id", id), zap.Any("customization", cfg.Customization))
+		if err = s.storage.Put(dctx, id, data); err != nil {
+			return cfg, err
 		}
 
-		return nil, err
-	})
+		s.metricCreate.Inc()
 
-	return err
+		logger.Info("schematic created", zap.String("id", id), zap.Any("customization", cfg.Customization))
+
+		return cfg, nil
+	}
+
+	for {
+		result, err, _ := s.sf.Do(id, func() (any, error) { //nolint:contextcheck
+			return put()
+		})
+
+		if result == nil && err != nil {
+			if errors.Is(err, context.Canceled) {
+				return err
+			}
+
+			// This Put joined a failed Get. Retry so that the write is still
+			// performed after the failed read flight completes.
+			continue
+		}
+
+		if _, ok := result.(*schematic.Schematic); !ok {
+			return fmt.Errorf("unexpected singleflight result type: %T", result)
+		}
+
+		return err
+	}
 }
 
 // Get retrieves the stored schematic.
@@ -118,7 +141,7 @@ func (s *Factory) get(ctx context.Context, id string) (*schematic.Schematic, err
 	// carry the request ID into the detached call so its logs keep the request_id.
 	reqID := ctxlog.RequestID(ctx)
 
-	sc, err, _ := s.sf.Do(id, func() (any, error) { //nolint:contextcheck
+	result, err, _ := s.sf.Do(id, func() (any, error) { //nolint:contextcheck
 		dctx := ctxlog.WithRequestID(context.Background(), reqID)
 
 		data, err := s.storage.Get(dctx, id)
@@ -134,12 +157,12 @@ func (s *Factory) get(ctx context.Context, id string) (*schematic.Schematic, err
 		return nil, err
 	}
 
-	sct, ok := sc.(*schematic.Schematic)
+	schematic, ok := result.(*schematic.Schematic)
 	if !ok {
-		return nil, fmt.Errorf("unexpected result type: %T", sc)
+		return nil, fmt.Errorf("unexpected singleflight result type: %T", result)
 	}
 
-	return sct, nil
+	return schematic, nil
 }
 
 // Get retrieves the stored schematic and enforces ownership.
