@@ -185,6 +185,7 @@ COPY go.sum go.sum
 RUN cd .
 RUN --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go mod download
 RUN --mount=type=cache,target=/go/pkg,id=image-factory/go/pkg go mod verify
+COPY ./api ./api
 COPY ./cmd ./cmd
 COPY ./internal ./internal
 COPY ./pkg ./pkg

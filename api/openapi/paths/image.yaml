@@ -1,0 +1,58 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+parameters:
+- $ref: ../components/parameters.yaml#/SchematicID
+- $ref: ../components/parameters.yaml#/TalosVersion
+- $ref: ../components/parameters.yaml#/ImageArtifactPath
+- $ref: ../components/parameters.yaml#/Filename
+- $ref: ../components/parameters.yaml#/DownloadToken
+get:
+  operationId: getImage
+  x-image-factory-validate-artifact-path: true
+  summary: Download an image artifact
+  security:
+  - basicAuth: []
+  - bearerAuth: []
+  - downloadToken: []
+  responses:
+    '200':
+      $ref: "../components/responses.yaml#/Artifact"
+    '302':
+      $ref: "../components/responses.yaml#/Found"
+    '400':
+      $ref: "../components/responses.yaml#/BadRequest"
+    '401':
+      $ref: "../components/responses.yaml#/Unauthorized"
+    '402':
+      $ref: "../components/responses.yaml#/PaymentRequired"
+    '403':
+      $ref: "../components/responses.yaml#/Forbidden"
+    '404':
+      $ref: "../components/responses.yaml#/NotFound"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"
+head:
+  operationId: headImage
+  x-image-factory-validate-artifact-path: true
+  summary: Inspect an image artifact
+  security:
+  - basicAuth: []
+  - bearerAuth: []
+  - downloadToken: []
+  responses:
+    '200':
+      $ref: "../components/responses.yaml#/ArtifactHeaders"
+    '400':
+      $ref: "../components/responses.yaml#/BadRequest"
+    '401':
+      $ref: "../components/responses.yaml#/Unauthorized"
+    '402':
+      $ref: "../components/responses.yaml#/PaymentRequired"
+    '403':
+      $ref: "../components/responses.yaml#/Forbidden"
+    '404':
+      $ref: "../components/responses.yaml#/NotFound"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

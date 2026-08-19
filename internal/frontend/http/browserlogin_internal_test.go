@@ -15,6 +15,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/require"
 
+	"github.com/siderolabs/image-factory/api"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
@@ -55,13 +56,18 @@ func TestRegisterBrowserLoginRoutes(t *testing.T) {
 	f := &Frontend{router: httprouter.New()}
 	f.options.AuthProvider = stubBrowserLogin{callbackPath: "/callback"}
 
+	contract, err := api.NewContract(t.Context())
+	require.NoError(t, err)
+
 	var registered []string
 
-	f.registerBrowserLogin(func(_ func(string, httprouter.Handle), path string, _ Handler) {
-		registered = append(registered, path)
+	f.registerBrowserLogin(func(method string, _ func(string, httprouter.Handle), path string, _ Handler) {
+		require.NoError(t, contract.ValidateRuntimeRoute(method, path))
+
+		registered = append(registered, method+" "+path)
 	})
 
-	require.Equal(t, []string{"/login", "/logout", "/logout", "/callback"}, registered)
+	require.Equal(t, []string{"GET /login", "GET /logout", "POST /logout", "GET /callback"}, registered)
 }
 
 // TestRegisterBrowserLoginSkipsPlainProvider pins that a provider without browser login
@@ -71,7 +77,7 @@ func TestRegisterBrowserLoginSkipsPlainProvider(t *testing.T) {
 
 	f := &Frontend{router: httprouter.New()}
 
-	f.registerBrowserLogin(func(func(string, httprouter.Handle), string, Handler) {
+	f.registerBrowserLogin(func(string, func(string, httprouter.Handle), string, Handler) {
 		t.Fatal("no route may be registered without a browser-login provider")
 	})
 }

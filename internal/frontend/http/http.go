@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/getkin/kin-openapi/routers"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/uuid"
@@ -30,6 +31,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/siderolabs/image-factory/api"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/audit"
@@ -49,6 +51,7 @@ import (
 // Frontend is the HTTP frontend.
 type Frontend struct {
 	router            *httprouter.Router
+	contract          *api.Contract
 	schematicFactory  *schematic.Factory
 	assetBuilder      *asset.Builder
 	artifactsManager  *artifacts.Manager
@@ -94,8 +97,12 @@ type ImageProxyOptions struct {
 // Handler is a custom handler type that includes the context and httprouter params, and returns an error.
 type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
 
+// InvalidRequestTag marks requests rejected by the OpenAPI contract.
+type InvalidRequestTag struct{}
+
 // NewFrontend creates a new HTTP frontend.
 func NewFrontend(
+	ctx context.Context,
 	logger *zap.Logger,
 	schematicFactory *schematic.Factory,
 	assetBuilder *asset.Builder,
@@ -125,6 +132,11 @@ func NewFrontend(
 	}
 
 	var err error
+
+	frontend.contract, err = api.NewContract(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OpenAPI contract: %w", err)
+	}
 
 	frontend.puller, err = remotewrap.NewPuller(opts.RegistryRefreshInterval, opts.InstallerInternalNameOptions, opts.RemoteOptions)
 	if err != nil {
@@ -156,12 +168,26 @@ func NewFrontend(
 		}),
 	})
 
-	registerRoute := func(registrator func(string, httprouter.Handle), path string, handler Handler) {
-		registrator(path, httproutermiddleware.Handler(path, frontend.wrapper(handler), mdlw))
+	var registrationErr error
+
+	registerRoute := func(method string, registrator func(string, httprouter.Handle), path string, handler Handler) {
+		handle := httproutermiddleware.Handler(path, frontend.wrapper(handler), mdlw)
+		if routeErr := registerRuntimeRoute(frontend.contract, method, registrator, path, handle); routeErr != nil {
+			registrationErr = errors.Join(registrationErr, routeErr)
+		}
 	}
 
-	registerPublicRoute := func(registrator func(string, httprouter.Handle), path string, handler Handler) {
-		registrator(path, httproutermiddleware.Handler(path, frontend.wrapperPublic(handler), mdlw))
+	registerPublicRoute := func(method string, registrator func(string, httprouter.Handle), path string, handler Handler) {
+		handle := httproutermiddleware.Handler(path, frontend.wrapperPublic(handler), mdlw)
+		if routeErr := registerRuntimeRoute(frontend.contract, method, registrator, path, handle); routeErr != nil {
+			registrationErr = errors.Join(registrationErr, routeErr)
+		}
+	}
+
+	registerStaticRoute := func(path string, filesystem http.FileSystem) {
+		if routeErr := registerRuntimeRoute(frontend.contract, http.MethodGet, frontend.router.GET, path, serveFiles(filesystem)); routeErr != nil {
+			registrationErr = errors.Join(registrationErr, routeErr)
+		}
 	}
 
 	// enterprise
@@ -183,67 +209,97 @@ func NewFrontend(
 			}
 
 			if isPublic {
-				registerPublicRoute(registrator, enterpriseRoute.Path(), enterpriseRoute.Handle)
+				registerPublicRoute(method, registrator, enterpriseRoute.Path(), enterpriseRoute.Handle)
 			} else {
-				registerRoute(registrator, enterpriseRoute.Path(), enterpriseRoute.Handle)
+				registerRoute(method, registrator, enterpriseRoute.Path(), enterpriseRoute.Handle)
 			}
 		}
 	}
 
 	// /healthz and /readyz are always public (Kubernetes probes, monitoring)
-	registerPublicRoute(frontend.router.GET, "/healthz", frontend.handleHealth)
-	registerPublicRoute(frontend.router.HEAD, "/healthz", frontend.handleHealth)
-	registerPublicRoute(frontend.router.GET, "/readyz", frontend.handleReady)
-	registerPublicRoute(frontend.router.HEAD, "/readyz", frontend.handleReady)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/healthz", frontend.handleHealth)
+	registerPublicRoute(http.MethodHead, frontend.router.HEAD, "/healthz", frontend.handleHealth)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/readyz", frontend.handleReady)
+	registerPublicRoute(http.MethodHead, frontend.router.HEAD, "/readyz", frontend.handleReady)
 
 	// images - require auth (download tokens bypass auth via JWT verification)
-	registerRoute(frontend.router.GET, "/image/:schematic/:version/:path", frontend.handleImage)
-	registerRoute(frontend.router.HEAD, "/image/:schematic/:version/:path", frontend.handleImage)
+	registerRoute(http.MethodGet, frontend.router.GET, "/image/:schematic/:version/:path", frontend.handleImage)
+	registerRoute(http.MethodHead, frontend.router.HEAD, "/image/:schematic/:version/:path", frontend.handleImage)
 
 	// PXE - require auth
-	registerRoute(frontend.router.GET, "/pxe/:schematic/:version/:path", frontend.handlePXE)
+	registerRoute(http.MethodGet, frontend.router.GET, "/pxe/:schematic/:version/:path", frontend.handlePXE)
 
 	// registry - /v2 requires auth (OCI spec: 401 challenge when auth enabled)
-	registerRoute(frontend.router.GET, "/v2", frontend.handleHealth)
-	registerRoute(frontend.router.HEAD, "/v2", frontend.handleHealth)
-	registerRoute(frontend.router.GET, "/v2/*path", frontend.handleV2)
-	registerRoute(frontend.router.HEAD, "/v2/*path", frontend.handleV2)
-	registerPublicRoute(frontend.router.GET, "/oci/cosign/signing-key.pub", frontend.handleCosignSigningKeyPub)
+	registerRoute(http.MethodGet, frontend.router.GET, "/v2", frontend.handleHealth)
+	registerRoute(http.MethodHead, frontend.router.HEAD, "/v2", frontend.handleHealth)
+	registerRoute(http.MethodGet, frontend.router.GET, "/v2/*path", frontend.handleV2)
+	registerRoute(http.MethodHead, frontend.router.HEAD, "/v2/*path", frontend.handleV2)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/oci/cosign/signing-key.pub", frontend.handleCosignSigningKeyPub)
 
 	// schematic - both POST and GET require auth
-	registerRoute(frontend.router.POST, "/schematics", frontend.handleSchematicCreate)
-	registerRoute(frontend.router.GET, "/schematics/:schematic", frontend.handleSchematicGet)
+	registerRoute(http.MethodPost, frontend.router.POST, "/schematics", frontend.handleSchematicCreate)
+	registerRoute(http.MethodGet, frontend.router.GET, "/schematics/:schematic", frontend.handleSchematicGet)
 
 	// meta - public
-	registerPublicRoute(frontend.router.GET, "/versions", frontend.handleVersions)
-	registerPublicRoute(frontend.router.GET, "/version/:version/extensions/official", frontend.handleOfficialExtensions)
-	registerPublicRoute(frontend.router.GET, "/version/:version/overlays/official", frontend.handleOfficialOverlays)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/versions", frontend.handleVersions)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/version/:version/extensions/official", frontend.handleOfficialExtensions)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/version/:version/overlays/official", frontend.handleOfficialOverlays)
 
 	// secureboot - public
-	registerPublicRoute(frontend.router.GET, "/secureboot/signing-cert.pem", frontend.handleSecureBootSigningCert)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/secureboot/signing-cert.pem", frontend.handleSecureBootSigningCert)
 
 	// talosctl - public
-	registerPublicRoute(frontend.router.GET, "/talosctl/:version", frontend.handleTalosctlList)
-	registerPublicRoute(frontend.router.HEAD, "/talosctl/:version/:path", frontend.handleTalosctl)
-	registerPublicRoute(frontend.router.GET, "/talosctl/:version/:path", frontend.handleTalosctl)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/talosctl/:version", frontend.handleTalosctlList)
+	registerPublicRoute(http.MethodHead, frontend.router.HEAD, "/talosctl/:version/:path", frontend.handleTalosctl)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/talosctl/:version/:path", frontend.handleTalosctl)
 
-	// llms.txt - public
-	registerPublicRoute(frontend.router.GET, "/llms.txt", frontend.handleLLMsTxt)
+	// machine-readable API documentation - public
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/llms.txt", frontend.handleLLMsTxt)
+	registerPublicRoute(http.MethodGet, frontend.router.GET, "/openapi.yaml", frontend.handleOpenAPI)
 
 	// UI - require auth (consistent with all other schematic-creating endpoints)
-	registerRoute(frontend.router.GET, "/", frontend.handleUI)
-	registerRoute(frontend.router.HEAD, "/", frontend.handleUI)
-	registerRoute(frontend.router.POST, "/ui/wizard", frontend.handleUIWizard)
-	registerRoute(frontend.router.GET, "/ui/version-doc", frontend.handleUIVersionDoc)
-	registerRoute(frontend.router.POST, "/ui/extensions-list", frontend.handleUIExtensionsList)
+	registerRoute(http.MethodGet, frontend.router.GET, "/", frontend.handleUI)
+	registerRoute(http.MethodHead, frontend.router.HEAD, "/", frontend.handleUI)
+	registerRoute(http.MethodPost, frontend.router.POST, "/ui/wizard", frontend.handleUIWizard)
+	registerRoute(http.MethodGet, frontend.router.GET, "/ui/version-doc", frontend.handleUIVersionDoc)
+	registerRoute(http.MethodPost, frontend.router.POST, "/ui/extensions-list", frontend.handleUIExtensionsList)
 
-	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
-	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
-	frontend.router.ServeFiles("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
+	registerStaticRoute("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
+	registerStaticRoute("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
+	registerStaticRoute("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 
 	frontend.registerBrowserLogin(registerPublicRoute)
 
+	if registrationErr != nil {
+		return nil, fmt.Errorf("register HTTP routes: %w", registrationErr)
+	}
+
 	return frontend, nil
+}
+
+func registerRuntimeRoute(
+	contract *api.Contract,
+	method string,
+	registrator func(string, httprouter.Handle),
+	path string,
+	handle httprouter.Handle,
+) error {
+	if err := contract.ValidateRuntimeRoute(method, path); err != nil {
+		return err
+	}
+
+	registrator(path, handle)
+
+	return nil
+}
+
+func serveFiles(filesystem http.FileSystem) httprouter.Handle {
+	server := http.FileServer(filesystem)
+
+	return func(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
+		request.URL.Path = params.ByName("filepath")
+		server.ServeHTTP(writer, request)
+	}
 }
 
 // Handler returns the HTTP handler.
@@ -283,7 +339,7 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 
 		var username string
 
-		handler := f.withAuth(h, requireAuth, &username, &state)
+		handler := f.withAuth(f.withContractValidation(h), requireAuth, &username, &state)
 
 		start := time.Now()
 		err := handler(ctx, sw, r, p)
@@ -336,6 +392,27 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 				Error:     errString(err),
 			})
 		}
+	}
+}
+
+func (f *Frontend) withContractValidation(h Handler) Handler {
+	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+		if f.contract != nil {
+			_, _, err := f.contract.ValidateRequest(ctx, r)
+			if errors.Is(err, routers.ErrPathNotFound) {
+				return xerrors.NewTagged[RouteNotFoundTag](fmt.Errorf("route not registered in OpenAPI: %w", err))
+			}
+
+			if errors.Is(err, routers.ErrMethodNotAllowed) {
+				return xerrors.NewTagged[MethodNotAllowedTag](fmt.Errorf("method not registered in OpenAPI: %w", err))
+			}
+
+			if err != nil {
+				return xerrors.NewTagged[InvalidRequestTag](fmt.Errorf("invalid request: %w", err))
+			}
+		}
+
+		return h(ctx, w, r, p)
 	}
 }
 
@@ -454,10 +531,16 @@ func MatchError(err error, callback func(message string, code int)) (zapcore.Lev
 		status = http.StatusNotFound
 
 		callback(err.Error(), http.StatusNotFound)
+	case xerrors.TagIs[MethodNotAllowedTag](err):
+		level = zap.WarnLevel
+		status = http.StatusMethodNotAllowed
+
+		callback(err.Error(), http.StatusMethodNotAllowed)
 	case xerrors.TagIs[profile.InvalidErrorTag](err),
 		xerrors.TagIs[schematicpkg.InvalidErrorTag](err),
 		xerrors.TagIs[enterrors.InvalidErrorTag](err),
-		xerrors.TagIs[InvalidImageTag](err):
+		xerrors.TagIs[InvalidImageTag](err),
+		xerrors.TagIs[InvalidRequestTag](err):
 		level = zap.WarnLevel
 		status = http.StatusBadRequest
 

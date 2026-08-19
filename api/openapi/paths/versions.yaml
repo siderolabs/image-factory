@@ -1,0 +1,25 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+get:
+  operationId: listVersions
+  summary: List Talos versions
+  description: Returns available Talos versions, or broken versions when `broken` is exactly `true`.
+  security: []
+  parameters:
+  - name: broken
+    in: query
+    required: false
+    description: The literal string `true` selects the configured broken-version list; every other value lists available versions.
+    schema:
+      type: string
+  responses:
+    '200':
+      description: Talos version strings with leading `v` prefixes.
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas.yaml#/VersionList"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

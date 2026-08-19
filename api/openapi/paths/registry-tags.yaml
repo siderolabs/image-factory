@@ -1,0 +1,22 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+parameters:
+- $ref: ../components/parameters.yaml#/RegistryNameTail
+get:
+  operationId: listRegistryTags
+  summary: List or proxy OCI repository tags
+  responses:
+    default:
+      $ref: "../components/responses.yaml#/OCIResponse"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"
+head:
+  operationId: headRegistryTags
+  summary: Inspect an OCI repository tag listing
+  responses:
+    default:
+      $ref: "../components/responses.yaml#/OCIResponse"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

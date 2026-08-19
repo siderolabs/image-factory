@@ -1,0 +1,159 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+EmptyResponse:
+  description: Successful empty response.
+JSONResponse:
+  description: JSON response whose detailed schema is owned by the referenced standard.
+  content:
+    application/json:
+      schema: {}
+JSONArtifact:
+  description: Downloadable JSON artifact.
+  headers:
+    Content-Disposition:
+      $ref: "./headers.yaml#/ContentDisposition"
+    Content-Length:
+      $ref: "./headers.yaml#/ContentLength"
+  content:
+    application/json:
+      schema: {}
+TextResponse:
+  description: Plain-text response.
+  content:
+    text/plain:
+      schema:
+        type: string
+PEMResponse:
+  description: PEM-encoded public material.
+  content:
+    application/x-pem-file:
+      schema:
+        type: string
+SPDXResponse:
+  description: Downloadable SPDX 2.3 JSON document.
+  headers:
+    Content-Disposition:
+      $ref: "./headers.yaml#/ContentDisposition"
+    Content-Length:
+      $ref: "./headers.yaml#/ContentLength"
+  content:
+    application/spdx+json:
+      schema: {}
+Artifact:
+  description: Downloadable artifact selected by the path suffix.
+  headers:
+    Content-Disposition:
+      $ref: "./headers.yaml#/ContentDisposition"
+    Content-Length:
+      $ref: "./headers.yaml#/ContentLength"
+  content:
+    application/octet-stream:
+      schema:
+        type: string
+        format: binary
+    text/plain:
+      schema:
+        type: string
+    application/vnd.dev.sigstore.bundle.v0.3+json:
+      schema: {}
+ArtifactHeaders:
+  description: Artifact metadata without a response body.
+  headers:
+    Content-Disposition:
+      $ref: "./headers.yaml#/ContentDisposition"
+    Content-Length:
+      $ref: "./headers.yaml#/ContentLength"
+OCIResponse:
+  description: Response forwarded from or generated for an OCI registry.
+  content:
+    application/octet-stream:
+      schema:
+        type: string
+        format: binary
+    application/vnd.oci.image.manifest.v1+json:
+      schema: {}
+    application/vnd.oci.image.index.v1+json:
+      schema: {}
+OCIIndexResponse:
+  description: OCI image index containing matching referrers.
+  headers:
+    Content-Length:
+      $ref: "./headers.yaml#/ContentLength"
+    Docker-Content-Digest:
+      schema:
+        type: string
+    Oci-Filters-Applied:
+      schema:
+        type: string
+  content:
+    application/vnd.oci.image.index.v1+json:
+      schema: {}
+OCIIndexHeaders:
+  description: OCI referrer metadata without a response body.
+  headers:
+    Content-Length:
+      $ref: "./headers.yaml#/ContentLength"
+    Docker-Content-Digest:
+      schema:
+        type: string
+    Oci-Filters-Applied:
+      schema:
+        type: string
+Found:
+  description: Artifact cache redirect.
+  headers:
+    Location:
+      $ref: "./headers.yaml#/Location"
+TemporaryRedirect:
+  description: External OCI registry redirect.
+  headers:
+    Location:
+      $ref: "./headers.yaml#/Location"
+BadRequest:
+  description: Invalid input.
+  content:
+    text/plain:
+      schema:
+        type: string
+Unauthorized:
+  description: Authentication is configured and credentials are missing or invalid.
+  headers:
+    WWW-Authenticate:
+      schema:
+        type: string
+  content:
+    text/plain:
+      schema:
+        type: string
+PaymentRequired:
+  description: An Enterprise asset feature is unavailable.
+  content:
+    text/plain:
+      schema:
+        type: string
+Forbidden:
+  description: The authenticated principal is outside its scope or does not own the schematic.
+  content:
+    text/plain:
+      schema:
+        type: string
+NotFound:
+  description: The route or requested object does not exist.
+  content:
+    text/plain:
+      schema:
+        type: string
+InternalServerError:
+  description: Unexpected server failure.
+  content:
+    text/plain:
+      schema:
+        type: string
+ServiceUnavailable:
+  description: A required service is not ready.
+  content:
+    text/plain:
+      schema:
+        type: string

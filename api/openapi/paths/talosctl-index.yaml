@@ -1,0 +1,24 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+parameters:
+- $ref: ../components/parameters.yaml#/TalosVersion
+get:
+  operationId: listTalosctlDownloads
+  summary: List talosctl download URLs
+  security: []
+  responses:
+    '200':
+      description: Absolute download URLs.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              type: string
+              format: uri
+    '404':
+      $ref: "../components/responses.yaml#/NotFound"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

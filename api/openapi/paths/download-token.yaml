@@ -1,0 +1,36 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+post:
+  operationId: createDownloadToken
+  summary: Create a short-lived image download token
+  x-enterprise: true
+  parameters:
+    - name: ttl
+      in: query
+      required: false
+      description: >-
+        Requested positive Go duration. The issuer enforces its configured minimum and maximum;
+        omitting this parameter selects the configured default.
+      example: 1h
+      schema:
+        type: string
+  responses:
+    '200':
+      description: A short-lived download token.
+      headers:
+        Cache-Control:
+          schema:
+            type: string
+          example: no-store
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas.yaml#/DownloadToken"
+    '401':
+      $ref: "../components/responses.yaml#/Unauthorized"
+    '403':
+      $ref: "../components/responses.yaml#/Forbidden"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

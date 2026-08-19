@@ -1,0 +1,40 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+parameters:
+- $ref: ../components/parameters.yaml#/RegistryNameTail
+- $ref: ../components/parameters.yaml#/OCIDigest
+- $ref: ../components/parameters.yaml#/ArtifactType
+get:
+  operationId: getRegistryReferrers
+  summary: Discover or proxy OCI referrers
+  responses:
+    '200':
+      $ref: "../components/responses.yaml#/OCIIndexResponse"
+    '401':
+      $ref: "../components/responses.yaml#/Unauthorized"
+    '403':
+      $ref: "../components/responses.yaml#/Forbidden"
+    '404':
+      $ref: "../components/responses.yaml#/NotFound"
+    default:
+      $ref: "../components/responses.yaml#/OCIResponse"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"
+head:
+  operationId: headRegistryReferrers
+  summary: Inspect OCI referrers
+  responses:
+    '200':
+      $ref: "../components/responses.yaml#/OCIIndexHeaders"
+    '401':
+      $ref: "../components/responses.yaml#/Unauthorized"
+    '403':
+      $ref: "../components/responses.yaml#/Forbidden"
+    '404':
+      $ref: "../components/responses.yaml#/NotFound"
+    default:
+      $ref: "../components/responses.yaml#/OCIResponse"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"
