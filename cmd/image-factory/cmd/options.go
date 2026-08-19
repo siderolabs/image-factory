@@ -86,7 +86,19 @@ func (o AuthenticationOptions) validate() error {
 			return errors.New(`authentication.auth0.audience is required when authentication.provider is "auth0"`)
 		}
 
-		// Only the key's encoding is checked here; the provider validates the group.
+		if o.Auth0.ClientID == "" {
+			return errors.New(`authentication.auth0.clientID is required when authentication.provider is "auth0"`)
+		}
+
+		if o.Auth0.ClientSecret == "" {
+			return errors.New(`authentication.auth0.clientSecret is required when authentication.provider is "auth0"`)
+		}
+
+		if o.Auth0.MaxNodeAppsPerOrg <= 0 {
+			return fmt.Errorf("authentication.auth0.maxNodeAppsPerOrg must be positive, got %d", o.Auth0.MaxNodeAppsPerOrg)
+		}
+
+		// Only the key's encoding is checked here; the provider validates whether it's required.
 		if o.Auth0.SessionKey != "" {
 			key, err := o.Auth0.DecodedSessionKey()
 			if err != nil {
@@ -657,8 +669,8 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 	//
 	// It is required when provider is "auth0", and ignored otherwise.
 	//
-	// Domain and audience alone validate bearer tokens.
-	// The browser-login fields are optional, and add the sign-in routes on top when set.
+	// Domain, audience, clientID and clientSecret are always required.
+	// sessionKey is optional, and adds the browser sign-in routes on top when set.
 	Auth0 Auth0Options `koanf:"auth0"`
 
 	// DownloadTokenKeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing download tokens.
@@ -705,15 +717,18 @@ type Auth0Options struct {
 	// Optional; when empty every valid token has full access.
 	MachineScope string `koanf:"machineScope"`
 
-	// ClientID is the Auth0 application Client ID used for the browser login flow.
+	// ClientID is the Auth0 application Client ID, used for the browser login flow and for the
+	// Management API calls that provision per-org node tokens.
 	//
-	// Optional; part of the browser-login group.
+	// Required. The application must be authorized in the Auth0 dashboard for the Management
+	// API with the `create:clients`, `read:clients`, `delete:clients` and `create:client_grants`
+	// scopes, regardless of whether browser login is also enabled.
 	ClientID string `koanf:"clientID"`
 
 	// ClientSecret is the Auth0 application Client Secret.
 	// Inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET environment variable.
 	//
-	// Optional; part of the browser-login group.
+	// Required; see ClientID.
 	ClientSecret string `koanf:"clientSecret"`
 
 	// SessionKey is the base64-encoded 32-byte AES-256 key used to encrypt session cookies.
@@ -723,13 +738,18 @@ type Auth0Options struct {
 	// All replicas must share the same key, since a session or in-progress login started
 	// on one replica has to be decrypted by whichever replica handles the next request.
 	//
-	// Optional; part of the browser-login group.
+	// Optional; enables the browser sign-in routes when set.
 	SessionKey string `koanf:"sessionKey"`
 
 	// issuerURLOverride replaces the issuer URL constructed from Domain, for the expected
 	// iss claim and for the JWKS, authorize and token endpoints.
 	// Unexported so koanf cannot reach it; see SetAuth0IssuerURL, built only under the integration tag.
 	issuerURLOverride string
+
+	// MaxNodeAppsPerOrg caps how many node tokens an org may have active at once.
+	//
+	// Enforced at creation time, on top of Auth0's own per-tenant client-count ceiling.
+	MaxNodeAppsPerOrg int `koanf:"maxNodeAppsPerOrg"`
 }
 
 // DecodedSessionKey returns the session key bytes, or nil when none is configured.
@@ -886,6 +906,9 @@ var DefaultOptions = Options{
 			Default: 5 * time.Minute,
 			Max:     8 * time.Hour,
 			Min:     30 * time.Second,
+		},
+		Auth0: Auth0Options{
+			MaxNodeAppsPerOrg: 10,
 		},
 	},
 

@@ -49,6 +49,8 @@ func setupProvider(t *testing.T, privateKey *rsa.PrivateKey) (*auth0.Provider, s
 	p, err := auth0.NewProvider(t.Context(), zaptest.NewLogger(t), auth0.Config{
 		Domain:            testDomain,
 		Audience:          testAudience,
+		ClientID:          testClientID,
+		ClientSecret:      testClientSecret,
 		IssuerURLOverride: issuerURL,
 	})
 	require.NoError(t, err)
@@ -325,6 +327,8 @@ func TestAuth0ProviderMachineScope(t *testing.T) {
 		p, err := auth0.NewProvider(t.Context(), zaptest.NewLogger(t), auth0.Config{
 			Domain:            testDomain,
 			Audience:          testAudience,
+			ClientID:          testClientID,
+			ClientSecret:      testClientSecret,
 			MachineScope:      scope,
 			IssuerURLOverride: issuerURL,
 		})
@@ -480,7 +484,9 @@ func TestBearerOnlyDeniesBrowserWithChallenge(t *testing.T) {
 func TestAuth0ProviderUsernameFromContext(t *testing.T) {
 	t.Parallel()
 
-	p, err := auth0.NewProvider(t.Context(), zaptest.NewLogger(t), auth0.Config{Domain: testDomain, Audience: testAudience})
+	p, err := auth0.NewProvider(t.Context(), zaptest.NewLogger(t), auth0.Config{
+		Domain: testDomain, Audience: testAudience, ClientID: testClientID, ClientSecret: testClientSecret,
+	})
 	require.NoError(t, err)
 
 	ctx := t.Context()
@@ -506,7 +512,12 @@ func TestNewProviderValidation(t *testing.T) {
 	require.Error(t, err, "empty audience should be rejected")
 
 	_, err = auth0.NewProvider(t.Context(), logger, auth0.Config{Domain: testDomain, Audience: testAudience})
-	require.NoError(t, err, "domain and audience alone should be a valid, bearer-token-only setup")
+	require.Error(t, err, "clientID and clientSecret are required even for a bearer-token-only setup")
+
+	_, err = auth0.NewProvider(t.Context(), logger, auth0.Config{
+		Domain: testDomain, Audience: testAudience, ClientID: testClientID, ClientSecret: testClientSecret,
+	})
+	require.NoError(t, err, "domain, audience, clientID and clientSecret is a valid, bearer-token-only setup")
 
 	// The domain is the trust anchor, so anything that could point elsewhere is rejected
 	// rather than trimmed into shape.
@@ -517,13 +528,17 @@ func TestNewProviderValidation(t *testing.T) {
 		"tenant.auth0.com#frag",
 		"tenant.auth0.com/../evil.example",
 	} {
-		_, err = auth0.NewProvider(t.Context(), logger, auth0.Config{Domain: domain, Audience: testAudience})
+		_, err = auth0.NewProvider(t.Context(), logger, auth0.Config{
+			Domain: domain, Audience: testAudience, ClientID: testClientID, ClientSecret: testClientSecret,
+		})
 		require.Errorf(t, err, "domain %q should be rejected", domain)
 	}
 
 	// A scheme or trailing slash is what the Auth0 console shows, so accept it.
 	for _, domain := range []string{"https://" + testDomain, "https://" + testDomain + "/", testDomain + "/"} {
-		_, err = auth0.NewProvider(t.Context(), logger, auth0.Config{Domain: domain, Audience: testAudience})
+		_, err = auth0.NewProvider(t.Context(), logger, auth0.Config{
+			Domain: domain, Audience: testAudience, ClientID: testClientID, ClientSecret: testClientSecret,
+		})
 		require.NoErrorf(t, err, "domain %q should be accepted", domain)
 	}
 
@@ -543,19 +558,14 @@ func TestNewProviderValidation(t *testing.T) {
 	}
 }
 
-// TestNewProviderBrowserLoginFields asserts the browser-login fields are all-or-nothing.
-func TestNewProviderBrowserLoginFields(t *testing.T) {
+// TestNewProviderClientCredentialsRequired asserts clientID and clientSecret are required
+// unconditionally — node-token management needs them independent of browser login.
+func TestNewProviderClientCredentialsRequired(t *testing.T) {
 	t.Parallel()
 
 	logger := zaptest.NewLogger(t)
 
-	base := auth0.Config{Domain: testDomain, Audience: testAudience}
-
-	full := base
-	full.ClientID = "client-id"
-	full.ClientSecret = "client-secret"
-	full.ExternalURL = "https://factory.example.com"
-	full.SessionKey = make([]byte, 32)
+	base := auth0.Config{Domain: testDomain, Audience: testAudience, ClientID: testClientID, ClientSecret: testClientSecret}
 
 	for _, tc := range []struct {
 		name    string
@@ -564,21 +574,46 @@ func TestNewProviderBrowserLoginFields(t *testing.T) {
 	}{
 		{"no clientID", func(c *auth0.Config) { c.ClientID = "" }, "clientID"},
 		{"no clientSecret", func(c *auth0.Config) { c.ClientSecret = "" }, "clientSecret"},
-		{"no sessionKey", func(c *auth0.Config) { c.SessionKey = nil }, "sessionKey"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg := full
+			cfg := base
 			tc.mutate(&cfg)
 
 			_, err := auth0.NewProvider(t.Context(), logger, cfg)
-			require.Error(t, err, "partial browser login config should be rejected")
+			require.Error(t, err, "missing client credentials should be rejected even with browser login disabled")
 			require.ErrorContains(t, err, tc.missing)
 		})
 	}
 
-	t.Run("all three present", func(t *testing.T) {
+	t.Run("present, sessionKey absent", func(t *testing.T) {
+		t.Parallel()
+
+		p, err := auth0.NewProvider(t.Context(), logger, base)
+		require.NoError(t, err, "clientID and clientSecret alone, with no sessionKey, is a valid management-only setup")
+		require.False(t, p.BrowserLoginEnabled())
+	})
+}
+
+// TestNewProviderSessionKeyOptional asserts sessionKey is the sole field that toggles browser
+// login, independent of clientID/clientSecret which TestNewProviderClientCredentialsRequired
+// covers.
+func TestNewProviderSessionKeyOptional(t *testing.T) {
+	t.Parallel()
+
+	logger := zaptest.NewLogger(t)
+
+	full := auth0.Config{
+		Domain:       testDomain,
+		Audience:     testAudience,
+		ClientID:     testClientID,
+		ClientSecret: testClientSecret,
+		ExternalURL:  "https://factory.example.com",
+		SessionKey:   make([]byte, 32),
+	}
+
+	t.Run("sessionKey present", func(t *testing.T) {
 		t.Parallel()
 
 		p, err := auth0.NewProvider(t.Context(), logger, full)
@@ -588,10 +623,13 @@ func TestNewProviderBrowserLoginFields(t *testing.T) {
 			"the callback route is fixed, and Auth0 is told externalURL + this path")
 	})
 
-	t.Run("none present", func(t *testing.T) {
+	t.Run("sessionKey absent", func(t *testing.T) {
 		t.Parallel()
 
-		p, err := auth0.NewProvider(t.Context(), logger, base)
+		cfg := full
+		cfg.SessionKey = nil
+
+		p, err := auth0.NewProvider(t.Context(), logger, cfg)
 		require.NoError(t, err)
 		require.False(t, p.BrowserLoginEnabled())
 	})

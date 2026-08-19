@@ -44,39 +44,11 @@ type browserLogin struct { //nolint:govet // keeping order for semantic clarity
 	secure bool // externalURL is https, so cookies can carry Secure
 }
 
-// browserLoginRequested reports whether the browser login settings are present, rejecting a
-// partial set.
-func (cfg Config) browserLoginRequested() (bool, error) {
-	fields := []struct {
-		name    string
-		present bool
-	}{
-		{"clientID", cfg.ClientID != ""},
-		{"clientSecret", cfg.ClientSecret != ""},
-		{"sessionKey", len(cfg.SessionKey) > 0},
-	}
-
-	var missing []string
-
-	for _, field := range fields {
-		if !field.present {
-			missing = append(missing, field.name)
-		}
-	}
-
-	// All three or none.
-	switch len(missing) {
-	case 0:
-		return true, nil
-	case len(fields):
-		return false, nil
-	default:
-		return false, fmt.Errorf(
-			"auth0: browser login requires clientID, clientSecret and sessionKey together (missing: %s); "+
-				"omit all three to serve machine-to-machine bearer tokens only",
-			strings.Join(missing, ", "),
-		)
-	}
+// browserLoginRequested reports whether the browser login settings are present.
+// clientID and clientSecret are validated separately, in NewProvider, since node-token
+// management needs them regardless of whether browser login is enabled.
+func (cfg Config) browserLoginRequested() bool {
+	return len(cfg.SessionKey) > 0
 }
 
 func newBrowserLogin(issuer string, keySet oidc.KeySet, tenantURL *url.URL, cfg Config) (*browserLogin, error) {

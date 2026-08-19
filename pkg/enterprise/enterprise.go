@@ -195,9 +195,9 @@ type Auth0Config struct {
 	Audience     string
 	MachineScope string
 
-	// Browser login, additive on top of the bearer-token validation Domain and Audience
-	// always enable. These two and SessionKey are all-or-nothing; a partial set fails at
-	// startup.
+	// ClientID and ClientSecret are always required: node-token management needs Management
+	// API credentials regardless of whether browser login (gated separately, on SessionKey)
+	// is enabled.
 	ClientID     string
 	ClientSecret string // inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET
 

@@ -180,6 +180,16 @@ func NewProvider(ctx context.Context, logger *zap.Logger, cfg Config) (*Provider
 		return nil, errors.New("auth0: audience must not be empty")
 	}
 
+	// Node-token management needs Management API credentials regardless of whether browser
+	// login (gated separately, on SessionKey) is enabled, so these are required unconditionally.
+	if cfg.ClientID == "" {
+		return nil, errors.New("auth0: clientID must not be empty")
+	}
+
+	if cfg.ClientSecret == "" {
+		return nil, errors.New("auth0: clientSecret must not be empty")
+	}
+
 	// Issuer URL doubles as the expected iss claim and as the base for every tenant endpoint.
 	issuer := cfg.IssuerURLOverride
 	if issuer == "" {
@@ -222,12 +232,7 @@ func NewProvider(ctx context.Context, logger *zap.Logger, cfg Config) (*Provider
 		logger:       providerLogger,
 	}
 
-	browserLoginRequested, err := cfg.browserLoginRequested()
-	if err != nil {
-		return nil, err
-	}
-
-	if browserLoginRequested {
+	if cfg.browserLoginRequested() {
 		if p.browser, err = newBrowserLogin(issuer, keySet, tenantURL, cfg); err != nil {
 			return nil, err
 		}
