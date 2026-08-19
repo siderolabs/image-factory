@@ -1,0 +1,37 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+post:
+  operationId: createSchematic
+  summary: Create or identify a schematic
+  description: The body is decoded as YAML, which also accepts JSON, independently of the Content-Type header.
+  x-image-factory-ignore-content-type: true
+  x-image-factory-handler-validates-body: true
+  requestBody:
+    required: true
+    content:
+      application/yaml:
+        schema:
+          $ref: "../components/schemas.yaml#/Schematic"
+      application/json:
+        schema:
+          $ref: "../components/schemas.yaml#/Schematic"
+      '*/*':
+        schema:
+          $ref: "../components/schemas.yaml#/Schematic"
+  responses:
+    '201':
+      description: The persisted canonical schematic and its ID.
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas.yaml#/SchematicCreated"
+    '400':
+      $ref: "../components/responses.yaml#/BadRequest"
+    '401':
+      $ref: "../components/responses.yaml#/Unauthorized"
+    '403':
+      $ref: "../components/responses.yaml#/Forbidden"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

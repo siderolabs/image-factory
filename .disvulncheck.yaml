@@ -5,4 +5,6 @@ ignore:
     reason: |
       No fix available; golang.org/x/crypto/openpgp only reachable via cosign legacy PGP signature verification,
       which IF does not use (sigstore-based verification).
-    date: 2026-08-11
+
+      https://github.com/sigstore/rekor/pull/2883
+    date: 2026-08-19

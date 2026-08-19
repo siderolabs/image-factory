@@ -1356,9 +1356,10 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		t.Run("profile", func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(
-				t, "error parsing profile from path: invalid profile path: \"metal-amd64.ssd\"\n",
+			assert.Contains(
+				t,
 				downloadAssetInvalid(ctx, t, baseURL, emptySchematicID, "v1.5.0", "metal-amd64.ssd", http.StatusBadRequest),
+				`invalid request: validate OpenAPI request: parameter "path"`,
 			)
 		})
 	})

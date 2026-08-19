@@ -5,6 +5,8 @@
 package http
 
 import (
+	"net/http"
+
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/siderolabs/image-factory/pkg/enterprise"
@@ -12,14 +14,14 @@ import (
 
 // registerBrowserLogin adds /login, /logout and the callback route when the auth provider
 // serves them.
-func (f *Frontend) registerBrowserLogin(registerPublicRoute func(func(string, httprouter.Handle), string, Handler)) {
+func (f *Frontend) registerBrowserLogin(registerPublicRoute func(string, func(string, httprouter.Handle), string, Handler)) {
 	blp, ok := f.options.AuthProvider.(enterprise.BrowserLoginProvider)
 	if !ok || !blp.BrowserLoginEnabled() {
 		return
 	}
 
-	registerPublicRoute(f.router.GET, "/login", blp.LoginHandler())
-	registerPublicRoute(f.router.GET, "/logout", blp.LogoutHandler())
-	registerPublicRoute(f.router.POST, "/logout", blp.LogoutHandler())
-	registerPublicRoute(f.router.GET, blp.CallbackPath(), blp.CallbackHandler())
+	registerPublicRoute(http.MethodGet, f.router.GET, "/login", blp.LoginHandler())
+	registerPublicRoute(http.MethodGet, f.router.GET, "/logout", blp.LogoutHandler())
+	registerPublicRoute(http.MethodPost, f.router.POST, "/logout", blp.LogoutHandler())
+	registerPublicRoute(http.MethodGet, f.router.GET, blp.CallbackPath(), blp.CallbackHandler())
 }

@@ -13,8 +13,11 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 )
 
-// RouteNotFoundTag is an error tag for registry paths that match no known route.
+// RouteNotFoundTag marks frontend and registry paths that match no known route.
 type RouteNotFoundTag struct{}
+
+// MethodNotAllowedTag marks requests whose path exists but method is not declared.
+type MethodNotAllowedTag struct{}
 
 // V2Target identifies the operation selected for an OCI Distribution route.
 type V2Target int

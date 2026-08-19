@@ -1,0 +1,192 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+openapi: 3.1.0
+jsonSchemaDialect: https://spec.openapis.org/oas/3.1/dialect/2024-11-10
+info:
+  title: Image Factory API
+  version: 0.1.0
+  description: |
+    Image Factory HTTP, UI, operational, PXE, and OCI registry routes.
+    Authentication requirements apply when an authentication provider is configured.
+security:
+- basicAuth: []
+- bearerAuth: []
+paths:
+  /:
+    $ref: "./openapi/paths/frontend.yaml#/uiRoot"
+  /healthz:
+    $ref: "./openapi/paths/frontend.yaml#/healthz"
+  /readyz:
+    $ref: "./openapi/paths/frontend.yaml#/readyz"
+  /ui/wizard:
+    $ref: "./openapi/paths/frontend.yaml#/uiWizard"
+  /ui/version-doc:
+    $ref: "./openapi/paths/frontend.yaml#/uiVersionDocumentation"
+  /ui/extensions-list:
+    $ref: "./openapi/paths/frontend.yaml#/uiExtensionsList"
+  /css/{filepath+}:
+    $ref: "./openapi/paths/frontend.yaml#/staticCSS"
+  /favicons/{filepath+}:
+    $ref: "./openapi/paths/frontend.yaml#/staticFavicon"
+  /js/{filepath+}:
+    $ref: "./openapi/paths/frontend.yaml#/staticJavaScript"
+  /login:
+    $ref: "./openapi/paths/frontend.yaml#/login"
+  /logout:
+    $ref: "./openapi/paths/frontend.yaml#/logout"
+  /callback:
+    $ref: "./openapi/paths/frontend.yaml#/callback"
+  /.well-known/jwks.json:
+    $ref: "./openapi/paths/download-token-jwks.yaml"
+  /download-token:
+    $ref: "./openapi/paths/download-token.yaml"
+  /schematics:
+    $ref: "./openapi/paths/schematics.yaml"
+  /schematics/{schematic}:
+    $ref: "./openapi/paths/schematic.yaml"
+  /image/{schematic}/{version}/{path}:
+    $ref: "./openapi/paths/image.yaml"
+  /versions:
+    $ref: "./openapi/paths/versions.yaml"
+  /version/{version}/extensions/official:
+    $ref: "./openapi/paths/official-extensions.yaml"
+  /version/{version}/overlays/official:
+    $ref: "./openapi/paths/official-overlays.yaml"
+  /talosctl/{version}:
+    $ref: "./openapi/paths/talosctl-index.yaml"
+  /talosctl/{version}/{path}:
+    $ref: "./openapi/paths/talosctl.yaml"
+  /secureboot/signing-cert.pem:
+    $ref: "./openapi/paths/secureboot-signing-certificate.yaml"
+  /oci/cosign/signing-key.pub:
+    $ref: "./openapi/paths/cosign-signing-key.yaml"
+  /llms.txt:
+    $ref: "./openapi/paths/llms.yaml"
+  /openapi.yaml:
+    $ref: "./openapi/paths/openapi.yaml"
+  /pxe/{schematic}/{version}/{path}:
+    $ref: "./openapi/paths/pxe.yaml"
+  /spdx/{schematic}/{version}/{arch}:
+    $ref: "./openapi/paths/spdx.yaml"
+  /vex/{version}/vex.json:
+    $ref: "./openapi/paths/vex.yaml"
+  /scans/{schematic}/{version}/{arch}/{report}:
+    $ref: "./openapi/paths/vulnerability-scan.yaml"
+  /v2:
+    $ref: "./openapi/paths/registry-root.yaml"
+  /v2/:
+    $ref: "./openapi/paths/registry-root-slash.yaml"
+  /v2/{name+}/manifests/{reference}:
+    $ref: "./openapi/paths/registry-manifests.yaml"
+  /v2/{name+}/blobs/{digest}:
+    $ref: "./openapi/paths/registry-blobs.yaml"
+  /v2/{name+}/tags/list:
+    $ref: "./openapi/paths/registry-tags.yaml"
+  /v2/{name+}/referrers/{digest}:
+    $ref: "./openapi/paths/registry-referrers.yaml"
+components:
+  securitySchemes:
+    basicAuth:
+      $ref: "./openapi/components/security-schemes.yaml#/basicAuth"
+    bearerAuth:
+      $ref: "./openapi/components/security-schemes.yaml#/bearerAuth"
+    downloadToken:
+      $ref: "./openapi/components/security-schemes.yaml#/downloadToken"
+  parameters:
+    SchematicID:
+      $ref: "./openapi/components/parameters.yaml#/SchematicID"
+    TalosVersion:
+      $ref: "./openapi/components/parameters.yaml#/TalosVersion"
+    ArtifactPath:
+      $ref: "./openapi/components/parameters.yaml#/ArtifactPath"
+    Architecture:
+      $ref: "./openapi/components/parameters.yaml#/Architecture"
+    ScanReport:
+      $ref: "./openapi/components/parameters.yaml#/ScanReport"
+    Filename:
+      $ref: "./openapi/components/parameters.yaml#/Filename"
+    DownloadToken:
+      $ref: "./openapi/components/parameters.yaml#/DownloadToken"
+    RegistryNameTail:
+      $ref: "./openapi/components/parameters.yaml#/RegistryNameTail"
+    OCIReference:
+      $ref: "./openapi/components/parameters.yaml#/OCIReference"
+    OCIDigest:
+      $ref: "./openapi/components/parameters.yaml#/OCIDigest"
+    ArtifactType:
+      $ref: "./openapi/components/parameters.yaml#/ArtifactType"
+  headers:
+    ContentDisposition:
+      $ref: "./openapi/components/headers.yaml#/ContentDisposition"
+    ContentLength:
+      $ref: "./openapi/components/headers.yaml#/ContentLength"
+    Location:
+      $ref: "./openapi/components/headers.yaml#/Location"
+  schemas:
+    VersionList:
+      $ref: "./openapi/components/schemas.yaml#/VersionList"
+    Extension:
+      $ref: "./openapi/components/schemas.yaml#/Extension"
+    Overlay:
+      $ref: "./openapi/components/schemas.yaml#/Overlay"
+    Schematic:
+      $ref: "./openapi/components/schemas.yaml#/Schematic"
+    Customization:
+      $ref: "./openapi/components/schemas.yaml#/Customization"
+    MetaValue:
+      $ref: "./openapi/components/schemas.yaml#/MetaValue"
+    SystemExtensions:
+      $ref: "./openapi/components/schemas.yaml#/SystemExtensions"
+    SecureBootCustomization:
+      $ref: "./openapi/components/schemas.yaml#/SecureBootCustomization"
+    DiskImageCustomization:
+      $ref: "./openapi/components/schemas.yaml#/DiskImageCustomization"
+    OverlayConfiguration:
+      $ref: "./openapi/components/schemas.yaml#/OverlayConfiguration"
+    SchematicCreated:
+      $ref: "./openapi/components/schemas.yaml#/SchematicCreated"
+    DownloadToken:
+      $ref: "./openapi/components/schemas.yaml#/DownloadToken"
+  responses:
+    EmptyResponse:
+      $ref: "./openapi/components/responses.yaml#/EmptyResponse"
+    JSONResponse:
+      $ref: "./openapi/components/responses.yaml#/JSONResponse"
+    JSONArtifact:
+      $ref: "./openapi/components/responses.yaml#/JSONArtifact"
+    TextResponse:
+      $ref: "./openapi/components/responses.yaml#/TextResponse"
+    PEMResponse:
+      $ref: "./openapi/components/responses.yaml#/PEMResponse"
+    SPDXResponse:
+      $ref: "./openapi/components/responses.yaml#/SPDXResponse"
+    Artifact:
+      $ref: "./openapi/components/responses.yaml#/Artifact"
+    ArtifactHeaders:
+      $ref: "./openapi/components/responses.yaml#/ArtifactHeaders"
+    OCIResponse:
+      $ref: "./openapi/components/responses.yaml#/OCIResponse"
+    OCIIndexResponse:
+      $ref: "./openapi/components/responses.yaml#/OCIIndexResponse"
+    OCIIndexHeaders:
+      $ref: "./openapi/components/responses.yaml#/OCIIndexHeaders"
+    Found:
+      $ref: "./openapi/components/responses.yaml#/Found"
+    TemporaryRedirect:
+      $ref: "./openapi/components/responses.yaml#/TemporaryRedirect"
+    BadRequest:
+      $ref: "./openapi/components/responses.yaml#/BadRequest"
+    Unauthorized:
+      $ref: "./openapi/components/responses.yaml#/Unauthorized"
+    PaymentRequired:
+      $ref: "./openapi/components/responses.yaml#/PaymentRequired"
+    Forbidden:
+      $ref: "./openapi/components/responses.yaml#/Forbidden"
+    NotFound:
+      $ref: "./openapi/components/responses.yaml#/NotFound"
+    InternalServerError:
+      $ref: "./openapi/components/responses.yaml#/InternalServerError"
+    ServiceUnavailable:
+      $ref: "./openapi/components/responses.yaml#/ServiceUnavailable"
