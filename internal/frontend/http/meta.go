@@ -20,10 +20,17 @@ import (
 	"github.com/siderolabs/image-factory/pkg/client"
 )
 
+func writeJSON(w http.ResponseWriter, value any) error {
+	w.Header().Set("Content-Type", "application/json")
+
+	return json.NewEncoder(w).Encode(value)
+}
+
 // handleVersions handles list of Talos versions available.
 func (f *Frontend) handleVersions(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	if r.URL.Query().Get("broken") == "true" {
-		return json.NewEncoder(w).Encode(
+		return writeJSON(
+			w,
 			xslices.Map(f.artifactsManager.GetBrokenTalosVersions(), func(v semver.Version) string {
 				return "v" + v.String()
 			}),
@@ -35,7 +42,8 @@ func (f *Frontend) handleVersions(ctx context.Context, w http.ResponseWriter, r 
 		return err
 	}
 
-	return json.NewEncoder(w).Encode(
+	return writeJSON(
+		w,
 		xslices.Map(versions, func(v semver.Version) string {
 			return "v" + v.String()
 		}),
@@ -59,7 +67,8 @@ func (f *Frontend) handleOfficialExtensions(ctx context.Context, w http.Response
 		return err
 	}
 
-	return json.NewEncoder(w).Encode(
+	return writeJSON(
+		w,
 		xslices.Map(extensions, func(e artifacts.ExtensionRef) client.ExtensionInfo {
 			return client.ExtensionInfo{
 				Name:        e.TaggedReference.RepositoryStr(),
@@ -85,7 +94,7 @@ func (f *Frontend) handleOfficialOverlays(ctx context.Context, w http.ResponseWr
 	}
 
 	if !quirks.New(version.String()).SupportsOverlay() {
-		return json.NewEncoder(w).Encode([]client.OverlayInfo{})
+		return writeJSON(w, []client.OverlayInfo{})
 	}
 
 	overlays, err := f.artifactsManager.GetOfficialOverlays(ctx, version.String())
@@ -93,7 +102,8 @@ func (f *Frontend) handleOfficialOverlays(ctx context.Context, w http.ResponseWr
 		return err
 	}
 
-	return json.NewEncoder(w).Encode(
+	return writeJSON(
+		w,
 		xslices.Map(overlays, func(e artifacts.OverlayRef) client.OverlayInfo {
 			return client.OverlayInfo{
 				Name:   e.Name,

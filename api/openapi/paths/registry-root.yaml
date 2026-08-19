@@ -1,0 +1,40 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+get:
+  operationId: checkRegistry
+  x-image-factory-api-token-scopes: [image:read, source:pull]
+  security:
+  - basicAuth: []
+  - bearerAuth: []
+  - sessionCookie: []
+  - apiTokenQuery: []
+  summary: Check OCI registry availability
+  responses:
+    '200':
+      $ref: "../components/responses.yaml#/EmptyResponse"
+    "303":
+      $ref: "../components/responses.yaml#/SeeOther"
+    '401':
+      $ref: "../components/responses.yaml#/Unauthorized"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"
+head:
+  operationId: headRegistry
+  x-image-factory-api-token-scopes: [image:read, source:pull]
+  security:
+  - basicAuth: []
+  - bearerAuth: []
+  - sessionCookie: []
+  - apiTokenQuery: []
+  summary: Check OCI registry availability without a body
+  responses:
+    '200':
+      $ref: "../components/responses.yaml#/EmptyResponse"
+    "303":
+      $ref: "../components/responses.yaml#/SeeOther"
+    '401':
+      $ref: "../components/responses.yaml#/Unauthorized"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

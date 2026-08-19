@@ -1,0 +1,29 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+parameters:
+- $ref: ../components/parameters.yaml#/TalosVersion
+- $ref: ../components/parameters.yaml#/ArtifactPath
+get:
+  operationId: getTalosctl
+  summary: Download a talosctl binary
+  security: []
+  responses:
+    '200':
+      $ref: "../components/responses.yaml#/Artifact"
+    '404':
+      $ref: "../components/responses.yaml#/NotFound"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"
+head:
+  operationId: headTalosctl
+  summary: Inspect a talosctl binary
+  security: []
+  responses:
+    '200':
+      $ref: "../components/responses.yaml#/ArtifactHeaders"
+    '404':
+      $ref: "../components/responses.yaml#/NotFound"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

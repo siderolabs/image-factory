@@ -1,0 +1,127 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+SchematicID:
+  name: schematic
+  in: path
+  required: true
+  description: SHA-256 identifier returned by `POST /schematics`.
+  example: 376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba
+  schema:
+    type: string
+    pattern: ^[0-9a-f]{64}$
+TalosVersion:
+  name: version
+  in: path
+  required: true
+  description: Semantic Talos Linux version, accepted with or without the leading `v`.
+  example: v1.13.0
+  schema:
+    type: string
+    pattern: ^v?[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+ImageArtifactPath:
+  name: path
+  in: path
+  required: true
+  description: |-
+    Artifact filename.
+
+    Supported forms are:
+
+    - `kernel-<arch>`;
+    - `cmdline-<platform>-<arch>[-secureboot]`;
+    - `initramfs-<arch>.xz`;
+    - `<platform>-<arch>[-secureboot].iso`;
+    - `<platform>-<arch>[-secureboot]-uki.efi`;
+    - `installer-<arch>[-secureboot].tar`;
+    - `<platform>-installer-<arch>[-secureboot].tar`;
+    - `<platform>-<arch>[-secureboot].<disk-format>[.<compression>]`.
+
+    Architectures are `amd64` and `arm64`; `x86_64` and `i386` are accepted as iPXE aliases for `amd64`.
+    Disk formats are `raw`, `qcow2`, `vhd`, and `ova`.
+    Compression suffixes are `tar.gz`, `gz`, `xz`, and `zst`.
+    Enterprise checksum or signature downloads append exactly one of `.sha256`, `.sha512`, or `.sigstore.json` to any supported artifact filename.
+  example: metal-amd64.raw.xz
+  schema:
+    type: string
+    pattern: ^[^/?#]+$
+ArtifactPath:
+  name: path
+  in: path
+  required: true
+  description: Artifact filename or platform-specific route suffix.
+  example: metal-amd64.raw.xz
+  schema:
+    type: string
+    pattern: ^[^/?#]+$
+Architecture:
+  name: arch
+  in: path
+  required: true
+  description: Target CPU architecture.
+  example: amd64
+  schema:
+    type: string
+    enum:
+      - amd64
+      - arm64
+ScanReport:
+  name: report
+  in: path
+  required: true
+  description: Report filename whose extension selects the response format.
+  example: report.sarif
+  schema:
+    type: string
+    pattern: .+\.(json|table|sarif|cdx)$
+Filename:
+  name: filename
+  in: query
+  required: false
+  description: Override for the attachment filename in `Content-Disposition`.
+  example: talos-metal-amd64.raw.xz
+  schema:
+    type: string
+RegistryNameTail:
+  name: name+
+  in: path
+  required: true
+  description: Greedy OCI repository name containing one or more complete path segments.
+  example: metal-installer/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba
+  x-greedy-path-parameter: true
+  schema:
+    type: string
+    pattern: ^[^/]+(?:/[^/]+)*$
+OCIReference:
+  name: reference
+  in: path
+  required: true
+  description: OCI tag or content digest identifying a manifest.
+  example: v1.13.0
+  schema:
+    oneOf:
+      - type: string
+        title: OCI tag
+        pattern: ^[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$
+      - type: string
+        title: OCI digest
+        pattern: ^[a-z0-9]+(?:[+._-][a-z0-9]+)*:[A-Za-z0-9=_-]+$
+OCIDigest:
+  name: digest
+  in: path
+  required: true
+  description: OCI content digest in `<algorithm>:<encoded>` form.
+  example: sha256:849ace01b9af514d817b05a9c5963a35202e09a4807d12f8a3ea83657c76c863
+  schema:
+    type: string
+    pattern: ^[a-z0-9]+(?:[+._-][a-z0-9]+)*:[A-Za-z0-9=_-]+$
+ArtifactType:
+  name: artifactType
+  in: query
+  required: false
+  description: OCI artifact media type used to filter referrer descriptors.
+  example: application/vnd.in-toto+json
+  schema:
+    type: string
+    pattern: '^[^/\s]+/[^;\s]+(?:;.*)?$'

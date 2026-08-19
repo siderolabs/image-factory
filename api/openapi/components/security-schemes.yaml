@@ -1,0 +1,36 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+basicAuth:
+  type: http
+  scheme: basic
+  description: |
+    With the htpasswd provider, the username and password are checked directly. With Auth0,
+    the username is ignored and the password carries an Auth0 access token. A self-issued API
+    token may also be supplied as the password, paired with its subject as the username for OCI
+    and Talos clients. Only the configured provider is active; API tokens require Enterprise
+    authentication and the operation's declared `x-image-factory-api-token-scopes`.
+bearerAuth:
+  type: http
+  scheme: bearer
+  bearerFormat: JWT
+  description: |
+    An Auth0 access token when Auth0 is the configured provider, or a self-issued API token when
+    the operation's declared `x-image-factory-api-token-scopes` permits its capabilities.
+    Bearer credentials are accepted but 401 responses deliberately advertise only Basic auth so
+    OCI clients do not mistake the factory for an OAuth token endpoint.
+sessionCookie:
+  type: apiKey
+  in: cookie
+  name: if_session
+  description: Encrypted Auth0 browser session cookie, available only when browser login is configured.
+apiTokenQuery:
+  type: apiKey
+  in: query
+  name: token
+  description: |
+    Self-issued API token supplied on GET or HEAD. The token must carry a capability declared by
+    the operation's `x-image-factory-api-token-scopes` and no token-management capability.
+    Query strings commonly appear in proxy and CDN logs; prefer a revocable stored token when a
+    credential must travel in a URL.

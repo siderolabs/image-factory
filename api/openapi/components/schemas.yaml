@@ -1,0 +1,458 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+VersionList:
+  type: array
+  description: Talos Linux versions available for image generation.
+  items:
+    type: string
+    description: A semantic Talos Linux version with a leading `v`.
+    pattern: ^v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$
+    examples:
+      - v1.13.0
+  examples:
+    - [v1.13.0, v1.12.4]
+Extension:
+  type: object
+  description: An official system extension compatible with the requested Talos version.
+  additionalProperties: false
+  required:
+    - name
+    - ref
+    - digest
+    - author
+    - description
+  properties:
+    name:
+      type: string
+      description: Catalog name used in `officialExtensions`.
+      minLength: 1
+      examples:
+        - siderolabs/amd-ucode
+    ref:
+      type: string
+      description: Immutable or versioned OCI image reference for the extension.
+      minLength: 1
+      examples:
+        - ghcr.io/siderolabs/amd-ucode:20230804
+    digest:
+      type: string
+      description: OCI content digest for the extension image.
+      pattern: ^[a-z0-9]+(?:[+._-][a-z0-9]+)*:[A-Za-z0-9=_-]+$
+      examples:
+        - sha256:761a5290a4bae9ceca11468d2ba8ca7b0f94e6e3a107ede2349ae26520682832
+    author:
+      type: string
+      description: Extension author from the catalog metadata.
+      examples:
+        - Sidero Labs
+    description:
+      type: string
+      description: Human-readable purpose of the extension.
+      examples:
+        - AMD CPU microcode
+  examples:
+    - name: siderolabs/amd-ucode
+      ref: ghcr.io/siderolabs/amd-ucode:20230804
+      digest: sha256:761a5290a4bae9ceca11468d2ba8ca7b0f94e6e3a107ede2349ae26520682832
+      author: Sidero Labs
+      description: AMD CPU microcode
+Overlay:
+  type: object
+  description: An official board overlay compatible with the requested Talos version.
+  additionalProperties: false
+  required:
+    - name
+    - image
+    - ref
+    - digest
+  properties:
+    name:
+      type: string
+      description: Overlay name supplied in a schematic.
+      minLength: 1
+      examples:
+        - rpi_generic
+    image:
+      type: string
+      description: Overlay image name supplied in a schematic.
+      minLength: 1
+      examples:
+        - siderolabs/sbc-raspberrypi
+    ref:
+      type: string
+      description: Versioned OCI image reference for the overlay.
+      minLength: 1
+      examples:
+        - ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0
+    digest:
+      type: string
+      description: OCI content digest for the overlay image.
+      pattern: ^[a-z0-9]+(?:[+._-][a-z0-9]+)*:[A-Za-z0-9=_-]+$
+      examples:
+        - sha256:849ace01b9af514d817b05a9c5963a35202e09a4807d12f8a3ea83657c76c863
+  examples:
+    - name: rpi_generic
+      image: siderolabs/sbc-raspberrypi
+      ref: ghcr.io/siderolabs/sbc-raspberrypi:v0.1.0
+      digest: sha256:849ace01b9af514d817b05a9c5963a35202e09a4807d12f8a3ea83657c76c863
+Schematic:
+  type: object
+  description: Requested Talos image customization. Unknown fields are rejected.
+  additionalProperties: false
+  properties:
+    owner:
+      type: string
+      description: >-
+        Enterprise-only owner identity. When authentication is enabled, the factory sets this
+        to the authenticated identity and rejects a conflicting supplied value.
+      examples:
+        - alice@example.com
+    customization:
+      $ref: "./schemas.yaml#/Customization"
+    overlay:
+      $ref: "./schemas.yaml#/OverlayConfiguration"
+  examples:
+    - customization:
+        extraKernelArgs:
+          - console=ttyS0
+        meta:
+          - key: 10
+            value: '{"externalIPs":["1.2.3.4"]}'
+        systemExtensions:
+          officialExtensions:
+            - siderolabs/amd-ucode
+Customization:
+  type: object
+  description: Talos image build customizations.
+  additionalProperties: false
+  properties:
+    embeddedMachineConfiguration:
+      type: string
+      description: YAML-encoded Talos machine configuration documents embedded in the image.
+      examples:
+        - |-
+          apiVersion: v1alpha1
+          kind: HostnameConfig
+          hostname: my-custom-hostname
+          auto: off
+    extraKernelArgs:
+      type: array
+      description: Additional arguments appended to the kernel command line.
+      items:
+        type: string
+        examples:
+          - console=ttyS0
+      examples:
+        - [console=ttyS0, net.ifnames=0]
+    meta:
+      type: array
+      description: Initial Talos META key-value entries.
+      items:
+        $ref: "./schemas.yaml#/MetaValue"
+    systemExtensions:
+      $ref: "./schemas.yaml#/SystemExtensions"
+    bootloader:
+      type: string
+      description: Bootloader selection. `auto` lets the imager choose the appropriate bootloader.
+      default: auto
+      enum:
+        - auto
+        - dual-boot
+        - grub
+        - sd-boot
+      examples:
+        - sd-boot
+    secureboot:
+      $ref: "./schemas.yaml#/SecureBootCustomization"
+    diskImage:
+      $ref: "./schemas.yaml#/DiskImageCustomization"
+MetaValue:
+  type: object
+  description: Initial Talos META entry.
+  additionalProperties: false
+  required:
+    - key
+    - value
+  properties:
+    key:
+      type: integer
+      description: Unsigned 8-bit META key.
+      minimum: 0
+      maximum: 255
+      examples:
+        - 10
+    value:
+      type: string
+      description: META value stored under the key.
+      examples:
+        - '{"externalIPs":["1.2.3.4"]}'
+SystemExtensions:
+  type: object
+  description: Official Talos system extensions to install into the image.
+  additionalProperties: false
+  properties:
+    officialExtensions:
+      type: array
+      description: Catalog names resolved automatically to versions compatible with Talos.
+      items:
+        type: string
+        minLength: 1
+        examples:
+          - siderolabs/amd-ucode
+      examples:
+        - [siderolabs/amd-ucode, siderolabs/gvisor]
+SecureBootCustomization:
+  type: object
+  description: Secure Boot options used when producing a Secure Boot image.
+  additionalProperties: false
+  properties:
+    enrollKeys:
+      type: string
+      description: >-
+        How systemd-boot enrolls Secure Boot keys on first boot. `if-safe` automatically
+        enrolls only in a virtual machine; `force` enables unattended enrollment on bare metal.
+      default: if-safe
+      enum:
+        - "off"
+        - manual
+        - if-safe
+        - force
+      examples:
+        - force
+    includeWellKnownCertificates:
+      type: boolean
+      description: Include well-known UEFI certificates in the auto-enrollment database.
+      default: false
+DiskImageCustomization:
+  type: object
+  description: Options applied only when producing disk images.
+  additionalProperties: false
+  properties:
+    sectorSize:
+      type: integer
+      description: Disk-image sector size in bytes. An omitted or zero value uses 512 bytes.
+      minimum: 0
+      default: 512
+      examples:
+        - 4096
+OverlayConfiguration:
+  type: object
+  description: Board overlay selected for image generation.
+  additionalProperties: false
+  required:
+    - image
+    - name
+  properties:
+    image:
+      type: string
+      description: Overlay container image or catalog image name.
+      minLength: 1
+      examples:
+        - siderolabs/sbc-raspberrypi
+    name:
+      type: string
+      description: Overlay implementation name.
+      minLength: 1
+      examples:
+        - rpi_generic
+    options:
+      type: object
+      description: Free-form options interpreted by the selected overlay implementation.
+      additionalProperties: true
+      examples:
+        - configTxtAppend: dtparam=audio=on
+SchematicCreated:
+  type: object
+  description: Canonical persisted schematic and its content-derived identifier.
+  additionalProperties: false
+  required:
+    - id
+    - schematic
+  properties:
+    id:
+      type: string
+      description: SHA-256 digest of the canonical YAML schematic, encoded as lowercase hexadecimal.
+      pattern: ^[0-9a-f]{64}$
+      examples:
+        - 2a63b6e7dab90ec9d44f213339b9545bd39c6499b22a14cf575c1ca4b6e39ff8
+    schematic:
+      type: string
+      description: Canonical YAML representation used to compute the identifier.
+      examples:
+        - |-
+          customization:
+            extraKernelArgs:
+              - vga=791
+APIToken:
+  type: object
+  description: Metadata of an active stored API token; the token value itself is only returned at creation.
+  additionalProperties: false
+  required:
+    - id
+    - name
+    - created_at
+    - expires_at
+    - scopes
+  properties:
+    id:
+      type: string
+      description: Token identifier, the JWT ID claim of the issued API token.
+      minLength: 1
+      examples:
+        - 01K3S2QW1V6P1Z0J9YQK4M8H7B
+    name:
+      type: string
+      description: Operator-supplied label.
+      examples:
+        - production-cluster
+    created_at:
+      type: string
+      format: date-time
+      description: Issue time of the token.
+      examples:
+        - "2026-08-19T12:12:58Z"
+    expires_at:
+      type: string
+      format: date-time
+      description: Expiry time of the token.
+      examples:
+        - "2026-09-18T12:12:58Z"
+    scopes:
+      type: array
+      description: Capabilities granted to the token.
+      minItems: 1
+      items:
+        $ref: "#/APITokenScope"
+    issuable_scopes:
+      type: array
+      description: Maximum capabilities that this token may grant to child tokens.
+      items:
+        $ref: "#/APITokenScope"
+APITokenScope:
+  type: string
+  enum:
+    - image:read
+    - report:read
+    - schematic:create
+    - schematic:read
+    - source:pull
+    - token:issue
+    - token:read
+    - token:revoke
+APITokenList:
+  type: object
+  description: Stored API tokens currently active for the authenticated provider-resolved principal.
+  additionalProperties: false
+  required:
+    - tokens
+  properties:
+    tokens:
+      type: [array, "null"]
+      description: Active stored API tokens, or null when the principal has none.
+      items:
+        $ref: "#/APIToken"
+APITokenCreateRequest:
+  type: object
+  description: |
+    Request to issue an API token. Choose either a predefined actor profile or explicit scopes;
+    the handler validates those alternatives and the caller's delegation ceiling.
+  additionalProperties: true
+  properties:
+    name:
+      type: string
+      description: Operator-supplied label; required for stored tokens and trimmed before use.
+      examples:
+        - production-cluster
+    actor:
+      type: string
+      description: Predefined capability profile; cannot be combined with explicit scopes.
+      enum: [talos, automation, operator, admin]
+    scopes:
+      type: array
+      description: Explicit capabilities; required when actor is absent.
+      minItems: 1
+      items:
+        $ref: "#/APITokenScope"
+    issuable_scopes:
+      type: array
+      description: Capabilities that the token may grant; requires token:issue in scopes.
+      items:
+        $ref: "#/APITokenScope"
+    subject:
+      type: string
+      description: Alternate identity; only a bootstrap credential may mint for another subject.
+      pattern: '^\S{1,256}$'
+    ttl:
+      type: string
+      description: Positive Go duration; an empty value uses the configured default.
+      examples:
+        - 720h
+    stored:
+      type: boolean
+      default: true
+      description: Whether the token is recorded and revocable; absent defaults to true.
+APITokenCreated:
+  type: object
+  description: A freshly issued API token; its token value is not retrievable afterwards.
+  additionalProperties: false
+  required:
+    - id
+    - name
+    - created_at
+    - expires_at
+    - scopes
+    - token
+    - org_id
+    - stored
+  properties:
+    id:
+      type: string
+      description: Token identifier, the JWT ID claim of the issued API token.
+      minLength: 1
+      examples:
+        - 01K3S2QW1V6P1Z0J9YQK4M8H7B
+    name:
+      type: string
+      description: Operator-supplied label; may be empty for an ephemeral token.
+      examples:
+        - production-cluster
+    created_at:
+      type: string
+      format: date-time
+      description: Issue time of the token.
+      examples:
+        - "2026-08-19T12:12:58Z"
+    expires_at:
+      type: string
+      format: date-time
+      description: Expiry time of the token.
+      examples:
+        - "2026-09-18T12:12:58Z"
+    scopes:
+      type: array
+      description: Capabilities granted to the token.
+      minItems: 1
+      items:
+        $ref: "#/APITokenScope"
+    issuable_scopes:
+      type: array
+      description: Maximum capabilities that this token may grant to child tokens.
+      items:
+        $ref: "#/APITokenScope"
+    token:
+      type: string
+      description: Signed JWT presented as a bearer credential.
+      minLength: 1
+      examples:
+        - eyJhbG...VCJ9...
+    org_id:
+      type: string
+      description: Identity the token authenticates as.
+      minLength: 1
+      examples:
+        - org_A1b2C3d4E5f6
+    stored:
+      type: boolean
+      description: Whether the token is recorded and can be revoked.

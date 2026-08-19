@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rsa"
+	"encoding/base64"
 	"net/http"
 	"testing"
 	"time"
@@ -84,6 +85,55 @@ func setupEnterpriseAuth0(t *testing.T, opts *cmd.Options) auth0TokenFixtures {
 	}
 }
 
+func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
+	if !enterprise.Enabled() {
+		t.Skip("enterprise features are disabled")
+	}
+
+	options := cmd.DefaultOptions
+	options.Cache.OCI = cacheRepository.OCIRepositoryOptions
+	options.Metrics.Namespace = "test_auth0_browser"
+	options.HTTP.ExternalURL = "http://image-factory.test"
+	options.Authentication.Auth0.ClientID = "browser-client"
+	options.Authentication.Auth0.ClientSecret = "browser-secret"
+	options.Authentication.Auth0.SessionKey = base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32))
+
+	setupEnterpriseAuth0(t, &options)
+
+	ctx, listenAddr, _ := setupFactory(t, options)
+	baseURL := "http://" + listenAddr
+	client := &http.Client{
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	for _, test := range []struct {
+		name   string
+		method string
+		path   string
+		status int
+	}{
+		{name: "login", method: http.MethodGet, path: "/login", status: http.StatusFound},
+		{name: "logout GET", method: http.MethodGet, path: "/logout", status: http.StatusFound},
+		{name: "logout POST", method: http.MethodPost, path: "/logout", status: http.StatusFound},
+		{name: "invalid callback", method: http.MethodGet, path: "/callback", status: http.StatusForbidden},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			req, err := http.NewRequestWithContext(ctx, test.method, baseURL+test.path, nil)
+			require.NoError(t, err)
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+			assert.Equal(t, test.status, resp.StatusCode)
+		})
+	}
+}
+
 func TestIntegrationAuth0(t *testing.T) {
 	if !enterprise.Enabled() {
 		t.Skip("enterprise features are disabled")
@@ -104,10 +154,10 @@ func TestIntegrationAuth0(t *testing.T) {
 		testAuth0Enforcement(ctx, t, baseURL, fixtures)
 	})
 
-	t.Run("NodeFlow", func(t *testing.T) {
+	t.Run("BasicPasswordFlow", func(t *testing.T) {
 		t.Parallel()
 
-		testAuth0NodeFlow(ctx, t, baseURL, fixtures)
+		testAuth0BasicPasswordFlow(ctx, t, baseURL, fixtures)
 	})
 
 	t.Run("Ownership", func(t *testing.T) {
@@ -207,9 +257,9 @@ func testAuth0Enforcement(ctx context.Context, t *testing.T, baseURL string, fx 
 	})
 }
 
-// testAuth0NodeFlow verifies that a JWT sent as the Basic Auth password (the
-// way Talos injects a node token as a registry credential) is accepted.
-func testAuth0NodeFlow(ctx context.Context, t *testing.T, baseURL string, fx auth0TokenFixtures) {
+// testAuth0BasicPasswordFlow verifies that an Auth0 access token sent as a Basic password is
+// accepted for clients such as OCI registries that cannot send Bearer credentials directly.
+func testAuth0BasicPasswordFlow(ctx context.Context, t *testing.T, baseURL string, fx auth0TokenFixtures) {
 	t.Helper()
 
 	t.Run("JWTAsBasicAuthPassword_200", func(t *testing.T) {

@@ -101,6 +101,10 @@ type TokenOptions struct {
 	// OrgID is omitted when empty, producing a token without an if_org_id claim.
 	OrgID string
 
+	// NativeOrgID is omitted when empty. It models Auth0's native org_id claim separately
+	// from the custom if_org_id claim consumed by Image Factory.
+	NativeOrgID string
+
 	// Nonce binds an ID token to the login that requested it. Omitted when empty, which is
 	// what an access token carries.
 	Nonce string
@@ -144,6 +148,10 @@ func SignToken(t *testing.T, privateKey *rsa.PrivateKey, opts TokenOptions) stri
 
 	if opts.OrgID != "" {
 		extra["if_org_id"] = opts.OrgID
+	}
+
+	if opts.NativeOrgID != "" {
+		extra["org_id"] = opts.NativeOrgID
 	}
 
 	if opts.Scope != "" {

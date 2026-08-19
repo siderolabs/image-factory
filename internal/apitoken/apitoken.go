@@ -65,8 +65,8 @@ func (t TTL) resolve(requested time.Duration) (time.Duration, error) {
 }
 
 // StorageTTL configures token lifetimes by whether the factory records the token. Stored tokens
-// may safely live longer because they can be revoked; ephemeral tokens need a short expiry because
-// expiry is the only way to take them out of circulation.
+// may safely live longer because they can be revoked individually; ephemeral tokens need a short
+// expiry because retiring their verification key invalidates every credential signed by that key.
 type StorageTTL struct {
 	Stored    TTL
 	Ephemeral TTL
@@ -344,7 +344,8 @@ type Claims struct {
 	IssuableScopes []Scope
 
 	// Stored says whether the factory keeps a record of this token, which is both what makes it
-	// revocable and what keeps it valid. A stored token is never read from a URL.
+	// revocable and what keeps it valid. Storage does not decide whether a token may travel in a URL;
+	// its scopes and the request method do.
 	Stored bool
 
 	// AnySubject permits token creation for an identity other than Subject. Only the offline

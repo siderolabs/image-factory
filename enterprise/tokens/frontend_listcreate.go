@@ -172,12 +172,27 @@ func parseTTL(raw string) (time.Duration, bool) {
 	return ttl, true
 }
 
+// decodeCreateRequest reads one bounded JSON request object.
+func decodeCreateRequest(r *http.Request) (createRequest, bool) {
+	data, err := io.ReadAll(io.LimitReader(r.Body, maxCreateBodyBytes+1))
+	if err != nil || len(data) > maxCreateBodyBytes {
+		return createRequest{}, false
+	}
+
+	var body createRequest
+
+	if err = json.Unmarshal(data, &body); err != nil {
+		return createRequest{}, false
+	}
+
+	return body, true
+}
+
 // decodeCreateBody returns the reason a request is unacceptable, empty when it is fine; every
 // reason is answered with the same 400, so the caller doesn't need to tell them apart.
 func (f *ListCreateFrontend) decodeCreateBody(r *http.Request) (params createParams, reason string) {
-	var body createRequest
-
-	if err := json.NewDecoder(io.LimitReader(r.Body, maxCreateBodyBytes)).Decode(&body); err != nil {
+	body, decoded := decodeCreateRequest(r)
+	if !decoded {
 		return createParams{}, "malformed request body"
 	}
 

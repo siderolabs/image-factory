@@ -23,14 +23,6 @@ import (
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 )
 
-// checksumSuffixes maps supported checksum file extensions to themselves.
-var checksumSuffixes = map[string]struct{}{
-	".sha512": {},
-	".sha256": {},
-}
-
-const signatureSuffix = ".sigstore.json"
-
 // handleImage handles downloading of boot assets.
 //
 //nolint:gocyclo,cyclop
@@ -44,25 +36,9 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 
 	// Detect enterprise sidecar suffixes before schematic/version lookup so
 	// non-enterprise builds reject them consistently regardless of asset validity.
-	wantSignature := strings.HasSuffix(path, signatureSuffix)
-	if wantSignature {
-		path = strings.TrimSuffix(path, signatureSuffix)
-	}
-
-	var checksumSuffix string
-
-	if !wantSignature {
-		for suffix := range checksumSuffixes {
-			if strings.HasSuffix(path, suffix) {
-				checksumSuffix = suffix
-				path = strings.TrimSuffix(path, suffix)
-
-				break
-			}
-		}
-	}
-
-	wantChecksum := checksumSuffix != ""
+	path, sidecar := profile.SplitArtifactPath(path)
+	wantSignature := sidecar == profile.ArtifactSidecarSignature
+	wantChecksum := sidecar.IsChecksum()
 
 	if wantChecksum && f.checksummer == nil {
 		return xerrors.NewTaggedf[enterrors.NotEnabledTag]("enterprise not enabled: checksum endpoint is not available")
@@ -87,7 +63,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 		return fmt.Errorf("error parsing version: %w", err)
 	}
 
-	prof, err := profile.ParseFromPath(path, version.String())
+	prof, err := profile.ParseArtifactPath(path, version.String())
 	if err != nil {
 		return fmt.Errorf("error parsing profile from path: %w", err)
 	}
@@ -126,7 +102,7 @@ func (f *Frontend) handleImage(ctx context.Context, w http.ResponseWriter, r *ht
 			return readerErr
 		}
 
-		return f.checksummer.WriteChecksum(ctx, w, r, reader, asset.Size(), filename, checksumSuffix)
+		return f.checksummer.WriteChecksum(ctx, w, r, reader, asset.Size(), filename, string(sidecar))
 	}
 
 	if asset, ok := asset.(cache.RedirectableAsset); ok && !disableRedirect && r.Method != http.MethodHead {

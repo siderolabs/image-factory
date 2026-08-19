@@ -1,0 +1,42 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+parameters:
+- $ref: ../components/parameters.yaml#/RegistryNameTail
+get:
+  operationId: listRegistryTags
+  x-image-factory-api-token-scopes: [image:read, source:pull]
+  security:
+  - basicAuth: []
+  - bearerAuth: []
+  - sessionCookie: []
+  - apiTokenQuery: []
+  summary: List or proxy OCI repository tags
+  responses:
+    "303":
+      $ref: "../components/responses.yaml#/SeeOther"
+    "401":
+      $ref: "../components/responses.yaml#/Unauthorized"
+    default:
+      $ref: "../components/responses.yaml#/OCIResponse"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"
+head:
+  operationId: headRegistryTags
+  x-image-factory-api-token-scopes: [image:read, source:pull]
+  security:
+  - basicAuth: []
+  - bearerAuth: []
+  - sessionCookie: []
+  - apiTokenQuery: []
+  summary: Inspect an OCI repository tag listing
+  responses:
+    "303":
+      $ref: "../components/responses.yaml#/SeeOther"
+    "401":
+      $ref: "../components/responses.yaml#/Unauthorized"
+    default:
+      $ref: "../components/responses.yaml#/OCIResponse"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

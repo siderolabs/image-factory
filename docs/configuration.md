@@ -900,8 +900,9 @@ It is required when provider is "htpasswd" (the default).
 
 Auth0 holds configuration for the Auth0 JWT authentication provider.
 
-Tokens must carry an `org_id` claim, which becomes the caller identity in the same way a username does for htpasswd.
-In Auth0 this means issuing tokens to organization-scoped clients; tokens without the claim are rejected.
+Tokens must carry a non-empty string in the custom `if_org_id` claim,
+which becomes the caller identity in the same way a username does for htpasswd.
+Auth0's native `org_id` claim is not read.
 
 It is required when provider is "auth0", and ignored otherwise.
 
@@ -985,14 +986,17 @@ Tokens holds configuration for self-issued API token management.
 KeyPaths is an ordered list of PEM-encoded ECDSA P-256 keys or certificates.
 The first entry must be a private key and is the only key used to mint tokens.
 Later entries are verification-only and may contain private keys, public keys, or X.509 certificates.
-If empty, a fresh key is generated at startup, which only works for single-replica deployments.
+If empty, a fresh in-memory key is generated at startup.
+Previously issued tokens then stop working after a restart,
+and tokens minted by one replica are not accepted by another, so this is suitable only for disposable single-process development.
 
 ---
 
 ### `authentication.tokens.storage`
 
 Storage is the base OCI repository under which stored token records are persisted; presence of a record is what makes such a token valid.
-Each organization gets its own repository beneath it, holding one tag per token, so a listing costs one organization's tokens rather than every token in the deployment.
+Each provider-resolved principal gets its own repository beneath it, holding one tag per token,
+so a listing costs one principal's tokens rather than every token in the deployment.
 A token minted with "stored": false is not recorded, so it cannot be listed or revoked and does not count against MaxPerOrg.
 
 ---
@@ -1077,7 +1081,9 @@ Default is the validity duration granted when the caller requests no explicit TT
 
 ### `authentication.tokens.ttl.ephemeral`
 
-Ephemeral bounds tokens whose expiry is the only way to take them out of circulation.
+Ephemeral bounds tokens with no per-token list or revoke operation.
+They normally leave circulation through expiry;
+removing a verification key retires every token signed by that key.
 
 ---
 
@@ -1158,7 +1164,7 @@ so refreshed credentials are picked up.
 - **Type:** `int`
 - **Env:** `AUTHENTICATION_TOKENS_MAXPERORG`
 
-MaxPerOrg caps how many stored tokens an org may have active at once.
+MaxPerOrg caps how many stored tokens a provider-resolved principal may have active at once.
 
 ---
 

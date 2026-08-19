@@ -61,6 +61,12 @@ var errFellThroughToProvider = errors.New("fell through to the auth provider")
 func queryTokenResult(t *testing.T, claims apitoken.Claims) (authenticated bool, forwarded string) {
 	t.Helper()
 
+	return queryTokenResultForRequest(t, claims, http.MethodGet, "/pxe/schematic/v1.0.0/metal-amd64?token=the-token")
+}
+
+func queryTokenResultForRequest(t *testing.T, claims apitoken.Claims, method, target string) (authenticated bool, forwarded string) {
+	t.Helper()
+
 	const token = "the-token"
 
 	f := &Frontend{logger: zap.NewNop()}
@@ -76,7 +82,7 @@ func queryTokenResult(t *testing.T, claims apitoken.Claims) (authenticated bool,
 	}, true, &username, &responseState{})
 
 	ctx := t.Context()
-	r := httptest.NewRequestWithContext(ctx, http.MethodGet, "/pxe/schematic/v1.0.0/metal-amd64?token="+token, nil)
+	r := httptest.NewRequestWithContext(ctx, method, target, nil)
 
 	err := handler(ctx, httptest.NewRecorder(), r, nil)
 	if err != nil {
@@ -118,6 +124,35 @@ func TestWithAuthQueryTokenAcceptsEphemeralToken(t *testing.T) {
 
 	require.True(t, authenticated)
 	require.Equal(t, "the-token", forwarded)
+}
+
+func TestWithAuthQueryTokenAcceptsEveryScopedReadClass(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		target string
+		scope  apitoken.Scope
+	}{
+		"schematic": {target: "/schematics/id?token=the-token", scope: "schematic:read"},
+		"report":    {target: "/spdx/id/v1.0.0/amd64.spdx.json?token=the-token", scope: "report:read"},
+		"image":     {target: "/image/id/v1.0.0/metal-amd64.raw.xz?token=the-token", scope: "image:read"},
+		"source":    {target: "/v2/siderolabs/schematic/manifests/latest?token=the-token", scope: "source:pull"},
+	}
+
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			authenticated, _ := queryTokenResultForRequest(t, apitoken.Claims{
+				Subject: "org_a",
+				ID:      "jti-1",
+				Scopes:  []apitoken.Scope{testCase.scope},
+				Stored:  true,
+			}, http.MethodGet, testCase.target)
+
+			require.True(t, authenticated)
+		})
+	}
 }
 
 // TestWithAuthQueryTokenRejectsMintingCredential is the carve-out that survives the relaxation:

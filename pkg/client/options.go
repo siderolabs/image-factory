@@ -39,14 +39,17 @@ func WithClient(client http.Client) Option {
 
 // WithTokenSource sets a token source that is consulted on every request for a bearer token.
 //
-// Use this instead of WithBearerToken when the token can rotate over the client's lifetime.
+// Use this instead of WithBearerToken when the provider credential can rotate over the client's lifetime,
+// for example when an Auth0 access token is refreshed in the background.
 func WithTokenSource(ts TokenSource) Option {
 	return func(o *Options) {
 		o.TokenSource = ts
 	}
 }
 
-// WithBearerToken adds a static bearer token to each request.
+// WithBearerToken adds a static bearer token to each request. It may be a configured-provider bearer
+// credential or a self-issued Image Factory API token; the server applies the corresponding identity
+// and scope checks.
 func WithBearerToken(token string) Option {
 	return func(o *Options) {
 		if o.ExtraHeaders == nil {
@@ -57,7 +60,9 @@ func WithBearerToken(token string) Option {
 	}
 }
 
-// WithBasicAuth adds basic authentication to each request.
+// WithBasicAuth adds basic authentication to each request. It can carry htpasswd credentials or a
+// self-issued API token in the password position for Basic-only clients. For an API token, the signed
+// subject determines the principal; the Basic username does not grant authority.
 func WithBasicAuth(username, password string) Option {
 	return func(o *Options) {
 		if o.ExtraHeaders == nil {

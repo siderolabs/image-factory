@@ -23,6 +23,7 @@ The official Image Factory is available at [https://factory.talos.dev](https://f
 ## LLM Usage
 
 The file is maintained at [`internal/frontend/http/templates/llms.txt`](internal/frontend/http/templates/llms.txt) and was generated with the assistance of AI Agent.
+Running instances expose the rendered reference at `/llms.txt` and the canonical OpenAPI 3.1 contract at `/openapi.yaml`; both routes are public.
 
 ## Documentation
 

@@ -103,7 +103,7 @@ spec:
               readOnly: true
             - name: grype-db
               mountPath: /var/lib/grype
-            {{- if .Values.config.authentication.enabled }}
+            {{- if and .Values.config.authentication.enabled (eq (default "htpasswd" .Values.config.authentication.provider) "htpasswd") }}
             - name: htpasswd
               mountPath: {{ dir .Values.config.authentication.htpasswdPath }}
               readOnly: true
@@ -133,7 +133,7 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "image-factory.grypeDBClaim" . }}
           {{- end }}
-        {{- if .Values.config.authentication.enabled }}
+        {{- if and .Values.config.authentication.enabled (eq (default "htpasswd" .Values.config.authentication.provider) "htpasswd") }}
         - name: htpasswd
           secret:
             secretName: {{ include "image-factory.htpasswdSecret" . }}

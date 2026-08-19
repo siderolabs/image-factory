@@ -1,0 +1,23 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+parameters:
+- $ref: ../components/parameters.yaml#/TalosVersion
+get:
+  operationId: listOfficialOverlays
+  summary: List official overlays
+  security: []
+  responses:
+    '200':
+      description: Official overlays for the Talos version, or an empty array before overlay support.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "../components/schemas.yaml#/Overlay"
+    '404':
+      $ref: "../components/responses.yaml#/NotFound"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

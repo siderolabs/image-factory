@@ -7,6 +7,7 @@
 package integration_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,4 +44,22 @@ func TestBrokenVersions(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NotContains(t, versions, brokenVersion)
+	require.NotEmpty(t, versions)
+
+	for _, path := range []string{
+		"/versions",
+		"/versions?broken=true",
+		"/version/" + versions[0] + "/extensions/official",
+		"/version/" + versions[0] + "/overlays/official",
+	} {
+		req, requestErr := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+path, nil)
+		require.NoError(t, requestErr)
+
+		resp, requestErr := http.DefaultClient.Do(req)
+		require.NoError(t, requestErr)
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		require.Equal(t, http.StatusOK, resp.StatusCode, path)
+		assert.Equal(t, "application/json", resp.Header.Get("Content-Type"), path)
+	}
 }

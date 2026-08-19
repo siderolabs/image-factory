@@ -590,6 +590,19 @@ func TestListCreateFrontendCreateRejectsMalformedBody(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+func TestListCreateFrontendCreateRejectsOversizedBody(t *testing.T) {
+	t.Parallel()
+
+	mgr := &fakeManager{}
+	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+	body := `{"name":"my-node","scopes":["image:read"]}` + strings.Repeat(" ", 1<<13)
+
+	w := doRequest(t, f, http.MethodPost, "/tokens", body, nil)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	require.Empty(t, mgr.createdName)
+}
+
 func TestListCreateFrontendCreateRejectsAtCap(t *testing.T) {
 	t.Parallel()
 

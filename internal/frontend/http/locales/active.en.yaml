@@ -398,7 +398,7 @@
   translation: "Home"
 
 - id: tokens.description
-  translation: "API tokens are credentials this factory issues itself. Choose the actor that will use the token; the factory grants that actor a fixed, least-privilege permission set."
+  translation: "API tokens are credentials this factory issues itself. Choose the actor that will use the token; the factory assigns that actor's fixed, server-defined capability profile."
 
 - id: tokens.table.name
   translation: "Name"
@@ -470,7 +470,7 @@
   translation: "This secret is shown only once. Copy it now, because you will not be able to view it again."
 
 - id: tokens.secret.identity
-  translation: "Organization ID / Username"
+  translation: "Identity"
 
 - id: tokens.secret.token
   translation: "Token"
@@ -488,7 +488,7 @@
   translation: "Revoke Token"
 
 - id: tokens.revoke.confirm
-  translation: "Revoke this token? Any Talos nodes using it will lose access."
+  translation: "Revoke this token? Any clients or nodes using it will immediately lose access."
 
 - id: tokens.error.load
   translation: "Failed to load tokens"
@@ -497,4 +497,4 @@
   translation: "Failed to revoke token"
 
 - id: tokens.error.limit
-  translation: "Token limit reached for this organization"
+  translation: "Token limit reached for this identity"

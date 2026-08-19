@@ -211,8 +211,9 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 // A positive ttl requests that lifetime, which the server accepts only within its
 // configured bounds; zero or less takes the server default.
 //
-// The token is not stored, which is what lets it travel in a URL; its lifetime is bounded by
-// the server's authentication.tokens.ttl.ephemeral policy.
+// The token is not stored, so expiry is its only revocation mechanism and its lifetime is bounded
+// by the server's authentication.tokens.ttl.ephemeral policy. Storage is independent of URL use;
+// both stored and ephemeral tokens may travel in a URL when their scopes are URL-safe.
 func (c *Client) DownloadToken(ctx context.Context, ttl time.Duration) (string, error) {
 	_, token, err := c.TokenCreate(ctx, TokenCreateOptions{
 		Scopes:    []string{"image:read"},

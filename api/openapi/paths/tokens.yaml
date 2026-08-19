@@ -1,0 +1,103 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+listCreate:
+  get:
+    operationId: listAPITokens
+    x-image-factory-api-token-scopes: [token:read]
+    summary: List the principal's active API tokens
+    tags: [APITokens]
+    x-image-factory-enterprise: true
+    responses:
+      "200":
+        description: Active stored API tokens.
+        headers:
+          Cache-Control:
+            schema:
+              type: string
+            example: no-store
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas.yaml#/APITokenList"
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses.yaml#/Forbidden"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+  post:
+    operationId: createAPIToken
+    x-image-factory-api-token-scopes: [token:issue]
+    summary: Issue an API token
+    tags: [APITokens]
+    x-image-factory-enterprise: true
+    x-image-factory-handler-validates-body: true
+    x-image-factory-ignore-content-type: true
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas.yaml#/APITokenCreateRequest"
+    responses:
+      "200":
+        description: The issued API token; its value is only returned here.
+        headers:
+          Cache-Control:
+            schema:
+              type: string
+            example: no-store
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas.yaml#/APITokenCreated"
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "400":
+        $ref: "../components/responses.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses.yaml#/Forbidden"
+      "409":
+        $ref: "../components/responses.yaml#/Conflict"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+revoke:
+  parameters:
+    - name: id
+      in: path
+      required: true
+      description: Identifier of the API token to revoke.
+      example: 01K3S2QW1V6P1Z0J9YQK4M8H7B
+      schema:
+        type: string
+        minLength: 1
+  post:
+    operationId: revokeAPIToken
+    x-image-factory-api-token-scopes: [token:revoke]
+    summary: Revoke one of the principal's stored API tokens
+    tags: [APITokens]
+    x-image-factory-enterprise: true
+    responses:
+      "204":
+        description: The API token was revoked.
+        headers:
+          Cache-Control:
+            schema:
+              type: string
+            example: no-store
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses.yaml#/Forbidden"
+      "404":
+        $ref: "../components/responses.yaml#/NotFound"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"

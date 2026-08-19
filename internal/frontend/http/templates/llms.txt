@@ -18,7 +18,13 @@ The Image Factory builds and serves customized Talos Linux boot artifacts. Artif
 
 ## HTTP API (`https://factory.talos.dev`)
 
-**Authentication**: The official public instance (`factory.talos.dev`) does not require authentication. Enterprise deployments may enable either htpasswd Basic authentication or Auth0 access tokens. Auth0 tokens are accepted as Bearer credentials and as the password in Basic credentials for OCI clients. Schematic, image, PXE, generated Installer OCI, SBOM, VEX and scan routes require authentication when it is enabled. Version, extension, overlay, `talosctl`, SecureBoot certificate, signing key, JWKS and `llms.txt` routes remain public.
+**Authentication**: The official public instance (`factory.talos.dev`) does not require authentication. Enterprise deployments may enable either htpasswd Basic authentication or Auth0 access tokens. Auth0 tokens are accepted as Bearer credentials and as the password in Basic credentials for OCI clients. The Auth0 principal is the non-empty string in the custom `if_org_id` claim; the native `org_id` claim is not read. Schematic, image, PXE, generated Installer OCI, SBOM, VEX and scan routes require authentication when it is enabled. Version, extension, overlay, `talosctl`, SecureBoot certificate, signing key, JWKS, `/openapi.yaml` and `/llms.txt` routes remain public.
+
+Self-issued API tokens are accepted as Bearer credentials or Basic passwords when their scopes cover the request. A valid stored or ephemeral token with no token-management scope may also use `?token=` on a covered `GET` or `HEAD`; query URLs can leak through logs and browser history. Auth0 browser login additionally authenticates with the encrypted `if_session` cookie when configured.
+
+### GET /openapi.yaml
+
+Returns the canonical OpenAPI 3.1 contract. This route is public.
 
 ### POST /schematics
 
@@ -161,13 +167,31 @@ Returns a VEX JSON document for vulnerability suppression. Available from Talos 
 
 Returns a vulnerability scan report. `:report` suffix: `.json`, `.table`, `.sarif`, `.cdx`. Available from Talos v1.13.0.
 
-### POST /download-token
+### GET /tokens
 
-Registered only when Enterprise authentication is enabled. Returns a short-lived `{access_token, token_type, expires_in}` JWT for authenticated image URLs. Append it as `?token=<access_token>` only on `GET` or `HEAD /image/...`, or on `GET /pxe/...`, which forwards it into the asset URLs of the script it returns.
+Registered only when Enterprise authentication is enabled. Lists the caller's active stored API tokens.
+
+### POST /tokens
+
+Registered only when Enterprise authentication is enabled. Creates a scoped API token. The response contains the token value only once. For an ephemeral one-hour image-download token:
+
+```json
+{"scopes":["image:read"],"stored":false,"ttl":"1h"}
+```
+
+Append a stored or ephemeral token as `?token=<token>` on any `GET` or `HEAD` operation its scopes cover. Common cases are image downloads and `GET /pxe/...`, which forwards the credential into the asset URLs of the script it returns. Token-management scopes are not accepted in query credentials.
+
+Callers may request explicit scopes, or choose the fixed server-owned `talos`, `automation`, `operator` or `admin` actor profile. A token's executable `scope` and delegation ceiling in `issuable_scopes` are separate; a token with `token:issue` may grant only subsets of its own `issuable_scopes`. Only the offline `admin-token` bootstrap credential can mint for another principal.
+
+Stored tokens are recorded, listed and individually revocable. Ephemeral and bootstrap tokens have no per-token revocation; removing a verification key retires every credential signed by that key.
+
+### POST /tokens/:id/revoke
+
+Registered only when Enterprise authentication is enabled. Revokes one of the caller's stored API tokens.
 
 ### GET /.well-known/jwks.json
 
-Registered only when Enterprise authentication is enabled. Returns the public JSON Web Key Set used to verify download tokens. This route is public when registered.
+Registered only when Enterprise authentication is enabled. Returns the public JSON Web Key Set used to verify API tokens. This route is public when registered.
 
 ## Examples
 

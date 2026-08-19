@@ -141,7 +141,7 @@ type customClaims struct {
 // Every token path goes through validateToken, so this is enforced everywhere.
 func (c *customClaims) Validate() error {
 	if c.OrgID == "" {
-		return errors.New("org_id claim is required")
+		return errors.New("if_org_id claim is required")
 	}
 
 	return nil

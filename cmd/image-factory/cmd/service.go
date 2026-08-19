@@ -163,6 +163,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	}
 
 	frontendHTTP, err := frontendhttp.NewFrontend(
+		ctx,
 		logger,
 		configFactory,
 		assetBuilder,

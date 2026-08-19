@@ -398,7 +398,7 @@
   translation: "Accueil"
 
 - id: tokens.description
-  translation: "Les jetons d'API sont des identifiants émis par cette factory. Choisissez l'acteur qui utilisera le jeton ; la factory lui attribue un ensemble fixe de permissions minimales."
+  translation: "Les jetons d'API sont des identifiants émis par cette factory. Choisissez l'acteur qui utilisera le jeton ; la factory lui attribue un profil de capacités fixe défini par le serveur."
 
 - id: tokens.table.name
   translation: "Nom"
@@ -470,7 +470,7 @@
   translation: "Ce secret ne s'affiche qu'une seule fois. Copiez-le maintenant, car vous ne pourrez plus le consulter ensuite."
 
 - id: tokens.secret.identity
-  translation: "ID d'organisation / nom d'utilisateur"
+  translation: "Identité"
 
 - id: tokens.secret.token
   translation: "Jeton"
@@ -488,7 +488,7 @@
   translation: "Révoquer le jeton"
 
 - id: tokens.revoke.confirm
-  translation: "Révoquer ce jeton ? Les nœuds Talos qui l'utilisent perdront l'accès."
+  translation: "Révoquer ce jeton ? Tout client ou nœud qui l'utilise perdra immédiatement l'accès."
 
 - id: tokens.error.load
   translation: "Échec du chargement des jetons"
@@ -497,4 +497,4 @@
   translation: "Échec de la révocation du jeton"
 
 - id: tokens.error.limit
-  translation: "Limite de jetons atteinte pour cette organisation"
+  translation: "Limite de jetons atteinte pour cette identité"

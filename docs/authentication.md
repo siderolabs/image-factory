@@ -11,13 +11,16 @@ There is no mode that accepts both htpasswd credentials and Auth0 tokens.
 
 ## The `Authorization` header
 
-Every endpoint marked `Auth: required` in the [API reference](api.md#authentication) takes its credential in the `Authorization` request header.
-What that header may contain depends on the active provider:
+Every endpoint marked `Auth: required` in the [API reference](api.md#authentication) takes a credential in the `Authorization` request header.
+What a full provider credential may contain depends on the active provider:
 
 | Provider   | Accepted `Authorization` value                          | Credential is                                     |
 | ---------- | ------------------------------------------------------- | ------------------------------------------------- |
 | `htpasswd` | `Basic base64(<username>:<password>)`                   | a user from the `htpasswd` file                   |
 | `auth0`    | `Bearer <jwt>`, or `Basic base64(<any-username>:<jwt>)` | an Auth0 access token for the configured audience |
+
+A self-issued [API token](#api-tokens) is accepted alongside either provider as `Bearer <token>` or as the Basic password.
+It reaches only operations covered by its scopes; a valid token without a scope for the request does not authenticate it, so the request falls back to the configured provider and normally ends in `401`.
 
 Details that decide whether a request authenticates:
 
@@ -32,9 +35,9 @@ Details that decide whether a request authenticates:
 - A missing or invalid credential is `401`.
   The response carries one `WWW-Authenticate: Basic` challenge, under both `htpasswd` and `auth0`.
   No Bearer challenge is advertised, even under `auth0` where Bearer credentials are accepted: docker's registry client reads a Bearer challenge's realm as an OAuth token endpoint to fetch a token from, and the factory has no such endpoint, so advertising one makes `docker login` fail before it sends any credentials.
-  With [browser login](#browser-login) configured, a page navigation is sent to `/login` with a `303` instead, and an XHR gets the `401` with no challenge on it.
+  With [browser login](#browser-login) configured, a page navigation is sent to `/login` with a `303` instead, and an htmx request gets the `401` with no challenge on it.
 
-There are two alternatives to this header: the [`?token=` query parameter](#the-token-query-parameter), accepted on image downloads and PXE scripts only, and the session cookie [browser login](#browser-login) issues.
+There are two alternatives to this header: the [`?token=` query parameter](#the-token-query-parameter), accepted for scoped API-token reads, and the session cookie [browser login](#browser-login) issues.
 The factory also issues credentials of its own, which the header carries too; see [API tokens](#api-tokens).
 
 ## htpasswd
@@ -47,8 +50,9 @@ The caller identity is the username.
 Bearer token authentication against an Auth0 tenant.
 Tokens are validated locally against the tenant's JWKS: signature, issuer, audience and expiry.
 
-The caller identity is the token's `org_id` claim, so tokens must be issued to organization-scoped clients.
-Tokens without the claim are rejected, since there would be no principal to attribute the request to.
+The caller identity is the non-empty string in the custom `if_org_id` claim.
+An Auth0 Action should copy the native organization ID into this custom claim; Auth0's native `org_id` claim is not read by the factory and cannot itself be populated by an Action.
+Tokens without the custom claim are rejected, since there would be no principal to attribute the request to.
 
 Tokens are accepted either as `Authorization: Bearer <token>` or in the password field of a Basic credential; see [The `Authorization` header](#the-authorization-header).
 
@@ -89,7 +93,7 @@ The cookie is capped at the 4096 bytes browsers accept; a tenant configured to e
 
 ### Migrating from htpasswd
 
-Switching an existing deployment from `htpasswd` to `auth0` changes the identity namespace from usernames to `org_...` identifiers.
+Switching an existing deployment from `htpasswd` to `auth0` changes the identity namespace from usernames to values of the custom `if_org_id` claim.
 Consequences:
 
 - Schematics owned by a username are not reachable by any Auth0 organization, and vice versa.
@@ -128,6 +132,9 @@ Neither is reachable in an authenticated deployment; each identity creates its o
 An API token is a JWT the factory issues and verifies with its own key, rather than one obtained from the configured provider.
 What it may do is decided by the **scopes** it carries, not by the endpoint that minted it.
 
+The token API retains the wire field `org_id` and configuration name `maxPerOrg`, but "organization" there means the provider-resolved principal: the htpasswd username or the value of the Auth0 custom `if_org_id` claim.
+It is not necessarily an Auth0 native organization ID.
+
 There is one token type, one active signing key and one JWKS containing every configured verification key.
 A short-lived download link and a year-long node credential are the same credential with different scopes, lifetimes and storage.
 
@@ -154,8 +161,8 @@ Scopes do not imply one another.
 A token carrying several scopes reaches the union of their routes.
 Ownership remains a separate mandatory check, so permission to read a schematic-derived resource never grants access to another subject's resources.
 
-A token's lifetime and supported transports follow whether it is stored, not which scopes it carries.
-See [Stored and ephemeral tokens](#stored-and-ephemeral-tokens).
+A token's storage controls its lifecycle and individual revocability.
+Its scopes control which routes it may reach and whether it is eligible for query transport; see [Stored and ephemeral tokens](#stored-and-ephemeral-tokens) and [The `?token=` query parameter](#the-token-query-parameter).
 
 ### Browser actor profiles
 
@@ -180,15 +187,15 @@ The HTTP API continues to accept explicit scopes for clients that need finer con
 Every token says, in the JWT itself, whether the factory keeps a record of it.
 That is the `stored` claim, set once when the token is minted and never re-derived afterwards.
 
-A **stored** token has a record written for it in its organization's repository.
+A **stored** token has a record written for it in its principal's repository.
 Presence of that record is what keeps it valid, which is what makes it revocable, and it is what `GET /tokens` lists.
 It needs a `name`, because the name is what an operator picks it out of that list by, and it counts against `authentication.tokens.maxPerOrg`.
 
 An **ephemeral** token is a signed string and nothing else.
-Nothing records it, so it cannot be listed or revoked; expiry is the only way it leaves circulation.
+Nothing records it, so it cannot be listed or revoked individually; it normally leaves circulation through expiry, while removing its verification key retires it together with every other token signed by that key.
 It needs no name and costs no registry write, on either the mint or the verify path.
 
-Because the only way to withdraw an ephemeral token is to wait, stored and ephemeral tokens have separate lifetime policies.
+Because an ephemeral token has no per-token revocation, stored and ephemeral tokens have separate lifetime policies.
 `authentication.tokens.ttl.stored` defaults to one year with a one-year maximum; `authentication.tokens.ttl.ephemeral` defaults to five minutes with an eight-hour maximum.
 The caller still chooses storage explicitly, but cannot request a lifetime outside the selected policy.
 
@@ -236,6 +243,7 @@ The command exists in Enterprise builds only.
 The token is written to stdout, while human-readable diagnostics go to stderr, so `> token` leaves a usable credential file.
 
 `--subject` is required and establishes the bootstrap credential's own identity.
+Under Auth0 it must exactly match the value of `if_org_id`; under htpasswd it must match the username.
 `--ttl` must fit `authentication.tokens.ttl.bootstrap`; this is a dedicated CLI-only lifetime policy.
 `authentication.tokens.keyPaths` must contain an active private key, because an in-memory key generated by another process would not match the running replicas.
 
@@ -323,6 +331,7 @@ The query string is for callers that cannot set a header: a browser, an applianc
   Leaking one of those yields the means to mint further credentials rather than only itself, and no download or PXE flow needs it.
   In practice `image:read` is the capability used for download and PXE URLs.
 - It is read only on `GET` and `HEAD`, so it never authenticates a write.
+  It works on every read operation covered by the token's scopes, including schematic, image, PXE, report and OCI registry reads; `image:read` is merely the usual URL-delivery case.
 - On `/pxe/` the same token is forwarded into the kernel, initramfs and UKI URLs of the generated script, so an iPXE boot needs no credential of its own.
   This happens whichever transport the token arrived on, since the URL is the only one iPXE has.
   Nothing is minted there: the script expires with the token it was fetched with, and re-fetching the script with an expiring token cannot extend that lifetime.
@@ -364,8 +373,9 @@ authentication:
       - /etc/image-factory/token-previous.crt
 ```
 
-Leaving the list empty generates a key pair at startup, which works for a single replica only: a token minted by one replica fails verification on every other, so requests fail intermittently behind a load balancer.
-Configure the key paths for any deployment running more than one replica.
+Leaving the list empty generates a key pair at startup.
+That is suitable only for disposable single-process development: previously issued tokens stop working after a restart, and a token minted by one replica fails verification on every other, so requests fail intermittently behind a load balancer.
+Configure the key paths for every persistent or multi-replica deployment.
 
 Rotate keys in two deployments so every replica can verify both keys before any replica starts signing with the new one:
 

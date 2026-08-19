@@ -108,6 +108,14 @@ func TestAuth0ProviderMiddleware(t *testing.T) {
 	validToken := signToken(t, privateKey, issuerURL, testAudience, testOrgID, time.Now().Add(time.Hour))
 	expiredToken := signToken(t, privateKey, issuerURL, testAudience, testOrgID, time.Now().Add(-time.Hour))
 	noOrgToken := signToken(t, privateKey, issuerURL, testAudience, "", time.Now().Add(time.Hour))
+	nativeOrgOnlyToken := testoidc.SignToken(t, privateKey, testoidc.TokenOptions{
+		KeyID:       testKeyID,
+		Issuer:      issuerURL,
+		Subject:     testSubject,
+		Audience:    []string{testAudience},
+		NativeOrgID: testOrgID,
+		Expiry:      time.Now().Add(time.Hour),
+	})
 	wrongAudToken := signToken(t, privateKey, issuerURL, "https://wrong-audience", "", time.Now().Add(time.Hour))
 	wrongIssToken := signToken(t, privateKey, "https://wrong.auth0.com/", testAudience, "", time.Now().Add(time.Hour))
 
@@ -246,9 +254,16 @@ func TestAuth0ProviderMiddleware(t *testing.T) {
 			expectAuthError: true,
 		},
 		{
-			name: "valid jwt but no org_id claim",
+			name: "valid jwt but no if_org_id claim",
 			setupRequest: func(r *http.Request) {
 				r.Header.Set("Authorization", "Bearer "+noOrgToken)
+			},
+			expectAuthError: true,
+		},
+		{
+			name: "native org_id does not replace if_org_id",
+			setupRequest: func(r *http.Request) {
+				r.Header.Set("Authorization", "Bearer "+nativeOrgOnlyToken)
 			},
 			expectAuthError: true,
 		},

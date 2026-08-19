@@ -9,13 +9,15 @@ Authentication is an Enterprise feature, enabled with `authentication.enabled`.
 When it is off, every registered endpoint in this reference is public, except that the token and JWKS routes are not registered at all.
 When it is on, each endpoint below carries an **Access** table with these four fields; endpoints that never take a credential are marked `Access: public` instead.
 See [Authentication](authentication.md) for the providers, the token formats and the scopes.
+API tokens may use Basic or Bearer authentication.
+On a `GET` or `HEAD` operation whose **Scopes** entry permits the token, any token without a token-management capability may instead use `?token=`; the OpenAPI contract marks these alternatives as `apiTokenQuery` and exposes the accepted capabilities through `x-image-factory-api-token-scopes`.
 
 With [browser login](authentication.md#browser-login) configured, every endpoint below also accepts the session cookie, and a browser navigation without a credential is redirected to `/login` rather than answered `401`.
 A client that does not ask for `text/html` gets the `401` described here.
 
 | Field | Values |
 | --- | --- |
-| **Auth** | `public` takes no credential, `required` takes an [`Authorization` header](authentication.md#the-authorization-header) for the configured provider, and a missing or invalid credential is `401`. |
+| **Auth** | `public` takes no credential. `required` accepts the configured provider, a suitably scoped API token, or an optional browser session; a missing, invalid or out-of-scope credential normally produces `401`. |
 | **Scopes** | Which [API token](authentication.md#api-tokens) capabilities may call the endpoint, or `none` when only a full provider credential can. |
 | **Ownership** | Whether the schematic's `owner` must match the caller identity, where a mismatch is `403`; an unauthenticated caller gets `401` whether or not the schematic exists, so existence is not leaked. |
 
@@ -34,16 +36,18 @@ The common error statuses are:
 
 | Status | Meaning |
 | ------ | ------- |
+| `303 See Other` | Browser navigation redirected to Auth0 login when browser login is configured. |
 | `400 Bad Request` | An input explicitly classified as an invalid path, architecture, report format, image profile or schematic is invalid. |
 | `401 Unauthorized` | Authentication is enabled and the credential is missing or invalid. |
 | `402 Payment Required` | The requested Enterprise-only asset feature is not enabled. |
-| `403 Forbidden` | The credential is valid but its API-token scopes or schematic ownership deny access. |
+| `403 Forbidden` | The authenticated principal fails an ownership, delegation or cross-subject authorization check, while a valid API token that does not cover the route falls back to the configured provider and normally produces `401`. |
 | `404 Not Found` | The schematic, Talos artifact or API/OCI route does not exist. |
 | `500 Internal Server Error` | The request failed unexpectedly. |
 | `503 Service Unavailable` | A required proxy or Enterprise service is temporarily unavailable. |
 
 Some core handlers currently wrap malformed semantic versions as unclassified errors and therefore return `500 Internal Server Error`, while the Enterprise SPDX, VEX and scan handlers classify malformed or too-old versions as `400 Bad Request`.
-This distinction is part of the current behavior to preserve or deliberately correct in the future OpenAPI-backed implementation.
+The frontend already matches and validates request and response shapes against the canonical OpenAPI contract; authentication, API-token scope checks and ownership checks are applied separately by frontend middleware and handlers.
+This status distinction is therefore current runtime behavior to preserve or deliberately change in both implementation and contract.
 
 For configured cross-origin callers, CORS preflight advertises only `GET`, `HEAD` and `OPTIONS`.
 It permits the `Cache-Control` request header and exposes `Content-Disposition`, `Content-Length` and `Content-Type` response headers.
@@ -191,8 +195,8 @@ The API never grants `any_subject`.
 It is optional and defaults to `true`, so a caller who omits it never ends up with a credential nobody can withdraw.
 The response echoes what was recorded.
 
-An ephemeral token is the only kind accepted from a `?token=` query parameter, and the only kind that may be minted without a `name`.
-There is no listing for a name to distinguish it in.
+Both stored and ephemeral tokens are accepted from a `?token=` query parameter when their scopes cover a `GET` or `HEAD` operation and they carry no token-management capability.
+An ephemeral token is the only kind that may be minted without a `name`; there is no listing for a name to distinguish it in.
 
 `ttl` is optional and is a Go duration.
 It must fall within `authentication.tokens.ttl.stored` or `.ephemeral`, selected by `stored`, and omitting it takes that policy's default.
@@ -369,7 +373,7 @@ The optional `filename` query parameter overrides the download filename used to 
 On a direct response, the factory returns `200 OK` with `Content-Type`, `Content-Length` and an attachment `Content-Disposition`.
 A `GET` may instead return `302 Found` to a configured object-storage or CDN URL; `HEAD` is always served directly and returns the same headers as a direct `GET`, without a body.
 
-In Enterprise edition this route also accepts an ephemeral `image:read` [API token](authentication.md#api-tokens) as `?token=<token>` in place of the `Authorization` header, as does `GET /pxe/`; see [The `?token=` query parameter](authentication.md#the-token-query-parameter).
+In Enterprise edition this route also accepts a stored or ephemeral `image:read` [API token](authentication.md#api-tokens) as `?token=<token>` in place of the `Authorization` header, as does `GET /pxe/`; see [The `?token=` query parameter](authentication.md#the-token-query-parameter).
 
 Common parameters:
 
@@ -618,7 +622,7 @@ Ownership remains enforced.
 
 iPXE cannot send request headers, so the credential goes in the URL, and whichever one authenticated the request is carried into the asset URLs of the returned script:
 
-* an [ephemeral download token](authentication.md#the-token-query-parameter) - `https://pxe.talos.dev/pxe/...?token=<token>` - is forwarded as `?token=` on the kernel, initramfs and UKI URLs, so no long-lived credential appears in the script.
+* a stored or ephemeral [`image:read` API token](authentication.md#the-token-query-parameter) - `https://pxe.talos.dev/pxe/...?token=<token>` - is forwarded as `?token=` on the kernel, initramfs and UKI URLs.
   The script expires with the token; nothing is minted here, so re-fetching it with an expiring token does not extend that lifetime.
 * Basic credentials - `https://<user>:<password>@pxe.talos.dev/pxe/...`, which the client encodes into `Authorization: Basic` - are embedded as userinfo on those same URLs.
 
@@ -657,12 +661,12 @@ Access, for every schematic-scoped `/v2/` route in this section, including `dock
 | --- | --- | --- |
 | required | `image:read` | enforced |
 
-Registry clients speak Basic auth, so an Auth0 JWT is presented as the Basic password with any username; see [The `Authorization` header](authentication.md#the-authorization-header).
+Registry clients speak Basic auth, so an Auth0 JWT or self-issued API token is presented as the Basic password; see [The `Authorization` header](authentication.md#the-authorization-header).
 
 Two routes in this section differ from the table:
 
 * `GET`, `HEAD` `/v2` is the OCI ping.
-  It returns an empty `200 OK`; when authentication is enabled it answers with a `401` challenge without a credential, but carries no schematic, so ownership does not apply.
+  It returns an empty `200 OK`; when authentication is enabled it accepts `image:read` or `source:pull`, answers with a `401` challenge without a credential, and carries no schematic, so ownership does not apply.
 * The [Source Image Proxy](#source-image-proxy) carries no schematic either; see the table in that section.
 
 The registry implements the user-facing OCI Distribution `GET` and `HEAD` operations under `/v2/` for manifest, blob and referrer retrieval.

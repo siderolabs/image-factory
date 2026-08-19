@@ -12,7 +12,7 @@
       }
     },
     "auth": {
-      "description": "Enterprise Authentication (htpasswd) Requires the Enterprise image-factory build. The chart cannot verify image identity; enabling this on a non-Enterprise image causes the app to ignore the configuration.",
+      "description": "Enterprise htpasswd credentials Requires the Enterprise image-factory build. The chart cannot verify image identity; enabling this on a non-Enterprise image causes the app to ignore the configuration. Used only when config.authentication.enabled=true and config.authentication.provider=htpasswd.",
       "type": "object",
       "properties": {
         "existingSecret": {
@@ -20,7 +20,7 @@
           "type": "string"
         },
         "htpasswd": {
-          "description": "If 'existingSecret' is empty and config.authentication.enabled=true, a Secret is created from this content. Multiline htpasswd content. Bcrypt hashes only ($2y$/$2a$/$2b$). Generate using: htpasswd -bnB user password \u003e\u003e users.htpasswd",
+          "description": "If 'existingSecret' is empty and the htpasswd provider is enabled, a Secret is created from this content. Multiline htpasswd content. Bcrypt hashes only ($2y$/$2a$/$2b$). Generate using: htpasswd -bnB user password \u003e\u003e users.htpasswd",
           "type": "string"
         }
       }
@@ -75,6 +75,9 @@
               "type": "boolean"
             },
             "htpasswdPath": {
+              "type": "string"
+            },
+            "provider": {
               "type": "string"
             }
           }

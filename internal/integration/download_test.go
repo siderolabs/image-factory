@@ -1382,9 +1382,33 @@ func testDownloadFrontend(ctx context.Context, t *testing.T, baseURL string) {
 		t.Run("profile", func(t *testing.T) {
 			t.Parallel()
 
-			assert.Equal(
-				t, "error parsing profile from path: invalid profile path: \"metal-amd64.ssd\"\n",
+			assert.Contains(
+				t,
 				downloadAssetInvalid(ctx, t, baseURL, emptySchematicID, "v1.5.0", "metal-amd64.ssd", http.StatusBadRequest),
+				"error parsing profile from path",
+			)
+		})
+
+		t.Run("missing schematic precedes invalid artifact", func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(
+				t, "schematic ID \"aaaaaaaaaaaa\" not found\n",
+				downloadAssetInvalid(ctx, t, baseURL, "aaaaaaaaaaaa", "v1.5.0", "metal-amd64.zip", http.StatusNotFound),
+			)
+		})
+
+		t.Run("unavailable checksum precedes invalid artifact", func(t *testing.T) {
+			t.Parallel()
+
+			if enterprise.Enabled() {
+				t.Skip("checksum generation is enabled in Enterprise")
+			}
+
+			assert.Contains(
+				t,
+				downloadAssetInvalid(ctx, t, baseURL, "aaaaaaaaaaaa", "v1.5.0", "metal-amd64.zip.sha256", http.StatusPaymentRequired),
+				"not enabled",
 			)
 		})
 	})

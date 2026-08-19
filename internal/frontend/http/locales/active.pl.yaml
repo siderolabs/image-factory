@@ -398,7 +398,7 @@
   translation: "Strona główna"
 
 - id: tokens.description
-  translation: "Tokeny API to poświadczenia wydawane przez tę fabrykę. Wybierz aktora, który będzie używać tokenu; fabryka przyzna mu stały zestaw minimalnych uprawnień."
+  translation: "Tokeny API to poświadczenia wydawane przez tę fabrykę. Wybierz aktora, który będzie używać tokenu; fabryka przypisze mu stały profil uprawnień zdefiniowany przez serwer."
 
 - id: tokens.table.name
   translation: "Nazwa"
@@ -470,7 +470,7 @@
   translation: "Ten sekret jest wyświetlany tylko raz. Skopiuj go teraz, bo nie będzie można go ponownie wyświetlić."
 
 - id: tokens.secret.identity
-  translation: "ID organizacji / nazwa użytkownika"
+  translation: "Tożsamość"
 
 - id: tokens.secret.token
   translation: "Token"
@@ -488,7 +488,7 @@
   translation: "Odwołaj token"
 
 - id: tokens.revoke.confirm
-  translation: "Odwołać ten token? Węzły Talos, które go używają, stracą dostęp."
+  translation: "Odwołać ten token? Wszyscy klienci i wszystkie węzły, które go używają, natychmiast stracą dostęp."
 
 - id: tokens.error.load
   translation: "Nie udało się wczytać tokenów"
@@ -497,4 +497,4 @@
   translation: "Nie udało się odwołać tokenu"
 
 - id: tokens.error.limit
-  translation: "Osiągnięto limit tokenów dla tej organizacji"
+  translation: "Osiągnięto limit tokenów dla tej tożsamości"

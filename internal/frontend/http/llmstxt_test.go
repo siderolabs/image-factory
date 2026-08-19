@@ -29,4 +29,13 @@ func TestHandleLLMsTxt(t *testing.T) {
 	assert.Equal(t, "text/plain; charset=utf-8", resp.Header.Get("Content-Type"))
 	assert.NotEmpty(t, w.Body.Bytes())
 	assert.Contains(t, w.Body.String(), "factory.talos.dev")
+	assert.Contains(t, w.Body.String(), "GET /openapi.yaml")
+	assert.Contains(t, w.Body.String(), "if_org_id")
+	assert.Contains(t, w.Body.String(), "GET /tokens")
+	assert.Contains(t, w.Body.String(), "POST /tokens")
+	assert.Contains(t, w.Body.String(), "POST /tokens/:id/revoke")
+	assert.Contains(t, w.Body.String(), "issuable_scopes")
+	assert.Contains(t, w.Body.String(), "stored or ephemeral token")
+	assert.NotContains(t, w.Body.String(), "POST /download-token")
+	assert.NotContains(t, w.Body.String(), "only ephemeral")
 }

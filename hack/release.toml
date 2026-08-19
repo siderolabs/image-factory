@@ -19,7 +19,7 @@ Generated image downloads, PXE assets and generated installer OCI pulls share `i
 
 Executable capabilities and delegation are separate. The JWT `scope` claim controls what the credential may do, while `issuable_scopes` is an explicit ceiling on what it may grant. Child capabilities and child delegation ceilings must both be subsets of the parent's ceiling. Unknown values fail closed, and no wildcard silently acquires future capabilities.
 
-Each token also carries a `stored` claim. A stored token is recorded per identity, listed, checked on every use and revocable. An ephemeral token is a signed string and nothing else; it is the only kind accepted from `?token=`. Token-management credentials are refused in query strings because those are copied into access logs.
+Each token also carries a `stored` claim. A stored token is recorded per identity, listed, checked on every use and revocable. An ephemeral token is a signed string and nothing else. Either kind may be used from `?token=` on scoped `GET` and `HEAD` operations; token-management credentials are refused in query strings because those are copied into access logs.
 
 Lifetime follows storage rather than capability. Stored tokens default to one year and remain revocable. Ephemeral tokens default to five minutes and may live up to eight hours. The CLI bootstrap credential has its own `authentication.tokens.ttl.bootstrap` policy.
 

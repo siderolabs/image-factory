@@ -1,0 +1,301 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+healthz:
+  get:
+    operationId: getHealth
+    summary: Check process health
+    tags: [Operational]
+    security: []
+    x-image-factory-internal: true
+    responses:
+      "200":
+        $ref: "../components/responses.yaml#/EmptyResponse"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+  head:
+    operationId: headHealth
+    summary: Inspect process health
+    tags: [Operational]
+    security: []
+    x-image-factory-internal: true
+    responses:
+      "200":
+        $ref: "../components/responses.yaml#/EmptyResponse"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+readyz:
+  get:
+    operationId: getReadiness
+    summary: Check service readiness
+    tags: [Operational]
+    security: []
+    x-image-factory-internal: true
+    responses:
+      "200":
+        $ref: "../components/responses.yaml#/EmptyResponse"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+      "503":
+        $ref: "../components/responses.yaml#/ServiceUnavailable"
+  head:
+    operationId: headReadiness
+    summary: Inspect service readiness
+    tags: [Operational]
+    security: []
+    x-image-factory-internal: true
+    responses:
+      "200":
+        $ref: "../components/responses.yaml#/EmptyResponse"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+      "503":
+        $ref: "../components/responses.yaml#/ServiceUnavailable"
+uiRoot:
+  get:
+    operationId: getUI
+    summary: Open the Image Factory UI
+    tags: [UI]
+    x-image-factory-internal: true
+    responses:
+      "200":
+        description: Image Factory HTML user interface.
+        content:
+          text/html:
+            schema:
+              type: string
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+  head:
+    operationId: headUI
+    summary: Inspect the Image Factory UI
+    tags: [UI]
+    x-image-factory-internal: true
+    responses:
+      "200":
+        description: Image Factory UI response headers.
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+uiWizard:
+  post:
+    operationId: postUIWizard
+    summary: Submit the Image Factory UI wizard
+    tags: [UI]
+    x-image-factory-internal: true
+    x-image-factory-handler-validates-body: true
+    responses:
+      "200":
+        description: Rendered wizard result.
+        content:
+          text/html:
+            schema:
+              type: string
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "400":
+        $ref: "../components/responses.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+uiVersionDocumentation:
+  get:
+    operationId: getUIVersionDocumentation
+    summary: Render Talos version documentation for the UI
+    tags: [UI]
+    x-image-factory-internal: true
+    responses:
+      "200":
+        description: Rendered Talos version documentation fragment.
+        content:
+          text/html:
+            schema:
+              type: string
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "400":
+        $ref: "../components/responses.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+uiTokens:
+  get:
+    operationId: getUITokens
+    summary: Open the API tokens page
+    tags: [UI]
+    x-image-factory-enterprise: true
+    x-image-factory-internal: true
+    responses:
+      "200":
+        description: API tokens HTML page shell; its own JavaScript drives /tokens.
+        content:
+          text/html:
+            schema:
+              type: string
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+uiExtensionsList:
+  post:
+    operationId: postUIExtensionsList
+    summary: Render an extensions list for the UI
+    tags: [UI]
+    x-image-factory-internal: true
+    x-image-factory-handler-validates-body: true
+    responses:
+      "200":
+        description: Rendered extensions-list fragment.
+        content:
+          text/html:
+            schema:
+              type: string
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "400":
+        $ref: "../components/responses.yaml#/BadRequest"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+login:
+  get:
+    operationId: startBrowserLogin
+    summary: Start browser authentication
+    tags: [Authentication]
+    security: []
+    x-image-factory-enterprise: true
+    x-image-factory-internal: true
+    responses:
+      "302":
+        $ref: "../components/responses.yaml#/Found"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+logout:
+  get:
+    operationId: getBrowserLogout
+    summary: End a browser session
+    tags: [Authentication]
+    security: []
+    x-image-factory-enterprise: true
+    x-image-factory-internal: true
+    responses:
+      "200":
+        description: Browser logout confirmation page.
+        content:
+          text/html:
+            schema:
+              type: string
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+  post:
+    operationId: postBrowserLogout
+    summary: End a browser session
+    tags: [Authentication]
+    security: []
+    x-image-factory-enterprise: true
+    x-image-factory-internal: true
+    x-image-factory-handler-validates-body: true
+    responses:
+      "303":
+        description: Browser session ended; continue at the identity provider logout URL.
+        headers:
+          Location:
+            $ref: "../components/headers.yaml#/Location"
+      "403":
+        $ref: "../components/responses.yaml#/Forbidden"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+callback:
+  get:
+    operationId: completeBrowserLogin
+    summary: Complete browser authentication
+    tags: [Authentication]
+    security: []
+    x-image-factory-enterprise: true
+    x-image-factory-internal: true
+    responses:
+      "302":
+        $ref: "../components/responses.yaml#/Found"
+      "403":
+        $ref: "../components/responses.yaml#/Forbidden"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+staticCSS:
+  parameters:
+  - name: filepath+
+    in: path
+    required: true
+    description: Embedded stylesheet path.
+    schema:
+      type: string
+      minLength: 1
+  get:
+    operationId: getCSSAsset
+    summary: Download an embedded stylesheet
+    tags: [UI]
+    security: []
+    x-image-factory-internal: true
+    responses:
+      "200":
+        description: Embedded stylesheet.
+      "404":
+        $ref: "../components/responses.yaml#/NotFound"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+staticFavicon:
+  parameters:
+  - name: filepath+
+    in: path
+    required: true
+    description: Embedded favicon path.
+    schema:
+      type: string
+      minLength: 1
+  get:
+    operationId: getFaviconAsset
+    summary: Download an embedded favicon
+    tags: [UI]
+    security: []
+    x-image-factory-internal: true
+    responses:
+      "200":
+        description: Embedded favicon.
+      "404":
+        $ref: "../components/responses.yaml#/NotFound"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
+staticJavaScript:
+  parameters:
+  - name: filepath+
+    in: path
+    required: true
+    description: Embedded JavaScript asset path.
+    schema:
+      type: string
+      minLength: 1
+  get:
+    operationId: getJavaScriptAsset
+    summary: Download an embedded JavaScript asset
+    tags: [UI]
+    security: []
+    x-image-factory-internal: true
+    responses:
+      "200":
+        description: Embedded JavaScript asset.
+      "404":
+        $ref: "../components/responses.yaml#/NotFound"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"

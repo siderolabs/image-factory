@@ -60,7 +60,7 @@ func runAdminToken(args []string, stdout io.Writer) error {
 	registerConfigFlag(fs)
 
 	subject := fs.String("subject", "",
-		"identity the token authenticates as: an org_id under Auth0, or a username under htpasswd. "+
+		"identity the token authenticates as: the if_org_id custom claim value under Auth0, or a username under htpasswd. "+
 			"Every token minted with it belongs to this identity.")
 	ttl := fs.Duration("ttl", 0,
 		"lifetime to request, within authentication.tokens.ttl.bootstrap; zero takes the configured default")

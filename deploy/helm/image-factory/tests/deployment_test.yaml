@@ -540,6 +540,25 @@ tests:
           content:
             name: htpasswd
 
+  - it: Should not mount htpasswd for the Auth0 provider
+    template: deployment.yaml
+    set:
+      config:
+        authentication:
+          enabled: true
+          provider: auth0
+    asserts:
+      - notContains:
+          path: spec.template.spec.volumes
+          any: true
+          content:
+            name: htpasswd
+      - notContains:
+          path: spec.template.spec.containers[0].volumeMounts
+          any: true
+          content:
+            name: htpasswd
+
   - it: Should mount htpasswd Secret at parent directory when config.authentication.enabled
     template: deployment.yaml
     set:
