@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ t .Localizer "auth.logout.title" }}</title>
+<link href="/css/output.css" rel="stylesheet">
+</head>
+<body class="dark:bg-gray-900 antialiased">
+<main class="md:container md:mx-auto prose dark:prose-invert mt-4">
+<h1>{{ t .Localizer "auth.logout.title" }}</h1>
+<form method="POST" action="/logout">
+<button type="submit" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">{{ t .Localizer "auth.logout.button" }}</button>
+</form>
+</main>
+</body>
+</html>

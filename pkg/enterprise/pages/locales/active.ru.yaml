@@ -1,0 +1,14 @@
+- id: auth.logout.title
+  translation: "Выход"
+
+- id: auth.logout.button
+  translation: "Выйти"
+
+- id: auth.login_error.title
+  translation: "Не удалось войти"
+
+- id: auth.login_error.signout
+  translation: "Выйти"
+
+- id: auth.login_error.try_again
+  translation: ", чтобы повторить попытку от имени другого пользователя."

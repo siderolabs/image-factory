@@ -1,0 +1,14 @@
+- id: auth.logout.title
+  translation: "Déconnexion"
+
+- id: auth.logout.button
+  translation: "Se déconnecter"
+
+- id: auth.login_error.title
+  translation: "Échec de la connexion"
+
+- id: auth.login_error.signout
+  translation: "Se déconnecter"
+
+- id: auth.login_error.try_again
+  translation: " pour réessayer avec un autre compte."

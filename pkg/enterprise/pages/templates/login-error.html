@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ t .Localizer "auth.login_error.title" }}</title>
+<link href="/css/output.css" rel="stylesheet">
+</head>
+<body class="dark:bg-gray-900 antialiased">
+<main class="md:container md:mx-auto prose dark:prose-invert mt-4">
+<h1>{{ t .Localizer "auth.login_error.title" }}</h1>
+<p>{{ .Reason }}</p>
+<p><a class="text-blue-600 dark:text-blue-500 underline" href="/logout">{{ t .Localizer "auth.login_error.signout" }}</a>{{ t .Localizer "auth.login_error.try_again" }}</p>
+</main>
+</body>
+</html>

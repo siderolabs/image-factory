@@ -1,0 +1,14 @@
+- id: auth.logout.title
+  translation: "Sign out"
+
+- id: auth.logout.button
+  translation: "Sign out"
+
+- id: auth.login_error.title
+  translation: "Sign-in failed"
+
+- id: auth.login_error.signout
+  translation: "Sign out"
+
+- id: auth.login_error.try_again
+  translation: " to try again as a different user."

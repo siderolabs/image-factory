@@ -10,13 +10,11 @@
 package auth0
 
 import (
-	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,6 +27,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
+	"github.com/siderolabs/image-factory/pkg/enterprise/pages"
 )
 
 // callbackPath is the route Auth0 redirects back to, appended to externalURL.
@@ -200,7 +199,7 @@ func (p *Provider) CallbackHandler() Handler {
 			logger.Debug("auth0: unusable state cookie", zap.Error(err))
 
 			if p.loginTerminal(r, err) {
-				return p.loginFailed(w, "Your browser did not keep the sign-in cookie. Check that cookies are enabled for this site.")
+				return p.loginFailed(w, r, "Your browser did not keep the sign-in cookie. Check that cookies are enabled for this site.")
 			}
 
 			http.Redirect(w, r, loginURL(""), http.StatusFound)
@@ -236,14 +235,14 @@ func (p *Provider) CallbackHandler() Handler {
 				zap.String("description", truncate(query.Get("error_description"), maxErrDescriptionLen)),
 			)
 
-			return p.loginFailed(w, "The identity provider rejected the sign-in request ("+errCode+").")
+			return p.loginFailed(w, r, "The identity provider rejected the sign-in request ("+errCode+").")
 		}
 
 		payload, err := p.exchange(ctx, query.Get("code"), sc)
 		if err != nil {
 			logger.Debug("auth0: code exchange failed", zap.Error(err))
 
-			return p.loginFailed(w, "Your account could not be signed in to this factory.")
+			return p.loginFailed(w, r, "Your account could not be signed in to this factory.")
 		}
 
 		if err = setSessionCookie(w, payload, p.browser.cipher, p.cookiesSecure(r)); err != nil {
@@ -319,46 +318,15 @@ func (p *Provider) exchange(ctx context.Context, code string, sc stateCookie) (s
 	return sessionPayload{AccessToken: token.AccessToken, Expiry: token.Expiry}, nil
 }
 
-// loginErrorPage is rendered for failures that would recur: Auth0's own SSO session
-// turns a bounce through /login into a redirect loop.
-//
-// TODO: this and logoutPage bypass internal/frontend/http/templates and getLocalizer, so
-// they are unstyled and English-only where every other user-facing page is neither.
-var loginErrorPage = template.Must(template.New("login-error").Parse(`<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Sign-in failed</title></head>
-<body>
-<h1>Sign-in failed</h1>
-<p>{{.}}</p>
-<p><a href="/logout">Sign out</a> to try again as a different user.</p>
-</body>
-</html>
-`))
-
 // loginFailed renders reason as a terminal error page, tagged so it is logged as a 403.
-func (p *Provider) loginFailed(w http.ResponseWriter, reason string) error {
-	if err := writeHTML(w, http.StatusForbidden, loginErrorPage, reason); err != nil {
+// Auth0's own SSO session turns a bounce through /login into a redirect loop, so this is
+// for failures that would otherwise recur.
+func (p *Provider) loginFailed(w http.ResponseWriter, r *http.Request, reason string) error {
+	if err := pages.RenderLoginError(w, r, http.StatusForbidden, reason); err != nil {
 		return err
 	}
 
 	return xerrors.NewTagged[enterrors.RespondedTag](errors.New(reason))
-}
-
-// writeHTML renders page into a buffer first, so a template failure becomes an error
-// rather than a half-written response.
-func writeHTML(w http.ResponseWriter, status int, page *template.Template, data any) error {
-	var buf bytes.Buffer
-
-	if err := page.Execute(&buf, data); err != nil {
-		return fmt.Errorf("auth0: render %s: %w", page.Name(), err)
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(status)
-
-	_, err := buf.WriteTo(w)
-
-	return err
 }
 
 // loginURL builds the /login target, carrying return_to so a failed attempt does not drop
@@ -371,24 +339,12 @@ func loginURL(returnTo string) string {
 	return "/login"
 }
 
-// logoutPage confirms a sign-out. The POST it submits is what actually logs the user
-// out, so an <img src="/logout"> or a link prefetcher cannot do it for them.
-var logoutPage = template.Must(template.New("logout").Parse(`<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Sign out</title></head>
-<body>
-<h1>Sign out</h1>
-<form method="POST" action="/logout"><button type="submit">Sign out</button></form>
-</body>
-</html>
-`))
-
 // LogoutHandler returns the handler for /logout. Only POST logs out; the Auth0 hand-off is
 // what drops the SSO session.
 func (p *Provider) LogoutHandler() Handler {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 		if r.Method != http.MethodPost {
-			return writeHTML(w, http.StatusOK, logoutPage, nil)
+			return pages.RenderLogout(w, r, http.StatusOK)
 		}
 
 		// SameSite does not help here: this handler needs none of our cookies. An absent
@@ -396,7 +352,7 @@ func (p *Provider) LogoutHandler() Handler {
 		if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" {
 			ctxlog.Logger(ctx, p.logger).Warn("auth0: cross-origin logout rejected", zap.String("sec_fetch_site", site))
 
-			if err := writeHTML(w, http.StatusForbidden, logoutPage, nil); err != nil {
+			if err := pages.RenderLogout(w, r, http.StatusForbidden); err != nil {
 				return err
 			}
 

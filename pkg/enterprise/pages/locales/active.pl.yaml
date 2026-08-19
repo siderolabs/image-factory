@@ -1,0 +1,14 @@
+- id: auth.logout.title
+  translation: "Wyloguj się"
+
+- id: auth.logout.button
+  translation: "Wyloguj się"
+
+- id: auth.login_error.title
+  translation: "Logowanie nie powiodło się"
+
+- id: auth.login_error.signout
+  translation: "Wyloguj się"
+
+- id: auth.login_error.try_again
+  translation: ", aby spróbować ponownie jako inny użytkownik."
