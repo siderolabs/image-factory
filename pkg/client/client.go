@@ -215,6 +215,34 @@ func (c *Client) ScanReport(ctx context.Context, schematicID, talosVersion, arch
 	return data, nil
 }
 
+// SPDXBundle downloads the SPDX SBOM bundle for the given schematic, Talos version, and
+// architecture, as "application/spdx+json".
+func (c *Client) SPDXBundle(ctx context.Context, schematicID, talosVersion, arch string) ([]byte, error) {
+	var data []byte
+
+	if err := c.do(ctx, http.MethodGet,
+		fmt.Sprintf("/spdx/%s/%s/%s", schematicID, talosVersion, arch),
+		&data); err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+// VEXDocument downloads the VEX document for the given Talos version, as "application/json".
+// VEX data is version-scoped, not schematic-scoped.
+func (c *Client) VEXDocument(ctx context.Context, talosVersion string) ([]byte, error) {
+	var data []byte
+
+	if err := c.do(ctx, http.MethodGet,
+		fmt.Sprintf("/vex/%s/vex.json", talosVersion),
+		&data); err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
 // requestOptions are options that can be applied to a request via [requestOption] functions.
 type requestOptions struct {
 	headers     map[string]string
