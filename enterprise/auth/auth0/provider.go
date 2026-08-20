@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	auth0mgmtclient "github.com/auth0/go-auth0/v3/management/client"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xerrors"
@@ -164,6 +165,7 @@ type Provider struct {
 	logger   *zap.Logger
 
 	browser *browserLogin
+	sdk     *auth0mgmtclient.Management
 
 	audience     string
 	machineScope string
@@ -225,8 +227,14 @@ func NewProvider(ctx context.Context, logger *zap.Logger, cfg Config) (*Provider
 	})
 	keySet := oidc.NewRemoteKeySet(keyCtx, tenantURL.JoinPath("/.well-known/jwks.json").String())
 
+	sdk, err := newManagementSDK(ctx, tenantURL, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("auth0: build management API client: %w", err)
+	}
+
 	p := &Provider{
 		verifier:     newVerifier(issuer, keySet, cfg.Audience),
+		sdk:          sdk,
 		audience:     cfg.Audience,
 		machineScope: cfg.MachineScope,
 		logger:       providerLogger,

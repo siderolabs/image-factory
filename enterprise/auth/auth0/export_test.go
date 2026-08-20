@@ -11,7 +11,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"time"
+
+	auth0option "github.com/auth0/go-auth0/v3/management/option"
 )
+
+func init() {
+	// Tests trigger 5xx/429 responses and shouldn't wait through the SDK's default backoff.
+	// WithoutRetries is a no-op here, so use WithMaxAttempts(1) instead.
+	managementSDKTestOptions = []auth0option.RequestOption{auth0option.WithMaxAttempts(1)}
+}
 
 // SafeReturnTo exposes the post-login redirect sanitizer for external tests.
 var SafeReturnTo = safeReturnTo
