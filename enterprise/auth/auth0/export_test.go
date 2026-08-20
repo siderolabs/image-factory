@@ -8,10 +8,20 @@
 package auth0
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"time"
+
+	auth0option "github.com/auth0/go-auth0/v3/management/option"
+	"go.uber.org/zap"
 )
+
+// NewProviderWithManagementOptions builds a Provider like NewProvider, but lets tests pass
+// extra Management SDK options, e.g. WithMaxAttempts(1) to skip retry backoff.
+func NewProviderWithManagementOptions(ctx context.Context, logger *zap.Logger, cfg Config, opts ...auth0option.RequestOption) (*Provider, error) {
+	return newProvider(ctx, logger, cfg, opts...)
+}
 
 // SafeReturnTo exposes the post-login redirect sanitizer for external tests.
 var SafeReturnTo = safeReturnTo

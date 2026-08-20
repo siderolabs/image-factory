@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	auth0mgmtclient "github.com/auth0/go-auth0/v3/management/client"
+	auth0option "github.com/auth0/go-auth0/v3/management/option"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xerrors"
@@ -164,6 +166,7 @@ type Provider struct {
 	logger   *zap.Logger
 
 	browser *browserLogin
+	sdk     *auth0mgmtclient.Management
 
 	audience     string
 	machineScope string
@@ -172,6 +175,12 @@ type Provider struct {
 // NewProvider creates a new Auth0 authentication provider.
 // It validates config only and never reaches the network; ctx scopes the JWKS HTTP client.
 func NewProvider(ctx context.Context, logger *zap.Logger, cfg Config) (*Provider, error) {
+	return newProvider(ctx, logger, cfg)
+}
+
+// newProvider is NewProvider's body. managementSDKOpts is exposed only via
+// export_test.go, for tests that need to tweak the Management SDK client's options.
+func newProvider(ctx context.Context, logger *zap.Logger, cfg Config, managementSDKOpts ...auth0option.RequestOption) (*Provider, error) {
 	if cfg.Domain == "" && cfg.IssuerURLOverride == "" {
 		return nil, errors.New("auth0: domain must not be empty")
 	}
@@ -225,8 +234,14 @@ func NewProvider(ctx context.Context, logger *zap.Logger, cfg Config) (*Provider
 	})
 	keySet := oidc.NewRemoteKeySet(keyCtx, tenantURL.JoinPath("/.well-known/jwks.json").String())
 
+	sdk, err := newManagementSDK(ctx, tenantURL, cfg, managementSDKOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("auth0: build management API client: %w", err)
+	}
+
 	p := &Provider{
 		verifier:     newVerifier(issuer, keySet, cfg.Audience),
+		sdk:          sdk,
 		audience:     cfg.Audience,
 		machineScope: cfg.MachineScope,
 		logger:       providerLogger,
