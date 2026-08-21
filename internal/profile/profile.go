@@ -443,6 +443,14 @@ func EnhanceFromSchematic(
 		}
 	}
 
+	if shouldAutoSignInstaller(prof, secureBootService, versionTag) {
+		if _, err := secureBootService.GetSecureBootAssets(); err == nil {
+			prof.SecureBoot = new(true)
+		} else if !errors.Is(err, secureboot.ErrDisabled) {
+			return prof, err
+		}
+	}
+
 	if prof.SecureBootEnabled() {
 		secureBootAssets, err := secureBootService.GetSecureBootAssets()
 		if err != nil {
@@ -651,6 +659,20 @@ func setKernelArgsAndMeta(prof *profile.Profile, schematic *schematicpkg.Schemat
 			},
 		)...,
 	)
+}
+
+func shouldAutoSignInstaller(
+	prof profile.Profile,
+	secureBootService *secureboot.Service,
+	versionTag string,
+) bool {
+	q := quirks.New(versionTag)
+
+	return !prof.SecureBootEnabled() &&
+		prof.Output.Kind == profile.OutKindInstaller &&
+		q.SupportsUnifiedInstaller() &&
+		!q.ForcesLockdownConfidentiality() &&
+		secureBootService != nil
 }
 
 // MergeOverlayProfile merges the overlay profile into the main profile.

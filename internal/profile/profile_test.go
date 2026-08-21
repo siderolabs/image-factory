@@ -350,6 +350,81 @@ func (producer *dependencyArtifactProducer) GetOverlayDependency(context.Context
 	return artifacts.ImageDependency{}, fmt.Errorf("unexpected overlay dependency resolution")
 }
 
+func TestUnifiedInstallerSecureBootBehavior(t *testing.T) {
+	enabledService, err := secureboot.NewService(secureboot.Options{
+		Enabled:         true,
+		SigningKeyPath:  "sign-key.pem",
+		SigningCertPath: "sign-cert.pem",
+		PCRKeyPath:      "pcr-key.pem",
+	})
+	require.NoError(t, err)
+
+	disabledService, err := secureboot.NewService(secureboot.Options{})
+	require.NoError(t, err)
+
+	enhance := func(t *testing.T, secureBoot bool, service *secureboot.Service, version string) (profile.Profile, error) {
+		t.Helper()
+
+		return imageprofile.EnhanceFromSchematic(
+			t.Context(),
+			imageprofile.InstallerProfile(secureBoot, artifacts.ArchAmd64, constants.PlatformMetal),
+			&schematic.Schematic{},
+			mockArtifactProducer{},
+			service,
+			version,
+		)
+	}
+
+	t.Run("enabled service collapses both installer variants into one", func(t *testing.T) {
+		standard, standardErr := enhance(t, false, enabledService, "v1.14.0")
+		require.NoError(t, standardErr)
+
+		secure, secureErr := enhance(t, true, enabledService, "v1.14.0")
+		require.NoError(t, secureErr)
+
+		require.True(t, standard.SecureBootEnabled())
+		require.NotNil(t, standard.Input.SecureBoot)
+		require.Equal(t, secure, standard)
+	})
+
+	t.Run("installers stay distinct while signing forces lockdown", func(t *testing.T) {
+		standard, standardErr := enhance(t, false, enabledService, "v1.13.0")
+		require.NoError(t, standardErr)
+
+		secure, secureErr := enhance(t, true, enabledService, "v1.13.0")
+		require.NoError(t, secureErr)
+
+		require.False(t, standard.SecureBootEnabled())
+		require.Nil(t, standard.Input.SecureBoot)
+		require.True(t, secure.SecureBootEnabled())
+		require.NotEqual(t, secure, standard)
+	})
+
+	t.Run("disabled service keeps standard installer available", func(t *testing.T) {
+		standard, standardErr := enhance(t, false, disabledService, "v1.14.0")
+		require.NoError(t, standardErr)
+		require.False(t, standard.SecureBootEnabled())
+		require.Nil(t, standard.Input.SecureBoot)
+	})
+
+	t.Run("disabled service rejects secure boot installer", func(t *testing.T) {
+		_, secureErr := enhance(t, true, disabledService, "v1.14.0")
+		require.ErrorIs(t, secureErr, secureboot.ErrDisabled)
+	})
+
+	t.Run("legacy installers remain distinct", func(t *testing.T) {
+		standard, standardErr := enhance(t, false, enabledService, "v1.9.0")
+		require.NoError(t, standardErr)
+
+		secure, secureErr := enhance(t, true, enabledService, "v1.9.0")
+		require.NoError(t, secureErr)
+
+		require.False(t, standard.SecureBootEnabled())
+		require.True(t, secure.SecureBootEnabled())
+		require.NotEqual(t, secure, standard)
+	})
+}
+
 func TestEnhanceFromSchematicCapturesConsumedDependencies(t *testing.T) {
 	producer := &dependencyArtifactProducer{}
 	prof := imageprofile.InstallerProfile(false, artifacts.ArchAmd64, constants.PlatformMetal)
@@ -539,7 +614,7 @@ func TestEnhanceFromSchematic(t *testing.T) {
 	tests := []testCase{} //nolint:prealloc
 
 	// Generate systematic test cases
-	versions := []string{"v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.9.0", "v1.10.0", "v1.11.0", "v1.12.0", "v1.13.0"}
+	versions := []string{"v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.9.0", "v1.10.0", "v1.11.0", "v1.12.0", "v1.13.0", "v1.14.0"}
 	archs := []string{"amd64", "arm64"}
 	secureBootStates := []bool{false, true}
 	outputKinds := []profile.OutputKind{profile.OutKindISO, profile.OutKindImage, profile.OutKindInstaller}
@@ -788,7 +863,19 @@ func generateTestName(version, arch, outputKind, extraSuffix string, secureBoot 
 	return name
 }
 
+// autoSignsInstaller mirrors the condition under which a standard installer is signed anyway,
+// because it builds the very same UKI as the secure boot one.
+func autoSignsInstaller(version string) bool {
+	q := quirks.New(version)
+
+	return q.SupportsUnifiedInstaller() && !q.ForcesLockdownConfidentiality()
+}
+
 func defaultExpectedProfile(version, arch string, outKind profile.OutputKind, secureboot bool) profile.Profile {
+	if outKind == profile.OutKindInstaller && autoSignsInstaller(version) {
+		secureboot = true
+	}
+
 	prof := profile.Profile{
 		Platform:   constants.PlatformMetal,
 		SecureBoot: new(secureboot),
@@ -879,7 +966,7 @@ func defaultExpectedProfileWithExtensionsKernelArgs(version, arch string, outKin
 		}
 	case profile.OutKindInstaller:
 		if secureboot || quirks.New(version).SupportsUnifiedInstaller() {
-			prof.Customization.ExtraKernelArgs = []string{"noapic", "nolapic"}
+			prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, "noapic", "nolapic")
 		}
 	}
 
@@ -890,7 +977,7 @@ func defaultExpectedProfileWithOverlayExtensionsKernelArgs(version, arch string,
 	prof := defaultExpectedProfile(version, arch, outKind, secureboot)
 
 	if quirks.New(version).SupportsUnifiedInstaller() {
-		prof.Customization.ExtraKernelArgs = []string{"noapic", "nolapic"}
+		prof.Customization.ExtraKernelArgs = append(prof.Customization.ExtraKernelArgs, "noapic", "nolapic")
 	}
 
 	prof.Input.OverlayInstaller = profile.ContainerAsset{
