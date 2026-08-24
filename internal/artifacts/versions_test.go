@@ -92,7 +92,7 @@ func TestExtractExtensionList(t *testing.T) {
 			// TaggedReference is the extension identity (matched against schematics), so
 			// the namespace must never leak into it.
 			assert.Equal(t, "siderolabs/gvisor", gvisor.TaggedReference.RepositoryStr())
-			assert.Equal(t, "harbor.example.com", gvisor.TaggedReference.RegistryStr())
+			assert.Equal(t, "ghcr.io", gvisor.TaggedReference.RegistryStr())
 			assert.Equal(t, test.expectedGvisorPullRef, gvisor.PullReference().String())
 			assert.Equal(t, "sha256:5ab365f2b98ab885b1d9a6ebb2e2b06d0a7887d2c173a2b7d3f9e0e4f2f4f1cb", gvisor.Digest)
 			assert.Equal(t, "Sidero Labs", gvisor.Author)

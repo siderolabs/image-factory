@@ -54,6 +54,11 @@ func testMetaFrontend(ctx context.Context, t *testing.T, baseURL string) {
 				assert.Contains(t, names, "siderolabs/amd-ucode")
 				assert.Contains(t, names, "siderolabs/gvisor")
 				assert.Contains(t, names, "siderolabs/nvidia-open-gpu-kernel-modules")
+
+				// assert that published image refs are canonical
+				for _, ext := range extensions {
+					assert.Contains(t, ext.Ref, "ghcr.io/siderolabs/")
+				}
 			})
 		}
 

@@ -233,7 +233,7 @@ func extractExtensionList(r io.Reader, imageRegistry registryWithNamespace) ([]E
 				repoPath, tag := taggedRef.RepositoryStr(), taggedRef.TagStr()
 
 				extensions = append(extensions, ExtensionRef{
-					TaggedReference: imageRegistry.registry.Repo(repoPath).Tag(tag),
+					TaggedReference: taggedRef,
 					Digest:          digest,
 
 					imageDigest:   line,
