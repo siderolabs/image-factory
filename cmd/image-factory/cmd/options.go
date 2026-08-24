@@ -720,9 +720,10 @@ type Auth0Options struct {
 	// ClientID is the Auth0 application Client ID, used for the browser login flow and for the
 	// Management API calls that provision per-org node tokens.
 	//
-	// Required. The application must be authorized in the Auth0 dashboard for the Management
-	// API with the `create:clients`, `read:clients`, `delete:clients` and `create:client_grants`
-	// scopes, regardless of whether browser login is also enabled.
+	// Required.
+	// The application must be authorized in the Auth0 dashboard for the Management API with the
+	// `create:clients`, `read:clients`, `delete:clients` and `create:client_grants` scopes,
+	// regardless of whether browser login is also enabled.
 	ClientID string `koanf:"clientID"`
 
 	// ClientSecret is the Auth0 application Client Secret.

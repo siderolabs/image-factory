@@ -1,6 +1,10 @@
 kind: golang.Generate
 spec:
   versionPackagePath: internal/version
+  goGenerateSpecs:
+    - source: ./internal
+      copy:
+        - docs/configuration.md
 ---
 kind: golang.Build
 spec:
@@ -759,20 +763,11 @@ spec:
   docker:
     enabled: true
     stages:
-      - name: docgen
-        description: run the docgen
-        from: base
-        steps:
-          - script:
-              command: go run ./tools/docgen ./cmd/image-factory/cmd/options.go docs/configuration.md
-              cache:
-                - /root/.cache/go-build
-                - /go/pkg
       - name: docs
         description: copies out the generated docs
         steps:
           - copy:
-              from: docgen
+              from: go-generate-0
               src: /src/docs/configuration.md
               dst: /configuration.md
   makefile:
@@ -780,9 +775,6 @@ spec:
     phony: true
     script:
       - "@$(MAKE) local-$@ DEST=docs"
-  ghaction:
-    enabled: true
-    condition: on-pull-request
 ---
 kind: custom.Step
 name: talosctl
