@@ -360,6 +360,8 @@ func buildEnterprisePlugins(
 		)
 	}
 
+	plugins = append(plugins, enterprise.NewNodeTokenFrontends(authProvider, opts.Authentication.Auth0.MaxNodeAppsPerOrg)...)
+
 	return plugins, spdxSource, nil
 }
 

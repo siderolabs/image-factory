@@ -164,6 +164,8 @@ type Provider struct {
 	verifier *oidc.IDTokenVerifier // access tokens
 	logger   *zap.Logger
 
+	tenantURL *url.URL
+
 	browser *browserLogin
 	sdk     *auth0mgmtclient.Management
 
@@ -234,6 +236,7 @@ func NewProvider(ctx context.Context, logger *zap.Logger, cfg Config) (*Provider
 
 	p := &Provider{
 		verifier:     newVerifier(issuer, keySet, cfg.Audience),
+		tenantURL:    tenantURL,
 		sdk:          sdk,
 		audience:     cfg.Audience,
 		machineScope: cfg.MachineScope,

@@ -90,6 +90,16 @@ func validNodeClientID(s string) bool {
 	return validNodeClientIDPattern.MatchString(s)
 }
 
+// Audience returns the API audience node tokens are scoped to.
+func (p *Provider) Audience() string {
+	return p.audience
+}
+
+// TokenURL returns the tenant's OAuth token endpoint, for a node to request its own token.
+func (p *Provider) TokenURL() string {
+	return p.tenantURL.JoinPath("/oauth/token").String()
+}
+
 // CreateNodeClient creates an Auth0 M2M application scoped to orgID and returns its
 // credentials. The secret is only ever available here — Auth0 never returns it again.
 func (p *Provider) CreateNodeClient(ctx context.Context, orgID, name string) (clientID, clientSecret string, err error) {

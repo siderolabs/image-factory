@@ -23,6 +23,7 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/checksum"
 	enterprisedt "github.com/siderolabs/image-factory/enterprise/downloadtoken"
 	"github.com/siderolabs/image-factory/enterprise/installerattestation"
+	"github.com/siderolabs/image-factory/enterprise/nodetoken"
 	"github.com/siderolabs/image-factory/enterprise/scanner"
 	scannerbuilder "github.com/siderolabs/image-factory/enterprise/scanner/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx"
@@ -257,4 +258,18 @@ func NewDownloadTokenFrontend(issuer DownloadTokenIssuer, authProvider AuthProvi
 // NewJWKSFrontend returns the FrontendPlugin for the JWKS public key endpoint.
 func NewJWKSFrontend(issuer DownloadTokenIssuer) FrontendPlugin {
 	return enterprisedt.NewJWKSFrontend(issuer)
+}
+
+// NewNodeTokenFrontends returns the node-token FrontendPlugins, or nil if authProvider isn't
+// an Auth0 provider (htpasswd has no Management API access to back node tokens with).
+func NewNodeTokenFrontends(authProvider AuthProvider, maxNodeAppsPerOrg int) []FrontendPlugin {
+	provider, ok := authProvider.(*auth0.Provider)
+	if !ok {
+		return nil
+	}
+
+	return []FrontendPlugin{
+		nodetoken.NewListCreateFrontend(provider, provider, maxNodeAppsPerOrg, provider.Audience(), provider.TokenURL()),
+		nodetoken.NewRevokeFrontend(provider, provider),
+	}
 }

@@ -77,3 +77,8 @@ func NewDownloadTokenFrontend(_ DownloadTokenIssuer, _ AuthProvider) FrontendPlu
 func NewJWKSFrontend(_ DownloadTokenIssuer) FrontendPlugin {
 	return nil
 }
+
+// NewNodeTokenFrontends returns nil when enterprise is not enabled.
+func NewNodeTokenFrontends(_ AuthProvider, _ int) []FrontendPlugin {
+	return nil
+}
