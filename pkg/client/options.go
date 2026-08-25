@@ -27,6 +27,17 @@ func WithClient(client http.Client) Option {
 	}
 }
 
+// WithBearerToken adds a bearer token to each request.
+func WithBearerToken(token string) Option {
+	return func(o *Options) {
+		if o.ExtraHeaders == nil {
+			o.ExtraHeaders = http.Header{}
+		}
+
+		o.ExtraHeaders.Set("Authorization", "Bearer "+token)
+	}
+}
+
 // WithBasicAuth adds basic authentication to each request.
 func WithBasicAuth(username, password string) Option {
 	return func(o *Options) {
