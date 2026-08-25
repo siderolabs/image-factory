@@ -159,7 +159,7 @@
                                 fixCell.textContent = fixVersions(v);
                                 tr.appendChild(fixCell);
                                 var descCell = document.createElement('td');
-                                descCell.className = 'py-1 break-words';
+                                descCell.className = 'py-1 whitespace-pre-wrap wrap-break-word';
                                 descCell.textContent = v.description || '';
                                 tr.appendChild(descCell);
                                 modalRows.appendChild(tr);
