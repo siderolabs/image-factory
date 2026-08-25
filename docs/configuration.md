@@ -893,8 +893,8 @@ In Auth0 this means issuing tokens to organization-scoped clients; tokens withou
 
 It is required when provider is "auth0", and ignored otherwise.
 
-Domain, audience, clientID and clientSecret are always required.
-sessionKey is optional, and adds the browser sign-in routes on top when set.
+Domain and audience alone validate bearer tokens.
+The browser-login fields are optional, and add the sign-in routes on top when set.
 
 ---
 
@@ -940,13 +940,9 @@ Optional; when empty every valid token has full access.
 - **Type:** `string`
 - **Env:** `AUTHENTICATION_AUTH0_CLIENTID`
 
-ClientID is the Auth0 application Client ID, used for the browser login flow and for the
-Management API calls that provision per-org node tokens.
+ClientID is the Auth0 application Client ID used for the browser login flow.
 
-Required.
-The application must be authorized in the Auth0 dashboard for the Management API with the
-`create:clients`, `read:clients`, `delete:clients` and `create:client_grants` scopes,
-regardless of whether browser login is also enabled.
+Optional; part of the browser-login group.
 
 ---
 
@@ -958,7 +954,7 @@ regardless of whether browser login is also enabled.
 ClientSecret is the Auth0 application Client Secret.
 Inject via IF_AUTHENTICATION_AUTH0_CLIENTSECRET environment variable.
 
-Required; see ClientID.
+Optional; part of the browser-login group.
 
 ---
 
@@ -974,18 +970,7 @@ Surrounding whitespace is trimmed, so a file or mounted secret with a trailing n
 All replicas must share the same key, since a session or in-progress login started
 on one replica has to be decrypted by whichever replica handles the next request.
 
-Optional; enables the browser sign-in routes when set.
-
----
-
-### `authentication.auth0.maxNodeAppsPerOrg`
-
-- **Type:** `int`
-- **Env:** `AUTHENTICATION_AUTH0_MAXNODEAPPSPERORG`
-
-MaxNodeAppsPerOrg caps how many node tokens an org may have active at once.
-
-Enforced at creation time, on top of Auth0's own per-tenant client-count ceiling.
+Optional; part of the browser-login group.
 
 ---
 
@@ -1392,7 +1377,6 @@ authentication:
         clientSecret: ""
         domain: ""
         machineScope: ""
-        maxNodeAppsPerOrg: 10
         sessionKey: ""
     downloadTokenKeyPath: ""
     downloadTokenTTL:
@@ -1536,7 +1520,6 @@ IF_AUTHENTICATION_AUTH0_CLIENTID=
 IF_AUTHENTICATION_AUTH0_CLIENTSECRET=
 IF_AUTHENTICATION_AUTH0_DOMAIN=
 IF_AUTHENTICATION_AUTH0_MACHINESCOPE=
-IF_AUTHENTICATION_AUTH0_MAXNODEAPPSPERORG=10
 IF_AUTHENTICATION_AUTH0_SESSIONKEY=
 IF_AUTHENTICATION_DOWNLOADTOKENKEYPATH=
 IF_AUTHENTICATION_DOWNLOADTOKENTTL_DEFAULT=5m0s

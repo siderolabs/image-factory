@@ -26,12 +26,9 @@ func auth0OptsWithSessionKey(sessionKey string) cmd.Options {
 			Provider:         "auth0",
 			DownloadTokenTTL: cmd.DefaultOptions.Authentication.DownloadTokenTTL,
 			Auth0: cmd.Auth0Options{
-				Domain:            "tenant.auth0.com",
-				Audience:          "https://factory.sidero.dev",
-				ClientID:          "client-id",
-				ClientSecret:      "client-secret",
-				MaxNodeAppsPerOrg: 10,
-				SessionKey:        sessionKey,
+				Domain:     "tenant.auth0.com",
+				Audience:   "https://factory.sidero.dev",
+				SessionKey: sessionKey,
 			},
 		},
 	}
@@ -301,15 +298,9 @@ func TestOptionsValidate(t *testing.T) {
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
-					Enabled:  true,
-					Provider: "auth0",
-					Auth0: cmd.Auth0Options{
-						Domain:            "tenant.auth0.com",
-						Audience:          "https://factory.sidero.dev",
-						ClientID:          "client-id",
-						ClientSecret:      "client-secret",
-						MaxNodeAppsPerOrg: 10,
-					},
+					Enabled:          true,
+					Provider:         "auth0",
+					Auth0:            cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
 					DownloadTokenTTL: cmd.DefaultOptions.Authentication.DownloadTokenTTL,
 				},
 			},
@@ -384,55 +375,6 @@ func TestOptionsValidate(t *testing.T) {
 				},
 			},
 			expectError: "authentication.auth0.audience is required",
-		},
-		{
-			name: "auth0 provider without a clientID",
-			opts: cmd.Options{
-				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
-				Authentication: cmd.AuthenticationOptions{
-					Enabled:  true,
-					Provider: "auth0",
-					Auth0: cmd.Auth0Options{
-						Domain:       "tenant.auth0.com",
-						Audience:     "https://factory.sidero.dev",
-						ClientSecret: "client-secret",
-					},
-				},
-			},
-			expectError: "authentication.auth0.clientID is required",
-		},
-		{
-			name: "auth0 provider without a clientSecret",
-			opts: cmd.Options{
-				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
-				Authentication: cmd.AuthenticationOptions{
-					Enabled:  true,
-					Provider: "auth0",
-					Auth0: cmd.Auth0Options{
-						Domain:   "tenant.auth0.com",
-						Audience: "https://factory.sidero.dev",
-						ClientID: "client-id",
-					},
-				},
-			},
-			expectError: "authentication.auth0.clientSecret is required",
-		},
-		{
-			name: "auth0 provider without a positive maxNodeAppsPerOrg",
-			opts: cmd.Options{
-				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
-				Authentication: cmd.AuthenticationOptions{
-					Enabled:  true,
-					Provider: "auth0",
-					Auth0: cmd.Auth0Options{
-						Domain:       "tenant.auth0.com",
-						Audience:     "https://factory.sidero.dev",
-						ClientID:     "client-id",
-						ClientSecret: "client-secret",
-					},
-				},
-			},
-			expectError: "authentication.auth0.maxNodeAppsPerOrg must be positive",
 		},
 		{
 			name: "unknown auth provider",
