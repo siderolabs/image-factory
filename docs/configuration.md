@@ -1265,6 +1265,121 @@ Capacity caps the number of cached objects before LRU eviction.
 
 ---
 
+### `enterprise.nodeTokens`
+
+NodeTokens contains configuration for self-issued node token management.
+
+---
+
+### `enterprise.nodeTokens.keyPath`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_NODETOKENS_KEYPATH`
+
+KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing node tokens.
+Kept separate from the download-token key so compromising one doesn't compromise the other.
+If unset, a fresh key is generated at startup, which only works for single-replica deployments.
+
+---
+
+### `enterprise.nodeTokens.storage`
+
+Storage is the OCI repository used to persist the per-org node-token index
+(the list of active tokens; presence in the index is what makes a token valid).
+
+---
+
+### `enterprise.nodeTokens.storage.registry`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_NODETOKENS_STORAGE_REGISTRY`
+
+Registry is the hostname of the container registry, e.g., `ghcr.io`.
+This is where images are stored.
+
+---
+
+### `enterprise.nodeTokens.storage.namespace`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_NODETOKENS_STORAGE_NAMESPACE`
+
+Namespace is the repository namespace or organization within the registry, e.g., `sidero-labs`.
+Some registries allow repositories without a namespace.
+
+---
+
+### `enterprise.nodeTokens.storage.repository`
+
+- **Type:** `string`
+- **Env:** `ENTERPRISE_NODETOKENS_STORAGE_REPOSITORY`
+
+Repository is the name of the repository inside the namespace, e.g., `talos`.
+Combined with Registry and Namespace, it forms the fully qualified repository path.
+
+---
+
+### `enterprise.nodeTokens.storage.insecure`
+
+- **Type:** `bool`
+- **Env:** `ENTERPRISE_NODETOKENS_STORAGE_INSECURE`
+
+Insecure allows connections to registries over HTTP or with invalid TLS certificates.
+
+---
+
+### `enterprise.nodeTokens.ttl`
+
+TTL bounds the lifetime of issued node tokens.
+
+---
+
+### `enterprise.nodeTokens.ttl.max`
+
+- **Type:** `time.Duration`
+- **Env:** `ENTERPRISE_NODETOKENS_TTL_MAX`
+
+Max is the longest validity duration a caller may request.
+
+---
+
+### `enterprise.nodeTokens.ttl.min`
+
+- **Type:** `time.Duration`
+- **Env:** `ENTERPRISE_NODETOKENS_TTL_MIN`
+
+Min is the shortest validity duration a caller may request.
+
+---
+
+### `enterprise.nodeTokens.ttl.default`
+
+- **Type:** `time.Duration`
+- **Env:** `ENTERPRISE_NODETOKENS_TTL_DEFAULT`
+
+Default is the validity duration granted when the caller requests no explicit TTL.
+
+---
+
+### `enterprise.nodeTokens.verificationCacheRefreshInterval`
+
+- **Type:** `time.Duration`
+- **Env:** `ENTERPRISE_NODETOKENS_VERIFICATIONCACHEREFRESHINTERVAL`
+
+VerificationCacheRefreshInterval bounds how stale the in-memory verification cache may be before it's refreshed from storage.
+This is also the bound on how long a revoked token may keep working after revocation.
+
+---
+
+### `enterprise.nodeTokens.maxPerOrg`
+
+- **Type:** `int`
+- **Env:** `ENTERPRISE_NODETOKENS_MAXPERORG`
+
+MaxPerOrg caps how many node tokens an org may have active at once.
+
+---
+
 ### `registry`
 
 Registry contains low-level tuning for the registry client (pull/push concurrency, debugging).
@@ -1431,6 +1546,19 @@ enterprise:
             namespace: ""
             registry: ""
             repository: ""
+    nodeTokens:
+        keyPath: ""
+        maxPerOrg: 10
+        storage:
+            insecure: false
+            namespace: siderolabs/image-factory
+            registry: ghcr.io
+            repository: node-tokens
+        ttl:
+            default: 8760h0m0s
+            max: 8760h0m0s
+            min: 24h0m0s
+        verificationCacheRefreshInterval: 5m0s
     scanner:
         cache:
             capacity: 4096
@@ -1562,6 +1690,16 @@ IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_INSECURE=false
 IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_NAMESPACE=
 IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REGISTRY=
 IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REPOSITORY=
+IF_ENTERPRISE_NODETOKENS_KEYPATH=
+IF_ENTERPRISE_NODETOKENS_MAXPERORG=10
+IF_ENTERPRISE_NODETOKENS_STORAGE_INSECURE=false
+IF_ENTERPRISE_NODETOKENS_STORAGE_NAMESPACE=siderolabs/image-factory
+IF_ENTERPRISE_NODETOKENS_STORAGE_REGISTRY=ghcr.io
+IF_ENTERPRISE_NODETOKENS_STORAGE_REPOSITORY=node-tokens
+IF_ENTERPRISE_NODETOKENS_TTL_DEFAULT=8760h0m0s
+IF_ENTERPRISE_NODETOKENS_TTL_MAX=8760h0m0s
+IF_ENTERPRISE_NODETOKENS_TTL_MIN=24h0m0s
+IF_ENTERPRISE_NODETOKENS_VERIFICATIONCACHEREFRESHINTERVAL=5m0s
 IF_ENTERPRISE_SCANNER_CACHE_CAPACITY=4096
 IF_ENTERPRISE_SCANNER_CACHE_TTL=15m0s
 IF_ENTERPRISE_SCANNER_DATABASEROOTDIR=/var/lib/grype
