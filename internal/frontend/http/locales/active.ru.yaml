@@ -40,6 +40,9 @@
 - id: info.version
   translation: "Версия"
 
+- id: nav.logout
+  translation: "Выйти"
+
 - id: interface.loading
   translation: "Загрузка..."
 
@@ -381,3 +384,60 @@
 
 - id: final.booter.command_post
   translation: " с этой схемой, выполните следующую команду на хосте в той же подсети:"
+
+- id: nodetokens.nav_link
+  translation: "Управление токенами узлов"
+
+- id: nodetokens.title
+  translation: "Токены узлов"
+
+- id: nodetokens.back_home
+  translation: "Главная"
+
+- id: nodetokens.description
+  translation: "Токены узлов — это долгоживущие учётные данные, которые узлы Talos используют для загрузки образов напрямую с этой фабрики."
+
+- id: nodetokens.table.name
+  translation: "Имя"
+
+- id: nodetokens.table.created
+  translation: "Создан"
+
+- id: nodetokens.empty
+  translation: "Токенов узлов пока нет."
+
+- id: nodetokens.create.name_label
+  translation: "Имя"
+
+- id: nodetokens.create.button
+  translation: "Создать токен узла"
+
+- id: nodetokens.secret.title
+  translation: "Токен узла создан"
+
+- id: nodetokens.secret.warning
+  translation: "Этот секрет показывается только один раз. Скопируйте его сейчас — повторно посмотреть его будет нельзя."
+
+- id: nodetokens.secret.token
+  translation: "Токен"
+
+- id: nodetokens.secret.org_id
+  translation: "ID организации"
+
+- id: nodetokens.secret.close
+  translation: "Закрыть"
+
+- id: nodetokens.revoke.button
+  translation: "Отозвать"
+
+- id: nodetokens.revoke.confirm
+  translation: "Отозвать этот токен узла? Узлы Talos, использующие его, потеряют доступ."
+
+- id: nodetokens.error.load
+  translation: "Не удалось загрузить токены узлов"
+
+- id: nodetokens.error.revoke
+  translation: "Не удалось отозвать токен узла"
+
+- id: nodetokens.error.limit
+  translation: "Достигнут лимит токенов узлов для этой организации"

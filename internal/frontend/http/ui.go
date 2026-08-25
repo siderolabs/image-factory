@@ -180,19 +180,21 @@ func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 
 	return getTemplates().ExecuteTemplate(w, "index.html", struct {
-		Version    string
-		WizardHTML template.HTML
-		Localizer  *i18n.Localizer
-		Bundle     *i18n.Bundle
-		Lang       string
-		Enterprise bool
+		Version             string
+		WizardHTML          template.HTML
+		Localizer           *i18n.Localizer
+		Bundle              *i18n.Bundle
+		Lang                string
+		Enterprise          bool
+		BrowserLoginEnabled bool
 	}{
-		Version:    version.Tag,
-		WizardHTML: template.HTML(buf.String()),
-		Localizer:  f.getLocalizer(r),
-		Bundle:     getLocalizerBundle(),
-		Lang:       getCurrentLang(r),
-		Enterprise: enterprise.Enabled(),
+		Version:             version.Tag,
+		WizardHTML:          template.HTML(buf.String()),
+		Localizer:           f.getLocalizer(r),
+		Bundle:              getLocalizerBundle(),
+		Lang:                getCurrentLang(r),
+		Enterprise:          enterprise.Enabled(),
+		BrowserLoginEnabled: f.browserLoginEnabled(),
 	})
 }
 

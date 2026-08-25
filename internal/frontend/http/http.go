@@ -237,6 +237,7 @@ func NewFrontend(
 	registerRoute(frontend.router.POST, "/ui/wizard", frontend.handleUIWizard)
 	registerRoute(frontend.router.GET, "/ui/version-doc", frontend.handleUIVersionDoc)
 	registerRoute(frontend.router.POST, "/ui/extensions-list", frontend.handleUIExtensionsList)
+	registerRoute(frontend.router.GET, "/ui/node-tokens", frontend.handleNodeTokensUI)
 
 	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))

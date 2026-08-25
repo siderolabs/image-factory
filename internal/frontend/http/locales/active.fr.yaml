@@ -40,6 +40,9 @@
 - id: info.version
   translation: "Version"
 
+- id: nav.logout
+  translation: "Se déconnecter"
+
 - id: interface.loading
   translation: "Chargement..."
 
@@ -384,3 +387,60 @@
 
 - id: final.booter.command_post
   translation: " avec ce schéma, exécutez la commande suivante sur un hôte dans le même sous-réseau :"
+
+- id: nodetokens.nav_link
+  translation: "Gérer les jetons de nœud"
+
+- id: nodetokens.title
+  translation: "Jetons de nœud"
+
+- id: nodetokens.back_home
+  translation: "Accueil"
+
+- id: nodetokens.description
+  translation: "Les jetons de nœud sont des identifiants de longue durée que les nœuds Talos utilisent pour extraire des images directement depuis cette factory."
+
+- id: nodetokens.table.name
+  translation: "Nom"
+
+- id: nodetokens.table.created
+  translation: "Créé le"
+
+- id: nodetokens.empty
+  translation: "Aucun jeton de nœud pour le moment."
+
+- id: nodetokens.create.name_label
+  translation: "Nom"
+
+- id: nodetokens.create.button
+  translation: "Créer un jeton de nœud"
+
+- id: nodetokens.secret.title
+  translation: "Jeton de nœud créé"
+
+- id: nodetokens.secret.warning
+  translation: "Ce secret ne s'affiche qu'une seule fois. Copiez-le maintenant — vous ne pourrez plus le consulter ensuite."
+
+- id: nodetokens.secret.token
+  translation: "Jeton"
+
+- id: nodetokens.secret.org_id
+  translation: "ID d'organisation"
+
+- id: nodetokens.secret.close
+  translation: "Fermer"
+
+- id: nodetokens.revoke.button
+  translation: "Révoquer"
+
+- id: nodetokens.revoke.confirm
+  translation: "Révoquer ce jeton de nœud ? Les nœuds Talos qui l'utilisent perdront l'accès."
+
+- id: nodetokens.error.load
+  translation: "Échec du chargement des jetons de nœud"
+
+- id: nodetokens.error.revoke
+  translation: "Échec de la révocation du jeton de nœud"
+
+- id: nodetokens.error.limit
+  translation: "Limite de jetons de nœud atteinte pour cette organisation"

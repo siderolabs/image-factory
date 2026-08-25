@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>{{ t .Localizer "nodetokens.title" }} - {{ t .Localizer "app.name" }}</title>
+    <link rel="shortcut icon" href=/favicons/favicon.ico>
+    <link rel=apple-touch-icon href=/favicons/apple-touch-icon-180x180.png sizes=180x180>
+    <link rel=icon type=image/png href=/favicons/favicon-16x16.png sizes=16x16>
+    <link rel=icon type=image/png href=/favicons/favicon-32x32.png sizes=32x32>
+    <link rel=icon type=image/png href=/favicons/android-chrome-192x192.png sizes=192x192>
+    <link href="/css/output.css" rel="stylesheet" />
+    <script src="/js/clipboard.js"></script>
+</head>
+
+<body class="dark:bg-gray-900 antialiased">
+    <header class="border-b border-gray-200 dark:border-gray-700">
+        <div class="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
+            <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+                {{ t .Localizer "nodetokens.title" }}
+            </h1>
+            <div class="flex items-center gap-4 text-sm">
+                <a href="/"
+                    class="text-gray-500 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-gray-100">
+                    {{ t .Localizer "nodetokens.back_home" }}
+                </a>
+                <form method="POST" action="/logout">
+                    <button type="submit"
+                        class="text-gray-500 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-gray-100">
+                        {{ t .Localizer "nav.logout" }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </header>
+    <main>
+        <div class="container mx-auto px-4 py-6 max-w-3xl">
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ t .Localizer "nodetokens.description" }}</p>
+
+            <div id="node-tokens-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
+
+            <table class="w-full text-sm mb-6 hidden" id="node-tokens-table">
+                <thead>
+                    <tr class="text-left border-b border-gray-200 dark:border-gray-700">
+                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.table.name" }}</th>
+                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.table.created" }}</th>
+                        <th class="py-2 font-medium text-gray-500 dark:text-gray-400"></th>
+                    </tr>
+                </thead>
+                <tbody id="node-tokens-rows"></tbody>
+            </table>
+            <p id="node-tokens-empty" class="hidden text-sm text-gray-500 dark:text-gray-400 mb-6">{{ t .Localizer "nodetokens.empty" }}</p>
+
+            <form id="node-tokens-create-form" class="flex items-end gap-2">
+                <div class="flex-1">
+                    <label for="node-token-name"
+                        class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-1">{{ t .Localizer "nodetokens.create.name_label" }}</label>
+                    <input type="text" id="node-token-name" name="name" required
+                        class="w-full bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                </div>
+                <button type="submit"
+                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                    {{ t .Localizer "nodetokens.create.button" }}
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <div id="node-token-secret-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
+        <div class="relative w-full max-w-lg rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
+            <h2 class="text-base font-semibold mb-2">{{ t .Localizer "nodetokens.secret.title" }}</h2>
+            <p class="text-sm text-red-600 dark:text-red-400 mb-4">{{ t .Localizer "nodetokens.secret.warning" }}</p>
+            <dl class="text-sm space-y-3 mb-4">
+                <div>
+                    <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.secret.token" }}</dt>
+                    <dd id="node-token-secret-token" class="mt-1"></dd>
+                </div>
+                <div>
+                    <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.secret.org_id" }}</dt>
+                    <dd id="node-token-secret-org-id" class="mt-1"></dd>
+                </div>
+            </dl>
+            <div class="flex justify-end">
+                <button type="button" id="node-token-secret-close"
+                    class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
+                    {{ t .Localizer "nodetokens.secret.close" }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var errorEl = document.getElementById('node-tokens-error');
+        var table = document.getElementById('node-tokens-table');
+        var rowsEl = document.getElementById('node-tokens-rows');
+        var emptyEl = document.getElementById('node-tokens-empty');
+        var createForm = document.getElementById('node-tokens-create-form');
+        var nameInput = document.getElementById('node-token-name');
+        var secretModal = document.getElementById('node-token-secret-modal');
+        var secretClose = document.getElementById('node-token-secret-close');
+        var copyIcon = '<svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>';
+
+        function showError(message) {
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+        }
+
+        function clearError() {
+            errorEl.textContent = '';
+            errorEl.classList.add('hidden');
+        }
+
+        function copyableField(container, text) {
+            container.innerHTML = '';
+
+            var div = document.createElement('div');
+            div.className = 'flex items-center gap-2 bg-slate-200 dark:bg-slate-700 p-1';
+
+            var span = document.createElement('span');
+            span.className = 'font-mono break-all text-gray-900 dark:text-gray-100';
+            span.textContent = text;
+            div.appendChild(span);
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.title = 'Copy to clipboard';
+            btn.className = 'p-0.5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors';
+            btn.setAttribute('onclick', 'copyToClipboard(this)');
+            btn.innerHTML = copyIcon;
+            div.appendChild(btn);
+
+            container.appendChild(div);
+        }
+
+        function renderRows(tokens) {
+            rowsEl.innerHTML = '';
+
+            if (!tokens.length) {
+                table.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
+
+                return;
+            }
+
+            table.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+
+            tokens.forEach(function(tok) {
+                var tr = document.createElement('tr');
+                tr.className = 'border-b border-gray-100 dark:border-gray-800';
+
+                var nameCell = document.createElement('td');
+                nameCell.className = 'py-2 pr-3';
+                nameCell.textContent = tok.name;
+                tr.appendChild(nameCell);
+
+                var createdCell = document.createElement('td');
+                createdCell.className = 'py-2 pr-3 text-gray-500 dark:text-gray-400';
+                createdCell.textContent = tok.created_at ? new Date(tok.created_at).toLocaleString() : '';
+                tr.appendChild(createdCell);
+
+                var actionCell = document.createElement('td');
+                actionCell.className = 'py-2 text-right';
+                var revokeBtn = document.createElement('button');
+                revokeBtn.type = 'button';
+                revokeBtn.className = 'text-red-600 hover:underline dark:text-red-400';
+                revokeBtn.textContent = '{{ t .Localizer "nodetokens.revoke.button" }}';
+                revokeBtn.addEventListener('click', function() { revokeToken(tok.id); });
+                actionCell.appendChild(revokeBtn);
+                tr.appendChild(actionCell);
+
+                rowsEl.appendChild(tr);
+            });
+        }
+
+        function loadTokens() {
+            fetch('/node-tokens', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+
+                    return r.json();
+                })
+                .then(function(doc) {
+                    renderRows(doc.tokens || []);
+                })
+                .catch(function(err) {
+                    showError('{{ t .Localizer "nodetokens.error.load" }}: ' + err.message);
+                });
+        }
+
+        function revokeToken(id) {
+            if (!window.confirm('{{ t .Localizer "nodetokens.revoke.confirm" }}')) {
+                return;
+            }
+
+            fetch('/node-tokens/' + encodeURIComponent(id) + '/revoke', { method: 'POST', credentials: 'same-origin' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+
+                    loadTokens();
+                })
+                .catch(function(err) {
+                    showError('{{ t .Localizer "nodetokens.error.revoke" }}: ' + err.message);
+                });
+        }
+
+        function showSecret(created) {
+            copyableField(document.getElementById('node-token-secret-token'), created.token);
+            copyableField(document.getElementById('node-token-secret-org-id'), created.org_id);
+
+            secretModal.classList.remove('hidden');
+            secretModal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideSecret() {
+            secretModal.classList.add('hidden');
+            secretModal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+
+        secretClose.addEventListener('click', hideSecret);
+        secretModal.addEventListener('click', function(e) {
+            if (e.target === secretModal) hideSecret();
+        });
+
+        createForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            clearError();
+
+            var name = nameInput.value.trim();
+            if (!name) return;
+
+            fetch('/node-tokens', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            })
+                .then(function(r) {
+                    if (r.status === 409) throw new Error('{{ t .Localizer "nodetokens.error.limit" }}');
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+
+                    return r.json();
+                })
+                .then(function(created) {
+                    nameInput.value = '';
+                    showSecret(created);
+                    loadTokens();
+                })
+                .catch(function(err) {
+                    showError(err.message);
+                });
+        });
+
+        loadTokens();
+    })();
+    </script>
+</body>
+
+</html>

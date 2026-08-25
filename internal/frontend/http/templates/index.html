@@ -14,10 +14,30 @@
 </head>
 
 <body class="dark:bg-gray-900 antialiased">
+    <header class="border-b border-gray-200 dark:border-gray-700">
+        <div class="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
+            <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+                {{ if .Enterprise }}{{ t .Localizer "page.header.enterprise" }}{{ else }}{{ t .Localizer "page.header" }}{{ end }}
+            </h1>
+            {{ if .BrowserLoginEnabled }}
+            <div class="flex items-center gap-4 text-sm">
+                <a href="/ui/node-tokens"
+                    class="text-gray-500 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-gray-100">
+                    {{ t .Localizer "nodetokens.nav_link" }}
+                </a>
+                <form method="POST" action="/logout">
+                    <button type="submit"
+                        class="text-gray-500 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-gray-100">
+                        {{ t .Localizer "nav.logout" }}
+                    </button>
+                </form>
+            </div>
+            {{ end }}
+        </div>
+    </header>
     <main>
-        <div class="md:container md:mx-auto">
+        <div class="container mx-auto px-4">
             <div class="prose dark:prose-invert mt-4">
-                <h1>{{ if .Enterprise }}{{ t .Localizer "page.header.enterprise" }}{{ else }}{{ t .Localizer "page.header" }}{{ end }}</h1>
                 <p>
                     {{ t .Localizer "info.developed_by" }}<a href="https://siderolabs.com/">Sidero Labs, Inc.</a>{{ t .Localizer "info.offers" }}<a href="https://talos.dev/">{{ t .Localizer "distro.name" }}</a>.
                 </p>

@@ -23,3 +23,11 @@ func (f *Frontend) registerBrowserLogin(registerPublicRoute func(func(string, ht
 	registerPublicRoute(f.router.POST, "/logout", blp.LogoutHandler())
 	registerPublicRoute(f.router.GET, blp.CallbackPath(), blp.CallbackHandler())
 }
+
+// browserLoginEnabled reports whether the auth provider serves the interactive login flow,
+// gating whether pages show the nav bar's logout/node-tokens links.
+func (f *Frontend) browserLoginEnabled() bool {
+	blp, ok := f.options.AuthProvider.(enterprise.BrowserLoginProvider)
+
+	return ok && blp.BrowserLoginEnabled()
+}

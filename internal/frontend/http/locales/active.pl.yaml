@@ -40,6 +40,9 @@
 - id: info.version
   translation: "Wersja"
 
+- id: nav.logout
+  translation: "Wyloguj się"
+
 - id: interface.loading
   translation: "Ładowanie..."
 
@@ -384,3 +387,60 @@
 
 - id: final.booter.command_post
   translation: " z tym schematem, uruchom następujące polecenie na hoście w tej samej podsieci:"
+
+- id: nodetokens.nav_link
+  translation: "Zarządzaj tokenami węzłów"
+
+- id: nodetokens.title
+  translation: "Tokeny węzłów"
+
+- id: nodetokens.back_home
+  translation: "Strona główna"
+
+- id: nodetokens.description
+  translation: "Tokeny węzłów to długoterminowe poświadczenia, których węzły Talos używają do pobierania obrazów bezpośrednio z tej fabryki."
+
+- id: nodetokens.table.name
+  translation: "Nazwa"
+
+- id: nodetokens.table.created
+  translation: "Utworzono"
+
+- id: nodetokens.empty
+  translation: "Brak tokenów węzłów."
+
+- id: nodetokens.create.name_label
+  translation: "Nazwa"
+
+- id: nodetokens.create.button
+  translation: "Utwórz token węzła"
+
+- id: nodetokens.secret.title
+  translation: "Utworzono token węzła"
+
+- id: nodetokens.secret.warning
+  translation: "Ten sekret jest wyświetlany tylko raz. Skopiuj go teraz — nie będzie można go ponownie wyświetlić."
+
+- id: nodetokens.secret.token
+  translation: "Token"
+
+- id: nodetokens.secret.org_id
+  translation: "ID organizacji"
+
+- id: nodetokens.secret.close
+  translation: "Zamknij"
+
+- id: nodetokens.revoke.button
+  translation: "Odwołaj"
+
+- id: nodetokens.revoke.confirm
+  translation: "Odwołać ten token węzła? Węzły Talos, które go używają, stracą dostęp."
+
+- id: nodetokens.error.load
+  translation: "Nie udało się wczytać tokenów węzłów"
+
+- id: nodetokens.error.revoke
+  translation: "Nie udało się odwołać tokenu węzła"
+
+- id: nodetokens.error.limit
+  translation: "Osiągnięto limit tokenów węzłów dla tej organizacji"

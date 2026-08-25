@@ -40,6 +40,9 @@
 - id: info.version
   translation: "Version"
 
+- id: nav.logout
+  translation: "Log out"
+
 - id: interface.loading
   translation: "Loading..."
 
@@ -384,3 +387,60 @@
 
 - id: final.booter.command_post
   translation: " with this schematic, run the following command on a host in the same subnet:"
+
+- id: nodetokens.nav_link
+  translation: "Manage Node Tokens"
+
+- id: nodetokens.title
+  translation: "Node Tokens"
+
+- id: nodetokens.back_home
+  translation: "Home"
+
+- id: nodetokens.description
+  translation: "Node tokens are long-lived credentials Talos nodes use to pull images directly from this factory."
+
+- id: nodetokens.table.name
+  translation: "Name"
+
+- id: nodetokens.table.created
+  translation: "Created"
+
+- id: nodetokens.empty
+  translation: "No node tokens yet."
+
+- id: nodetokens.create.name_label
+  translation: "Name"
+
+- id: nodetokens.create.button
+  translation: "Create Node Token"
+
+- id: nodetokens.secret.title
+  translation: "Node Token Created"
+
+- id: nodetokens.secret.warning
+  translation: "This secret is shown only once. Copy it now — you won't be able to view it again."
+
+- id: nodetokens.secret.token
+  translation: "Token"
+
+- id: nodetokens.secret.org_id
+  translation: "Organization ID"
+
+- id: nodetokens.secret.close
+  translation: "Close"
+
+- id: nodetokens.revoke.button
+  translation: "Revoke"
+
+- id: nodetokens.revoke.confirm
+  translation: "Revoke this node token? Any Talos nodes using it will lose access."
+
+- id: nodetokens.error.load
+  translation: "Failed to load node tokens"
+
+- id: nodetokens.error.revoke
+  translation: "Failed to revoke node token"
+
+- id: nodetokens.error.limit
+  translation: "Node token limit reached for this organization"
