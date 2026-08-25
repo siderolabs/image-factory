@@ -98,7 +98,7 @@ type TokenOptions struct {
 	Issuer  string
 	Subject string
 
-	// OrgID is omitted when empty, producing a token without an org_id claim.
+	// OrgID is omitted when empty, producing a token without an if_org_id claim.
 	OrgID string
 
 	// Nonce binds an ID token to the login that requested it. Omitted when empty, which is
@@ -143,7 +143,7 @@ func SignToken(t *testing.T, privateKey *rsa.PrivateKey, opts TokenOptions) stri
 	extra := map[string]any{}
 
 	if opts.OrgID != "" {
-		extra["org_id"] = opts.OrgID
+		extra["if_org_id"] = opts.OrgID
 	}
 
 	if opts.Scope != "" {

@@ -137,7 +137,10 @@ func normalizeDomain(domain string) (string, error) {
 
 // customClaims holds Auth0-specific JWT claims beyond the standard registered set.
 type customClaims struct {
-	OrgID string `json:"org_id"`
+	// if_org_id, not org_id: Auth0 treats org_id as a protected claim name tied to native
+	// Organizations and silently drops attempts to set it from an Action, so both the M2M
+	// and browser-login paths mirror it into this custom claim name instead.
+	OrgID string `json:"if_org_id"`
 
 	// Auth0 puts granted scopes in scope for plain client-credentials tokens and in
 	// permissions when RBAC is enabled on the API, so both have to be consulted.
