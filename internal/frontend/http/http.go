@@ -388,7 +388,7 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 		// context so handlePXE can forward it into the asset URLs it emits.
 		if f.options.DownloadTokenIssuer != nil && (r.Method == http.MethodGet || r.Method == http.MethodHead) && tokenAcceptedOn(r.URL.Path) && r.URL.RawQuery != "" {
 			if tokenStr := r.URL.Query().Get("token"); tokenStr != "" {
-				if sub, err := f.options.DownloadTokenIssuer.Verify(tokenStr); err == nil {
+				if sub, _, err := f.options.DownloadTokenIssuer.Verify(tokenStr); err == nil {
 					*username = sub
 					ctx = authProvider.ContextWithUsername(ctx, sub)
 					ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)

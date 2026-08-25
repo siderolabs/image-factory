@@ -30,7 +30,7 @@ type AuthProvider interface {
 // Issuer creates signed JWT download tokens.
 // Defined locally to avoid an import cycle with pkg/enterprise.
 type Issuer interface {
-	Issue(subject string, requestedTTL time.Duration) (string, time.Duration, error)
+	Issue(subject string, requestedTTL time.Duration) (token string, ttl time.Duration, jti string, err error)
 }
 
 // Frontend is the FrontendPlugin that issues download tokens.
@@ -87,7 +87,7 @@ func (f *Frontend) Handle(ctx context.Context, w http.ResponseWriter, r *http.Re
 		return nil
 	}
 
-	token, ttl, err := f.issuer.Issue(username, requestedTTL)
+	token, ttl, _, err := f.issuer.Issue(username, requestedTTL)
 	if err != nil {
 		if errors.Is(err, downloadtoken.ErrTTLOutOfRange) {
 			http.Error(w, err.Error(), http.StatusBadRequest)

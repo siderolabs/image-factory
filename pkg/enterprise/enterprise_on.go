@@ -243,10 +243,10 @@ func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) 
 // fresh ECDSA P-256 key pair is generated (suitable for single-replica deployments).
 func NewDownloadTokenIssuer(keyPath string, ttl DownloadTokenTTL) (DownloadTokenIssuer, error) {
 	if keyPath != "" {
-		return downloadtoken.LoadIssuer(keyPath, ttl)
+		return downloadtoken.LoadIssuer(keyPath, ttl, downloadtoken.DownloadAudience)
 	}
 
-	return downloadtoken.GenerateIssuer(ttl)
+	return downloadtoken.GenerateIssuer(ttl, downloadtoken.DownloadAudience)
 }
 
 // NewDownloadTokenFrontend returns the FrontendPlugin for download token issuance.

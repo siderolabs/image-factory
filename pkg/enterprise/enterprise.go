@@ -142,12 +142,12 @@ type SignatureWriter interface {
 // not enabled the issuer is nil and the download-token routes are not registered.
 type DownloadTokenIssuer interface {
 	// Issue creates a signed JWT for the given subject (org_id or username), valid for
-	// the requested lifetime, and returns the token along with the granted lifetime.
+	// the requested lifetime, and returns the token, granted lifetime, and the token's jti.
 	// A non-positive request selects the configured default.
-	Issue(subject string, requestedTTL time.Duration) (string, time.Duration, error)
+	Issue(subject string, requestedTTL time.Duration) (token string, ttl time.Duration, jti string, err error)
 
-	// Verify parses and validates the JWT, returning the subject claim on success.
-	Verify(tokenStr string) (string, error)
+	// Verify parses and validates the JWT, returning the subject and jti claims on success.
+	Verify(tokenStr string) (subject, jti string, err error)
 
 	// JWKS returns the pre-built JSON Web Key Set containing the public key.
 	JWKS() []byte
