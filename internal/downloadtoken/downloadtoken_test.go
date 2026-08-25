@@ -22,18 +22,62 @@ import (
 
 var defaultTTL = downloadtoken.TTL{Default: 5 * time.Minute, Min: 30 * time.Second, Max: 8 * time.Hour}
 
+func TestGenerateIssuerRejectsUnknownAudience(t *testing.T) {
+	t.Parallel()
+
+	_, err := downloadtoken.GenerateIssuer(defaultTTL, "not-a-real-audience")
+	require.Error(t, err)
+}
+
+func TestIssueRejectsEmptySubject(t *testing.T) {
+	t.Parallel()
+
+	issuer, err := downloadtoken.GenerateIssuer(defaultTTL, downloadtoken.DownloadAudience)
+	require.NoError(t, err)
+
+	token, _, _, issueErr := issuer.Issue("", 0)
+	require.Error(t, issueErr)
+	assert.Empty(t, token)
+}
+
 func TestRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := downloadtoken.GenerateIssuer(defaultTTL)
+	issuer, err := downloadtoken.GenerateIssuer(defaultTTL, downloadtoken.DownloadAudience)
 	require.NoError(t, err)
 
-	token, _, err := issuer.Issue("org_abc123", 0)
+	token, _, jti, err := issuer.Issue("org_abc123", 0)
 	require.NoError(t, err)
+	require.NotEmpty(t, jti)
 
-	sub, err := issuer.Verify(token)
+	sub, gotJTI, err := issuer.Verify(token)
 	require.NoError(t, err)
 	assert.Equal(t, "org_abc123", sub)
+	assert.Equal(t, jti, gotJTI)
+}
+
+// TestAudienceIsolation checks a node-audience token is rejected by a download-audience
+// issuer, and vice versa, even when both share the same claims shape.
+func TestAudienceIsolation(t *testing.T) {
+	t.Parallel()
+
+	downloadIssuer, err := downloadtoken.GenerateIssuer(defaultTTL, downloadtoken.DownloadAudience)
+	require.NoError(t, err)
+
+	nodeIssuer, err := downloadtoken.GenerateIssuer(defaultTTL, downloadtoken.NodeAudience)
+	require.NoError(t, err)
+
+	nodeToken, _, _, err := nodeIssuer.Issue("org_abc123", 0)
+	require.NoError(t, err)
+
+	_, _, err = downloadIssuer.Verify(nodeToken)
+	require.Error(t, err)
+
+	downloadToken, _, _, err := downloadIssuer.Issue("org_abc123", 0)
+	require.NoError(t, err)
+
+	_, _, err = nodeIssuer.Verify(downloadToken)
+	require.Error(t, err)
 }
 
 func TestExpiredToken(t *testing.T) {
@@ -41,13 +85,13 @@ func TestExpiredToken(t *testing.T) {
 
 	// Negative TTL makes the token already expired at issuance, well past
 	// the 30s clock-skew leeway used by Verify.
-	issuer, err := downloadtoken.GenerateIssuer(downloadtoken.TTL{Default: -time.Minute, Min: time.Second, Max: time.Hour})
+	issuer, err := downloadtoken.GenerateIssuer(downloadtoken.TTL{Default: -time.Minute, Min: time.Second, Max: time.Hour}, downloadtoken.DownloadAudience)
 	require.NoError(t, err)
 
-	token, _, err := issuer.Issue("org_abc123", 0)
+	token, _, _, err := issuer.Issue("org_abc123", 0)
 	require.NoError(t, err)
 
-	_, err = issuer.Verify(token)
+	_, _, err = issuer.Verify(token)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "expired")
 }
@@ -55,10 +99,10 @@ func TestExpiredToken(t *testing.T) {
 func TestTamperedToken(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := downloadtoken.GenerateIssuer(defaultTTL)
+	issuer, err := downloadtoken.GenerateIssuer(defaultTTL, downloadtoken.DownloadAudience)
 	require.NoError(t, err)
 
-	token, _, err := issuer.Issue("org_abc123", 0)
+	token, _, _, err := issuer.Issue("org_abc123", 0)
 	require.NoError(t, err)
 
 	// Corrupt the payload (second segment) so claims no longer match the signature.
@@ -67,23 +111,23 @@ func TestTamperedToken(t *testing.T) {
 
 	tampered := parts[0] + "." + parts[1] + "TAMPERED." + parts[2]
 
-	_, err = issuer.Verify(tampered)
+	_, _, err = issuer.Verify(tampered)
 	require.Error(t, err)
 }
 
 func TestWrongKey(t *testing.T) {
 	t.Parallel()
 
-	issuer1, err := downloadtoken.GenerateIssuer(defaultTTL)
+	issuer1, err := downloadtoken.GenerateIssuer(defaultTTL, downloadtoken.DownloadAudience)
 	require.NoError(t, err)
 
-	issuer2, err := downloadtoken.GenerateIssuer(defaultTTL)
+	issuer2, err := downloadtoken.GenerateIssuer(defaultTTL, downloadtoken.DownloadAudience)
 	require.NoError(t, err)
 
-	token, _, err := issuer1.Issue("org_abc123", 0)
+	token, _, _, err := issuer1.Issue("org_abc123", 0)
 	require.NoError(t, err)
 
-	_, err = issuer2.Verify(token)
+	_, _, err = issuer2.Verify(token)
 	require.Error(t, err)
 }
 
@@ -93,13 +137,13 @@ func TestNewIssuerFromKey(t *testing.T) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 
-	issuer, err := downloadtoken.NewIssuer(key, defaultTTL)
+	issuer, err := downloadtoken.NewIssuer(key, defaultTTL, downloadtoken.DownloadAudience)
 	require.NoError(t, err)
 
-	token, _, err := issuer.Issue("alice", 0)
+	token, _, _, err := issuer.Issue("alice", 0)
 	require.NoError(t, err)
 
-	sub, err := issuer.Verify(token)
+	sub, _, err := issuer.Verify(token)
 	require.NoError(t, err)
 	assert.Equal(t, "alice", sub)
 }
@@ -107,7 +151,7 @@ func TestNewIssuerFromKey(t *testing.T) {
 func TestJWKS(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := downloadtoken.GenerateIssuer(defaultTTL)
+	issuer, err := downloadtoken.GenerateIssuer(defaultTTL, downloadtoken.DownloadAudience)
 	require.NoError(t, err)
 
 	jwksData := issuer.JWKS()
@@ -136,7 +180,7 @@ func TestJWKS(t *testing.T) {
 	assert.NotEmpty(t, doc.Keys[0].Kid, "JWKS should include a kid (key ID)")
 
 	// Verify the kid in the JWT header matches the JWKS kid.
-	token, _, err := issuer.Issue("test", 0)
+	token, _, _, err := issuer.Issue("test", 0)
 	require.NoError(t, err)
 
 	var header struct {
@@ -156,7 +200,7 @@ func TestJWKS(t *testing.T) {
 func TestRequestedTTL(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := downloadtoken.GenerateIssuer(defaultTTL)
+	issuer, err := downloadtoken.GenerateIssuer(defaultTTL, downloadtoken.DownloadAudience)
 	require.NoError(t, err)
 
 	for _, test := range []struct {
@@ -175,7 +219,7 @@ func TestRequestedTTL(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			token, granted, err := issuer.Issue("org_abc123", test.requested)
+			token, granted, _, err := issuer.Issue("org_abc123", test.requested)
 
 			if test.expectErr {
 				require.ErrorIs(t, err, downloadtoken.ErrTTLOutOfRange)
@@ -186,7 +230,7 @@ func TestRequestedTTL(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, test.expected, granted)
 
-			sub, err := issuer.Verify(token)
+			sub, _, err := issuer.Verify(token)
 			require.NoError(t, err)
 			assert.Equal(t, "org_abc123", sub)
 		})

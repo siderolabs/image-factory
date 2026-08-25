@@ -368,7 +368,7 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 		// GET/HEAD /image/ to prevent use on other endpoints.
 		if f.options.DownloadTokenIssuer != nil && (r.Method == http.MethodGet || r.Method == http.MethodHead) && strings.HasPrefix(r.URL.Path, "/image/") && r.URL.RawQuery != "" {
 			if tokenStr := r.URL.Query().Get("token"); tokenStr != "" {
-				if sub, err := f.options.DownloadTokenIssuer.Verify(tokenStr); err == nil {
+				if sub, _, err := f.options.DownloadTokenIssuer.Verify(tokenStr); err == nil {
 					*username = sub
 					ctx = authProvider.ContextWithUsername(ctx, sub)
 
