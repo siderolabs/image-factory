@@ -45,8 +45,8 @@ require (
 	github.com/siderolabs/go-pointer v1.0.1
 	github.com/siderolabs/go-retry v0.3.3
 	github.com/siderolabs/go-vex v0.1.2
-	github.com/siderolabs/talos v1.14.0-rc.1
-	github.com/siderolabs/talos/pkg/machinery v1.14.0-rc.1
+	github.com/siderolabs/talos v1.14.0-rc.2.0.20260825161121-322de8bf2974
+	github.com/siderolabs/talos/pkg/machinery v1.14.0-rc.2.0.20260825161121-322de8bf2974
 	github.com/sigstore/cosign/v3 v3.1.3
 	github.com/sigstore/protobuf-specs v0.5.1
 	github.com/sigstore/sigstore v1.10.9
@@ -467,10 +467,10 @@ require (
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
-	golang.org/x/mod v0.38.0 // indirect
+	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
-	golang.org/x/tools v0.48.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10 // indirect
 	gonum.org/v1/gonum v0.17.0 // indirect
@@ -487,9 +487,9 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/gorm v1.31.2 // indirect
 	howett.net/plist v1.0.1 // indirect
-	k8s.io/api v0.37.0-rc.0 // indirect
-	k8s.io/apimachinery v0.37.0-rc.0 // indirect
-	k8s.io/client-go v0.37.0-rc.0 // indirect
+	k8s.io/api v0.37.0-rc.1 // indirect
+	k8s.io/apimachinery v0.37.0-rc.1 // indirect
+	k8s.io/client-go v0.37.0-rc.1 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260721132016-d427ff9ee9ad // indirect
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
