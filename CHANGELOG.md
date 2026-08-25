@@ -1,3 +1,106 @@
+## [image-factory 1.5.1](https://github.com/siderolabs/image-factory/releases/tag/v1.5.1) (2026-08-25)
+
+Welcome to the v1.5.1 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Noel Georgi
+* Mateusz Urbanek
+* Edward Sammut Alessi
+* Spencer Smith
+* Dmitrii Sharshakov
+* Maja Bojarska
+* Max Makarov
+* Dima Aratin
+* Evan Champion
+* Noel
+* Orzelius
+* Utku Ozdemir
+* dadbravo
+
+### Changes
+<details><summary>10 commits</summary>
+<p>
+
+* [`5f1f197`](https://github.com/siderolabs/image-factory/commit/5f1f197fcc7a37c50fe9b3ac374a721653f8cd81) feat: update Talos to 1.14.0-rc.2
+* [`b7908c1`](https://github.com/siderolabs/image-factory/commit/b7908c1f25c0ab589c8d09f30ddf965be847eab3) feat(enterprise): add Auth0 Management API client for node tokens
+* [`36fedd7`](https://github.com/siderolabs/image-factory/commit/36fedd761da751d17efa61c8d07ad35bbb55767c) feat: add WithBearerToken to include m2m token
+* [`e783a3d`](https://github.com/siderolabs/image-factory/commit/e783a3d7111eccd76eee28ddd2cc5822a3f26ced) feat(frontend): preserve whitespace for vuln descriptions
+* [`18f56f7`](https://github.com/siderolabs/image-factory/commit/18f56f773239c09b10262be89a1b5ce7f36b148a) chore: make sure check-dirty also checks docs
+* [`196a447`](https://github.com/siderolabs/image-factory/commit/196a447532a25d7da6ea27f7f194d713aa88d104) fix: enforce canonical image references
+* [`26b95ca`](https://github.com/siderolabs/image-factory/commit/26b95cacb0846378fa5ed75e397eb732d6500c0a) feat(enterprise): require auth0 clientID and clientSecret always
+* [`25561f7`](https://github.com/siderolabs/image-factory/commit/25561f7ee883d742cf7b873309f1b666b1b4ee72) fix: retry put when joining a failed get flight
+* [`aab14ff`](https://github.com/siderolabs/image-factory/commit/aab14ffc33e2b276356cc022d2bd8e563eaf4cae) feat: add spdx and vex reports to factory client
+* [`dc6a9f9`](https://github.com/siderolabs/image-factory/commit/dc6a9f9a6a0ca51b36354788f7370b3fcd6328ef) feat(enterprise): theme and translate Auth0 logout/login-error pages
+</p>
+</details>
+
+### Changes from siderolabs/pkgs
+<details><summary>9 commits</summary>
+<p>
+
+* [`13c7afc`](https://github.com/siderolabs/pkgs/commit/13c7afca2a82792ecf85d8cd81a1659fe9ef1db6) chore: update OpenZFS to 2.4.4
+* [`7cf25e7`](https://github.com/siderolabs/pkgs/commit/7cf25e7a90ec2c19a1c9ce6c575612be8505908e) feat: bump kernel to 6.18.46
+* [`84c1b87`](https://github.com/siderolabs/pkgs/commit/84c1b8752ef16f78f5893fe3b0de7a9288c58d7d) feat: backport aes256k support (Ceph)
+* [`9e069b7`](https://github.com/siderolabs/pkgs/commit/9e069b7a69a59e0d3781fe73ec9e6a6040449d6c) feat: enable SPD5118 sensor driver
+* [`fe419a4`](https://github.com/siderolabs/pkgs/commit/fe419a4885c2c59d9c3c65cd184056b66f9dbc81) feat: enable IPSec offload and dma-buf heaps
+* [`02ae809`](https://github.com/siderolabs/pkgs/commit/02ae80939ad14ea44933c7592feadb72553c1865) feat: update Linux to 6.18.45
+* [`2b995f1`](https://github.com/siderolabs/pkgs/commit/2b995f1f7bbfba53442e4624acbe2bcd99d56ea4) feat(kernel): enable CONFIG_MLX5_VFIO_PCI
+* [`fc35614`](https://github.com/siderolabs/pkgs/commit/fc35614a711c2bca43d376966de78e4ec7ce91ae) feat: update containerd to 2.3.4
+* [`e708524`](https://github.com/siderolabs/pkgs/commit/e708524c8918066e63bf0f1ee8f5b1f5c69a57c7) feat: update toolchain/tools
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>27 commits</summary>
+<p>
+
+* [`322de8bf2`](https://github.com/siderolabs/talos/commit/322de8bf2974b529ef676fd6be1746aaf2c3a74a) fix: cache filemap layers on disk
+* [`414a1d463`](https://github.com/siderolabs/talos/commit/414a1d46333bc4f7484381cf513b94fde52a0636) release(v1.14.0-rc.2): prepare release
+* [`a740329b9`](https://github.com/siderolabs/talos/commit/a740329b9de0de336737fc1167ebb2954e96d0d9) feat: bump kernel, containerd and go
+* [`0048cd3f4`](https://github.com/siderolabs/talos/commit/0048cd3f4ada8933fb13a7d3784b5d6dfbe560ad) chore: bump vulncheck dates
+* [`acc89cbef`](https://github.com/siderolabs/talos/commit/acc89cbeff95cb661e4344be76c9b1c10512fd3e) fix: use default terminal theme colors in talosctl dashboard
+* [`d78c61c82`](https://github.com/siderolabs/talos/commit/d78c61c82ecbc1f0a5bc03b68879a0d5d9133c7f) fix: don't create new client in dry-run mode
+* [`7276d54ef`](https://github.com/siderolabs/talos/commit/7276d54ef6b135450c3936684bc35ef37f1ed33e) fix: preserve selected sd-boot entry on upgrade
+* [`68a436656`](https://github.com/siderolabs/talos/commit/68a436656733c4c59451878f01b77afc60b58d61) fix: use the UKI command line when the config has no install section
+* [`e32a266d9`](https://github.com/siderolabs/talos/commit/e32a266d99b8cf9d4a3cb83ed15a4ed9a7b4e603) fix: persist in-memory meta on fresh install
+* [`35c8f172c`](https://github.com/siderolabs/talos/commit/35c8f172cffb602a3c024db983987dc54c0c2449) fix: drop lockdown=confidentiality default for 1.14+
+* [`977199548`](https://github.com/siderolabs/talos/commit/9771995485e9389b78aad271e14673b9b8ee005e) fix: reduce stalls in the etcd member promotion cycle
+* [`4c381dfae`](https://github.com/siderolabs/talos/commit/4c381dfaecd733bdcf79045fb135e390ac4f5b4a) feat: update CoreDNS to 1.14.7
+* [`95135f804`](https://github.com/siderolabs/talos/commit/95135f8042c48752e4b863463ed34fade4b27d2f) feat: update Kubernetes to 1.37.0-rc.1
+* [`7ac3cad5e`](https://github.com/siderolabs/talos/commit/7ac3cad5e6319f9132cf97f210ae7873931b1e72) fix: watch IPv6 route changes in RouteSpecController
+* [`d31a66599`](https://github.com/siderolabs/talos/commit/d31a665992d6d0d6cb5ee74efd9d9ce2b982a759) fix: enable SELinux to work with overlays
+* [`3cc04997f`](https://github.com/siderolabs/talos/commit/3cc04997fe2eb5788a053634c5170a1ab377bd11) fix: move the spike information field of the time.Status resource
+* [`52e874785`](https://github.com/siderolabs/talos/commit/52e8747858416265e8c37ec992430e3352b58ec9) feat: log peer address in gRPC request log
+* [`5f0005c25`](https://github.com/siderolabs/talos/commit/5f0005c258d126ab3880371997ee993e7bfc151f) feat: talosctl dashboard log filtering
+* [`5d13cc0e7`](https://github.com/siderolabs/talos/commit/5d13cc0e7c7863f8a46906903c3fea524fdc6c21) fix: truncate files replaced by system extensions
+* [`afc8d952d`](https://github.com/siderolabs/talos/commit/afc8d952d1787886d4f1da44cfc861124ae12c4c) fix: skip target settings for external volume mounts
+* [`6e83aece4`](https://github.com/siderolabs/talos/commit/6e83aece435a14d453178d30f57e9c7ed0dd0478) test: use tiny hostns debug image
+* [`2f371abd5`](https://github.com/siderolabs/talos/commit/2f371abd502877e4a12eb27c1d9b5ebcb5ac2e7d) fix: support try mode apply without prior config
+* [`d3544c2e3`](https://github.com/siderolabs/talos/commit/d3544c2e3befb23b315adc6006ac18bf17a298be) fix: adjust cluster size for VFAT on ISO
+* [`3909ca9b2`](https://github.com/siderolabs/talos/commit/3909ca9b238fc4a11cf1f61ebbd7278802c39c0d) feat: impl ContainerImageController
+* [`c563615ed`](https://github.com/siderolabs/talos/commit/c563615ed7da05a6639f1e4d31c50ebc1fa39d26) test: add cachefilesd to the test matrix
+* [`d36a20e84`](https://github.com/siderolabs/talos/commit/d36a20e842687ece37781950ce12cf476baf0ac0) fix: apply directory user volume mount security
+* [`78efbb413`](https://github.com/siderolabs/talos/commit/78efbb413863a902319c2f0b3668e310280cc7e3) fix: install conntrack handler in accept ingress firewall mode
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/auth0/go-auth0/v3**               v3.3.0 **_new_**
+* **github.com/siderolabs/pkgs**                 v1.14.0-1-geffed43 -> v1.14.0-10-g13c7afc
+* **github.com/siderolabs/talos**                v1.14.0-rc.1 -> 322de8bf2974
+* **github.com/siderolabs/talos/pkg/machinery**  v1.14.0-rc.1 -> 322de8bf2974
+* **github.com/stretchr/testify**                v1.11.1 -> v1.12.0
+
+Previous release can be found at [v1.5.0](https://github.com/siderolabs/image-factory/releases/tag/v1.5.0)
+
 ## [image-factory 1.5.0](https://github.com/siderolabs/image-factory/releases/tag/v1.5.0) (2026-08-17)
 
 Welcome to the v1.5.0 release of image-factory!
