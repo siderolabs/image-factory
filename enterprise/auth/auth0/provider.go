@@ -18,8 +18,6 @@ import (
 	"strings"
 	"time"
 
-	auth0mgmtclient "github.com/auth0/go-auth0/v3/management/client"
-	auth0option "github.com/auth0/go-auth0/v3/management/option"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xerrors"
@@ -169,7 +167,6 @@ type Provider struct {
 	logger   *zap.Logger
 
 	browser *browserLogin
-	sdk     *auth0mgmtclient.Management
 
 	audience     string
 	machineScope string
@@ -178,28 +175,12 @@ type Provider struct {
 // NewProvider creates a new Auth0 authentication provider.
 // It validates config only and never reaches the network; ctx scopes the JWKS HTTP client.
 func NewProvider(ctx context.Context, logger *zap.Logger, cfg Config) (*Provider, error) {
-	return newProvider(ctx, logger, cfg)
-}
-
-// newProvider is NewProvider's body. managementSDKOpts is exposed only via
-// export_test.go, for tests that need to tweak the Management SDK client's options.
-func newProvider(ctx context.Context, logger *zap.Logger, cfg Config, managementSDKOpts ...auth0option.RequestOption) (*Provider, error) {
 	if cfg.Domain == "" && cfg.IssuerURLOverride == "" {
 		return nil, errors.New("auth0: domain must not be empty")
 	}
 
 	if cfg.Audience == "" {
 		return nil, errors.New("auth0: audience must not be empty")
-	}
-
-	// Node-token management needs Management API credentials regardless of whether browser
-	// login (gated separately, on SessionKey) is enabled, so these are required unconditionally.
-	if cfg.ClientID == "" {
-		return nil, errors.New("auth0: clientID must not be empty")
-	}
-
-	if cfg.ClientSecret == "" {
-		return nil, errors.New("auth0: clientSecret must not be empty")
 	}
 
 	// Issuer URL doubles as the expected iss claim and as the base for every tenant endpoint.
@@ -237,20 +218,19 @@ func newProvider(ctx context.Context, logger *zap.Logger, cfg Config, management
 	})
 	keySet := oidc.NewRemoteKeySet(keyCtx, tenantURL.JoinPath("/.well-known/jwks.json").String())
 
-	sdk, err := newManagementSDK(ctx, tenantURL, cfg, managementSDKOpts...)
-	if err != nil {
-		return nil, fmt.Errorf("auth0: build management API client: %w", err)
-	}
-
 	p := &Provider{
 		verifier:     newVerifier(issuer, keySet, cfg.Audience),
-		sdk:          sdk,
 		audience:     cfg.Audience,
 		machineScope: cfg.MachineScope,
 		logger:       providerLogger,
 	}
 
-	if cfg.browserLoginRequested() {
+	browserLoginRequested, err := cfg.browserLoginRequested()
+	if err != nil {
+		return nil, err
+	}
+
+	if browserLoginRequested {
 		if p.browser, err = newBrowserLogin(issuer, keySet, tenantURL, cfg); err != nil {
 			return nil, err
 		}

@@ -72,8 +72,6 @@ func setupEnterpriseAuth0(t *testing.T, opts *cmd.Options) auth0TokenFixtures {
 	opts.Authentication.Provider = cmd.AuthProviderAuth0
 	opts.Authentication.Auth0.Domain = auth0TestDomain
 	opts.Authentication.Auth0.Audience = auth0TestAudience
-	opts.Authentication.Auth0.ClientID = "test-client-id"
-	opts.Authentication.Auth0.ClientSecret = "test-client-secret"
 	opts.SetAuth0IssuerURL(serverURL)
 
 	now := time.Now()
