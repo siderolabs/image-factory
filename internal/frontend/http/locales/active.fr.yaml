@@ -415,6 +415,9 @@
 - id: nodetokens.create.button
   translation: "Créer un jeton de nœud"
 
+- id: nodetokens.create.cancel
+  translation: "Annuler"
+
 - id: nodetokens.secret.title
   translation: "Jeton de nœud créé"
 
@@ -432,6 +435,9 @@
 
 - id: nodetokens.revoke.button
   translation: "Révoquer"
+
+- id: nodetokens.revoke.title
+  translation: "Révoquer le jeton de nœud"
 
 - id: nodetokens.revoke.confirm
   translation: "Révoquer ce jeton de nœud ? Les nœuds Talos qui l'utilisent perdront l'accès."

@@ -412,6 +412,9 @@
 - id: nodetokens.create.button
   translation: "Создать токен узла"
 
+- id: nodetokens.create.cancel
+  translation: "Отмена"
+
 - id: nodetokens.secret.title
   translation: "Токен узла создан"
 
@@ -429,6 +432,9 @@
 
 - id: nodetokens.revoke.button
   translation: "Отозвать"
+
+- id: nodetokens.revoke.title
+  translation: "Отзыв токена узла"
 
 - id: nodetokens.revoke.confirm
   translation: "Отозвать этот токен узла? Узлы Talos, использующие его, потеряют доступ."

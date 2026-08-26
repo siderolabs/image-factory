@@ -380,7 +380,7 @@
         {{ end }}
 </div>
 
-<div class="flex gap-4">
+<div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
         {{ template "back-button" (dict "Params"
         "target,version,platform,board,arch,secureboot,extensions,selected-bootloader,selected-cmdline,selected-overlay-options,selected-embedded-config"
         "Localizer" .Localizer) }}

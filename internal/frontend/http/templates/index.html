@@ -14,30 +14,31 @@
 </head>
 
 <body class="dark:bg-gray-900 antialiased">
-    <header class="border-b border-gray-200 dark:border-gray-700">
-        <div class="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
+    <header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-gray-200 dark:bg-gray-900/80 dark:border-gray-800">
+        <div class="container mx-auto max-w-3xl flex items-center justify-between gap-4 px-6 py-3">
             <h1 class="text-lg font-bold text-gray-900 dark:text-white">
                 {{ if .Enterprise }}{{ t .Localizer "page.header.enterprise" }}{{ else }}{{ t .Localizer "page.header" }}{{ end }}
             </h1>
             {{ if .BrowserLoginEnabled }}
-            <div class="flex items-center gap-4 text-sm">
+            <nav class="flex items-center gap-1 text-sm">
                 <a href="/ui/node-tokens"
-                    class="text-gray-500 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-gray-100">
+                    class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors">
                     {{ t .Localizer "nodetokens.nav_link" }}
                 </a>
+                <div class="w-px h-4 bg-gray-200 dark:bg-gray-700"></div>
                 <form method="POST" action="/logout">
                     <button type="submit"
-                        class="text-gray-500 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-gray-100">
+                        class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors">
                         {{ t .Localizer "nav.logout" }}
                     </button>
                 </form>
-            </div>
+            </nav>
             {{ end }}
         </div>
     </header>
     <main>
-        <div class="container mx-auto px-4">
-            <div class="prose dark:prose-invert mt-4">
+        <div class="container mx-auto max-w-3xl px-6">
+            <div class="prose prose-sm dark:prose-invert mt-4">
                 <p>
                     {{ t .Localizer "info.developed_by" }}<a href="https://siderolabs.com/">Sidero Labs, Inc.</a>{{ t .Localizer "info.offers" }}<a href="https://talos.dev/">{{ t .Localizer "distro.name" }}</a>.
                 </p>
@@ -60,7 +61,7 @@
                 </svg>
                 <span class="sr-only">{{ t .Localizer "interface.loading" }}</span>
             </div>
-            <form class="text-gray-900 dark:text-white"
+            <form class="text-gray-900 dark:text-white mt-5"
                   id="wizard-form"
                   hx-indicator="#processing"
 				  hx-disabled-elt="button"
@@ -68,12 +69,12 @@
 				  {{ .WizardHTML }}
 			</form>
 			<!-- 🌐 Language Switcher -->
-			<div class="mt-8 flex justify-end items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+			<div class="mt-6 mb-6 flex justify-end items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
 				<label for="lang">{{ t .Localizer "lang.name" }}</label>
 				<form>
 					<select name="lang"
 					hx-get="" hx-params="lang"
-					class="w-32 bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
+					class="w-28 bg-gray-50 border border-gray-300 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
 					{{ $lang := .Lang }}
 					{{ $localizer := .Localizer }}
 					{{ range .Bundle.LanguageTags }}

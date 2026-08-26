@@ -87,7 +87,7 @@ auto: off">{{ .SelectedEmbeddedConfig }}</textarea>
     {{ end }}
 
     {{ if .SupportsBootloaderSelection }}
-    <div class="mb-6 mt-6">
+    <div class="mb-6 mt-6 space-y-2">
         <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
             {{ t .Localizer "customization.bootloader.title" }}:
         </label>
@@ -112,7 +112,7 @@ auto: off">{{ .SelectedEmbeddedConfig }}</textarea>
     </div>
     {{ end }}
 
-    <div class="flex gap-4">
+    <div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
         {{ template "back-button" (dict "Params"
         "target,version,platform,board,arch,secureboot,selected-extensions"
         "Localizer" .Localizer)

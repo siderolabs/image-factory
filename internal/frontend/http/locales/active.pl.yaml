@@ -415,6 +415,9 @@
 - id: nodetokens.create.button
   translation: "Utwórz token węzła"
 
+- id: nodetokens.create.cancel
+  translation: "Anuluj"
+
 - id: nodetokens.secret.title
   translation: "Utworzono token węzła"
 
@@ -432,6 +435,9 @@
 
 - id: nodetokens.revoke.button
   translation: "Odwołaj"
+
+- id: nodetokens.revoke.title
+  translation: "Odwołaj token węzła"
 
 - id: nodetokens.revoke.confirm
   translation: "Odwołać ten token węzła? Węzły Talos, które go używają, stracą dostęp."

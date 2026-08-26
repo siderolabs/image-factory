@@ -12,20 +12,23 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 
 	"github.com/siderolabs/image-factory/internal/version"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 // handleNodeTokensUI handles GET /node-tokens. It renders a page shell only; the page's own
 // JS drives /node-tokens via fetch().
 func (f *Frontend) handleNodeTokensUI(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	return getTemplates().ExecuteTemplate(w, "node-tokens.html", struct {
-		Version   string
-		Localizer *i18n.Localizer
-		Bundle    *i18n.Bundle
-		Lang      string
+		Version    string
+		Localizer  *i18n.Localizer
+		Bundle     *i18n.Bundle
+		Lang       string
+		Enterprise bool
 	}{
-		Version:   version.Tag,
-		Localizer: f.getLocalizer(r),
-		Bundle:    getLocalizerBundle(),
-		Lang:      getCurrentLang(r),
+		Version:    version.Tag,
+		Localizer:  f.getLocalizer(r),
+		Bundle:     getLocalizerBundle(),
+		Lang:       getCurrentLang(r),
+		Enterprise: enterprise.Enabled(),
 	})
 }
