@@ -3,8 +3,8 @@
 {{ template "header" (t .Localizer "extensions.title") }}
 <div class="mb-6 max-h-[500px] flex flex-col">
     <div class="ms-2 text-sm">
-        <p class="text-xs font-normal text-gray-500 dark:text-gray-300">
-            <a class="text-blue-600 dark:text-blue-500 underline" target="_blank"
+        <p class="text-xs font-normal text-gray-500 dark:text-naturals-n12">
+            <a class="text-primary-p5 dark:text-primary-p3 underline" target="_blank"
                 href="https://github.com/siderolabs/extensions">{{ t .Localizer "extensions.title" }}</a>{{ t .Localizer
             "extensions.description" }}
             <br>
@@ -13,17 +13,17 @@
     </div>
 
     <div class="ps-2 mt-2 mb-2">
-        <label for="search" class="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-white">Search</label>
+        <label for="search" class="mb-2 text-sm font-medium text-gray-900 sr-only dark:text-naturals-n14">Search</label>
         <div class="relative">
             <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true"
+                <svg class="w-4 h-4 text-gray-500 dark:text-naturals-n10" aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
                 </svg>
             </div>
             <input type="search" id="search" name="search"
-                class="block w-full p-2 ps-10 text-xs text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                class="block w-full p-2 ps-10 text-xs text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-primary-p3 focus:border-primary-p3 dark:bg-naturals-n5 dark:border-naturals-n6 dark:placeholder-naturals-n9 dark:text-naturals-n14 dark:focus:ring-primary-p3 dark:focus:border-primary-p3"
                 placeholder="{{ t .Localizer "button.search" }}" hx-post="/ui/extensions-list"
                 hx-trigger="input changed delay:500ms, search" hx-target="#extensions-list"
                 hx-params="version,search,extensions" />
@@ -34,7 +34,7 @@
         {{ template "extensions-list" . }}
     </div>
 
-    <div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
+    <div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-naturals-n5 dark:bg-naturals-n0/90">
         {{ template "back-button" (dict "Params"
         "target,version,platform,board,selected-arch,selected-secureboot" "Localizer" .Localizer) }}
         {{ template "next-button" . }}

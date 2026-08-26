@@ -3,12 +3,12 @@
 {{ template "header" (t .Localizer "versions.title") }}
 <div class="mb-6">
     {{ if eq .Target "sbc" }}
-    <div class="mb-4 p-4 text-sm text-blue-800 rounded-lg bg-blue-50 dark:bg-gray-800 dark:text-blue-400" role="alert">
+    <div class="mb-4 p-4 text-sm text-primary-p6 rounded-lg bg-primary-p4/10 dark:bg-naturals-n4 dark:text-primary-p2" role="alert">
         Only Talos 1.7+ is supported with SBCs
     </div>
     {{ end }}
     <select name="version"
-        class="w-64 bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500"
+        class="w-64 bg-gray-50 border border-gray-300 text-sm rounded-lg focus:ring-primary-p3 focus:border-primary-p3 block p-2.5 dark:bg-naturals-n5 dark:border-naturals-n6 dark:placeholder-naturals-n9 dark:focus:ring-primary-p3 dark:focus:border-primary-p3"
         hx-get="/ui/version-doc" hx-target="#version-doc" hx-params="version">
         {{ $defaultVersion := .Versions.DefaultVersion }}
         {{ range .Versions.Groups }}
@@ -20,7 +20,7 @@
         {{ end }}
     </select>
     <div class="mt-6">
-        <p class="text-xs font-normal text-gray-500 dark:text-gray-300">
+        <p class="text-xs font-normal text-gray-500 dark:text-naturals-n12">
             {{ t .Localizer "versions.recommendation" }} ({{ .Versions.LatestStable }}).
             <br>
             {{ t .Localizer "versions.recommendation.pre_release" }}
@@ -29,7 +29,7 @@
     <div class="mt-6" id="version-doc">
         {{ template "version-doc" (dict "Version" $defaultVersion "Localizer" .Localizer) }}
     </div>
-    <div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
+    <div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-naturals-n5 dark:bg-naturals-n0/90">
         {{ template "back-button" (dict "Params" "selected-target" "Localizer" .Localizer) }}
         {{ template "next-button" . }}
     </div>

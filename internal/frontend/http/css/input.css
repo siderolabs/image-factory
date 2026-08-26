@@ -4,3 +4,32 @@
 
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
+
+/* Omni's palette (frontend/src/index.css in siderolabs/omni), reused here so the two
+   Sidero UIs share a brand accent and a consistent dark-mode neutral scale. */
+@theme {
+  --color-naturals-n0: #101118;
+  --color-naturals-n1: #13141c;
+  --color-naturals-n2: #15161e;
+  --color-naturals-n3: #191b24;
+  --color-naturals-n4: #1f222e;
+  --color-naturals-n5: #272932;
+  --color-naturals-n6: #2c2e38;
+  --color-naturals-n7: #3a3b45;
+  --color-naturals-n8: #5b5c64;
+  --color-naturals-n9: #7d7d85;
+  --color-naturals-n10: #878990;
+  --color-naturals-n11: #9fa1a6;
+  --color-naturals-n12: #c3c3c7;
+  --color-naturals-n13: #e8e8e9;
+  --color-naturals-n14: #ffffff;
+
+  --color-primary-p1: #ffbea9;
+  --color-primary-p2: #fe9e74;
+  --color-primary-p3: #ff8b59;
+  --color-primary-p4: #ff5f2a;
+  --color-primary-p5: #ce5027;
+  --color-primary-p6: #342321;
+
+  --color-red-r1: #ff5c56;
+}

@@ -3,11 +3,11 @@
 {{ template "header" (t .Localizer "customization.title") }}
 <div class="mb-6">
     <div class="mb-6">
-        <label for="extra-args" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+        <label for="extra-args" class="block mb-2 text-sm font-medium text-gray-900 dark:text-naturals-n14">
             {{ t .Localizer "customization.cmdline" }}
         </label>
         <input id="extra-args" name="cmdline" value="{{ .SelectedCmdline }}"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-p3 focus:border-primary-p3 block w-full p-2.5 dark:bg-naturals-n5 dark:border-naturals-n6 dark:placeholder-naturals-n9 dark:text-naturals-n14 dark:focus:ring-primary-p3 dark:focus:border-primary-p3"
             placeholder="-console console=tty0">
         <input name="cmdline-set" type="hidden" value="1">
     </div>
@@ -39,11 +39,11 @@
 
     {{ if .EmbeddedConfigEnabled }}
     <div class="mb-6">
-        <label for="embedded-config" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+        <label for="embedded-config" class="block mb-2 text-sm font-medium text-gray-900 dark:text-naturals-n14">
             {{ t .Localizer "customization.embedded_config" }}
         </label>
         <textarea id="embedded-config" name="embedded-config"
-            class="bg-gray-50 border min-h-24 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full h-16 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            class="bg-gray-50 border min-h-24 border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-p3 focus:border-primary-p3 block w-full h-16 p-2.5 dark:bg-naturals-n5 dark:border-naturals-n6 dark:placeholder-naturals-n9 dark:text-naturals-n14 dark:focus:ring-primary-p3 dark:focus:border-primary-p3"
             placeholder="apiVersion: v1alpha1
 kind: HostnameConfig
 hostname: my-custom-hostname
@@ -63,11 +63,11 @@ auto: off">{{ .SelectedEmbeddedConfig }}</textarea>
 
     {{ if .OverlayOptionsEnabled }}
     <div class="mb-6 mt-6">
-        <label for="extra-overlay-options" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+        <label for="extra-overlay-options" class="block mb-2 text-sm font-medium text-gray-900 dark:text-naturals-n14">
             {{ t .Localizer "customization.overlay" }}
         </label>
         <textarea id="extra-overlay-options" name="overlay-options"
-            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full h-16 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-p3 focus:border-primary-p3 block w-full h-16 p-2.5 dark:bg-naturals-n5 dark:border-naturals-n6 dark:placeholder-naturals-n9 dark:text-naturals-n14 dark:focus:ring-primary-p3 dark:focus:border-primary-p3"
             placeholder="configTxtAppend: 'dtoverlay=vc4-fkms-v3d'">{{ .SelectedOverlayOptions }}</textarea>
     </div>
 
@@ -88,7 +88,7 @@ auto: off">{{ .SelectedEmbeddedConfig }}</textarea>
 
     {{ if .SupportsBootloaderSelection }}
     <div class="mb-6 mt-6 space-y-2">
-        <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
+        <label class="block mb-2 text-sm font-medium text-gray-900 dark:text-naturals-n14">
             {{ t .Localizer "customization.bootloader.title" }}:
         </label>
         {{ template "radio-with-description" dict "name" "bootloader" "value" "auto" "current"
@@ -112,7 +112,7 @@ auto: off">{{ .SelectedEmbeddedConfig }}</textarea>
     </div>
     {{ end }}
 
-    <div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
+    <div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-naturals-n5 dark:bg-naturals-n0/90">
         {{ template "back-button" (dict "Params"
         "target,version,platform,board,arch,secureboot,selected-extensions"
         "Localizer" .Localizer)

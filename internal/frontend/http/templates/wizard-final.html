@@ -2,17 +2,17 @@
 {{ template "hidden-inputs" . }}
 
 {{ if .VEXAvailable }}
-<section id="scan-summary" class="mb-6 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm"
+<section id="scan-summary" class="mb-6 rounded-md border border-slate-300 dark:border-naturals-n5 bg-slate-50 dark:bg-naturals-n4 p-4 text-sm"
         data-scan-url="{{ .ScanBaseURL }}"
         data-enterprise="{{ if .Enterprise }}true{{ else }}false{{ end }}">
         <h2 class="text-base font-semibold mb-2">{{ t .Localizer "final.scan.title" }}</h2>
         {{ if .Enterprise }}
-        <p data-scan-state="loading" class="text-slate-600 dark:text-slate-300 mb-2">{{ t .Localizer "final.scan.loading" }}</p>
+        <p data-scan-state="loading" class="text-slate-600 dark:text-naturals-n12 mb-2">{{ t .Localizer "final.scan.loading" }}</p>
         <div data-scan-state="ready" class="hidden mb-2">
                 <p class="mb-2"><span data-scan-summary></span></p>
                 <ul class="flex flex-wrap gap-3 mb-2" data-scan-counts></ul>
         </div>
-        <p data-scan-state="error" class="hidden mb-2 text-red-600 dark:text-red-400"></p>
+        <p data-scan-state="error" class="hidden mb-2 text-red-r1"></p>
         <p class="text-xs">
                 {{ t .Localizer "final.scan.download" }}
                 <a class="ml-1 underline" data-scan-link="json">JSON</a>
@@ -26,15 +26,15 @@
 </section>
 {{ if .Enterprise }}
 <div id="scan-detail-modal" data-scan-modal class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
-        <div data-scan-modal-card class="relative w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg">
-                <div class="flex-none flex items-center justify-between py-2 px-4 border-b border-slate-200 dark:border-slate-700">
+        <div data-scan-modal-card class="relative w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden rounded-md border border-slate-300 dark:border-naturals-n5 bg-white dark:bg-naturals-n1 shadow-lg">
+                <div class="flex-none flex items-center justify-between py-2 px-4 border-b border-slate-200 dark:border-naturals-n5">
                         <h3 class="text-base font-semibold" data-scan-modal-title></h3>
-                        <button type="button" class="text-2xl leading-none bg-transparent border-0 cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-slate-100" data-scan-modal-close aria-label="Close">&times;</button>
+                        <button type="button" class="text-2xl leading-none bg-transparent border-0 cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-naturals-n13" data-scan-modal-close aria-label="Close">&times;</button>
                 </div>
                 <div data-scan-modal-body class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4">
                         <table class="w-full table-fixed text-xs border-collapse">
                                 <thead>
-                                        <tr class="text-left border-b border-slate-200 dark:border-slate-700">
+                                        <tr class="text-left border-b border-slate-200 dark:border-naturals-n5">
                                                 <th class="py-1 pr-3 w-40">CVE</th>
                                                 <th class="py-1 pr-3 w-[18%]">Package</th>
                                                 <th class="py-1 pr-3 w-28">Version</th>
@@ -57,7 +57,7 @@
                         a.href = base + '/' + formats[a.dataset.scanLink];
                 });
                 var severityClasses = {
-                        Critical:   'bg-red-600 text-white',
+                        Critical:   'bg-red-r1 text-white',
                         High:       'bg-orange-700 text-white',
                         Medium:     'bg-orange-500 text-white',
                         Low:        'bg-yellow-500 text-black',
@@ -127,7 +127,7 @@
                                 v.relatedVulnerabilities = m.relatedVulnerabilities || [];
                                 var a = m.artifact || {};
                                 var tr = document.createElement('tr');
-                                tr.className = 'border-b border-slate-100 dark:border-slate-800 align-top';
+                                tr.className = 'border-b border-slate-100 dark:border-naturals-n4 align-top';
                                 var cveID = preferredCveID(v);
                                 var url = bestURL(v);
                                 var cveCell = document.createElement('td');
@@ -229,7 +229,7 @@
         {{ t .Localizer "final.image" }}{{ template "copyable-text" .Schematic}}
 </div>
 
-<div class="mb-6 text-sm font-mono bg-slate-200 dark:bg-slate-700 p-1 whitespace-pre">{{ .Marshaled }}</div>
+<div class="mb-6 text-sm font-mono bg-slate-200 dark:bg-naturals-n5 p-1 whitespace-pre">{{ .Marshaled }}</div>
 
 <div class="mb-6 prose prose-sm dark:prose-invert max-w-none">
         <h2>{{ t .Localizer "final.first_boot" }}</h2>
@@ -380,7 +380,7 @@
         {{ end }}
 </div>
 
-<div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
+<div class="sticky bottom-0 z-10 -mx-6 mt-6 flex gap-3 border-t border-gray-200 bg-white/90 px-6 py-4 backdrop-blur dark:border-naturals-n5 dark:bg-naturals-n0/90">
         {{ template "back-button" (dict "Params"
         "target,version,platform,board,arch,secureboot,extensions,selected-bootloader,selected-cmdline,selected-overlay-options,selected-embedded-config"
         "Localizer" .Localizer) }}

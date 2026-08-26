@@ -12,21 +12,22 @@
     <script src="/js/clipboard.js"></script>
 </head>
 
-<body class="dark:bg-gray-900 antialiased">
-    <header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-gray-200 dark:bg-gray-900/80 dark:border-gray-800">
+<body class="dark:bg-naturals-n0 antialiased">
+    <header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-gray-200 dark:bg-naturals-n0/80 dark:border-naturals-n5">
         <div class="container mx-auto max-w-3xl flex items-center justify-between gap-4 px-6 py-3">
-            <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+            <h1 class="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-naturals-n14">
+                {{ template "talos-logo" }}
                 {{ if .Enterprise }}{{ t .Localizer "page.header.enterprise" }}{{ else }}{{ t .Localizer "page.header" }}{{ end }}
             </h1>
             <nav class="flex items-center gap-1 text-sm">
                 <a href="/"
-                    class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-naturals-n10 dark:hover:text-naturals-n13 dark:hover:bg-naturals-n5 transition-colors">
                     {{ t .Localizer "nodetokens.back_home" }}
                 </a>
-                <div class="w-px h-4 bg-gray-200 dark:bg-gray-700"></div>
+                <div class="w-px h-4 bg-gray-200 dark:bg-naturals-n5"></div>
                 <form method="POST" action="/logout">
                     <button type="submit"
-                        class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-naturals-n10 dark:hover:text-naturals-n13 dark:hover:bg-naturals-n5 transition-colors">
                         {{ t .Localizer "nav.logout" }}
                     </button>
                 </form>
@@ -36,49 +37,49 @@
     <main>
         <div class="container mx-auto max-w-3xl px-6 py-8">
             <div class="flex items-center justify-between gap-4 mb-4">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t .Localizer "nodetokens.title" }}</h2>
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-naturals-n14">{{ t .Localizer "nodetokens.title" }}</h2>
                 <button type="button" id="node-token-create-open"
-                    class="shrink-0 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center inline-flex items-center gap-1.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 transition-colors">
+                    class="shrink-0 text-white bg-primary-p4 hover:bg-primary-p3 focus:ring-4 focus:outline-none focus:ring-primary-p2 font-medium rounded-lg text-sm px-4 py-1.5 text-center inline-flex items-center gap-1.5 dark:bg-primary-p4 dark:hover:bg-primary-p3 dark:focus:ring-primary-p5 transition-colors">
                     <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 1v12M1 7h12" />
                     </svg>
                     {{ t .Localizer "nodetokens.create.button" }}
                 </button>
             </div>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ t .Localizer "nodetokens.description" }}</p>
+            <p class="text-sm text-gray-600 dark:text-naturals-n10 mb-6">{{ t .Localizer "nodetokens.description" }}</p>
 
-            <div id="node-tokens-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
+            <div id="node-tokens-error" class="hidden mb-4 text-sm text-red-r1"></div>
 
             <table class="w-full text-sm mb-6 hidden" id="node-tokens-table">
                 <thead>
-                    <tr class="text-left border-b border-gray-200 dark:border-gray-700">
-                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.table.name" }}</th>
-                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.table.created" }}</th>
-                        <th class="py-2 font-medium text-gray-500 dark:text-gray-400"></th>
+                    <tr class="text-left border-b border-gray-200 dark:border-naturals-n6">
+                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-naturals-n10">{{ t .Localizer "nodetokens.table.name" }}</th>
+                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-naturals-n10">{{ t .Localizer "nodetokens.table.created" }}</th>
+                        <th class="py-2 font-medium text-gray-500 dark:text-naturals-n10"></th>
                     </tr>
                 </thead>
                 <tbody id="node-tokens-rows"></tbody>
             </table>
-            <p id="node-tokens-empty" class="hidden text-sm text-gray-500 dark:text-gray-400 mb-6">{{ t .Localizer "nodetokens.empty" }}</p>
+            <p id="node-tokens-empty" class="hidden text-sm text-gray-500 dark:text-naturals-n10 mb-6">{{ t .Localizer "nodetokens.empty" }}</p>
         </div>
     </main>
 
     <div id="node-token-create-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
-        <div class="relative w-full max-w-md rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
-            <h2 class="text-base font-semibold mb-4 text-gray-900 dark:text-white">{{ t .Localizer "nodetokens.create.button" }}</h2>
-            <div id="node-token-create-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
+        <div class="relative w-full max-w-md rounded-md border border-slate-300 dark:border-naturals-n5 bg-white dark:bg-naturals-n1 shadow-lg p-6">
+            <h2 class="text-base font-semibold mb-4 text-gray-900 dark:text-naturals-n14">{{ t .Localizer "nodetokens.create.button" }}</h2>
+            <div id="node-token-create-error" class="hidden mb-4 text-sm text-red-r1"></div>
             <form id="node-tokens-create-form">
                 <label for="node-token-name"
-                    class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-1">{{ t .Localizer "nodetokens.create.name_label" }}</label>
+                    class="block text-sm font-medium text-gray-900 dark:text-naturals-n12 mb-1">{{ t .Localizer "nodetokens.create.name_label" }}</label>
                 <input type="text" id="node-token-name" name="name" required
-                    class="w-full bg-gray-50 border border-gray-300 text-sm text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                    class="w-full bg-gray-50 border border-gray-300 text-sm text-gray-900 rounded-lg focus:ring-primary-p3 focus:border-primary-p3 block p-2.5 mb-4 dark:bg-naturals-n5 dark:border-naturals-n6 dark:text-naturals-n14 dark:placeholder-naturals-n9 dark:focus:ring-primary-p3 dark:focus:border-primary-p3">
                 <div class="flex justify-end gap-2">
                     <button type="button" id="node-token-create-cancel"
-                        class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
+                        class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-naturals-n4 dark:text-naturals-n14 dark:border-naturals-n6 dark:hover:bg-naturals-n6">
                         {{ t .Localizer "nodetokens.create.cancel" }}
                     </button>
                     <button type="submit"
-                        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                        class="text-white bg-primary-p4 hover:bg-primary-p3 focus:ring-4 focus:outline-none focus:ring-primary-p2 font-medium rounded-lg text-sm px-4 py-1.5 text-center dark:bg-primary-p4 dark:hover:bg-primary-p3 dark:focus:ring-primary-p5">
                         {{ t .Localizer "nodetokens.create.button" }}
                     </button>
                 </div>
@@ -87,22 +88,22 @@
     </div>
 
     <div id="node-token-secret-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
-        <div class="relative w-full max-w-lg rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
-            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-white">{{ t .Localizer "nodetokens.secret.title" }}</h2>
-            <p class="text-sm text-red-600 dark:text-red-400 mb-4">{{ t .Localizer "nodetokens.secret.warning" }}</p>
+        <div class="relative w-full max-w-lg rounded-md border border-slate-300 dark:border-naturals-n5 bg-white dark:bg-naturals-n1 shadow-lg p-6">
+            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-naturals-n14">{{ t .Localizer "nodetokens.secret.title" }}</h2>
+            <p class="text-sm text-red-r1 mb-4">{{ t .Localizer "nodetokens.secret.warning" }}</p>
             <dl class="text-sm space-y-3 mb-4">
                 <div>
-                    <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.secret.token" }}</dt>
+                    <dt class="font-medium text-gray-500 dark:text-naturals-n10">{{ t .Localizer "nodetokens.secret.token" }}</dt>
                     <dd id="node-token-secret-token" class="mt-1"></dd>
                 </div>
                 <div>
-                    <dt class="font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.secret.org_id" }}</dt>
+                    <dt class="font-medium text-gray-500 dark:text-naturals-n10">{{ t .Localizer "nodetokens.secret.org_id" }}</dt>
                     <dd id="node-token-secret-org-id" class="mt-1"></dd>
                 </div>
             </dl>
             <div class="flex justify-end">
                 <button type="button" id="node-token-secret-close"
-                    class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
+                    class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-naturals-n4 dark:text-naturals-n14 dark:border-naturals-n6 dark:hover:bg-naturals-n6">
                     {{ t .Localizer "nodetokens.secret.close" }}
                 </button>
             </div>
@@ -110,16 +111,16 @@
     </div>
 
     <div id="node-token-revoke-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
-        <div class="relative w-full max-w-md rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
-            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-white">{{ t .Localizer "nodetokens.revoke.title" }}</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ t .Localizer "nodetokens.revoke.confirm" }}</p>
+        <div class="relative w-full max-w-md rounded-md border border-slate-300 dark:border-naturals-n5 bg-white dark:bg-naturals-n1 shadow-lg p-6">
+            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-naturals-n14">{{ t .Localizer "nodetokens.revoke.title" }}</h2>
+            <p class="text-sm text-gray-600 dark:text-naturals-n10 mb-4">{{ t .Localizer "nodetokens.revoke.confirm" }}</p>
             <div class="flex justify-end gap-2">
                 <button type="button" id="node-token-revoke-cancel"
-                    class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
+                    class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-naturals-n4 dark:text-naturals-n14 dark:border-naturals-n6 dark:hover:bg-naturals-n6">
                     {{ t .Localizer "nodetokens.create.cancel" }}
                 </button>
                 <button type="button" id="node-token-revoke-confirm"
-                    class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
+                    class="text-white bg-red-r1 hover:brightness-110 active:brightness-90 focus:ring-4 focus:outline-none focus:ring-red-r1/30 font-medium rounded-lg text-sm px-4 py-1.5 text-center transition-[filter] dark:focus:ring-red-r1/40">
                     {{ t .Localizer "nodetokens.revoke.button" }}
                 </button>
             </div>
@@ -160,17 +161,17 @@
             container.innerHTML = '';
 
             var div = document.createElement('div');
-            div.className = 'flex items-center gap-2 bg-slate-200 dark:bg-slate-700 p-1';
+            div.className = 'flex items-center gap-2 bg-slate-200 dark:bg-naturals-n5 p-1';
 
             var span = document.createElement('span');
-            span.className = 'font-mono break-all text-gray-900 dark:text-gray-100';
+            span.className = 'font-mono break-all text-gray-900 dark:text-naturals-n13';
             span.textContent = text;
             div.appendChild(span);
 
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.title = 'Copy to clipboard';
-            btn.className = 'p-0.5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors';
+            btn.className = 'p-0.5 text-gray-600 hover:text-gray-900 dark:text-naturals-n10 dark:hover:text-naturals-n13 rounded border border-gray-300 dark:border-naturals-n6 hover:bg-gray-100 dark:hover:bg-naturals-n6 transition-colors';
             btn.setAttribute('onclick', 'copyToClipboard(this)');
             btn.innerHTML = copyIcon;
             div.appendChild(btn);
@@ -193,15 +194,15 @@
 
             tokens.forEach(function(tok) {
                 var tr = document.createElement('tr');
-                tr.className = 'border-b border-gray-100 dark:border-gray-800';
+                tr.className = 'border-b border-gray-100 dark:border-naturals-n5';
 
                 var nameCell = document.createElement('td');
-                nameCell.className = 'py-2 pr-3 text-gray-900 dark:text-gray-100';
+                nameCell.className = 'py-2 pr-3 text-gray-900 dark:text-naturals-n13';
                 nameCell.textContent = tok.name;
                 tr.appendChild(nameCell);
 
                 var createdCell = document.createElement('td');
-                createdCell.className = 'py-2 pr-3 text-gray-500 dark:text-gray-400';
+                createdCell.className = 'py-2 pr-3 text-gray-500 dark:text-naturals-n10';
                 createdCell.textContent = tok.created_at ? new Date(tok.created_at).toLocaleString() : '';
                 tr.appendChild(createdCell);
 
@@ -209,7 +210,7 @@
                 actionCell.className = 'py-2 text-right';
                 var revokeBtn = document.createElement('button');
                 revokeBtn.type = 'button';
-                revokeBtn.className = 'text-red-600 hover:underline dark:text-red-400';
+                revokeBtn.className = 'text-red-r1 hover:underline';
                 revokeBtn.textContent = '{{ t .Localizer "nodetokens.revoke.button" }}';
                 revokeBtn.addEventListener('click', function() { showRevoke(tok.id); });
                 actionCell.appendChild(revokeBtn);
