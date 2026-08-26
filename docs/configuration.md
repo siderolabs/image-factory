@@ -670,6 +670,15 @@ Talosctl is the image containing the Talos CLI tool (talosctl-all).
 
 ---
 
+### `artifacts.core.components.imageFactory`
+
+- **Type:** `string`
+- **Env:** `ARTIFACTS_CORE_COMPONENTS_IMAGEFACTORY`
+
+ImageFactory is the image containing the Image Factory itself.
+
+---
+
 ### `artifacts.core.insecure`
 
 - **Type:** `bool`
@@ -1352,6 +1361,7 @@ artifacts:
     core:
         components:
             extensionManifest: siderolabs/extensions
+            imageFactory: siderolabs/image-factory
             imager: siderolabs/imager
             installer: siderolabs/installer
             installerBase: siderolabs/installer-base
@@ -1504,6 +1514,7 @@ secureBoot:
 
 ```env
 IF_ARTIFACTS_CORE_COMPONENTS_EXTENSIONMANIFEST=siderolabs/extensions
+IF_ARTIFACTS_CORE_COMPONENTS_IMAGEFACTORY=siderolabs/image-factory
 IF_ARTIFACTS_CORE_COMPONENTS_IMAGER=siderolabs/imager
 IF_ARTIFACTS_CORE_COMPONENTS_INSTALLER=siderolabs/installer
 IF_ARTIFACTS_CORE_COMPONENTS_INSTALLERBASE=siderolabs/installer-base

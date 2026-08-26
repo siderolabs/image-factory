@@ -246,7 +246,23 @@ func exprString(e ast.Expr) string {
 
 // collectUsage runs the CLI help command and captures the output.
 func collectUsage(ctx context.Context) (string, error) {
-	cmdHelp := exec.CommandContext(ctx, "go", "run", "./cmd/image-factory", "-h")
+	tmpDir, err := os.MkdirTemp("", "docgen")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp dir: %w", err)
+	}
+
+	defer os.RemoveAll(tmpDir) //nolint:errcheck
+
+	binary := filepath.Join(tmpDir, "image-factory")
+
+	build := exec.CommandContext(ctx, "go", "build", "-o", binary, "./cmd/image-factory")
+	build.Stderr = os.Stderr
+
+	if err := build.Run(); err != nil {
+		return "", fmt.Errorf("failed to build the CLI: %w", err)
+	}
+
+	cmdHelp := exec.CommandContext(ctx, binary, "-h")
 
 	buf := new(bytes.Buffer)
 

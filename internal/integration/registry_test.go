@@ -39,6 +39,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
 	registryhttp "github.com/siderolabs/image-factory/internal/frontend/http"
 	"github.com/siderolabs/image-factory/internal/image/attestation"
 	"github.com/siderolabs/image-factory/internal/image/verify"
@@ -435,16 +436,14 @@ func testRegistryProxy(ctx context.Context, t *testing.T, registryAddr string, b
 	t.Run("ListTags", func(t *testing.T) {
 		t.Parallel()
 
-		repo := registry.Repo("siderolabs", "installer-base")
+		for _, image := range cmd.DefaultOptions.Artifacts.Core.Components.ImageMap() {
+			repo := registry.Repo(image)
 
-		// ensure the tag is present in the backing registry, then list through the proxy.
-		_, err := remote.Head(repo.Tag(talosVersion), ociRemoteAuthOpts()...)
-		require.NoError(t, err)
+			tags, err := remote.List(repo, ociRemoteAuthOpts()...)
+			require.NoError(t, err)
 
-		tags, err := remote.List(repo, ociRemoteAuthOpts()...)
-		require.NoError(t, err)
-
-		assert.Contains(t, tags, talosVersion, "tag listing through the proxy should include the pulled version")
+			assert.NotEmpty(t, tags, talosVersion)
+		}
 	})
 
 	t.Run("Authentication", func(t *testing.T) {

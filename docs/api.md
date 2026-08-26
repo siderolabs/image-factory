@@ -683,6 +683,7 @@ Images are forwarded as-is, keeping their original signatures.
 * `extensions`
 * `overlays`
 * `talosctl-all`
+* `image-factory`
 
 Example: `docker pull factory.talos.dev/siderolabs/installer-base:v1.13.5`
 
