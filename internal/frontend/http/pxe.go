@@ -77,10 +77,24 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, r *http
 		return err
 	}
 
-	// Embed credentials in image asset URLs so iPXE can authenticate when fetching kernel/initramfs.
+	// Image asset URLs carry a credential so iPXE can authenticate when fetching kernel/initramfs:
+	// the download token this request was authenticated with, or the Basic credentials it arrived
+	// with. Forwarding the token as-is means the script expires with it; nothing is minted here.
 	imageBaseURL := f.options.ExternalPXEURL
+
 	if f.options.AuthProvider != nil {
-		if username, password, ok := r.BasicAuth(); ok {
+		// The script body is a bearer credential whichever branch below runs, and the Basic
+		// credentials it may embed do not expire, so the response must never be stored. The
+		// token branch of withAuth never reaches pinCacheControl, and the htpasswd provider
+		// pins nothing, so this is the only place that sets it.
+		w.Header().Set("Cache-Control", "no-store")
+
+		if token, ok := downloadTokenFromContext(ctx); ok {
+			u := *f.options.ExternalPXEURL
+			// JoinPath copies the URL and rewrites only the path, so the query survives.
+			u.RawQuery = url.Values{"token": {token}}.Encode()
+			imageBaseURL = &u
+		} else if username, password, ok := r.BasicAuth(); ok {
 			u := *f.options.ExternalPXEURL
 			u.User = url.UserPassword(username, password)
 			imageBaseURL = &u

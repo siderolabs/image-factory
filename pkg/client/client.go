@@ -177,8 +177,9 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 }
 
 // DownloadToken requests a short-lived JWT download token scoped to the
-// authenticated caller's identity. The token can be appended as ?token= to
-// any image download URL; one token covers all schematics owned by the caller.
+// authenticated caller's identity. The token can be appended as ?token= to any
+// image download URL, and to a PXE script URL, which forwards it into the asset
+// URLs of the script; one token covers all schematics owned by the caller.
 //
 // A positive ttl requests that lifetime, which the server accepts only within its
 // configured bounds; zero or less takes the server default.

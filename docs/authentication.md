@@ -35,7 +35,7 @@ Details that decide whether a request authenticates:
   The Auth0 order is deliberate: OCI clients take the first scheme they recognize, and only the Basic form carries a usable token for those clients.
   With [browser login](#browser-login) configured, a page navigation is sent to `/login` with a `303` instead, and an XHR gets the `401` with no challenge on it.
 
-There are two alternatives to this header: the [`?token=` query parameter](#the-token-query-parameter), accepted on image downloads only, and the session cookie [browser login](#browser-login) issues.
+There are two alternatives to this header: the [`?token=` query parameter](#the-token-query-parameter), accepted on image downloads and PXE scripts only, and the session cookie [browser login](#browser-login) issues.
 
 ## htpasswd
 
@@ -186,8 +186,11 @@ Verification allows a further 30s of clock leeway.
 ### The `?token=` query parameter
 
 - Its value is the `access_token` from `POST /download-token`, and nothing else.
-- It is accepted only on `GET` and `HEAD` under `/image/`.
-  It does not work on `/pxe/`, on the `/v2/` registry, on schematic routes, or on the SBOM, VEX and scan routes: elsewhere the parameter is ignored and the [`Authorization` header](#the-authorization-header) is the only credential.
+- It is accepted only on `GET` and `HEAD` under `/image/`, and on `GET` under `/pxe/`, the only method that route registers.
+  It does not work on the `/v2/` registry, on schematic routes, or on the SBOM, VEX and scan routes: elsewhere the parameter is ignored and the [`Authorization` header](#the-authorization-header) is the only credential.
+- On `/pxe/` the same token is forwarded into the kernel, initramfs and UKI URLs of the generated script, so an iPXE boot needs no credential of its own.
+  Nothing is minted there: the script expires with the token it was fetched with, and re-fetching the script with an expiring token cannot extend that lifetime.
+  A boot fetches its assets seconds after the script, so the default `5m` covers it; request a longer lifetime for a script that is stored and reused.
 - It is not interchangeable with that header.
   A download token is signed with the factory's own key rather than issued by the provider, so it is rejected as `Authorization: Bearer`; conversely an Auth0 JWT or an htpasswd password is not a download token and does not work as `?token=`.
 - It is checked before the header.
@@ -197,6 +200,9 @@ Verification allows a further 30s of clock leeway.
 
 The subject of a download token is the caller identity — `org_id`, or the username under htpasswd — not a schematic and not a path.
 Ownership is then enforced the same way it is for any other request, which means one token grants read access to every image owned by that identity for its lifetime, not only the URL it was pasted into.
+
+Because `/pxe/` accepts one, that read access covers the kernel command line a schematic produces, and so the extensions and kernel arguments it is built from — which is why an Auth0 [machine-scoped token](#machine-credentials) is denied there.
+A leaked download token therefore exposes how the identity's images are built, not only the image bytes.
 
 Treat the URL as the credential it is.
 It carries the token in the query string, where proxy and CDN access logs tend to record it.

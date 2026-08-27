@@ -163,7 +163,7 @@ Returns a vulnerability scan report. `:report` suffix: `.json`, `.table`, `.sari
 
 ### POST /download-token
 
-Registered only when Enterprise authentication is enabled. Returns a short-lived `{access_token, token_type, expires_in}` JWT for authenticated image URLs. Append it as `?token=<access_token>` only on `GET` or `HEAD /image/...`.
+Registered only when Enterprise authentication is enabled. Returns a short-lived `{access_token, token_type, expires_in}` JWT for authenticated image URLs. Append it as `?token=<access_token>` only on `GET` or `HEAD /image/...`, or on `GET /pxe/...`, which forwards it into the asset URLs of the script it returns.
 
 ### GET /.well-known/jwks.json
 

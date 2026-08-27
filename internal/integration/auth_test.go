@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -545,6 +546,12 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 		assertRequiresAuth(t, resp)
 	})
 
+	t.Run("PXE", func(t *testing.T) {
+		t.Parallel()
+
+		testDownloadTokenPXE(ctx, t, baseURL, schematicID)
+	})
+
 	t.Run("JWKSEndpoint", func(t *testing.T) {
 		t.Parallel()
 
@@ -568,6 +575,92 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 
 		require.NoError(t, json.Unmarshal(body, &doc))
 		assert.NotEmpty(t, doc.Keys)
+	})
+}
+
+// testDownloadTokenPXE verifies that /pxe accepts a download token and forwards that
+// same token into the asset URLs of the script it returns, so a boot needs no
+// credential of its own anywhere.
+func testDownloadTokenPXE(ctx context.Context, t *testing.T, baseURL, schematicID string) {
+	t.Helper()
+
+	const talosVersion = "v1.11.0"
+
+	for _, test := range []struct {
+		name       string
+		path       string
+		directives []string
+	}{
+		{name: "standard", path: "metal-amd64", directives: []string{"kernel", "initrd"}},
+		{name: "secureboot", path: "metal-amd64-secureboot", directives: []string{"kernel"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			token := getDownloadToken(ctx, t, baseURL)
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+				baseURL+"/pxe/"+schematicID+"/"+talosVersion+"/"+test.path+"?token="+token, nil)
+			require.NoError(t, err)
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"),
+				"the script body is a bearer credential")
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			script := string(body)
+
+			if _, password := authCredentials(); password != "" {
+				assert.NotContains(t, script, password,
+					"the token path must not embed userinfo credentials")
+			}
+
+			assetURLs := pxeAssetURLs(t, script, test.directives...)
+			require.Len(t, assetURLs, len(test.directives))
+
+			for _, assetURL := range assetURLs {
+				parsed, err := url.Parse(assetURL)
+				require.NoError(t, err)
+
+				assert.Equal(t, token, parsed.Query().Get("token"))
+
+				// The forwarded token has to actually authenticate the asset fetch,
+				// which is the only assertion proving the script can boot.
+				assetReq, err := http.NewRequestWithContext(ctx, http.MethodHead, assetURL, nil)
+				require.NoError(t, err)
+
+				assetResp, err := http.DefaultClient.Do(assetReq) //nolint:bodyclose // closed by the cleanup below
+				require.NoError(t, err)
+
+				t.Cleanup(func() { assetResp.Body.Close() }) //nolint:errcheck
+
+				assert.Equal(t, http.StatusOK, assetResp.StatusCode, "fetching %s", assetURL)
+			}
+		})
+	}
+
+	t.Run("tampered", func(t *testing.T) {
+		t.Parallel()
+
+		tampered := tamperSignature(t, getDownloadToken(ctx, t, baseURL))
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+			baseURL+"/pxe/"+schematicID+"/"+talosVersion+"/metal-amd64?token="+tampered, nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assertRequiresAuth(t, resp)
 	})
 }
 

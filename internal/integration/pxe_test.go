@@ -41,13 +41,19 @@ func downloadPXE(ctx context.Context, t *testing.T, baseURL string, schematicID,
 		resp.Body.Close()
 	})
 
+	if username, _ := authCredentials(); username != "" {
+		assert.Equal(t, "no-store", resp.Header.Get("Cache-Control"),
+			"the script embeds the Basic credentials it was fetched with")
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 
 	return string(body)
 }
 
-func checkPXENoRedirect(ctx context.Context, t *testing.T, pxe string, files ...string) {
+// pxeAssetURLs returns the asset URL of each named iPXE directive ("kernel", "initrd").
+func pxeAssetURLs(t *testing.T, pxe string, directives ...string) []string {
 	t.Helper()
 
 	scanner := bufio.NewScanner(strings.NewReader(pxe))
@@ -57,8 +63,8 @@ func checkPXENoRedirect(ctx context.Context, t *testing.T, pxe string, files ...
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 
-		for _, file := range files {
-			if strings.HasPrefix(line, file+" ") {
+		for _, directive := range directives {
+			if strings.HasPrefix(line, directive+" ") {
 				fields := strings.Fields(line)
 				if len(fields) > 1 {
 					urls = append(urls, fields[1])
@@ -69,7 +75,13 @@ func checkPXENoRedirect(ctx context.Context, t *testing.T, pxe string, files ...
 
 	require.NoError(t, scanner.Err())
 
-	for _, testURL := range urls {
+	return urls
+}
+
+func checkPXENoRedirect(ctx context.Context, t *testing.T, pxe string, files ...string) {
+	t.Helper()
+
+	for _, testURL := range pxeAssetURLs(t, pxe, files...) {
 		downloadNoRedirect(ctx, t, testURL)
 	}
 }

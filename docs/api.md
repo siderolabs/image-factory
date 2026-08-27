@@ -170,7 +170,8 @@ The lifetime can be requested with the `ttl` query parameter as a Go duration, e
 It must fall within `authentication.downloadTokenTTL.min` and `authentication.downloadTokenTTL.max`
 (`30s` and `8h` by default); anything else is rejected with `400`.
 
-The token is appended to an image URL as `?token=<access_token>` and is accepted only on `GET` and `HEAD` under `/image/`.
+The token is appended to an image or PXE URL as `?token=<access_token>` and is accepted only on `GET` and `HEAD` under `/image/`, and on `GET` under `/pxe/`, the only method that route registers.
+A `/pxe/` request forwards it into the asset URLs of the script it returns.
 One token covers every schematic owned by the caller, not just the URL it is used with; see [Authentication](authentication.md#download-tokens).
 
 ### `GET /.well-known/jwks.json`
@@ -554,13 +555,19 @@ Returns an iPXE script which downloads and boots Talos Linux with the specified 
 
 Access:
 
-| Auth     | `?token=`    | Machine scope | Ownership |
-| -------- | ------------ | ------------- | --------- |
-| required | not accepted | denied        | enforced  |
+| Auth     | `?token=` | Machine scope | Ownership |
+| -------- | --------- | ------------- | --------- |
+| required | accepted  | denied        | enforced  |
 
 The script embeds the schematic's kernel command line, which is schematic-derived customization, so a machine-scoped token is denied here for the same reason it cannot read a schematic definition.
-Download tokens are not accepted either.
-iPXE cannot send request headers, so an authenticated boot puts the credential in the URL: `https://<user>:<password>@pxe.talos.dev/pxe/...`, which the client encodes into `Authorization: Basic`.
+
+iPXE cannot send request headers, so the credential goes in the URL, and whichever one authenticated the request is carried into the asset URLs of the returned script:
+
+* a [download token](authentication.md#the-token-query-parameter) - `https://pxe.talos.dev/pxe/...?token=<token>` - is forwarded as `?token=` on the kernel, initramfs and UKI URLs, so no long-lived credential appears in the script.
+  The script expires with the token; nothing is minted here, so re-fetching it with an expiring token does not extend that lifetime.
+* Basic credentials - `https://<user>:<password>@pxe.talos.dev/pxe/...`, which the client encodes into `Authorization: Basic` - are embedded as userinfo on those same URLs.
+
+Either credential makes the body worth stealing, so every authenticated response from this route is `Cache-Control: no-store`.
 
 * `:schematic` is a schematic ID returned by `POST /schematics`
 * `:version` is a Talos Linux version, e.g. `v1.5.0`

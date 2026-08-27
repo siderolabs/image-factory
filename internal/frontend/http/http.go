@@ -348,6 +348,26 @@ func requestIDFrom(r *http.Request) string {
 	return uuid.NewString()
 }
 
+// tokenAcceptedOn reports whether a download token may authenticate this path.
+//
+// Both paths only read artifacts owned by the token's subject: /image/ serves them,
+// and /pxe/ describes how to fetch them. Everywhere else the parameter is ignored so
+// a token cannot stand in for a full credential.
+func tokenAcceptedOn(path string) bool {
+	return strings.HasPrefix(path, "/image/") || strings.HasPrefix(path, "/pxe/")
+}
+
+// downloadTokenKey keys the verified download token on the request context.
+type downloadTokenKey struct{}
+
+// downloadTokenFromContext returns the download token that authenticated the request.
+// It is only ever set after Verify succeeded, so a caller may forward it as-is.
+func downloadTokenFromContext(ctx context.Context) (string, bool) {
+	token, ok := ctx.Value(downloadTokenKey{}).(string)
+
+	return token, ok
+}
+
 // withAuth wraps h with the auth middleware when authentication is required.
 //
 // The middleware stores the username on a context it derives internally, which
@@ -361,16 +381,17 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 	authProvider := f.options.AuthProvider
 
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-		// Download token: if the request carries a valid JWT on an image
-		// download path, extract the subject as the authenticated identity.
+		// Download token: if the request carries a valid JWT on a path where tokens
+		// are accepted, extract the subject as the authenticated identity.
 		// Ownership is enforced normally by schematicFactory.Get() since the
-		// JWT subject is set on the context. Tokens are only accepted on
-		// GET/HEAD /image/ to prevent use on other endpoints.
-		if f.options.DownloadTokenIssuer != nil && (r.Method == http.MethodGet || r.Method == http.MethodHead) && strings.HasPrefix(r.URL.Path, "/image/") && r.URL.RawQuery != "" {
+		// JWT subject is set on the context. The verified token is also put on the
+		// context so handlePXE can forward it into the asset URLs it emits.
+		if f.options.DownloadTokenIssuer != nil && (r.Method == http.MethodGet || r.Method == http.MethodHead) && tokenAcceptedOn(r.URL.Path) && r.URL.RawQuery != "" {
 			if tokenStr := r.URL.Query().Get("token"); tokenStr != "" {
 				if sub, err := f.options.DownloadTokenIssuer.Verify(tokenStr); err == nil {
 					*username = sub
 					ctx = authProvider.ContextWithUsername(ctx, sub)
+					ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)
 
 					return h(ctx, w, r, p)
 				}
