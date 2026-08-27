@@ -40,6 +40,7 @@ type OverlayInfo struct {
 type Client struct {
 	baseURL      *url.URL
 	extraHeaders http.Header
+	tokenSource  TokenSource
 	client       http.Client
 }
 
@@ -56,6 +57,7 @@ func New(baseURL string, options ...Option) (*Client, error) {
 		baseURL:      bURL,
 		client:       opts.Client,
 		extraHeaders: opts.ExtraHeaders,
+		tokenSource:  opts.TokenSource,
 	}
 
 	return c, nil
@@ -303,6 +305,17 @@ func (c *Client) do(ctx context.Context, method, uri string, responseData any, o
 	}
 
 	maps.Copy(req.Header, c.extraHeaders)
+
+	if c.tokenSource != nil {
+		token, tokenErr := c.tokenSource(ctx)
+		if tokenErr != nil {
+			return fmt.Errorf("failed to get token: %w", tokenErr)
+		}
+
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+	}
 
 	resp, err := c.client.Do(req)
 	if err != nil {
