@@ -1,3 +1,53 @@
+## [image-factory 1.6.0](https://github.com/siderolabs/image-factory/releases/tag/v1.6.0) (2026-08-28)
+
+Welcome to the v1.6.0 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Unified Installer Signing
+
+Installer images for Talos 1.14.0 and newer are now always signed when SecureBoot assets are configured.
+
+Unified installers embed a UKI regardless of the SecureBoot flag, so `installer` and `installer-secureboot` now resolve to the same profile
+and share cached assets instead of being built and stored twice.
+
+Talos versions before 1.14.0 are unaffected: signing an installer there also turns on `lockdown=confidentiality`, so the two variants stay distinct.
+
+
+### Contributors
+
+* Spencer Smith
+* Mateusz Urbanek
+* Edward Sammut Alessi
+* Orzelius
+
+### Changes
+<details><summary>10 commits</summary>
+<p>
+
+* [`9244e82`](https://github.com/siderolabs/image-factory/commit/9244e820bd67cb3bfc427033f9344e50ac2ee857) feat: sign installer profile when unified secureboot supported
+* [`3b58dfa`](https://github.com/siderolabs/image-factory/commit/3b58dfa0fe48cd7d8366cac92d52d42e7f156a50) feat(enterprise): add a node tokens page
+* [`82bd329`](https://github.com/siderolabs/image-factory/commit/82bd3298b90aad729c34a5fa848f93d777961f95) feat: add node token methods to the factory client
+* [`9312d82`](https://github.com/siderolabs/image-factory/commit/9312d82ff73feb8fd303dfd8d12ae498f34549f5) feat(enterprise): add self-issued node tokens
+* [`4691e01`](https://github.com/siderolabs/image-factory/commit/4691e0156da8dd62d741e9c5ba4d8e4ab534b19b) feat: add WithTokenSource to include bearer tokens
+* [`b115d17`](https://github.com/siderolabs/image-factory/commit/b115d17c79e68b568f1f3f526d1bf22bf253b398) chore(enterprise): drop the Auth0 Management API node-token design
+* [`6f08ed9`](https://github.com/siderolabs/image-factory/commit/6f08ed978167b88d5f1d384493f755aa07cb5cec) feat(enterprise): extend the download-token issuer to a second audience
+* [`c51ac14`](https://github.com/siderolabs/image-factory/commit/c51ac142788af8de5217d8116628ad43ec4f9d70) feat: accept download token on /pxe/ and forward it
+* [`7252d87`](https://github.com/siderolabs/image-factory/commit/7252d8728c5a9f83b5ce3c648f00a9b3f522961b) chore: allow proxying IF through IF
+* [`f45ec71`](https://github.com/siderolabs/image-factory/commit/f45ec713035d424a43a5686b94515a07c946a303) fix(enterprise): read the org_id claim from if_org_id
+</p>
+</details>
+
+### Dependency Changes
+
+* **github.com/prometheus/client_golang**  v1.24.0 -> v1.24.1
+* **github.com/stretchr/testify**          v1.12.0 -> v1.11.1
+
+Previous release can be found at [v1.5.1](https://github.com/siderolabs/image-factory/releases/tag/v1.5.1)
+
 ## [image-factory 1.5.1](https://github.com/siderolabs/image-factory/releases/tag/v1.5.1) (2026-08-25)
 
 Welcome to the v1.5.1 release of image-factory!
