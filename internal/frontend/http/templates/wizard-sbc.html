@@ -1,15 +1,12 @@
 {{ define "wizard-sbc" }}
 {{ template "hidden-inputs" . }}
 {{ template "header" (t .Localizer "singleboard.title") }}
-<div class="mb-6">
+<div class="mb-6 space-y-2">
     {{ range .SBCs }}
     {{ template "radio-with-description" dict "name" "board" "value" .Name "current" $.SelectedBoard "label" .Label "description" (dynamic_template "board-description" (dict "Board" . "Version" $.Version "Localizer" $.Localizer))  }}
     {{ end }}
 
-    <div class="flex gap-4">
-        {{ template "back-button" (dict "Params" "target,selected-version" "Localizer" .Localizer) }}
-        {{ template "next-button" . }}
-    </div>
+    {{ template "wizard-footer" (dict "BackParams" "target,selected-version" "ShowNext" true "Localizer" .Localizer) }}
 </div>
 {{ end }}
 

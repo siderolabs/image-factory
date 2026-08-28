@@ -23,3 +23,12 @@ func (f *Frontend) registerBrowserLogin(registerPublicRoute func(func(string, ht
 	registerPublicRoute(f.router.POST, "/logout", blp.LogoutHandler())
 	registerPublicRoute(f.router.GET, blp.CallbackPath(), blp.CallbackHandler())
 }
+
+// logoutEnabled reports whether pages should show a logout link, which requires the auth
+// provider to serve the interactive browser login flow — htpasswd's Basic-auth challenge
+// has no route to hit that would clear the browser's cached credentials.
+func (f *Frontend) logoutEnabled() bool {
+	blp, ok := f.options.AuthProvider.(enterprise.BrowserLoginProvider)
+
+	return ok && blp.BrowserLoginEnabled()
+}

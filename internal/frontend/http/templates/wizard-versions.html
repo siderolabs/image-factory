@@ -29,10 +29,7 @@
     <div class="mt-6" id="version-doc">
         {{ template "version-doc" (dict "Version" $defaultVersion "Localizer" .Localizer) }}
     </div>
-    <div class="flex gap-4">
-        {{ template "back-button" (dict "Params" "selected-target" "Localizer" .Localizer) }}
-        {{ template "next-button" . }}
-    </div>
+    {{ template "wizard-footer" (dict "BackParams" "selected-target" "ShowNext" true "Localizer" .Localizer) }}
 </div>
 {{ end }}
 

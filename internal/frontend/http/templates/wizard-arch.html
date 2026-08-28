@@ -1,7 +1,7 @@
 {{ define "wizard-arch" }}
 {{ template "hidden-inputs" . }}
 {{ template "header" (t .Localizer "architecture.title") }}
-<div class="mb-6">
+<div class="mb-6 space-y-2">
     {{ template "radio-with-description" dict "name" "arch" "value" "amd64" "current" .SelectedArch "label" "amd64" "extraLabelClass" "font-mono" "description" (dynamic_template "arch-description" (dict "Target" .Target "Arch" "amd64" "Localizer" .Localizer)) }}
     {{ template "radio-with-description" dict "name" "arch" "value" "arm64" "current" .SelectedArch "label" "arm64" "extraLabelClass" "font-mono" "description" (dynamic_template "arch-description" (dict "Target" .Target "Arch" "arm64" "Localizer" .Localizer)) }}
     {{ if .SecureBootSupported }}
@@ -16,14 +16,11 @@
             </div>
         </div>
     {{ end }}
-    <div class="flex gap-4">
-        {{ if eq .Target "metal" }}
-            {{ template "back-button" (dict "Params" "target,selected-version" "Localizer" .Localizer) }}
-        {{ else }}
-            {{ template "back-button" (dict "Params" "target,version,selected-platform" "Localizer" .Localizer) }}
-        {{ end }}
-        {{ template "next-button" . }}
-    </div>
+    {{ if eq .Target "metal" }}
+        {{ template "wizard-footer" (dict "BackParams" "target,selected-version" "ShowNext" true "Localizer" .Localizer) }}
+    {{ else }}
+        {{ template "wizard-footer" (dict "BackParams" "target,version,selected-platform" "ShowNext" true "Localizer" .Localizer) }}
+    {{ end }}
 </div>
 {{ end }}
 
