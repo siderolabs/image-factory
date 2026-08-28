@@ -36,6 +36,13 @@ type OverlayInfo struct {
 	Digest string `json:"digest"`
 }
 
+// NodeTokenInfo defines a node token list response item.
+type NodeTokenInfo struct {
+	CreatedAt time.Time `json:"created_at"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+}
+
 // Client is the Image Factory HTTP API client.
 type Client struct {
 	baseURL      *url.URL
@@ -201,6 +208,50 @@ func (c *Client) DownloadToken(ctx context.Context, ttl time.Duration) (string, 
 	}
 
 	return response.AccessToken, nil
+}
+
+// NodeTokenList returns the caller's currently active node tokens.
+func (c *Client) NodeTokenList(ctx context.Context) ([]NodeTokenInfo, error) {
+	var response struct {
+		Tokens []NodeTokenInfo `json:"tokens"`
+	}
+
+	if err := c.do(ctx, http.MethodGet, "/node-tokens", &response); err != nil {
+		return nil, err
+	}
+
+	return response.Tokens, nil
+}
+
+// NodeTokenCreate mints a new node token under name, returning its ID and the token itself.
+// The token is only ever returned at creation time; it can't be retrieved again afterward.
+func (c *Client) NodeTokenCreate(ctx context.Context, name string) (id, token string, err error) {
+	body, err := json.Marshal(struct {
+		Name string `json:"name"`
+	}{Name: name})
+	if err != nil {
+		return "", "", err
+	}
+
+	var response struct {
+		ID    string `json:"id"`
+		Token string `json:"token"`
+	}
+
+	if err := c.do(
+		ctx, http.MethodPost, "/node-tokens", &response,
+		WithRequestData(body),
+		WithHeaders(map[string]string{"Content-Type": "application/json"}),
+	); err != nil {
+		return "", "", err
+	}
+
+	return response.ID, response.Token, nil
+}
+
+// NodeTokenRevoke revokes the node token with the given ID.
+func (c *Client) NodeTokenRevoke(ctx context.Context, id string) error {
+	return c.do(ctx, http.MethodPost, fmt.Sprintf("/node-tokens/%s/revoke", id), nil)
 }
 
 // ScanReport downloads a vulnerability scan report for the given schematic, Talos version,
