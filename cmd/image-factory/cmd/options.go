@@ -62,7 +62,15 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("audit.mode must be one of %v, got %q", auditModeOptions, o.Audit.Mode)
 	}
 
-	return o.Authentication.validate()
+	if err := o.Authentication.validate(); err != nil {
+		return err
+	}
+
+	if o.Authentication.Enabled {
+		return o.Enterprise.NodeTokens.validate()
+	}
+
+	return nil
 }
 
 // validate checks the settings required by the selected provider, so that a misconfiguration
@@ -107,13 +115,19 @@ func (o AuthenticationOptions) validate() error {
 // validate checks that the download token lifetime bounds are sane and contain the default,
 // so that a bad range fails at startup rather than on the first token request.
 func (o DownloadTokenTTL) validate() error {
+	return validateTTLBounds("authentication.downloadTokenTTL", o.Min, o.Max, o.Default)
+}
+
+// validateTTLBounds checks that a [min, max] TTL range is sane and contains default. prefix
+// identifies the config path in error messages, e.g. "authentication.downloadTokenTTL".
+func validateTTLBounds(prefix string, minTTL, maxTTL, defaultTTL time.Duration) error {
 	switch {
-	case o.Min <= 0:
-		return fmt.Errorf("authentication.downloadTokenTTL.min must be positive, got %s", o.Min)
-	case o.Max < o.Min:
-		return fmt.Errorf("authentication.downloadTokenTTL.max %s is below .min %s", o.Max, o.Min)
-	case o.Default < o.Min || o.Default > o.Max:
-		return fmt.Errorf("authentication.downloadTokenTTL.default %s is outside [%s, %s]", o.Default, o.Min, o.Max)
+	case minTTL <= 0:
+		return fmt.Errorf("%s.min must be positive, got %s", prefix, minTTL)
+	case maxTTL < minTTL:
+		return fmt.Errorf("%s.max %s is below .min %s", prefix, maxTTL, minTTL)
+	case defaultTTL < minTTL || defaultTTL > maxTTL:
+		return fmt.Errorf("%s.default %s is outside [%s, %s]", prefix, defaultTTL, minTTL, maxTTL)
 	default:
 		return nil
 	}
@@ -758,6 +772,64 @@ type EnterpriseOptions struct {
 
 	// VEX contains configuration for VEX data fetching.
 	VEX VEXOptions `koanf:"vex"`
+
+	// NodeTokens contains configuration for self-issued node token management.
+	NodeTokens NodeTokenOptions `koanf:"nodeTokens"`
+}
+
+// NodeTokenOptions configures self-issued node token issuance, storage, and verification.
+type NodeTokenOptions struct {
+	// KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing node tokens.
+	// Kept separate from the download-token key so compromising one doesn't compromise the other.
+	// If unset, a fresh key is generated at startup, which only works for single-replica deployments.
+	KeyPath string `koanf:"keyPath"`
+
+	// Storage is the OCI repository used to persist the per-org node-token index
+	// (the list of active tokens; presence in the index is what makes a token valid).
+	Storage OCIRepositoryOptions `koanf:"storage"`
+
+	// TTL bounds the lifetime of issued node tokens.
+	TTL NodeTokenTTL `koanf:"ttl"`
+
+	// VerificationCacheRefreshInterval bounds how stale the in-memory verification cache may be before it's refreshed from storage.
+	// This is also the bound on how long a revoked token may keep working after revocation.
+	VerificationCacheRefreshInterval time.Duration `koanf:"verificationCacheRefreshInterval"`
+
+	// MaxPerOrg caps how many node tokens an org may have active at once.
+	MaxPerOrg int `koanf:"maxPerOrg"`
+}
+
+// NodeTokenTTL defines the validity duration for node tokens.
+//
+// Unlike download tokens, a node token isn't refreshed once it's written into a Talos machine
+// config, so its default lifetime is expected to be long (up to Max).
+type NodeTokenTTL struct {
+	// Max is the longest validity duration a caller may request.
+	Max time.Duration `koanf:"max"`
+
+	// Min is the shortest validity duration a caller may request.
+	Min time.Duration `koanf:"min"`
+
+	// Default is the validity duration granted when the caller requests no explicit TTL.
+	Default time.Duration `koanf:"default"`
+}
+
+// validate checks that the node token lifetime bounds are sane and contain the default,
+// and that the per-org cap is positive, so a bad config fails at startup rather than on
+// the first node-token request.
+func (o NodeTokenOptions) validate() error {
+	if err := validateTTLBounds("enterprise.nodeTokens.ttl", o.TTL.Min, o.TTL.Max, o.TTL.Default); err != nil {
+		return err
+	}
+
+	switch {
+	case o.MaxPerOrg <= 0:
+		return fmt.Errorf("enterprise.nodeTokens.maxPerOrg must be positive, got %d", o.MaxPerOrg)
+	case o.VerificationCacheRefreshInterval <= 0:
+		return fmt.Errorf("enterprise.nodeTokens.verificationCacheRefreshInterval must be positive, got %s", o.VerificationCacheRefreshInterval)
+	default:
+		return nil
+	}
 }
 
 // ExtraExtensionsOptions configures custom extensions offered alongside the official ones.
@@ -920,6 +992,20 @@ var DefaultOptions = Options{
 				Namespace:  "siderolabs/image-factory",
 				Repository: "spdx-cache",
 			},
+		},
+		NodeTokens: NodeTokenOptions{
+			Storage: OCIRepositoryOptions{
+				Registry:   "ghcr.io",
+				Namespace:  "siderolabs/image-factory",
+				Repository: "node-tokens",
+			},
+			TTL: NodeTokenTTL{
+				Default: 365 * 24 * time.Hour,
+				Max:     365 * 24 * time.Hour,
+				Min:     24 * time.Hour,
+			},
+			VerificationCacheRefreshInterval: 5 * time.Minute,
+			MaxPerOrg:                        10,
 		},
 		Scanner: ScannerOptions{
 			DatabaseURL:      "https://grype.anchore.io/databases",

@@ -72,6 +72,7 @@ type Options struct {
 	InstallerSBOMSource              enterprise.SPDXSource
 	AuthProvider                     enterprise.AuthProvider
 	DownloadTokenIssuer              enterprise.DownloadTokenIssuer
+	NodeTokenVerifier                enterprise.NodeTokenVerifier
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
 	AuditSink                        audit.Sink
@@ -357,6 +358,12 @@ func tokenAcceptedOn(path string) bool {
 	return strings.HasPrefix(path, "/image/") || strings.HasPrefix(path, "/pxe/")
 }
 
+// nodeTokenAcceptedOn reports whether path is on the pull-only registry surface a node
+// token may authenticate: schematic-derived images and the OCI registry API.
+func nodeTokenAcceptedOn(path string) bool {
+	return strings.HasPrefix(path, "/image/") || path == "/v2" || strings.HasPrefix(path, "/v2/")
+}
+
 // downloadTokenKey keys the verified download token on the request context.
 type downloadTokenKey struct{}
 
@@ -398,6 +405,19 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 			}
 		}
 
+		// Node token: a self-issued, long-lived credential nodes present to the registry,
+		// scoped to the same pull-only surface as a machine-scoped Auth0 token.
+		if f.options.NodeTokenVerifier != nil && (r.Method == http.MethodGet || r.Method == http.MethodHead) && nodeTokenAcceptedOn(r.URL.Path) {
+			if tokenStr := extractBearerOrBasicToken(r); tokenStr != "" {
+				if orgID, ok := f.options.NodeTokenVerifier.Verify(ctx, tokenStr); ok {
+					*username = orgID
+					ctx = authProvider.ContextWithUsername(ctx, orgID)
+
+					return h(ctx, w, r, p)
+				}
+			}
+		}
+
 		err := authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 			*username, _ = authProvider.UsernameFromContext(ctx)
 
@@ -416,6 +436,24 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 
 		return err
 	}
+}
+
+// extractBearerOrBasicToken pulls a bearer credential from the Authorization header, checking
+// both the Bearer scheme and HTTP Basic auth, since OCI/registry clients commonly send a token
+// as the Basic password rather than a Bearer header.
+func extractBearerOrBasicToken(r *http.Request) string {
+	scheme, value, _ := strings.Cut(r.Header.Get("Authorization"), " ")
+
+	// RFC 9110 makes the scheme case-insensitive; some clients send "bearer".
+	if strings.EqualFold(scheme, "Bearer") {
+		return value
+	}
+
+	if _, password, ok := r.BasicAuth(); ok {
+		return password
+	}
+
+	return ""
 }
 
 // audit records one entry for an authenticated request; a sink failure is logged

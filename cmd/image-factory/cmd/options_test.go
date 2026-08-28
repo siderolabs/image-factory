@@ -31,6 +31,7 @@ func auth0OptsWithSessionKey(sessionKey string) cmd.Options {
 				SessionKey: sessionKey,
 			},
 		},
+		Enterprise: cmd.EnterpriseOptions{NodeTokens: cmd.DefaultOptions.Enterprise.NodeTokens},
 	}
 }
 
@@ -215,6 +216,7 @@ func TestOCIRepositoryOptions(t *testing.T) {
 	})
 }
 
+//nolint:maintidx
 func TestOptionsValidate(t *testing.T) {
 	t.Parallel()
 
@@ -303,7 +305,25 @@ func TestOptionsValidate(t *testing.T) {
 					Auth0:            cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
 					DownloadTokenTTL: cmd.DefaultOptions.Authentication.DownloadTokenTTL,
 				},
+				Enterprise: cmd.EnterpriseOptions{NodeTokens: cmd.DefaultOptions.Enterprise.NodeTokens},
 			},
+		},
+		{
+			name: "authentication enabled without a positive nodeTokens maxPerOrg",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:          true,
+					Provider:         "auth0",
+					Auth0:            cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
+					DownloadTokenTTL: cmd.DefaultOptions.Authentication.DownloadTokenTTL,
+				},
+				Enterprise: cmd.EnterpriseOptions{NodeTokens: cmd.NodeTokenOptions{
+					TTL:                              cmd.DefaultOptions.Enterprise.NodeTokens.TTL,
+					VerificationCacheRefreshInterval: cmd.DefaultOptions.Enterprise.NodeTokens.VerificationCacheRefreshInterval,
+				}},
+			},
+			expectError: "enterprise.nodeTokens.maxPerOrg must be positive",
 		},
 		{
 			name: "download token TTL without bounds",

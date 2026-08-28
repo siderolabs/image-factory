@@ -23,6 +23,7 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/checksum"
 	enterprisedt "github.com/siderolabs/image-factory/enterprise/downloadtoken"
 	"github.com/siderolabs/image-factory/enterprise/installerattestation"
+	"github.com/siderolabs/image-factory/enterprise/nodetoken"
 	"github.com/siderolabs/image-factory/enterprise/scanner"
 	scannerbuilder "github.com/siderolabs/image-factory/enterprise/scanner/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx"
@@ -257,4 +258,47 @@ func NewDownloadTokenFrontend(issuer DownloadTokenIssuer, authProvider AuthProvi
 // NewJWKSFrontend returns the FrontendPlugin for the JWKS public key endpoint.
 func NewJWKSFrontend(issuer DownloadTokenIssuer) FrontendPlugin {
 	return enterprisedt.NewJWKSFrontend(issuer)
+}
+
+// NewNodeTokenFrontends returns the node-token FrontendPlugins together with a NodeTokenVerifier.
+func NewNodeTokenFrontends(authProvider AuthProvider, opts NodeTokenOptions) ([]FrontendPlugin, NodeTokenVerifier, error) {
+	var (
+		issuer *downloadtoken.Issuer
+		err    error
+	)
+
+	if opts.KeyPath != "" {
+		issuer, err = downloadtoken.LoadIssuer(opts.KeyPath, opts.TTL, downloadtoken.NodeAudience)
+	} else {
+		issuer, err = downloadtoken.GenerateIssuer(opts.TTL, downloadtoken.NodeAudience)
+	}
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to initialize node token issuer: %w", err)
+	}
+
+	var repoOpts []name.Option
+
+	if opts.StorageInsecure {
+		repoOpts = append(repoOpts, name.Insecure)
+	}
+
+	repo, err := name.NewRepository(opts.StorageRepository, repoOpts...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse node token storage repository: %w", err)
+	}
+
+	storage, err := nodetoken.NewStorage(repo, opts.VerificationCacheRefreshInterval, opts.RemoteOptions)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to initialize node token storage: %w", err)
+	}
+
+	manager := nodetoken.NewManager(issuer, storage)
+
+	plugins := []FrontendPlugin{
+		nodetoken.NewListCreateFrontend(manager, authProvider, opts.MaxPerOrg),
+		nodetoken.NewRevokeFrontend(manager, authProvider),
+	}
+
+	return plugins, manager, nil
 }

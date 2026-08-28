@@ -126,7 +126,9 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		return err
 	}
 
-	enterprisePlugins, spdxSource, err := buildEnterprisePlugins(ctx, eg, logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, authProvider, downloadTokenIssuer, opts)
+	enterprisePlugins, spdxSource, nodeTokenVerifier, err := buildEnterprisePlugins(
+		ctx, eg, logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, authProvider, downloadTokenIssuer, opts,
+	)
 	if err != nil {
 		return err
 	}
@@ -158,6 +160,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 
 	frontendOptions.AuditSink = auditSink
 	frontendOptions.DownloadTokenIssuer = downloadTokenIssuer
+	frontendOptions.NodeTokenVerifier = nodeTokenVerifier
 	frontendOptions.InstallerSBOMSource = spdxSource
 
 	signatureWriter, err := buildSignatureWriter(logger, frontendOptions.CacheImageSigner, assetCache)
@@ -294,9 +297,9 @@ func buildEnterprisePlugins(
 	authProvider enterprise.AuthProvider,
 	downloadTokenIssuer enterprise.DownloadTokenIssuer,
 	opts Options,
-) ([]enterprise.FrontendPlugin, enterprise.SPDXSource, error) {
+) ([]enterprise.FrontendPlugin, enterprise.SPDXSource, enterprise.NodeTokenVerifier, error) {
 	if !enterprise.Enabled() {
-		return nil, nil, nil //nolint:nilnil
+		return nil, nil, nil, nil
 	}
 
 	spdxFrontend, spdxSource, err := enterprise.NewSpdxFrontend(logger, enterprise.SPDXOptions{
@@ -312,12 +315,12 @@ func buildEnterprisePlugins(
 		RegistryRefreshInterval: opts.Artifacts.RefreshInterval,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize SPDX frontend: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to initialize SPDX frontend: %w", err)
 	}
 
 	imageVerifyOptions, err := buildImageVerifyOptions(logger, opts)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	vexFrontend, vexSource, err := enterprise.NewVEXFrontend(ctx, eg, logger, enterprise.VEXOptions{
@@ -331,7 +334,7 @@ func buildEnterprisePlugins(
 		VerifyOptions:    imageVerifyOptions,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize VEX frontend: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to initialize VEX frontend: %w", err)
 	}
 
 	scannerFrontend, err := enterprise.NewScannerFrontend(ctx, eg, logger, enterprise.ScannerOptions{
@@ -347,7 +350,7 @@ func buildEnterprisePlugins(
 		CacheCapacity:    opts.Enterprise.Scanner.Cache.Capacity,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize scanner frontend: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to initialize scanner frontend: %w", err)
 	}
 
 	plugins := []enterprise.FrontendPlugin{spdxFrontend, vexFrontend, scannerFrontend}
@@ -360,7 +363,32 @@ func buildEnterprisePlugins(
 		)
 	}
 
-	return plugins, spdxSource, nil
+	var nodeTokenVerifier enterprise.NodeTokenVerifier
+
+	if authProvider != nil {
+		var nodeTokenPlugins []enterprise.FrontendPlugin
+
+		nodeTokenPlugins, nodeTokenVerifier, err = enterprise.NewNodeTokenFrontends(authProvider, enterprise.NodeTokenOptions{
+			KeyPath: opts.Enterprise.NodeTokens.KeyPath,
+			TTL: enterprise.DownloadTokenTTL{
+				Default: opts.Enterprise.NodeTokens.TTL.Default,
+				Min:     opts.Enterprise.NodeTokens.TTL.Min,
+				Max:     opts.Enterprise.NodeTokens.TTL.Max,
+			},
+			StorageRepository:                opts.Enterprise.NodeTokens.Storage.String(),
+			StorageInsecure:                  opts.Enterprise.NodeTokens.Storage.Insecure,
+			RemoteOptions:                    remoteOptions(),
+			VerificationCacheRefreshInterval: opts.Enterprise.NodeTokens.VerificationCacheRefreshInterval,
+			MaxPerOrg:                        opts.Enterprise.NodeTokens.MaxPerOrg,
+		})
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to initialize node token frontends: %w", err)
+		}
+
+		plugins = append(plugins, nodeTokenPlugins...)
+	}
+
+	return plugins, spdxSource, nodeTokenVerifier, nil
 }
 
 func buildFrontendOptions(cacheImageSigner signer.Signer, authProvider enterprise.AuthProvider, opts Options) (frontendhttp.Options, error) {

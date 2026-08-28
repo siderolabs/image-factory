@@ -157,6 +157,24 @@ type DownloadTokenIssuer interface {
 // caller does not ask for one, and the bounds a caller may request within.
 type DownloadTokenTTL = downloadtoken.TTL
 
+// NodeTokenVerifier reports the org ID a bearer credential authenticates, or ok=false if it
+// isn't a currently valid, self-issued node token.
+type NodeTokenVerifier interface {
+	Verify(ctx context.Context, tokenStr string) (orgID string, ok bool)
+}
+
+// NodeTokenOptions holds configuration for self-issued node token issuance, storage, and
+// verification.
+type NodeTokenOptions struct {
+	KeyPath                          string
+	StorageRepository                string
+	RemoteOptions                    []remote.Option
+	TTL                              DownloadTokenTTL
+	VerificationCacheRefreshInterval time.Duration
+	MaxPerOrg                        int
+	StorageInsecure                  bool
+}
+
 // Handler is the type of HTTP handlers used by the enterprise frontend.
 type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
 
