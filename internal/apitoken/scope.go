@@ -26,6 +26,12 @@ const (
 
 	// ScopeToken authenticates API token management.
 	ScopeToken Scope = "token"
+
+	// ScopeAdmin authenticates API token management and, unlike ScopeToken, may hand out
+	// ScopeToken. It is the bootstrap credential: POST /tokens refuses to mint it, the factory
+	// never records it, and the `admin-token` subcommand of the binary is the only thing that
+	// issues one. See CanGrant, APIMintable and Storable.
+	ScopeAdmin Scope = "admin"
 )
 
 // scopeRoutes is the single route table every scoped credential is checked against, the
@@ -49,16 +55,21 @@ var scopeRoutes = map[Scope]func(method, path string) bool{
 
 		return readOnly(method) && strings.HasPrefix(path, "/schematics/")
 	},
-	ScopeToken: func(method, path string) bool {
-		switch {
-		case path == "/tokens":
-			return method == http.MethodGet || method == http.MethodPost
-		case strings.HasPrefix(path, "/tokens/"):
-			return method == http.MethodPost
-		default:
-			return false
-		}
-	},
+	ScopeToken: tokenRoutes,
+	ScopeAdmin: tokenRoutes,
+}
+
+// tokenRoutes is the surface both minting scopes reach. They differ in what they may grant, not
+// in where they may be used.
+func tokenRoutes(method, path string) bool {
+	switch {
+	case path == "/tokens":
+		return method == http.MethodGet || method == http.MethodPost
+	case strings.HasPrefix(path, "/tokens/"):
+		return method == http.MethodPost
+	default:
+		return false
+	}
 }
 
 // Scopes returns every scope this package defines, sorted.
@@ -104,12 +115,55 @@ func Covers(have, want []Scope) bool {
 }
 
 // CanGrant reports whether a caller holding have may mint a token carrying want.
+//
+// ScopeAdmin is the one scope that may hand out ScopeToken, which is what makes it the bootstrap
+// credential. It may not hand out ScopeAdmin: an admin token cannot be revoked, so a leaked one
+// that could mint its own successor would never fall out of circulation.
 func CanGrant(have, want []Scope) bool {
+	if slices.Contains(want, ScopeAdmin) {
+		return false
+	}
+
+	if slices.Contains(have, ScopeAdmin) {
+		return true
+	}
+
 	if slices.Contains(want, ScopeToken) {
 		return false
 	}
 
 	return Covers(have, want)
+}
+
+// CanMintForOthers reports whether a caller authenticated by a token carrying scopes may mint a
+// token whose subject is an identity other than its own.
+//
+// Only ScopeAdmin may. Note that this is not the pattern CanGrant follows: there, a full provider
+// credential is unrestricted, because it can only ever hand out authority over its own identity.
+// Minting for another identity reaches across tenants instead, so holding an htpasswd password or
+// an Auth0 client secret is not enough on its own.
+func CanMintForOthers(have []Scope) bool {
+	return slices.Contains(have, ScopeAdmin)
+}
+
+// APIMintable reports whether POST /tokens may mint a token carrying scopes, whatever credential
+// the caller holds. ScopeAdmin is not mintable over HTTP at all, so no compromise of the web path,
+// and no htpasswd or Auth0 credential either, can produce one; the `admin-token` subcommand can.
+func APIMintable(scopes []Scope) bool {
+	return !slices.Contains(scopes, ScopeAdmin)
+}
+
+// Storable reports whether the factory may record a token carrying scopes. ScopeAdmin never is,
+// by request: its lifetime is its only bound, which is why Issue caps it at StorageTTL.UnstoredMax.
+func Storable(scopes []Scope) bool {
+	return !slices.Contains(scopes, ScopeAdmin)
+}
+
+// URLSafe reports whether a token carrying scopes may travel in a query string. A scope that
+// hands out authority never may, however short-lived the token is: query strings are copied into
+// proxy and CDN access logs, and a minting credential there is a minting credential leaked.
+func URLSafe(scopes []Scope) bool {
+	return !slices.Contains(scopes, ScopeToken) && !slices.Contains(scopes, ScopeAdmin)
 }
 
 type scopesKey struct{}

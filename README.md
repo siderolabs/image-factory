@@ -37,7 +37,6 @@ The file is maintained at [`internal/frontend/http/templates/llms.txt`](internal
 
 ## License
 
-The Image Factory is licensed under the [Mozilla Public License, version 2.0](LICENSE), except for the code in the `enterprise/` folder,
-which is licensed under the [Business Source License 1.1](enterprise/LICENSE).
+The Image Factory is licensed under the [Mozilla Public License, version 2.0](LICENSE), except for the code in the `enterprise/` folder, which is licensed under the [Business Source License 1.1](enterprise/LICENSE).
 
 The enterprise code is not included in the open source version of Image Factory, and it is not built by default.

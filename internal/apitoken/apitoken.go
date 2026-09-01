@@ -37,6 +37,10 @@ var ErrTTLOutOfRange = errors.New("apitoken: requested TTL out of range")
 // ErrUnknownScope is returned when a scope is not one of the scopes this package defines.
 var ErrUnknownScope = errors.New("apitoken: unknown scope")
 
+// ErrUnstorableScope is returned by Issue when a caller asks for a stored token carrying a scope
+// the factory never records.
+var ErrUnstorableScope = errors.New("apitoken: scope cannot be stored")
+
 // TTL bounds the lifetime of issued tokens.
 type TTL struct {
 	// Default is used when the caller does not request a lifetime.
@@ -181,6 +185,9 @@ type claims struct {
 // Whether the factory will record the token then narrows that window further. The default is
 // pulled into whatever window survives, so a caller who requests no lifetime gets a valid one
 // rather than an error.
+//
+// storageRule explains the two bounds this applies; the third case, a scope that is never stored,
+// keeps its own window.
 func (i *Issuer) resolveTTL(scopes []Scope, stored bool, requested time.Duration) (time.Duration, error) {
 	bounds := TTL{Min: math.MaxInt64, Max: math.MaxInt64, Default: math.MaxInt64}
 
@@ -195,33 +202,49 @@ func (i *Issuer) resolveTTL(scopes []Scope, stored bool, requested time.Duration
 		bounds.Default = min(bounds.Default, scopeTTL.Default)
 	}
 
+	// A scope the factory never records, ScopeAdmin, is unstored by construction rather than by
+	// the caller's choice, so UnstoredMax says nothing about it and its own window governs.
+	// Rotating the signing key is what retires one of those early.
 	if stored {
 		bounds.Min = max(bounds.Min, i.storage.StoredMin)
-	} else {
+	} else if Storable(scopes) {
+		// The caller declined a record the factory would have kept, so the lifetime is capped.
+		// Nothing can withdraw this token, and it could have been withdrawn.
 		bounds.Max = min(bounds.Max, i.storage.UnstoredMax)
 	}
 
+	rule := storageRule(scopes, stored)
+
 	if bounds.Min > bounds.Max {
-		return 0, fmt.Errorf("%w: no lifetime satisfies both the scopes and %s", ErrTTLOutOfRange, storageRule(stored))
+		return 0, fmt.Errorf("%w: no lifetime satisfies both the scopes and %s", ErrTTLOutOfRange, rule)
 	}
 
 	bounds.Default = min(max(bounds.Default, bounds.Min), bounds.Max)
 
 	ttl, err := bounds.resolve(requested)
 	if err != nil {
-		return 0, fmt.Errorf("%w (%s)", err, storageRule(stored))
+		if rule == "" {
+			return 0, err
+		}
+
+		return 0, fmt.Errorf("%w (%s)", err, rule)
 	}
 
 	return ttl, nil
 }
 
-// storageRule names the bound the caller ran into, so the 400 says which of the two rules fired.
-func storageRule(stored bool) string {
-	if stored {
+// storageRule names the storage bound that narrowed the window, so a rejection says which rule
+// fired. It is empty when no storage bound applied and the scopes' own window is the whole story,
+// which would otherwise blame UnstoredMax for a ceiling it did not set.
+func storageRule(scopes []Scope, stored bool) string {
+	switch {
+	case stored:
 		return "the minimum lifetime of a stored token"
+	case Storable(scopes):
+		return "the maximum lifetime of an unstored token"
+	default:
+		return ""
 	}
-
-	return "the maximum lifetime of an unstored token"
 }
 
 // Token is a freshly minted API token.
@@ -270,6 +293,10 @@ func (i *Issuer) Issue(subject string, scopes []Scope, stored bool, requestedTTL
 		if !scope.Valid() {
 			return Token{}, fmt.Errorf("%w: %q", ErrUnknownScope, scope)
 		}
+	}
+
+	if stored && !Storable(scopes) {
+		return Token{}, fmt.Errorf("%w: %s", ErrUnstorableScope, FormatScopes(scopes))
 	}
 
 	ttl, err := i.resolveTTL(scopes, stored, requestedTTL)

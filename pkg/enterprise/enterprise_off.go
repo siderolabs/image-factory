@@ -9,10 +9,12 @@ package enterprise
 import (
 	"context"
 	"errors"
+	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/siderolabs/image-factory/internal/apitoken"
 	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
@@ -61,6 +63,11 @@ func NewHTPasswdProvider(_ *zap.Logger, _ string) (AuthProvider, error) {
 // NewAuth0Provider creates a new Auth0 JWT authentication provider.
 func NewAuth0Provider(_ context.Context, _ *zap.Logger, _ Auth0Config) (AuthProvider, error) {
 	return nil, errors.New("authentication is not supported in the non-enterprise version")
+}
+
+// MintAdminToken is not available when enterprise is not enabled.
+func MintAdminToken(_ TokenOptions, _ string, _ time.Duration) (apitoken.Token, error) {
+	return apitoken.Token{}, errors.New("API tokens are not supported in the non-enterprise version")
 }
 
 // NewTokenFrontends returns nil when enterprise is not enabled.

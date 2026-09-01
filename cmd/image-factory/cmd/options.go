@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
@@ -672,13 +674,11 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 // TokenOptions configures self-issued API token issuance, storage, and verification.
 type TokenOptions struct {
 	// KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing API tokens.
-	// One key signs every scope, so a deployment that used to configure separate download- and
-	// node-token keys has to pick one of them here.
+	// One key signs every scope, so a deployment that used to configure separate download- and node-token keys has to pick one of them here.
 	// If unset, a fresh key is generated at startup, which only works for single-replica deployments.
 	KeyPath string `koanf:"keyPath"`
 
-	// Storage is the OCI repository used to persist the per-org token index
-	// (the list of active stored tokens; presence in the index is what makes such a token valid).
+	// Storage is the OCI repository used to persist the per-org token index (the list of active stored tokens; presence in the index is what makes such a token valid).
 	// A token minted with "stored": false is not recorded, so it cannot be listed or revoked and does not count against MaxPerOrg.
 	Storage OCIRepositoryOptions `koanf:"storage"`
 
@@ -695,17 +695,15 @@ type TokenOptions struct {
 
 // TokenTTLOptions bounds the lifetime of issued tokens, one entry per scope.
 //
-// A caller picks a lifetime with the `ttl` field of POST /tokens (e.g. `"ttl": "720h"`);
-// requests outside [min, max] are rejected with HTTP 400.
+// A caller picks a lifetime with the `ttl` field of POST /tokens (e.g. `"ttl": "720h"`); requests outside [min, max] are rejected with HTTP 400.
 type TokenTTLOptions struct {
 	// StoredMin is the shortest lifetime a stored token may have, whatever its scopes allow.
-	// Recording a credential that expires in minutes buys a registry write and nothing else, since the
-	// token is gone before anyone can revoke it, so short lifetimes belong to unstored tokens.
+	// Recording a credential that expires in minutes buys a registry write and nothing else, since the token is gone before anyone can revoke it, so short lifetimes belong to unstored tokens.
 	StoredMin time.Duration `koanf:"storedMin"`
 
 	// UnstoredMax is the longest lifetime an unstored token may have, whatever its scopes allow.
-	// Such a token is not recorded, so expiry is the only way it leaves circulation, and it is the only kind
-	// of token accepted from a ?token= query parameter, where proxy and CDN access logs keep a copy of it.
+	// Such a token is not recorded, so expiry is the only way it leaves circulation.
+	// It is also the only kind accepted from a ?token= query parameter, where proxy and CDN access logs keep a copy of it.
 	//
 	// It must not be below StoredMin, which would leave lifetimes no token could be issued for.
 	UnstoredMax time.Duration `koanf:"unstoredMax"`
@@ -723,6 +721,10 @@ type TokenTTLOptions struct {
 
 	// Token bounds the lifetime of tokens carrying the "token" scope, which mint and revoke other tokens.
 	Token TokenTTL `koanf:"token"`
+
+	// Admin bounds the lifetime of tokens carrying the "admin" scope, the bootstrap credential that mints "token"-scoped tokens.
+	// An admin token is never recorded, so UnstoredMax does not apply to it and nothing can revoke it: it is expected to be long-lived, held offline, and retired by rotating KeyPath.
+	Admin TokenTTL `koanf:"admin"`
 }
 
 // TokenTTL defines the validity duration for one token scope.
@@ -737,6 +739,21 @@ type TokenTTL struct {
 	Default time.Duration `koanf:"default"`
 }
 
+// EnterpriseOptions renders the token settings in the form pkg/enterprise takes. remoteOptions
+// only reaches the token index, so a caller that touches no storage may pass nil.
+func (o TokenOptions) EnterpriseOptions(remoteOptions []remote.Option) enterprise.TokenOptions {
+	return enterprise.TokenOptions{
+		KeyPath:                          o.KeyPath,
+		TTL:                              o.ScopeTTLs(),
+		StorageTTL:                       o.StorageTTL(),
+		StorageRepository:                o.Storage.String(),
+		StorageInsecure:                  o.Storage.Insecure,
+		RemoteOptions:                    remoteOptions,
+		VerificationCacheRefreshInterval: o.VerificationCacheRefreshInterval,
+		MaxPerOrg:                        o.MaxPerOrg,
+	}
+}
+
 // StorageTTL renders the stored/unstored lifetime split in the form the token issuer takes.
 func (o TokenOptions) StorageTTL() enterprise.TokenStorageTTL {
 	return enterprise.TokenStorageTTL{StoredMin: o.TTL.StoredMin, UnstoredMax: o.TTL.UnstoredMax}
@@ -749,6 +766,7 @@ func (o TokenOptions) ScopeTTLs() map[enterprise.TokenScope]enterprise.TokenTTL 
 		enterprise.TokenScopePull:      {Default: o.TTL.Pull.Default, Min: o.TTL.Pull.Min, Max: o.TTL.Pull.Max},
 		enterprise.TokenScopeSchematic: {Default: o.TTL.Schematic.Default, Min: o.TTL.Schematic.Min, Max: o.TTL.Schematic.Max},
 		enterprise.TokenScopeToken:     {Default: o.TTL.Token.Default, Min: o.TTL.Token.Min, Max: o.TTL.Token.Max},
+		enterprise.TokenScopeAdmin:     {Default: o.TTL.Admin.Default, Min: o.TTL.Admin.Min, Max: o.TTL.Admin.Max},
 	}
 }
 
@@ -769,6 +787,10 @@ func (o TokenOptions) validate() error {
 	}
 
 	if err := validateTTLBounds("authentication.tokens.ttl.token", o.TTL.Token.Min, o.TTL.Token.Max, o.TTL.Token.Default); err != nil {
+		return err
+	}
+
+	if err := validateTTLBounds("authentication.tokens.ttl.admin", o.TTL.Admin.Min, o.TTL.Admin.Max, o.TTL.Admin.Default); err != nil {
 		return err
 	}
 
@@ -1015,6 +1037,11 @@ var DefaultOptions = Options{
 				Token: TokenTTL{
 					Default: 30 * 24 * time.Hour,
 					Max:     90 * 24 * time.Hour,
+					Min:     time.Hour,
+				},
+				Admin: TokenTTL{
+					Default: 90 * 24 * time.Hour,
+					Max:     10 * 365 * 24 * time.Hour,
 					Min:     time.Hour,
 				},
 			},

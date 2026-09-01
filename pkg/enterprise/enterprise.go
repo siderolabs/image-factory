@@ -152,6 +152,9 @@ const (
 
 	// TokenScopeToken authenticates API token management.
 	TokenScopeToken = apitoken.ScopeToken
+
+	// TokenScopeAdmin authenticates API token management and may grant TokenScopeToken.
+	TokenScopeAdmin = apitoken.ScopeAdmin
 )
 
 // TokenTTL configures token lifetimes for one scope.
@@ -160,6 +163,10 @@ type TokenTTL = apitoken.TTL
 // TokenStorageTTL splits token lifetimes by whether the factory records the token: below
 // StoredMin a token can only be unstored, past UnstoredMax only stored.
 type TokenStorageTTL = apitoken.StorageTTL
+
+// MintedToken is a freshly issued API token: the signed string, plus the lifetime and jti the
+// issuer settled on.
+type MintedToken = apitoken.Token
 
 // TokenClaims are the verified contents of an API token: who it authenticates, what it reaches,
 // and whether the factory keeps a revocable record of it.

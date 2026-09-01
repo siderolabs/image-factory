@@ -381,13 +381,13 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 			if tokenStr, fromQuery := extractAPIToken(r); tokenStr != "" {
 				if claims, ok := f.options.TokenVerifier.Verify(ctx, tokenStr); ok &&
 					apitoken.Allows(claims.Scopes, r.Method, r.URL.Path) &&
-					(!fromQuery || !claims.Stored) {
+					(!fromQuery || (!claims.Stored && apitoken.URLSafe(claims.Scopes))) {
 					*username = claims.Subject
 					ctx = authProvider.ContextWithUsername(ctx, claims.Subject)
 
 					ctx = apitoken.ContextWithScopes(ctx, claims.Scopes)
 
-					if !claims.Stored {
+					if !claims.Stored && apitoken.URLSafe(claims.Scopes) {
 						ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)
 					}
 
@@ -417,8 +417,9 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 }
 
 // extractAPIToken pulls an API token off the request, reporting whether it came from the
-// query string, which the caller pairs with the token's stored claim. An unstored token is
-// short-lived enough to survive an access log, and a stored one is not.
+// query string, which the caller pairs with the token's stored claim and apitoken.URLSafe. An
+// unstored token is short-lived enough to survive an access log; a stored one is not, and neither
+// is a minting credential of any lifetime.
 func extractAPIToken(r *http.Request) (token string, fromQuery bool) {
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {
 		if token = r.URL.Query().Get("token"); token != "" {

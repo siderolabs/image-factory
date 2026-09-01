@@ -176,6 +176,7 @@ A short-lived download link and a year-long node credential are the same credent
 | `pull`      | `GET`/`HEAD` under `/image/`, and `GET`/`HEAD` on the `/v2/` OCI registry |
 | `schematic` | `POST /schematics`, and `GET`/`HEAD` under `/schematics/`                 |
 | `token`     | the `/tokens` routes                                                      |
+| `admin`     | the `/tokens` routes                                                      |
 
 One table in the factory defines these route sets, and the Auth0 [machine scope](#machine-credentials) is checked against the `pull` row of it, so a machine credential and a self-issued pull token reach exactly the same surface.
 
@@ -188,40 +189,35 @@ Reads are ownership-enforced like any other request, so the scope never reaches 
 
 A token may carry more than one scope, in which case it reaches the union of their routes and takes the tightest lifetime bound of any of them.
 
-Which transports a token may arrive on, and whether it can be listed and revoked, are not scope
-properties: they follow from whether the factory records it. See [Stored and unstored tokens](#stored-and-unstored-tokens).
+Which transports a token may arrive on, and whether it can be listed and revoked, are not scope properties: they follow from whether the factory records it.
+See [Stored and unstored tokens](#stored-and-unstored-tokens).
 
 ### Stored and unstored tokens
 
 Every token says, in the JWT itself, whether the factory keeps a record of it.
 That is the `stored` claim, set once when the token is minted and never re-derived afterwards.
 
-A **stored** token is written to the per-org index. Presence in that index is what keeps it valid,
-which is what makes it revocable, and it is what `GET /tokens` lists. It needs a `name`, because
-the name is what an operator picks it out of that list by, and it counts against
-`authentication.tokens.maxPerOrg`.
+A **stored** token is written to the per-org index.
+Presence in that index is what keeps it valid, which is what makes it revocable, and it is what `GET /tokens` lists.
+It needs a `name`, because the name is what an operator picks it out of that list by, and it counts against `authentication.tokens.maxPerOrg`.
 
-An **unstored** token is a signed string and nothing else. Nothing records it, so it cannot be
-listed or revoked; expiry is the only way it leaves circulation. It needs no name, costs no
-registry write, and it is the only kind read from a [`?token=` query parameter](#the-token-query-parameter).
+An **unstored** token is a signed string and nothing else.
+Nothing records it, so it cannot be listed or revoked; expiry is the only way it leaves circulation.
+It needs no name, costs no registry write, and it is the only kind read from a [`?token=` query parameter](#the-token-query-parameter).
 
-Because the only way to withdraw an unstored token is to wait, lifetime and storage are tied
-together at issue time:
+Because the only way to withdraw an unstored token is to wait, lifetime and storage are tied together at issue time:
 
-| Requested lifetime                                  | May be issued |
-| --------------------------------------------------- | ------------- |
-| below `authentication.tokens.ttl.storedMin` (`1h`)   | unstored only |
-| above `authentication.tokens.ttl.unstoredMax` (`8h`)  | stored only |
-| in between                                          | either, the caller picks |
+| Requested lifetime                                   | May be issued            |
+| ---------------------------------------------------- | ------------------------ |
+| below `authentication.tokens.ttl.storedMin` (`1h`)   | unstored only            |
+| above `authentication.tokens.ttl.unstoredMax` (`8h`) | stored only              |
+| in between                                           | either, the caller picks |
 
-So a five-minute download link cannot be recorded, a year-long node credential cannot escape
-revocation, and neither rule depends on which scopes the token carries.
+So a five-minute download link cannot be recorded, a year-long node credential cannot escape revocation, and neither rule depends on which scopes the token carries.
 
-On the verification path the claim decides the work: an unstored token is accepted on its
-signature and expiry alone, and a stored one is additionally looked up in the index, so a revoked
-token stops working without every download paying for a registry read.
+On the verification path the claim decides the work: an unstored token is accepted on its signature and expiry alone, and a stored one is additionally looked up in the index, so a revoked token stops working without every download paying for a registry read.
 
-### The `token` scope
+### The `token` and `admin` scopes
 
 `token` is the one scope that hands out authority, so it is attenuating.
 A caller authenticated **by an API token** may mint a token only within these two rules:
@@ -237,6 +233,42 @@ Neither rule applies to a caller holding a full provider credential — an htpas
 That is the credential a person uses in the UI.
 
 A `403` with `the authenticating token may not grant these scopes` is one of these rules firing.
+
+`admin` is the exception to the first rule and the bootstrap credential for the second.
+It reaches the same routes as `token`, and may hand out `token`, which nothing else can, along with any other scope it does not itself hold.
+It may not hand out `admin`, not even to a caller already holding it, so a leaked admin token cannot mint a successor that outlives it.
+
+It is not mintable over HTTP at all.
+`POST /tokens` rejects the scope for every caller, a full htpasswd or Auth0 credential included, with a `400`.
+The only thing that issues one is the [`admin-token` subcommand](#minting-an-admin-token).
+
+An admin token is also the only credential that may mint for an identity other than its own; see [Minting for another identity](#minting-for-another-identity).
+
+An admin token is never recorded, which means nothing can revoke it.
+That is deliberate, and it is the reason for the other limits on it: it cannot mint another admin token, it is refused in a `?token=` query parameter, and its lifetime is the only bound on a leak.
+Rotating `authentication.tokens.keyPath` retires one early, at the cost of invalidating every other self-issued token too.
+Keep it offline, and give it the shortest lifetime the deployment can work with.
+
+### Minting an admin token
+
+```shell
+image-factory admin-token --config /etc/image-factory/config.yaml --subject org_abc123
+eyJ...
+```
+
+The command exists in Enterprise builds only, since it is API token management that a community build registers no routes for.
+`image-factory --help` lists the commands a build has, and a community build refuses this one with `unknown command "admin-token"`.
+
+The token goes to stdout and everything a human should read goes to stderr, so `> token` leaves a usable file.
+
+`--subject` is required and is the identity the token authenticates as, an `org_id` under Auth0 or a username under htpasswd.
+Every token minted with it belongs to that identity, so it decides which organization the credential can act for.
+
+`--ttl` requests a lifetime within `authentication.tokens.ttl.admin`, which defaults to 90 days and allows up to 10 years.
+`authentication.tokens.unstoredMax` does not apply: that cap is for a caller who declined a record the factory would have kept, and `admin` never had that choice.
+
+`authentication.tokens.keyPath` has to be set.
+Without it the factory generates a signing key at startup, so the subcommand would print a token signed with a key no running replica holds.
 
 ### Minting one
 
@@ -278,6 +310,30 @@ An unstored `pull` token therefore defaults to `unstoredMax` rather than a year,
 The subject of every token is the caller identity — `org_id`, or the username under htpasswd — never a schematic and never a path.
 Ownership is then enforced the same way it is for any other request, which means a token reaches every image owned by that identity for its lifetime, within its scopes.
 
+### Minting for another identity
+
+`POST /tokens` normally mints for the caller: the subject of the new token is the identity that authenticated the request, and no field says otherwise.
+A `subject` field overrides that, and only an admin token may send it.
+
+```shell
+curl -s -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://factory.example.com/tokens \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"rack-3","scopes":["pull"],"subject":"org_abc123"}'
+```
+
+The minted token belongs to `org_abc123` in every sense that matters: it authenticates as that identity, ownership checks resolve against it, the record lands in that organization's index, it counts against that organization's `maxPerOrg`, and the response reports it as `org_id`.
+
+Anything other than an admin token is refused with `403` and `only an admin token may mint for another identity`.
+That includes a full htpasswd or Auth0 credential, which is otherwise unrestricted in what it may mint.
+The asymmetry is deliberate: a provider credential carries authority over its own identity, and naming another identity reaches across tenants instead.
+Naming your own identity is not a cross-tenant mint, so it is allowed and does nothing.
+
+`subject` must be a single-line value of at most 256 bytes.
+It ends up in the JWT, in the token index and in every audit record the minted token produces, so whitespace and control characters are refused rather than escaped.
+
+One asymmetry to plan around: minting is cross-tenant, listing and revocation are not.
+`GET /tokens` and `POST /tokens/:id/revoke` still act on the caller's own identity, so a token an admin minted into another organization is revoked by a credential belonging to that organization, not by the admin token that created it.
+
 ### The `?token=` query parameter
 
 The query string is for callers that cannot set a header: a browser, an appliance, a link handed to someone else, an iPXE boot.
@@ -286,7 +342,9 @@ The query string is for callers that cannot set a header: a browser, an applianc
   An Auth0 JWT or an htpasswd password is not one and does not work here.
 - Only an [unstored](#stored-and-unstored-tokens) token is read from the query string.
   A stored one is rejected there and must use the header: query strings are recorded by proxy and CDN access logs, which is survivable for the hours an unstored token can live and not for the year a stored one can.
-  Any scope may travel this way, so long as the token is unstored; in practice that means `download`, since that is the scope a URL needs.
+- A token carrying `token` or `admin` is refused there whatever its lifetime.
+  A minting credential in an access log is a minting credential leaked, and no expiry short enough to fix that is long enough to be useful.
+  Every other scope may travel this way when the token is unstored, which in practice means `download`, since that is the scope a URL needs.
 - It is read only on `GET` and `HEAD`, so it never authenticates a write.
 - On `/pxe/` the same token is forwarded into the kernel, initramfs and UKI URLs of the generated script, so an iPXE boot needs no credential of its own.
   This happens whichever transport the token arrived on, since the URL is the only one iPXE has.

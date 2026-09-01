@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -109,18 +110,44 @@ func (f *ListCreateFrontend) list(ctx context.Context, w http.ResponseWriter, or
 }
 
 type createRequest struct {
-	Stored *bool    `json:"stored"`
-	Name   string   `json:"name"`
+	// Stored is a pointer so that an absent field means "stored", which is the safe default.
+	// A caller who forgets it never ends up with a credential nobody can take back.
+	Stored *bool `json:"stored"`
+
+	Name string `json:"name"`
+
+	// Subject is the identity the minted token belongs to. Empty means the caller's own, which is
+	// all anything short of an admin token may ask for.
+	Subject string `json:"subject"`
+
 	TTL    string   `json:"ttl"`
 	Scopes []string `json:"scopes"`
 }
 
 // createParams is an accepted create request.
 type createParams struct {
-	name   string
-	scopes []apitoken.Scope
-	ttl    time.Duration
-	stored bool
+	name    string
+	subject string
+	scopes  []apitoken.Scope
+	ttl     time.Duration
+	stored  bool
+}
+
+// maxSubjectBytes bounds the identity a token may be minted for. It ends up in the JWT, in the
+// token index and in every audit record the token produces, so it is worth keeping short.
+const maxSubjectBytes = 256
+
+// validSubject reports whether an identity is one the factory will mint for. Control characters
+// and whitespace are refused because the value is echoed into audit records, where a newline
+// would forge a log line.
+func validSubject(subject string) bool {
+	if subject == "" || len(subject) > maxSubjectBytes {
+		return false
+	}
+
+	return !strings.ContainsFunc(subject, func(r rune) bool {
+		return unicode.IsControl(r) || unicode.IsSpace(r)
+	})
 }
 
 // parseTTL parses a requested ttl; an absent value means "unspecified" and yields a zero
@@ -156,6 +183,12 @@ func (f *ListCreateFrontend) decodeCreateBody(r *http.Request) (params createPar
 		return createParams{}, err.Error()
 	}
 
+	// Refused for every caller, a full htpasswd or Auth0 credential included, so that no request
+	// can produce the credential that hands out minting authority.
+	if !apitoken.APIMintable(scopes) {
+		return createParams{}, `the "admin" scope cannot be minted over the API; use the image-factory admin-token subcommand`
+	}
+
 	stored := body.Stored == nil || *body.Stored
 
 	name := strings.TrimSpace(body.Name)
@@ -168,7 +201,12 @@ func (f *ListCreateFrontend) decodeCreateBody(r *http.Request) (params createPar
 		return createParams{}, "invalid ttl: expected a positive Go duration, e.g. 720h"
 	}
 
-	return createParams{name: name, scopes: scopes, ttl: ttl, stored: stored}, ""
+	subject := strings.TrimSpace(body.Subject)
+	if subject != "" && !validSubject(subject) {
+		return createParams{}, `"subject" must be a single-line identity of at most 256 bytes`
+	}
+
+	return createParams{name: name, subject: subject, scopes: scopes, ttl: ttl, stored: stored}, ""
 }
 
 func (f *ListCreateFrontend) create(ctx context.Context, w http.ResponseWriter, r *http.Request, orgID string) error {
@@ -179,14 +217,30 @@ func (f *ListCreateFrontend) create(ctx context.Context, w http.ResponseWriter, 
 		return nil
 	}
 
-	if callerScopes, viaToken := apitoken.ScopesFromContext(ctx); viaToken && !apitoken.CanGrant(callerScopes, params.scopes) {
+	callerScopes, viaToken := apitoken.ScopesFromContext(ctx)
+
+	if viaToken && !apitoken.CanGrant(callerScopes, params.scopes) {
 		http.Error(w, "the authenticating token may not grant these scopes", http.StatusForbidden)
 
 		return nil
 	}
 
+	// Everything below mints for subject, not for the caller: the cap, the record and the
+	// response all belong to the identity the token will authenticate as.
+	subject := orgID
+
+	if params.subject != "" && params.subject != orgID {
+		if !viaToken || !apitoken.CanMintForOthers(callerScopes) {
+			http.Error(w, "only an admin token may mint for another identity", http.StatusForbidden)
+
+			return nil
+		}
+
+		subject = params.subject
+	}
+
 	if params.stored {
-		existing, err := f.manager.List(ctx, orgID)
+		existing, err := f.manager.List(ctx, subject)
 		if err != nil {
 			return err
 		}
@@ -200,7 +254,7 @@ func (f *ListCreateFrontend) create(ctx context.Context, w http.ResponseWriter, 
 		}
 	}
 
-	record, token, err := f.manager.Create(ctx, orgID, params.name, params.scopes, params.stored, params.ttl)
+	record, token, err := f.manager.Create(ctx, subject, params.name, params.scopes, params.stored, params.ttl)
 	if err != nil {
 		if errors.Is(err, apitoken.ErrTTLOutOfRange) || errors.Is(err, apitoken.ErrUnknownScope) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -220,7 +274,7 @@ func (f *ListCreateFrontend) create(ctx context.Context, w http.ResponseWriter, 
 		Stored bool `json:"stored"`
 	}{
 		Token:  token,
-		OrgID:  orgID,
+		OrgID:  subject,
 		Record: record,
 		Stored: params.stored,
 	})

@@ -337,16 +337,7 @@ func buildEnterprisePlugins(
 
 		var tokenPlugins []enterprise.FrontendPlugin
 
-		tokenPlugins, tokenVerifier, err = enterprise.NewTokenFrontends(authProvider, enterprise.TokenOptions{
-			KeyPath:                          tokenOpts.KeyPath,
-			TTL:                              tokenOpts.ScopeTTLs(),
-			StorageTTL:                       tokenOpts.StorageTTL(),
-			StorageRepository:                tokenOpts.Storage.String(),
-			StorageInsecure:                  tokenOpts.Storage.Insecure,
-			RemoteOptions:                    remoteOptions(),
-			VerificationCacheRefreshInterval: tokenOpts.VerificationCacheRefreshInterval,
-			MaxPerOrg:                        tokenOpts.MaxPerOrg,
-		})
+		tokenPlugins, tokenVerifier, err = enterprise.NewTokenFrontends(authProvider, tokenOpts.EnterpriseOptions(remoteOptions()))
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to initialize token frontends: %w", err)
 		}

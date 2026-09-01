@@ -43,6 +43,26 @@ Breaking changes:
 See the [authentication docs](https://github.com/siderolabs/image-factory/blob/main/docs/authentication.md#api-tokens) for the upgrade steps.
 """
 
+    [notes.admin_tokens]
+        title = "Admin Tokens"
+        description = """\
+A new `admin` scope is the bootstrap credential for API token management. It reaches the same routes as `token` and differs in one way: it may hand out `token`, which no other scope can.
+
+It cannot be minted over HTTP. `POST /tokens` rejects the scope for every caller, an htpasswd user or Auth0 client included, so no request can produce the credential that hands out minting authority. A new subcommand issues it instead:
+
+```
+image-factory admin-token --config /etc/image-factory/config.yaml --subject org_abc123
+```
+
+The command is Enterprise-only, and `image-factory --help` lists the commands a build has. The token goes to stdout and the notice about it to stderr, so redirecting stdout gives a usable file. `--ttl` requests a lifetime within `authentication.tokens.ttl.admin`, which defaults to 90 days and allows up to 10 years. `authentication.tokens.keyPath` has to be set, otherwise the token would be signed with a key no replica holds.
+
+An admin token is never recorded, so nothing can revoke it. Rotating `authentication.tokens.keyPath` is what retires one early, and that invalidates every other self-issued token as well. Keep it offline and give it the shortest lifetime the deployment can live with.
+
+An admin token is also the only credential that may mint for another identity. `POST /tokens` takes a `subject` field, and the minted token belongs to that identity in every sense: it authenticates as it, its record lands in that organization's index, and it counts against that organization's cap. Anything else sending `subject` is refused with `403`, a full htpasswd or Auth0 credential included, since naming another identity reaches across tenants rather than within one. Listing and revocation stay per-identity, so a token minted into another organization is revoked with a credential belonging to it.
+
+Two limits bound it. It may not mint another `admin` token, not even from an admin token, so a leaked one cannot mint a successor that outlives it. And it is refused in a `?token=` query parameter, as is any `token`-scoped credential, because query strings are copied into proxy and CDN access logs.
+"""
+
 [make_deps]
 
     [make_deps.pkgs]

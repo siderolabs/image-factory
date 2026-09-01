@@ -307,6 +307,24 @@ func TestOptionsValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "admin token TTL without bounds",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:      true,
+					Provider:     "htpasswd",
+					HTPasswdPath: "/etc/factory/htpasswd",
+					Tokens: func() cmd.TokenOptions {
+						tokens := cmd.DefaultOptions.Authentication.Tokens
+						tokens.TTL.Admin = cmd.TokenTTL{Default: 90 * 24 * time.Hour}
+
+						return tokens
+					}(),
+				},
+			},
+			expectError: "authentication.tokens.ttl.admin.min must be positive",
+		},
+		{
 			name: "unstoredMax below storedMin",
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},

@@ -88,6 +88,14 @@ authentication:
         min: 1m
         max: 8760h
 
+      # the bootstrap credential, minted only by `image-factory admin-token`. Never recorded,
+      # so unstoredMax does not apply to it and nothing can revoke it. Short here because the
+      # dev key is regenerated freely; production keeps 90d.
+      admin:
+        default: 1h
+        min: 1m
+        max: 24h
+
       # creating schematics and reading your own back
       schematic:
         default: 2160h

@@ -221,6 +221,155 @@ func TestListCreateFrontendCreateRejectsUnknownScope(t *testing.T) {
 	require.Empty(t, mgr.createdName)
 }
 
+// TestListCreateFrontendRefusesAdminScope covers the rule that the bootstrap credential is not an
+// HTTP feature: the caller here holds a full provider credential, the most authority the API
+// recognizes, and still cannot mint one.
+func TestListCreateFrontendRefusesAdminScope(t *testing.T) {
+	t.Parallel()
+
+	for name, body := range map[string]string{
+		"alone":          `{"name":"n","scopes":["admin"]}`,
+		"alongside pull": `{"name":"n","scopes":["pull","admin"]}`,
+		"unstored":       `{"scopes":["admin"],"stored":false}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			mgr := &fakeManager{}
+			f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+			w := doRequest(t, f, http.MethodPost, "/tokens", body, nil)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Contains(t, w.Body.String(), "admin-token subcommand")
+			require.Empty(t, mgr.createdScopes, "the token must never be minted")
+		})
+	}
+}
+
+// TestCreateFromAdminTokenMayGrantMinting is the other side: an admin token authenticating over
+// HTTP is exactly how a token-scoped token gets made.
+func TestCreateFromAdminTokenMayGrantMinting(t *testing.T) {
+	t.Parallel()
+
+	mgr := &fakeManager{}
+	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+	w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin}, `{"name":"n","scopes":["token"]}`)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, []apitoken.Scope{apitoken.ScopeToken}, mgr.createdScopes)
+
+	refused := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin}, `{"name":"n","scopes":["admin"]}`)
+	require.Equal(t, http.StatusBadRequest, refused.Code, "not even an admin token mints another one")
+}
+
+// TestCreateForAnotherIdentity covers the cross-tenant rule from both ends: an admin token may
+// name the identity a token belongs to, and nothing else may, a full provider credential included.
+func TestCreateForAnotherIdentity(t *testing.T) {
+	t.Parallel()
+
+	const other = "org_other"
+
+	t.Run("admin token may", func(t *testing.T) {
+		t.Parallel()
+
+		mgr := &fakeManager{}
+		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+		w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin},
+			`{"name":"n","scopes":["pull"],"subject":"`+other+`"}`)
+
+		require.Equal(t, http.StatusOK, w.Code)
+		require.Equal(t, other, mgr.createdOrgID, "the record belongs to the named identity")
+
+		var resp createResponse
+
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+		require.Equal(t, other, resp.OrgID, "and the response reports it, since it is the registry username")
+	})
+
+	t.Run("full credential may not", func(t *testing.T) {
+		t.Parallel()
+
+		mgr := &fakeManager{}
+		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+		w := doRequest(t, f, http.MethodPost, "/tokens",
+			`{"name":"n","scopes":["pull"],"subject":"`+other+`"}`, nil)
+
+		require.Equal(t, http.StatusForbidden, w.Code, "an htpasswd user must not reach another tenant")
+		require.Empty(t, mgr.createdOrgID)
+	})
+
+	t.Run("minting token may not", func(t *testing.T) {
+		t.Parallel()
+
+		mgr := &fakeManager{}
+		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+		w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeToken, apitoken.ScopePull},
+			`{"name":"n","scopes":["pull"],"subject":"`+other+`"}`)
+
+		require.Equal(t, http.StatusForbidden, w.Code)
+		require.Empty(t, mgr.createdOrgID)
+	})
+
+	t.Run("naming your own identity is not a cross-tenant mint", func(t *testing.T) {
+		t.Parallel()
+
+		mgr := &fakeManager{}
+		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+		w := doRequest(t, f, http.MethodPost, "/tokens",
+			`{"name":"n","scopes":["pull"],"subject":"`+testOrgID+`"}`, nil)
+
+		require.Equal(t, http.StatusOK, w.Code)
+		require.Equal(t, testOrgID, mgr.createdOrgID)
+	})
+
+	t.Run("absent subject still mints for the caller", func(t *testing.T) {
+		t.Parallel()
+
+		mgr := &fakeManager{}
+		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+		w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin}, `{"name":"n","scopes":["pull"]}`)
+
+		require.Equal(t, http.StatusOK, w.Code)
+		require.Equal(t, testOrgID, mgr.createdOrgID)
+	})
+}
+
+// TestCreateRejectsMalformedSubject covers the input validation on a value that reaches the JWT,
+// the token index and every audit record the minted token goes on to produce.
+func TestCreateRejectsMalformedSubject(t *testing.T) {
+	t.Parallel()
+
+	for name, subject := range map[string]string{
+		"newline":  "org_a\nfake-audit-line",
+		"tab":      "org_a\tb",
+		"space":    "org a",
+		"nul":      "org_a\u0000",
+		"too long": strings.Repeat("o", 257),
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			mgr := &fakeManager{}
+			f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+			body, err := json.Marshal(map[string]any{"name": "n", "scopes": []string{"pull"}, "subject": subject})
+			require.NoError(t, err)
+
+			w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin}, string(body))
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Empty(t, mgr.createdOrgID)
+		})
+	}
+}
+
 func TestListCreateFrontendCreateRejectsBadTTL(t *testing.T) {
 	t.Parallel()
 
@@ -365,12 +514,12 @@ func TestRevokeFrontendSurfacesOtherErrors(t *testing.T) {
 
 func doRequestAs(t *testing.T, f interface {
 	Handle(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error
-}, scopes []apitoken.Scope, target, body string,
+}, scopes []apitoken.Scope, body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 
 	ctx := apitoken.ContextWithScopes(t.Context(), scopes)
-	r := httptest.NewRequestWithContext(ctx, http.MethodPost, target, strings.NewReader(body))
+	r := httptest.NewRequestWithContext(ctx, http.MethodPost, "/tokens", strings.NewReader(body))
 	w := httptest.NewRecorder()
 
 	require.NoError(t, f.Handle(ctx, w, r, nil))
@@ -386,7 +535,7 @@ func TestCreateRefusesToGrantMoreThanTheCallerHolds(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequestAs(t, f, minterScope, "/tokens", `{"name":"n","scopes":["pull"]}`)
+	w := doRequestAs(t, f, minterScope, `{"name":"n","scopes":["pull"]}`)
 
 	require.Equal(t, http.StatusForbidden, w.Code)
 	require.Empty(t, mgr.createdName, "the token must never be minted")
@@ -398,7 +547,7 @@ func TestCreateRefusesToGrantMinting(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequestAs(t, f, minterScope, "/tokens", `{"name":"n","scopes":["token"]}`)
+	w := doRequestAs(t, f, minterScope, `{"name":"n","scopes":["token"]}`)
 
 	require.Equal(t, http.StatusForbidden, w.Code)
 	require.Empty(t, mgr.createdName)
@@ -412,7 +561,7 @@ func TestCreateAllowsGrantingWhatTheCallerHolds(t *testing.T) {
 
 	caller := []apitoken.Scope{apitoken.ScopeToken, apitoken.ScopePull}
 
-	w := doRequestAs(t, f, caller, "/tokens", `{"name":"n","scopes":["pull"]}`)
+	w := doRequestAs(t, f, caller, `{"name":"n","scopes":["pull"]}`)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, pullScope, mgr.createdScopes)

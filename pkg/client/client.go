@@ -224,12 +224,25 @@ func (c *Client) TokenList(ctx context.Context) ([]TokenInfo, error) {
 // not recorded, needs no name, may travel in a `?token=` query parameter, and is capped at the
 // server's authentication.tokens.ttl.unstoredMax since expiry is the only way to retire it.
 func (c *Client) TokenCreate(ctx context.Context, name string, scopes []string, stored bool, ttl time.Duration) (id, token string, err error) {
+	return c.TokenCreateFor(ctx, "", name, scopes, stored, ttl)
+}
+
+// TokenCreateFor mints a token belonging to subject rather than to the caller. An empty subject
+// means the caller's own identity, which is what TokenCreate asks for.
+//
+// Minting for another identity reaches across tenants, so the server allows it only when the
+// request is authenticated by an admin token; anything else is refused with 403. An admin token
+// comes from the factory binary's `admin-token` subcommand, never from this API.
+func (c *Client) TokenCreateFor(
+	ctx context.Context, subject, name string, scopes []string, stored bool, ttl time.Duration,
+) (id, token string, err error) {
 	request := struct {
-		Name   string   `json:"name"`
-		TTL    string   `json:"ttl,omitempty"`
-		Scopes []string `json:"scopes"`
-		Stored bool     `json:"stored"`
-	}{Name: name, Scopes: scopes, Stored: stored}
+		Name    string   `json:"name"`
+		Subject string   `json:"subject,omitempty"`
+		TTL     string   `json:"ttl,omitempty"`
+		Scopes  []string `json:"scopes"`
+		Stored  bool     `json:"stored"`
+	}{Name: name, Subject: subject, Scopes: scopes, Stored: stored}
 
 	if ttl > 0 {
 		request.TTL = ttl.String()

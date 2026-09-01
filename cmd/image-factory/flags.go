@@ -7,6 +7,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/knadh/koanf/v2"
@@ -21,26 +22,47 @@ var (
 	config   *flags.Configs = flags.MustNewConfigs("IF_")
 )
 
+// printUsage writes the top-level help: how to invoke the factory, the subcommands this edition
+// has, and the server's own flags.
+func printUsage(fs *pflag.FlagSet) {
+	fmt.Fprint(os.Stderr, "Usage:\n  image-factory [flags]              Run the factory.\n")
+
+	if len(subcommands) > 0 {
+		fmt.Fprint(os.Stderr, "  image-factory <command> [flags]    Run a command instead of the factory.\n\nCommands:\n")
+
+		for _, cmd := range subcommands {
+			fmt.Fprintf(os.Stderr, "  %-13s %s\n", cmd.name, cmd.summary)
+		}
+	}
+
+	fmt.Fprint(os.Stderr, "\nFlags:\n")
+	fs.PrintDefaults()
+
+	if len(subcommands) > 0 {
+		fmt.Fprint(os.Stderr, "\nRun \"image-factory <command> --help\" for a command's own flags.\n")
+	}
+}
+
 func initFlags(args []string) error {
 	fs := pflag.NewFlagSet("image-factory", pflag.ExitOnError)
 
-	fs.Var(logLevel, "log-level", fmt.Sprintf("Log level %v", flags.LevelValues))
-	fs.Var(
-		config, "config",
-		"Configuration source(s). Can be specified multiple times or as a comma-separated list.\n"+
-			"Supported forms:\n"+
-			"  env=[PREFIX]        Load configuration from environment variables (optional prefix).\n"+
-			"  FILE                Load configuration from a file; format is inferred from extension.\n"+
-			"  file=FILE           Explicit file source (same as FILE).\n\n"+
-			"Supported file extensions:\n"+
-			"  .json               JSON\n"+
-			"  .yaml, .yml         YAML\n"+
-			"  .env                dotenv\n\n"+
-			"Sources are applied in the order provided; later values override earlier ones.\n"+
-			"A default is always applied, regardless of whether --config is specified.",
-	)
+	// pflag lists flags and nothing else, so subcommands would be invisible without this.
+	fs.Usage = func() { printUsage(fs) }
 
-	return fs.Parse(args)
+	fs.Var(logLevel, "log-level", fmt.Sprintf("Log level %v", flags.LevelValues))
+	registerConfigFlag(fs)
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	// The factory takes no positional arguments, so a leftover one is a verb this build does not
+	// have: an Enterprise-only command in a community build, or a typo.
+	if extra := fs.Args(); len(extra) > 0 {
+		return fmt.Errorf("unknown command %q; run image-factory --help for the commands this build has", extra[0])
+	}
+
+	return nil
 }
 
 // removedConfigKeys maps a config key that no longer exists to the key that replaced it.

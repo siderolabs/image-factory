@@ -317,6 +317,54 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 			getWithToken(ctx, t, baseURL+"/image/"+schematicID+"/v1.9.0/kernel-amd64?token="+token, ""))
 	})
 
+	t.Run("AdminScopeIsNotMintableOverHTTP", func(t *testing.T) {
+		t.Parallel()
+
+		// The caller here is a full htpasswd credential, which mints anything else it likes.
+		status, _ := createToken(ctx, t, baseURL, `{"name":"e2e-admin","scopes":["admin"]}`)
+		assert.Equal(t, http.StatusBadRequest, status, "the bootstrap credential is subcommand-only")
+	})
+
+	t.Run("MintingTokenIsRefusedFromQueryString", func(t *testing.T) {
+		t.Parallel()
+
+		// Short enough to be unstored, which is what would otherwise let it into a URL.
+		status, created := createToken(ctx, t, baseURL, `{"scopes":["token"],"stored":false,"ttl":"1h"}`)
+		require.Equal(t, http.StatusOK, status)
+
+		minter, _ := created["token"].(string)
+		require.NotEmpty(t, minter)
+
+		assert.Equal(t, http.StatusOK, getWithToken(ctx, t, baseURL+"/tokens", minter),
+			"the header still works")
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/tokens?token="+minter, nil)
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assertRequiresAuth(t, resp)
+	})
+
+	t.Run("MintingForAnotherIdentityNeedsAdmin", func(t *testing.T) {
+		t.Parallel()
+
+		// The caller is a full htpasswd credential, the most authority the API recognizes.
+		status, _ := createToken(ctx, t, baseURL, `{"name":"e2e-other","scopes":["pull"],"subject":"org_someone_else"}`)
+		assert.Equal(t, http.StatusForbidden, status, "a tenant must not mint into another tenant")
+
+		// Naming your own identity is not a cross-tenant mint, so it is allowed.
+		self, _ := authCredentials()
+
+		status, created := createToken(ctx, t, baseURL,
+			fmt.Sprintf(`{"name":"e2e-self","scopes":["pull"],"subject":%q}`, self))
+		require.Equal(t, http.StatusOK, status)
+		assert.Equal(t, self, created["org_id"])
+	})
+
 	t.Run("TokenScopeCannotEscalate", func(t *testing.T) {
 		t.Parallel()
 

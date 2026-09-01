@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/prometheus/client_golang/prometheus"
@@ -236,6 +237,31 @@ func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) 
 		SessionKey:        cfg.SessionKey,
 		IssuerURLOverride: cfg.IssuerURLOverride,
 	})
+}
+
+// MintAdminToken issues an admin-scoped API token, the bootstrap credential that mints
+// token-scoped tokens over the API. It is deliberately not reachable over HTTP: the binary's
+// `admin-token` subcommand is the only caller.
+//
+// subject is the identity the token authenticates as, an org_id or an htpasswd username, and is
+// what every token minted with it will belong to. A non-positive ttl takes the configured default.
+//
+// The signing key has to come from opts.KeyPath. Generating one here would sign the token with a
+// key no running replica holds, so the token would be printed and then rejected everywhere.
+func MintAdminToken(opts TokenOptions, subject string, ttl time.Duration) (apitoken.Token, error) {
+	if opts.KeyPath == "" {
+		return apitoken.Token{}, errors.New("authentication.tokens.keyPath must be set to mint an admin token, " +
+			"otherwise the token is signed with a key no replica holds")
+	}
+
+	issuer, err := apitoken.LoadIssuer(opts.KeyPath, opts.TTL, opts.StorageTTL)
+	if err != nil {
+		return apitoken.Token{}, fmt.Errorf("failed to initialize token issuer: %w", err)
+	}
+
+	// Never stored: nothing records this token, so nothing can revoke it either. Rotating the
+	// signing key is what retires one early.
+	return issuer.Issue(subject, []TokenScope{TokenScopeAdmin}, false, ttl)
 }
 
 // NewTokenFrontends returns the API-token FrontendPlugins together with a TokenVerifier.

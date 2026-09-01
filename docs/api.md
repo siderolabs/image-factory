@@ -19,10 +19,8 @@ A client that does not ask for `text/html` gets the `401` described here.
 | **Scopes** | Which [API token](authentication.md#api-tokens) scopes may call the endpoint, or `none` when only a full credential can; an Auth0 token carrying `authentication.auth0.machineScope` gets exactly `pull`, and is `403` anywhere that scope is not listed even though the token itself is valid. |
 | **Ownership** | Whether the schematic's `owner` must match the caller identity, where a mismatch is `403`; an unauthenticated caller gets `401` whether or not the schematic exists, so existence is not leaked. |
 
-The factory interprets four scopes — `download`, `pull`, `schematic` and `token` — and one
-table defines what each reaches; see [Scopes](authentication.md#scopes).
-A credential either carries scopes, and is then limited to the endpoints its scopes allow, or
-it does not and has full access.
+The factory interprets four scopes - `download`, `pull`, `schematic` and `token` - and one table defines what each reaches; see [Scopes](authentication.md#scopes).
+A credential either carries scopes, and is then limited to the endpoints its scopes allow, or it does not and has full access.
 An Auth0 token carries scopes only when `machineScope` is configured and the token has it;
 the htpasswd provider has no scopes at all.
 
@@ -153,12 +151,10 @@ Access:
 | -------- | ------ | --------- |
 | required | `token` | not applicable |
 
-Mints and lists [API tokens](authentication.md#api-tokens): self-issued JWTs whose
-scopes decide what they may reach.
-A token is always issued to the calling identity, so no request says who it is for.
+Mints and lists [API tokens](authentication.md#api-tokens): self-issued JWTs whose scopes decide what they may reach.
+A token is issued to the calling identity unless the request names another in `subject`, which only an admin token may do; see [Minting for another identity](authentication.md#minting-for-another-identity).
 
-`POST` takes a JSON body and answers `200 OK` with `Content-Type: application/json` and
-`Cache-Control: no-store`:
+`POST` takes a JSON body and answers `200 OK` with `Content-Type: application/json` and `Cache-Control: no-store`:
 
 ```json
 {"name": "rack-3", "scopes": ["pull"], "ttl": "8760h", "stored": true}
@@ -179,25 +175,23 @@ A token is always issued to the calling identity, so no request says who it is f
 
 `token` is returned exactly once, here; it is never stored and cannot be read back.
 
-`stored` decides whether the factory records the token, and so whether `GET /tokens` will list it
-and `POST /tokens/:id/revoke` can take it back.
-It is optional and defaults to `true`, so a caller who omits it never ends up with a credential
-nobody can withdraw.
+`stored` decides whether the factory records the token, and so whether `GET /tokens` will list it and `POST /tokens/:id/revoke` can take it back.
+It is optional and defaults to `true`, so a caller who omits it never ends up with a credential nobody can withdraw.
 The response echoes what was recorded.
 
-An unstored token is the only kind accepted from a `?token=` query parameter, and the only kind
-that may be minted without a `name`. There is no listing for a name to distinguish it in.
+An unstored token is the only kind accepted from a `?token=` query parameter, and the only kind that may be minted without a `name`.
+There is no listing for a name to distinguish it in.
 
-`ttl` is optional and is a Go duration; it must fall within the bounds configured for the
-requested scopes (`authentication.tokens.ttl.<scope>.min` … `.max`), and omitting it takes
-`.default`, pulled into the window `stored` leaves.
-Lifetime and storage are tied together: below `authentication.tokens.ttl.storedMin` (`1h` by
-default) a token can only be unstored, and above `authentication.tokens.ttl.unstoredMax`
-(`8h` by default) only stored.
+`ttl` is optional and is a Go duration; it must fall within the bounds configured for the requested scopes (`authentication.tokens.ttl.<scope>.min` … `.max`), and omitting it takes `.default`, pulled into the window `stored` leaves.
+Lifetime and storage are tied together: below `authentication.tokens.ttl.storedMin` (`1h` by default) a token can only be unstored, and above `authentication.tokens.ttl.unstoredMax` (`8h` by default) only stored.
 Between the two the caller picks.
 
-A missing `name` on a stored token, an unknown scope, a malformed `ttl` and a lifetime outside the
-bounds, storage bounds included, are each `400`.
+A missing `name` on a stored token, an unknown scope, a malformed `ttl` and a lifetime outside the bounds, storage bounds included, are each `400`.
+
+A `subject` naming another identity is `403` unless the caller is an admin token, and a `subject` that is not a single-line value of at most 256 bytes is `400`.
+
+The `admin` scope is also `400`, for every caller.
+It is the credential that hands out minting authority, and nothing reachable over HTTP issues it; see [Minting an admin token](authentication.md#minting-an-admin-token).
 
 `GET` returns the tokens the caller's organization can still revoke:
 
@@ -205,10 +199,8 @@ bounds, storage bounds included, are each `400`.
 {"tokens": [{"id": "0d1c...", "name": "rack-3", "scopes": ["pull"], "created_at": "...", "expires_at": "..."}]}
 ```
 
-Unstored tokens never appear: nothing records them, because they expire long before anyone could
-want them back.
-Only stored tokens count against `authentication.tokens.maxPerOrg`, and a `POST` that would
-exceed it is `409`.
+Unstored tokens never appear: nothing records them, because they expire long before anyone could want them back.
+Only stored tokens count against `authentication.tokens.maxPerOrg`, and a `POST` that would exceed it is `409`.
 
 ### `POST /tokens/:id/revoke`
 
@@ -223,11 +215,9 @@ Access:
 | required | `token` | not applicable |
 
 Takes the token with `:id` out of circulation.
-`:id` is the `id` from `POST /tokens`, and only tokens belonging to the caller's organization
-can be named; an unknown one is `404`.
+`:id` is the `id` from `POST /tokens`, and only tokens belonging to the caller's organization can be named; an unknown one is `404`.
 A successful response is `204 No Content`.
-Revocation is not instant: it takes effect once every replica's verification cache refreshes,
-within `authentication.tokens.verificationCacheRefreshInterval`.
+Revocation is not instant: it takes effect once every replica's verification cache refreshes, within `authentication.tokens.verificationCacheRefreshInterval`.
 
 ### `GET /.well-known/jwks.json`
 

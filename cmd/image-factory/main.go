@@ -48,7 +48,17 @@ func run() error {
 }
 
 func runWithContext(ctx context.Context) error {
-	if err := initFlags(os.Args); err != nil {
+	// A subcommand runs instead of the factory, not alongside it, so it is dispatched before the
+	// server's own flags are parsed.
+	if len(os.Args) > 1 {
+		for _, cmd := range subcommands {
+			if os.Args[1] == cmd.name {
+				return cmd.run(os.Args[2:], os.Stdout)
+			}
+		}
+	}
+
+	if err := initFlags(os.Args[1:]); err != nil {
 		return err
 	}
 

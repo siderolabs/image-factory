@@ -3,7 +3,10 @@
 ## CLI Usage
 
 ```console
-Usage of image-factory:
+Usage:
+  image-factory [flags]              Run the factory.
+
+Flags:
       --config configs    Configuration source(s). Can be specified multiple times or as a comma-separated list.
                           Supported forms:
                             env=[PREFIX]        Load configuration from environment variables (optional prefix).
@@ -995,16 +998,14 @@ Tokens holds configuration for self-issued API token management.
 - **Env:** `AUTHENTICATION_TOKENS_KEYPATH`
 
 KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing API tokens.
-One key signs every scope, so a deployment that used to configure separate download- and
-node-token keys has to pick one of them here.
+One key signs every scope, so a deployment that used to configure separate download- and node-token keys has to pick one of them here.
 If unset, a fresh key is generated at startup, which only works for single-replica deployments.
 
 ---
 
 ### `authentication.tokens.storage`
 
-Storage is the OCI repository used to persist the per-org token index
-(the list of active stored tokens; presence in the index is what makes such a token valid).
+Storage is the OCI repository used to persist the per-org token index (the list of active stored tokens; presence in the index is what makes such a token valid).
 A token minted with "stored": false is not recorded, so it cannot be listed or revoked and does not count against MaxPerOrg.
 
 ---
@@ -1060,8 +1061,7 @@ TTL bounds the lifetime of issued tokens, per scope.
 - **Env:** `AUTHENTICATION_TOKENS_TTL_STOREDMIN`
 
 StoredMin is the shortest lifetime a stored token may have, whatever its scopes allow.
-Recording a credential that expires in minutes buys a registry write and nothing else, since the
-token is gone before anyone can revoke it, so short lifetimes belong to unstored tokens.
+Recording a credential that expires in minutes buys a registry write and nothing else, since the token is gone before anyone can revoke it, so short lifetimes belong to unstored tokens.
 
 ---
 
@@ -1071,8 +1071,8 @@ token is gone before anyone can revoke it, so short lifetimes belong to unstored
 - **Env:** `AUTHENTICATION_TOKENS_TTL_UNSTOREDMAX`
 
 UnstoredMax is the longest lifetime an unstored token may have, whatever its scopes allow.
-Such a token is not recorded, so expiry is the only way it leaves circulation, and it is the only kind
-of token accepted from a ?token= query parameter, where proxy and CDN access logs keep a copy of it.
+Such a token is not recorded, so expiry is the only way it leaves circulation.
+It is also the only kind accepted from a ?token= query parameter, where proxy and CDN access logs keep a copy of it.
 
 It must not be below StoredMin, which would leave lifetimes no token could be issued for.
 
@@ -1207,6 +1207,40 @@ Min is the shortest validity duration a caller may request.
 
 - **Type:** `time.Duration`
 - **Env:** `AUTHENTICATION_TOKENS_TTL_TOKEN_DEFAULT`
+
+Default is the validity duration granted when the caller requests no explicit TTL.
+
+---
+
+### `authentication.tokens.ttl.admin`
+
+Admin bounds the lifetime of tokens carrying the "admin" scope, the bootstrap credential that mints "token"-scoped tokens.
+An admin token is never recorded, so UnstoredMax does not apply to it and nothing can revoke it: it is expected to be long-lived, held offline, and retired by rotating KeyPath.
+
+---
+
+### `authentication.tokens.ttl.admin.max`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_ADMIN_MAX`
+
+Max is the longest validity duration a caller may request.
+
+---
+
+### `authentication.tokens.ttl.admin.min`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_ADMIN_MIN`
+
+Min is the shortest validity duration a caller may request.
+
+---
+
+### `authentication.tokens.ttl.admin.default`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_ADMIN_DEFAULT`
 
 Default is the validity duration granted when the caller requests no explicit TTL.
 
@@ -1605,6 +1639,10 @@ authentication:
             registry: ghcr.io
             repository: tokens
         ttl:
+            admin:
+                default: 2160h0m0s
+                max: 87600h0m0s
+                min: 1h0m0s
             download:
                 default: 5m0s
                 max: 8h0m0s
@@ -1769,6 +1807,9 @@ IF_AUTHENTICATION_TOKENS_STORAGE_INSECURE=false
 IF_AUTHENTICATION_TOKENS_STORAGE_NAMESPACE=siderolabs/image-factory
 IF_AUTHENTICATION_TOKENS_STORAGE_REGISTRY=ghcr.io
 IF_AUTHENTICATION_TOKENS_STORAGE_REPOSITORY=tokens
+IF_AUTHENTICATION_TOKENS_TTL_ADMIN_DEFAULT=2160h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_ADMIN_MAX=87600h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_ADMIN_MIN=1h0m0s
 IF_AUTHENTICATION_TOKENS_TTL_DOWNLOAD_DEFAULT=5m0s
 IF_AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MAX=8h0m0s
 IF_AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MIN=30s

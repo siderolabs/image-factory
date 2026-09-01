@@ -28,6 +28,7 @@ var testStorage = apitoken.StorageTTL{StoredMin: time.Second, UnstoredMax: 365 *
 
 var (
 	downloadTTL = apitoken.TTL{Default: 5 * time.Minute, Min: 30 * time.Second, Max: 8 * time.Hour}
+	adminTTL    = apitoken.TTL{Default: 90 * 24 * time.Hour, Min: time.Hour, Max: 10 * 365 * 24 * time.Hour}
 	pullTTL     = apitoken.TTL{Default: 365 * 24 * time.Hour, Min: 24 * time.Hour, Max: 365 * 24 * time.Hour}
 
 	defaultTTLs = map[apitoken.Scope]apitoken.TTL{
@@ -75,7 +76,7 @@ func TestIssueRejectsUnknownScope(t *testing.T) {
 	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
 	require.NoError(t, err)
 
-	_, err = issuer.Issue("org_abc123", []apitoken.Scope{"admin"}, true, 0)
+	_, err = issuer.Issue("org_abc123", []apitoken.Scope{"not-a-scope"}, true, 0)
 	require.ErrorIs(t, err, apitoken.ErrUnknownScope)
 }
 
@@ -330,7 +331,7 @@ func TestParseScopes(t *testing.T) {
 		{name: "extra whitespace", claim: "  download   pull ", expected: []apitoken.Scope{apitoken.ScopeDownload, apitoken.ScopePull}},
 		{name: "deduplicated", claim: "pull download pull", expected: []apitoken.Scope{apitoken.ScopePull, apitoken.ScopeDownload}},
 		{name: "empty", claim: "", expectErr: true},
-		{name: "unknown", claim: "download admin", expectErr: true},
+		{name: "unknown", claim: "download not-a-scope", expectErr: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -361,6 +362,7 @@ func TestAllows(t *testing.T) {
 		pull      bool
 		schematic bool
 		token     bool
+		admin     bool
 	}{
 		{name: "image get", method: "GET", path: "/image/abc/v1.13.0/metal-amd64.iso", download: true, pull: true},
 		{name: "image head", method: "HEAD", path: "/image/abc/v1.13.0/metal-amd64.iso", download: true, pull: true},
@@ -374,9 +376,9 @@ func TestAllows(t *testing.T) {
 		{name: "schematic read", method: "GET", path: "/schematics/abc", schematic: true},
 		{name: "schematic write to one", method: "POST", path: "/schematics/abc"},
 		{name: "schematic collection read", method: "GET", path: "/schematics"},
-		{name: "token mint", method: "POST", path: "/tokens", token: true},
-		{name: "token list", method: "GET", path: "/tokens", token: true},
-		{name: "token revoke", method: "POST", path: "/tokens/abc/revoke", token: true},
+		{name: "token mint", method: "POST", path: "/tokens", token: true, admin: true},
+		{name: "token list", method: "GET", path: "/tokens", token: true, admin: true},
+		{name: "token revoke", method: "POST", path: "/tokens/abc/revoke", token: true, admin: true},
 		{name: "retired download token alias", method: "POST", path: "/download-token"},
 		{name: "retired node token alias", method: "POST", path: "/node-tokens"},
 		{name: "sbom", method: "GET", path: "/spdx/abc/v1.13.0/amd64"},
@@ -394,6 +396,7 @@ func TestAllows(t *testing.T) {
 				apitoken.ScopePull:      test.pull,
 				apitoken.ScopeSchematic: test.schematic,
 				apitoken.ScopeToken:     test.token,
+				apitoken.ScopeAdmin:     test.admin,
 			}
 
 			all := make([]apitoken.Scope, 0, len(want))
@@ -437,6 +440,108 @@ func TestCanGrant(t *testing.T) {
 	assert.True(t, apitoken.Covers(fullish, minter))
 	assert.False(t, apitoken.Covers(puller, fullish))
 	assert.True(t, apitoken.Covers(puller, nil))
+}
+
+// TestCanGrantAdmin covers the one asymmetry between the two minting scopes: admin hands out
+// token, token does not, and neither hands out admin.
+func TestCanGrantAdmin(t *testing.T) {
+	t.Parallel()
+
+	var (
+		admin  = []apitoken.Scope{apitoken.ScopeAdmin}
+		minter = []apitoken.Scope{apitoken.ScopeToken}
+		puller = []apitoken.Scope{apitoken.ScopePull}
+	)
+
+	assert.True(t, apitoken.CanGrant(admin, minter), "handing out minting authority is what admin is for")
+	assert.True(t, apitoken.CanGrant(admin, puller), "and it may hand out anything else it does not hold")
+	assert.True(t, apitoken.CanGrant(admin, []apitoken.Scope{apitoken.ScopeToken, apitoken.ScopePull}))
+
+	assert.False(t, apitoken.CanGrant(admin, admin), "an admin token cannot mint its own successor")
+	assert.False(t, apitoken.CanGrant(minter, admin), "nor can a minting token promote itself")
+	assert.False(t, apitoken.CanGrant(puller, admin))
+	assert.False(t, apitoken.CanGrant(admin, []apitoken.Scope{apitoken.ScopePull, apitoken.ScopeAdmin}),
+		"admin anywhere in the request is refused, not filtered out")
+}
+
+func TestCanMintForOthers(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, apitoken.CanMintForOthers([]apitoken.Scope{apitoken.ScopeAdmin}))
+	assert.True(t, apitoken.CanMintForOthers([]apitoken.Scope{apitoken.ScopeAdmin, apitoken.ScopePull}))
+	assert.False(t, apitoken.CanMintForOthers([]apitoken.Scope{apitoken.ScopeToken}),
+		"minting authority over your own identity is not authority over another's")
+	assert.False(t, apitoken.CanMintForOthers(pull()))
+	assert.False(t, apitoken.CanMintForOthers(nil), "a full provider credential carries no scopes")
+}
+
+func TestAPIMintable(t *testing.T) {
+	t.Parallel()
+
+	assert.False(t, apitoken.APIMintable([]apitoken.Scope{apitoken.ScopeAdmin}),
+		"POST /tokens must never produce the bootstrap credential")
+	assert.False(t, apitoken.APIMintable([]apitoken.Scope{apitoken.ScopePull, apitoken.ScopeAdmin}))
+	assert.True(t, apitoken.APIMintable([]apitoken.Scope{apitoken.ScopeToken}))
+	assert.True(t, apitoken.APIMintable(download()))
+}
+
+func TestURLSafe(t *testing.T) {
+	t.Parallel()
+
+	assert.True(t, apitoken.URLSafe(download()), "a download link is the whole point of the query parameter")
+	assert.True(t, apitoken.URLSafe(pull()))
+	assert.False(t, apitoken.URLSafe([]apitoken.Scope{apitoken.ScopeToken}),
+		"a minting credential in an access log is a minting credential leaked")
+	assert.False(t, apitoken.URLSafe([]apitoken.Scope{apitoken.ScopeAdmin}))
+	assert.False(t, apitoken.URLSafe([]apitoken.Scope{apitoken.ScopeDownload, apitoken.ScopeAdmin}),
+		"one authority-granting scope is enough to keep the whole token out of a URL")
+}
+
+// TestIssueRefusesToStoreAdmin pins the request that an admin token is never recorded: asking for
+// one is an error rather than a silently unstored token.
+func TestIssueRefusesToStoreAdmin(t *testing.T) {
+	t.Parallel()
+
+	issuer, err := apitoken.GenerateIssuer(map[apitoken.Scope]apitoken.TTL{
+		apitoken.ScopeAdmin: adminTTL,
+	}, testStorage)
+	require.NoError(t, err)
+
+	_, err = issuer.Issue("org_abc123", []apitoken.Scope{apitoken.ScopeAdmin}, true, 0)
+	require.ErrorIs(t, err, apitoken.ErrUnstorableScope)
+
+	token, err := issuer.Issue("org_abc123", []apitoken.Scope{apitoken.ScopeAdmin}, false, 0)
+	require.NoError(t, err)
+	assert.False(t, token.Stored)
+
+	claims, err := issuer.Verify(token.Signed)
+	require.NoError(t, err)
+	assert.False(t, claims.Stored, "so verification never looks it up in an index it is not in")
+}
+
+// TestAdminTokenIsNotCappedByUnstoredMax covers why UnstoredMax cannot apply to admin: the cap
+// exists for a caller who declined a record the factory would have kept, and admin never had that
+// choice. An admin token is long-lived on purpose.
+func TestAdminTokenIsNotCappedByUnstoredMax(t *testing.T) {
+	t.Parallel()
+
+	issuer, err := apitoken.GenerateIssuer(map[apitoken.Scope]apitoken.TTL{
+		apitoken.ScopeAdmin:    adminTTL,
+		apitoken.ScopeDownload: downloadTTL,
+	}, apitoken.StorageTTL{StoredMin: time.Hour, UnstoredMax: 8 * time.Hour})
+	require.NoError(t, err)
+
+	token, err := issuer.Issue("org_abc123", []apitoken.Scope{apitoken.ScopeAdmin}, false, 0)
+	require.NoError(t, err)
+	assert.Equal(t, adminTTL.Default, token.ExpiresAt.Sub(token.IssuedAt))
+
+	token, err = issuer.Issue("org_abc123", []apitoken.Scope{apitoken.ScopeAdmin}, false, 5*365*24*time.Hour)
+	require.NoError(t, err)
+	assert.Equal(t, 5*365*24*time.Hour, token.ExpiresAt.Sub(token.IssuedAt))
+
+	// A download token still is capped, so the exemption is admin's and not everyone's.
+	_, err = issuer.Issue("org_abc123", download(), false, 24*time.Hour)
+	require.ErrorIs(t, err, apitoken.ErrTTLOutOfRange)
 }
 
 func TestScopesFromContext(t *testing.T) {
