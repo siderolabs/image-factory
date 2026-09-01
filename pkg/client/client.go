@@ -36,11 +36,13 @@ type OverlayInfo struct {
 	Digest string `json:"digest"`
 }
 
-// NodeTokenInfo defines a node token list response item.
-type NodeTokenInfo struct {
+// TokenInfo defines an API token list response item.
+type TokenInfo struct {
 	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
+	Scopes    []string  `json:"scopes"`
 }
 
 // Client is the Image Factory HTTP API client.
@@ -185,50 +187,55 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 	return versions, nil
 }
 
-// DownloadToken requests a short-lived JWT download token scoped to the
-// authenticated caller's identity. The token can be appended as ?token= to any
-// image download URL, and to a PXE script URL, which forwards it into the asset
-// URLs of the script; one token covers all schematics owned by the caller.
+// DownloadToken requests a short-lived JWT token carrying the download scope, scoped to the
+// authenticated caller's identity. The token can be appended as ?token= to any image download
+// URL, and to a PXE script URL, which forwards it into the asset URLs of the script; one token
+// covers all schematics owned by the caller.
 //
 // A positive ttl requests that lifetime, which the server accepts only within its
 // configured bounds; zero or less takes the server default.
+//
+// The token is not stored, which is what lets it travel in a URL; its lifetime is bounded by
+// the server's authentication.tokens.ttl.unstoredMax.
 func (c *Client) DownloadToken(ctx context.Context, ttl time.Duration) (string, error) {
-	var response struct {
-		AccessToken string `json:"access_token"`
-	}
+	_, token, err := c.TokenCreate(ctx, "", []string{"download"}, false, ttl)
 
-	var opts []requestOption
-
-	if ttl > 0 {
-		opts = append(opts, WithQueryParams(url.Values{"ttl": {ttl.String()}}))
-	}
-
-	if err := c.do(ctx, http.MethodPost, "/download-token", &response, opts...); err != nil {
-		return "", err
-	}
-
-	return response.AccessToken, nil
+	return token, err
 }
 
-// NodeTokenList returns the caller's currently active node tokens.
-func (c *Client) NodeTokenList(ctx context.Context) ([]NodeTokenInfo, error) {
+// TokenList returns the caller's currently active stored tokens.
+func (c *Client) TokenList(ctx context.Context) ([]TokenInfo, error) {
 	var response struct {
-		Tokens []NodeTokenInfo `json:"tokens"`
+		Tokens []TokenInfo `json:"tokens"`
 	}
 
-	if err := c.do(ctx, http.MethodGet, "/node-tokens", &response); err != nil {
+	if err := c.do(ctx, http.MethodGet, "/tokens", &response); err != nil {
 		return nil, err
 	}
 
 	return response.Tokens, nil
 }
 
-// NodeTokenCreate mints a new node token under name, returning its ID and the token itself.
+// TokenCreate mints a token under name carrying scopes, returning its ID and the token itself.
 // The token is only ever returned at creation time; it can't be retrieved again afterward.
-func (c *Client) NodeTokenCreate(ctx context.Context, name string) (id, token string, err error) {
-	body, err := json.Marshal(struct {
-		Name string `json:"name"`
-	}{Name: name})
+//
+// A stored token is recorded by the factory, so it can be listed and revoked, requires a name
+// to be picked out of that list by, and counts against the per-org cap. A non-stored one is
+// not recorded, needs no name, may travel in a `?token=` query parameter, and is capped at the
+// server's authentication.tokens.ttl.unstoredMax since expiry is the only way to retire it.
+func (c *Client) TokenCreate(ctx context.Context, name string, scopes []string, stored bool, ttl time.Duration) (id, token string, err error) {
+	request := struct {
+		Name   string   `json:"name"`
+		TTL    string   `json:"ttl,omitempty"`
+		Scopes []string `json:"scopes"`
+		Stored bool     `json:"stored"`
+	}{Name: name, Scopes: scopes, Stored: stored}
+
+	if ttl > 0 {
+		request.TTL = ttl.String()
+	}
+
+	body, err := json.Marshal(request)
 	if err != nil {
 		return "", "", err
 	}
@@ -239,7 +246,7 @@ func (c *Client) NodeTokenCreate(ctx context.Context, name string) (id, token st
 	}
 
 	if err := c.do(
-		ctx, http.MethodPost, "/node-tokens", &response,
+		ctx, http.MethodPost, "/tokens", &response,
 		WithRequestData(body),
 		WithHeaders(map[string]string{"Content-Type": "application/json"}),
 	); err != nil {
@@ -249,9 +256,9 @@ func (c *Client) NodeTokenCreate(ctx context.Context, name string) (id, token st
 	return response.ID, response.Token, nil
 }
 
-// NodeTokenRevoke revokes the node token with the given ID.
-func (c *Client) NodeTokenRevoke(ctx context.Context, id string) error {
-	return c.do(ctx, http.MethodPost, fmt.Sprintf("/node-tokens/%s/revoke", id), nil)
+// TokenRevoke revokes the token with the given ID.
+func (c *Client) TokenRevoke(ctx context.Context, id string) error {
+	return c.do(ctx, http.MethodPost, fmt.Sprintf("/tokens/%s/revoke", id), nil)
 }
 
 // ScanReport downloads a vulnerability scan report for the given schematic, Talos version,

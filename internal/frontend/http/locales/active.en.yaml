@@ -388,62 +388,113 @@
 - id: final.booter.command_post
   translation: " with this schematic, run the following command on a host in the same subnet:"
 
-- id: nodetokens.nav_link
-  translation: "Manage Node Tokens"
+- id: tokens.nav_link
+  translation: "Manage API Tokens"
 
-- id: nodetokens.title
-  translation: "Node Tokens"
+- id: tokens.title
+  translation: "API Tokens"
 
-- id: nodetokens.back_home
+- id: tokens.back_home
   translation: "Home"
 
-- id: nodetokens.description
-  translation: "Node tokens are long-lived credentials Talos nodes use to pull images directly from this factory."
+- id: tokens.description
+  translation: "API tokens are credentials this factory issues itself. Each one carries the permissions you pick when you create it, and nothing more."
 
-- id: nodetokens.table.name
+- id: tokens.table.name
   translation: "Name"
 
-- id: nodetokens.table.created
+- id: tokens.table.expires
+  translation: "Expires"
+
+- id: tokens.table.expired
+  translation: "expired"
+
+- id: tokens.table.created
   translation: "Created"
 
-- id: nodetokens.empty
-  translation: "No node tokens yet."
+- id: tokens.table.permissions
+  translation: "Permissions"
 
-- id: nodetokens.create.name_label
+- id: tokens.empty
+  translation: "No tokens yet."
+
+- id: tokens.create.name_label
   translation: "Name"
 
-- id: nodetokens.create.button
-  translation: "Create Node Token"
+- id: tokens.create.ttl_label
+  translation: "Lifetime"
 
-- id: nodetokens.create.cancel
+- id: tokens.create.ttl_help
+  translation: "A Go duration, such as 24h or 90m. Days are not a unit, so write 720h rather than 30d. Leave it empty to take the server default."
+
+- id: tokens.create.permissions_label
+  translation: "Permissions"
+
+- id: tokens.create.permission_pull
+  translation: "Pull images"
+
+- id: tokens.create.permission_pull_help
+  translation: "A Talos node uses this to pull installers."
+
+- id: tokens.create.permission_download
+  translation: "Download images"
+
+- id: tokens.create.permission_download_help
+  translation: "Fetches images and PXE scripts with the Authorization header. A download link that carries the token in its URL is a different thing, and the API mints those."
+
+- id: tokens.create.permission_schematic
+  translation: "Create schematics"
+
+- id: tokens.create.permission_schematic_help
+  translation: "A build pipeline uses this to create schematics and read its own back."
+
+- id: tokens.create.permission_token
+  translation: "Manage tokens"
+
+- id: tokens.create.permission_token_help
+  translation: "Creates, lists and revokes tokens. A token can only pass on permissions it already has, and can never pass on this one."
+
+- id: tokens.create.permissions_required
+  translation: "Select at least one permission."
+
+- id: tokens.create.button
+  translation: "Create Token"
+
+- id: tokens.create.cancel
   translation: "Cancel"
 
-- id: nodetokens.secret.title
-  translation: "Node Token Created"
+- id: tokens.secret.title
+  translation: "Token Created"
 
-- id: nodetokens.secret.warning
-  translation: "This secret is shown only once. Copy it now — you won't be able to view it again."
+- id: tokens.secret.warning
+  translation: "This secret is shown only once. Copy it now, because you will not be able to view it again."
 
-- id: nodetokens.secret.patch
+- id: tokens.secret.identity
+  translation: "Organization ID / Username"
+
+- id: tokens.secret.token
+  translation: "Token"
+
+- id: tokens.secret.patch
   translation: "Machine Config Patch"
 
-- id: nodetokens.secret.close
+- id: tokens.secret.close
   translation: "Close"
 
-- id: nodetokens.revoke.button
+- id: tokens.revoke.button
   translation: "Revoke"
 
-- id: nodetokens.revoke.title
-  translation: "Revoke Node Token"
+- id: tokens.revoke.title
+  translation: "Revoke Token"
 
-- id: nodetokens.revoke.confirm
-  translation: "Revoke this node token? Any Talos nodes using it will lose access."
+- id: tokens.revoke.confirm
+  translation: "Revoke this token? Any Talos nodes using it will lose access."
 
-- id: nodetokens.error.load
-  translation: "Failed to load node tokens"
+- id: tokens.error.load
+  translation: "Failed to load tokens"
 
-- id: nodetokens.error.revoke
-  translation: "Failed to revoke node token"
+- id: tokens.error.revoke
+  translation: "Failed to revoke token"
 
-- id: nodetokens.error.limit
-  translation: "Node token limit reached for this organization"
+- id: tokens.error.limit
+  translation: "Token limit reached for this organization"

@@ -388,62 +388,113 @@
 - id: final.booter.command_post
   translation: " z tym schematem, uruchom następujące polecenie na hoście w tej samej podsieci:"
 
-- id: nodetokens.nav_link
-  translation: "Zarządzaj tokenami węzłów"
+- id: tokens.nav_link
+  translation: "Zarządzaj tokenami API"
 
-- id: nodetokens.title
-  translation: "Tokeny węzłów"
+- id: tokens.title
+  translation: "Tokeny API"
 
-- id: nodetokens.back_home
+- id: tokens.back_home
   translation: "Strona główna"
 
-- id: nodetokens.description
-  translation: "Tokeny węzłów to długoterminowe poświadczenia, których węzły Talos używają do pobierania obrazów bezpośrednio z tej fabryki."
+- id: tokens.description
+  translation: "Tokeny API to poświadczenia, które ta fabryka wydaje sama. Każdy ma tylko te uprawnienia, które wybierzesz przy tworzeniu."
 
-- id: nodetokens.table.name
+- id: tokens.table.name
   translation: "Nazwa"
 
-- id: nodetokens.table.created
+- id: tokens.table.expires
+  translation: "Wygasa"
+
+- id: tokens.table.expired
+  translation: "wygasł"
+
+- id: tokens.table.created
   translation: "Utworzono"
 
-- id: nodetokens.empty
-  translation: "Brak tokenów węzłów."
+- id: tokens.table.permissions
+  translation: "Uprawnienia"
 
-- id: nodetokens.create.name_label
+- id: tokens.empty
+  translation: "Brak tokenów."
+
+- id: tokens.create.name_label
   translation: "Nazwa"
 
-- id: nodetokens.create.button
-  translation: "Utwórz token węzła"
+- id: tokens.create.ttl_label
+  translation: "Czas życia"
 
-- id: nodetokens.create.cancel
+- id: tokens.create.ttl_help
+  translation: "Czas trwania w formacie Go, na przykład 24h lub 90m. Dni nie są jednostką, więc wpisz 720h zamiast 30d. Pozostaw puste, aby użyć wartości domyślnej serwera."
+
+- id: tokens.create.permissions_label
+  translation: "Uprawnienia"
+
+- id: tokens.create.permission_pull
+  translation: "Pobieranie obrazów (pull)"
+
+- id: tokens.create.permission_pull_help
+  translation: "Węzeł Talos używa go do pobierania instalatorów."
+
+- id: tokens.create.permission_download
+  translation: "Pobieranie plików (download)"
+
+- id: tokens.create.permission_download_help
+  translation: "Pobiera obrazy i skrypty PXE z nagłówkiem Authorization. Link do pobrania z tokenem w adresie URL to co innego i tworzy je API."
+
+- id: tokens.create.permission_schematic
+  translation: "Tworzenie schematów"
+
+- id: tokens.create.permission_schematic_help
+  translation: "Potok budowania używa go do tworzenia schematów i odczytu własnych."
+
+- id: tokens.create.permission_token
+  translation: "Zarządzanie tokenami"
+
+- id: tokens.create.permission_token_help
+  translation: "Tworzy, wyświetla i odwołuje tokeny. Token może przekazać tylko te uprawnienia, które sam ma, i nigdy tego uprawnienia."
+
+- id: tokens.create.permissions_required
+  translation: "Wybierz co najmniej jedno uprawnienie."
+
+- id: tokens.create.button
+  translation: "Utwórz token"
+
+- id: tokens.create.cancel
   translation: "Anuluj"
 
-- id: nodetokens.secret.title
-  translation: "Utworzono token węzła"
+- id: tokens.secret.title
+  translation: "Utworzono token"
 
-- id: nodetokens.secret.warning
-  translation: "Ten sekret jest wyświetlany tylko raz. Skopiuj go teraz — nie będzie można go ponownie wyświetlić."
+- id: tokens.secret.warning
+  translation: "Ten sekret jest wyświetlany tylko raz. Skopiuj go teraz, bo nie będzie można go ponownie wyświetlić."
 
-- id: nodetokens.secret.patch
+- id: tokens.secret.identity
+  translation: "ID organizacji / nazwa użytkownika"
+
+- id: tokens.secret.token
+  translation: "Token"
+
+- id: tokens.secret.patch
   translation: "Fragment konfiguracji maszyny"
 
-- id: nodetokens.secret.close
+- id: tokens.secret.close
   translation: "Zamknij"
 
-- id: nodetokens.revoke.button
+- id: tokens.revoke.button
   translation: "Odwołaj"
 
-- id: nodetokens.revoke.title
-  translation: "Odwołaj token węzła"
+- id: tokens.revoke.title
+  translation: "Odwołaj token"
 
-- id: nodetokens.revoke.confirm
-  translation: "Odwołać ten token węzła? Węzły Talos, które go używają, stracą dostęp."
+- id: tokens.revoke.confirm
+  translation: "Odwołać ten token? Węzły Talos, które go używają, stracą dostęp."
 
-- id: nodetokens.error.load
-  translation: "Nie udało się wczytać tokenów węzłów"
+- id: tokens.error.load
+  translation: "Nie udało się wczytać tokenów"
 
-- id: nodetokens.error.revoke
-  translation: "Nie udało się odwołać tokenu węzła"
+- id: tokens.error.revoke
+  translation: "Nie udało się odwołać tokenu"
 
-- id: nodetokens.error.limit
-  translation: "Osiągnięto limit tokenów węzłów dla tej organizacji"
+- id: tokens.error.limit
+  translation: "Osiągnięto limit tokenów dla tej organizacji"

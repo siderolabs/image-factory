@@ -180,23 +180,42 @@ func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 
 	return getTemplates().ExecuteTemplate(w, "index.html", struct {
-		Version           string
-		WizardHTML        template.HTML
-		Localizer         *i18n.Localizer
-		Bundle            *i18n.Bundle
-		Lang              string
-		Enterprise        bool
-		NodeTokensEnabled bool
-		LogoutEnabled     bool
+		Version       string
+		WizardHTML    template.HTML
+		Localizer     *i18n.Localizer
+		Bundle        *i18n.Bundle
+		Lang          string
+		Enterprise    bool
+		TokensEnabled bool
+		LogoutEnabled bool
 	}{
-		Version:           version.Tag,
-		WizardHTML:        template.HTML(buf.String()),
-		Localizer:         f.getLocalizer(r),
-		Bundle:            getLocalizerBundle(),
-		Lang:              getCurrentLang(r),
-		Enterprise:        enterprise.Enabled(),
-		NodeTokensEnabled: f.options.NodeTokenVerifier != nil,
-		LogoutEnabled:     f.logoutEnabled(),
+		Version:       version.Tag,
+		WizardHTML:    template.HTML(buf.String()),
+		Localizer:     f.getLocalizer(r),
+		Bundle:        getLocalizerBundle(),
+		Lang:          getCurrentLang(r),
+		Enterprise:    enterprise.Enabled(),
+		TokensEnabled: f.options.TokenVerifier != nil,
+		LogoutEnabled: f.logoutEnabled(),
+	})
+}
+
+// handleTokensUI handles '/ui/tokens'.
+func (f *Frontend) handleTokensUI(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+	return getTemplates().ExecuteTemplate(w, "tokens.html", struct {
+		Version       string
+		Localizer     *i18n.Localizer
+		Bundle        *i18n.Bundle
+		Lang          string
+		Enterprise    bool
+		LogoutEnabled bool
+	}{
+		Version:       version.Tag,
+		Localizer:     f.getLocalizer(r),
+		Bundle:        getLocalizerBundle(),
+		Lang:          getCurrentLang(r),
+		Enterprise:    enterprise.Enabled(),
+		LogoutEnabled: f.logoutEnabled(),
 	})
 }
 
@@ -839,7 +858,7 @@ func (f *Frontend) handleUIWizard(ctx context.Context, w http.ResponseWriter, r 
 	return getTemplates().ExecuteTemplate(w, templateName+".html", data)
 }
 
-// handleUIWizard handles '/ui/extensions-list'.
+// handleUIExtensionsList handles '/ui/extensions-list'.
 func (f *Frontend) handleUIExtensionsList(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	version := r.FormValue("version")
 	filter := r.FormValue("search")
@@ -853,7 +872,6 @@ func (f *Frontend) handleUIExtensionsList(ctx context.Context, w http.ResponseWr
 	if filter != "" {
 		extensionList = xslices.Filter(extensionList, func(ext artifacts.ExtensionRef) bool {
 			if slices.Index(extensions, ext.TaggedReference.RepositoryStr()) != -1 {
-				// selected
 				return true
 			}
 

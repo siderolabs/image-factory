@@ -21,19 +21,18 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/auth"
 	"github.com/siderolabs/image-factory/enterprise/auth/auth0"
 	"github.com/siderolabs/image-factory/enterprise/checksum"
-	enterprisedt "github.com/siderolabs/image-factory/enterprise/downloadtoken"
 	"github.com/siderolabs/image-factory/enterprise/installerattestation"
-	"github.com/siderolabs/image-factory/enterprise/nodetoken"
 	"github.com/siderolabs/image-factory/enterprise/scanner"
 	scannerbuilder "github.com/siderolabs/image-factory/enterprise/scanner/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx"
 	"github.com/siderolabs/image-factory/enterprise/spdx/builder"
 	"github.com/siderolabs/image-factory/enterprise/spdx/storage/registry"
+	"github.com/siderolabs/image-factory/enterprise/tokens"
 	"github.com/siderolabs/image-factory/enterprise/vex"
 	vexbuilder "github.com/siderolabs/image-factory/enterprise/vex/builder"
+	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
-	"github.com/siderolabs/image-factory/internal/downloadtoken"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
@@ -239,42 +238,24 @@ func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) 
 	})
 }
 
-// NewDownloadTokenIssuer creates a new download token issuer.
-// If keyPath is non-empty the key is loaded from the PEM file; otherwise a
+// NewTokenFrontends returns the API-token FrontendPlugins together with a TokenVerifier.
+//
+// If opts.KeyPath is non-empty the signing key is loaded from the PEM file; otherwise a
 // fresh ECDSA P-256 key pair is generated (suitable for single-replica deployments).
-func NewDownloadTokenIssuer(keyPath string, ttl DownloadTokenTTL) (DownloadTokenIssuer, error) {
-	if keyPath != "" {
-		return downloadtoken.LoadIssuer(keyPath, ttl, downloadtoken.DownloadAudience)
-	}
-
-	return downloadtoken.GenerateIssuer(ttl, downloadtoken.DownloadAudience)
-}
-
-// NewDownloadTokenFrontend returns the FrontendPlugin for download token issuance.
-func NewDownloadTokenFrontend(issuer DownloadTokenIssuer, authProvider AuthProvider) FrontendPlugin {
-	return enterprisedt.NewFrontend(issuer, authProvider)
-}
-
-// NewJWKSFrontend returns the FrontendPlugin for the JWKS public key endpoint.
-func NewJWKSFrontend(issuer DownloadTokenIssuer) FrontendPlugin {
-	return enterprisedt.NewJWKSFrontend(issuer)
-}
-
-// NewNodeTokenFrontends returns the node-token FrontendPlugins together with a NodeTokenVerifier.
-func NewNodeTokenFrontends(authProvider AuthProvider, opts NodeTokenOptions) ([]FrontendPlugin, NodeTokenVerifier, error) {
+func NewTokenFrontends(authProvider AuthProvider, opts TokenOptions) ([]FrontendPlugin, TokenVerifier, error) {
 	var (
-		issuer *downloadtoken.Issuer
+		issuer *apitoken.Issuer
 		err    error
 	)
 
 	if opts.KeyPath != "" {
-		issuer, err = downloadtoken.LoadIssuer(opts.KeyPath, opts.TTL, downloadtoken.NodeAudience)
+		issuer, err = apitoken.LoadIssuer(opts.KeyPath, opts.TTL, opts.StorageTTL)
 	} else {
-		issuer, err = downloadtoken.GenerateIssuer(opts.TTL, downloadtoken.NodeAudience)
+		issuer, err = apitoken.GenerateIssuer(opts.TTL, opts.StorageTTL)
 	}
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize node token issuer: %w", err)
+		return nil, nil, fmt.Errorf("failed to initialize token issuer: %w", err)
 	}
 
 	var repoOpts []name.Option
@@ -285,19 +266,20 @@ func NewNodeTokenFrontends(authProvider AuthProvider, opts NodeTokenOptions) ([]
 
 	repo, err := name.NewRepository(opts.StorageRepository, repoOpts...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse node token storage repository: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse token storage repository: %w", err)
 	}
 
-	storage, err := nodetoken.NewStorage(repo, opts.VerificationCacheRefreshInterval, opts.RemoteOptions)
+	storage, err := tokens.NewStorage(repo, opts.VerificationCacheRefreshInterval, opts.RemoteOptions)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to initialize node token storage: %w", err)
+		return nil, nil, fmt.Errorf("failed to initialize token storage: %w", err)
 	}
 
-	manager := nodetoken.NewManager(issuer, storage)
+	manager := tokens.NewManager(issuer, storage)
 
 	plugins := []FrontendPlugin{
-		nodetoken.NewListCreateFrontend(manager, authProvider, opts.MaxPerOrg),
-		nodetoken.NewRevokeFrontend(manager, authProvider),
+		tokens.NewListCreateFrontend(manager, authProvider, opts.MaxPerOrg),
+		tokens.NewRevokeFrontend(manager, authProvider),
+		tokens.NewJWKSFrontend(issuer),
 	}
 
 	return plugins, manager, nil

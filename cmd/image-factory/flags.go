@@ -5,7 +5,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/knadh/koanf/v2"
 	"github.com/spf13/pflag"
@@ -41,6 +43,31 @@ func initFlags(args []string) error {
 	return fs.Parse(args)
 }
 
+// removedConfigKeys maps a config key that no longer exists to the key that replaced it.
+// Keys are lowercased, since koanf lowercases what it reads from the environment provider.
+var removedConfigKeys = map[string]string{
+	"authentication.downloadtokenkeypath": "authentication.tokens.keyPath",
+	"authentication.downloadtokenttl":     "authentication.tokens.ttl.download",
+	"enterprise.nodetokens":               "authentication.tokens",
+}
+
+// checkRemovedConfigKeys rejects a config that still sets a removed key, so that a stale
+// setting fails at startup rather than being silently ignored — a download-token key that
+// no longer signs anything would otherwise look configured.
+func checkRemovedConfigKeys(keys []string) (err error) {
+	for _, key := range keys {
+		lower := strings.ToLower(key)
+
+		for removed, replacement := range removedConfigKeys {
+			if lower == removed || strings.HasPrefix(lower, removed+".") {
+				err = errors.Join(err, fmt.Errorf("%s has been removed; use %s instead", key, replacement))
+			}
+		}
+	}
+
+	return err
+}
+
 func initConfig() (cmd.Options, error) {
 	opts := cmd.DefaultOptions
 
@@ -52,6 +79,10 @@ func initConfig() (cmd.Options, error) {
 		if err := k.Load(cfg.Provider, cfg.Parser); err != nil {
 			return opts, err
 		}
+	}
+
+	if err := checkRemovedConfigKeys(k.Keys()); err != nil {
+		return opts, err
 	}
 
 	if err := k.Unmarshal("", &opts); err != nil {

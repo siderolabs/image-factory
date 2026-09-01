@@ -385,62 +385,113 @@
 - id: final.booter.command_post
   translation: " с этой схемой, выполните следующую команду на хосте в той же подсети:"
 
-- id: nodetokens.nav_link
-  translation: "Управление токенами узлов"
+- id: tokens.nav_link
+  translation: "Управление API-токенами"
 
-- id: nodetokens.title
-  translation: "Токены узлов"
+- id: tokens.title
+  translation: "API-токены"
 
-- id: nodetokens.back_home
+- id: tokens.back_home
   translation: "Главная"
 
-- id: nodetokens.description
-  translation: "Токены узлов — это долгоживущие учётные данные, которые узлы Talos используют для загрузки образов напрямую с этой фабрики."
+- id: tokens.description
+  translation: "API-токены — это учётные данные, которые фабрика выпускает сама. Каждый имеет только те разрешения, которые вы выберете при создании."
 
-- id: nodetokens.table.name
+- id: tokens.table.name
   translation: "Имя"
 
-- id: nodetokens.table.created
+- id: tokens.table.expires
+  translation: "Истекает"
+
+- id: tokens.table.expired
+  translation: "истёк"
+
+- id: tokens.table.created
   translation: "Создан"
 
-- id: nodetokens.empty
-  translation: "Токенов узлов пока нет."
+- id: tokens.table.permissions
+  translation: "Разрешения"
 
-- id: nodetokens.create.name_label
+- id: tokens.empty
+  translation: "Токенов пока нет."
+
+- id: tokens.create.name_label
   translation: "Имя"
 
-- id: nodetokens.create.button
-  translation: "Создать токен узла"
+- id: tokens.create.ttl_label
+  translation: "Время жизни"
 
-- id: nodetokens.create.cancel
+- id: tokens.create.ttl_help
+  translation: "Длительность в формате Go, например 24h или 90m. Дни не являются единицей, поэтому пишите 720h вместо 30d. Оставьте пустым, чтобы использовать значение сервера по умолчанию."
+
+- id: tokens.create.permissions_label
+  translation: "Разрешения"
+
+- id: tokens.create.permission_pull
+  translation: "Загрузка образов (pull)"
+
+- id: tokens.create.permission_pull_help
+  translation: "Узел Talos использует его для загрузки инсталляторов."
+
+- id: tokens.create.permission_download
+  translation: "Скачивание образов (download)"
+
+- id: tokens.create.permission_download_help
+  translation: "Получает образы и PXE-скрипты с заголовком Authorization. Ссылка на скачивание с токеном в URL — это другое, и такие токены выдаёт API."
+
+- id: tokens.create.permission_schematic
+  translation: "Создание схем"
+
+- id: tokens.create.permission_schematic_help
+  translation: "Конвейер сборки использует его для создания схем и чтения своих собственных."
+
+- id: tokens.create.permission_token
+  translation: "Управление токенами"
+
+- id: tokens.create.permission_token_help
+  translation: "Создаёт, показывает и отзывает токены. Токен может передать только те разрешения, которые уже имеет, и никогда это разрешение."
+
+- id: tokens.create.permissions_required
+  translation: "Выберите хотя бы одно разрешение."
+
+- id: tokens.create.button
+  translation: "Создать токен"
+
+- id: tokens.create.cancel
   translation: "Отмена"
 
-- id: nodetokens.secret.title
-  translation: "Токен узла создан"
+- id: tokens.secret.title
+  translation: "Токен создан"
 
-- id: nodetokens.secret.warning
-  translation: "Этот секрет показывается только один раз. Скопируйте его сейчас — повторно посмотреть его будет нельзя."
+- id: tokens.secret.warning
+  translation: "Этот секрет показывается только один раз. Скопируйте его сейчас, повторно посмотреть его будет нельзя."
 
-- id: nodetokens.secret.patch
+- id: tokens.secret.identity
+  translation: "ID организации / имя пользователя"
+
+- id: tokens.secret.token
+  translation: "Токен"
+
+- id: tokens.secret.patch
   translation: "Патч конфигурации машины"
 
-- id: nodetokens.secret.close
+- id: tokens.secret.close
   translation: "Закрыть"
 
-- id: nodetokens.revoke.button
+- id: tokens.revoke.button
   translation: "Отозвать"
 
-- id: nodetokens.revoke.title
-  translation: "Отзыв токена узла"
+- id: tokens.revoke.title
+  translation: "Отзыв токена"
 
-- id: nodetokens.revoke.confirm
-  translation: "Отозвать этот токен узла? Узлы Talos, использующие его, потеряют доступ."
+- id: tokens.revoke.confirm
+  translation: "Отозвать этот токен? Узлы Talos, использующие его, потеряют доступ."
 
-- id: nodetokens.error.load
-  translation: "Не удалось загрузить токены узлов"
+- id: tokens.error.load
+  translation: "Не удалось загрузить токены"
 
-- id: nodetokens.error.revoke
-  translation: "Не удалось отозвать токен узла"
+- id: tokens.error.revoke
+  translation: "Не удалось отозвать токен"
 
-- id: nodetokens.error.limit
-  translation: "Достигнут лимит токенов узлов для этой организации"
+- id: tokens.error.limit
+  translation: "Достигнут лимит токенов для этой организации"

@@ -19,15 +19,15 @@
             <h1 class="text-lg font-bold text-gray-900 dark:text-white">
                 {{ if .Enterprise }}{{ t .Localizer "page.header.enterprise" }}{{ else }}{{ t .Localizer "page.header" }}{{ end }}
             </h1>
-            {{ if or .NodeTokensEnabled .LogoutEnabled }}
+            {{ if or .TokensEnabled .LogoutEnabled }}
             <nav class="flex items-center gap-1 text-sm">
-                {{ if .NodeTokensEnabled }}
-                <a href="/ui/node-tokens"
+                {{ if .TokensEnabled }}
+                <a href="/ui/tokens"
                     class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors">
-                    {{ t .Localizer "nodetokens.nav_link" }}
+                    {{ t .Localizer "tokens.nav_link" }}
                 </a>
                 {{ end }}
-                {{ if and .NodeTokensEnabled .LogoutEnabled }}
+                {{ if and .TokensEnabled .LogoutEnabled }}
                 <div class="w-px h-4 bg-gray-200 dark:bg-gray-700"></div>
                 {{ end }}
                 {{ if .LogoutEnabled }}

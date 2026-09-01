@@ -121,13 +121,8 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 		eg.Go(func() error { return authProvider.Run(ctx) })
 	}
 
-	downloadTokenIssuer, err := buildDownloadTokenIssuer(opts)
-	if err != nil {
-		return err
-	}
-
-	enterprisePlugins, spdxSource, nodeTokenVerifier, err := buildEnterprisePlugins(
-		ctx, eg, logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, authProvider, downloadTokenIssuer, opts,
+	enterprisePlugins, spdxSource, tokenVerifier, err := buildEnterprisePlugins(
+		ctx, eg, logger, configFactory, artifactsManager, assetBuilder, cacheImageSigner, authProvider, opts,
 	)
 	if err != nil {
 		return err
@@ -159,8 +154,7 @@ func RunFactory(ctx context.Context, logger *zap.Logger, opts Options) error {
 	}
 
 	frontendOptions.AuditSink = auditSink
-	frontendOptions.DownloadTokenIssuer = downloadTokenIssuer
-	frontendOptions.NodeTokenVerifier = nodeTokenVerifier
+	frontendOptions.TokenVerifier = tokenVerifier
 	frontendOptions.InstallerSBOMSource = spdxSource
 
 	signatureWriter, err := buildSignatureWriter(logger, frontendOptions.CacheImageSigner, assetCache)
@@ -268,24 +262,6 @@ func buildSignatureWriter(logger *zap.Logger, imageSigner signer.Signer, cache a
 	return signatureWriter, nil
 }
 
-func buildDownloadTokenIssuer(opts Options) (enterprise.DownloadTokenIssuer, error) {
-	if !enterprise.Enabled() {
-		return nil, nil //nolint:nilnil
-	}
-
-	if !opts.Authentication.Enabled {
-		return nil, nil //nolint:nilnil
-	}
-
-	ttl := opts.Authentication.DownloadTokenTTL
-
-	return enterprise.NewDownloadTokenIssuer(opts.Authentication.DownloadTokenKeyPath, enterprise.DownloadTokenTTL{
-		Default: ttl.Default,
-		Min:     ttl.Min,
-		Max:     ttl.Max,
-	})
-}
-
 func buildEnterprisePlugins(
 	ctx context.Context,
 	eg *errgroup.Group,
@@ -295,9 +271,8 @@ func buildEnterprisePlugins(
 	assetBuilder *asset.Builder,
 	cacheImageSigner signer.Signer,
 	authProvider enterprise.AuthProvider,
-	downloadTokenIssuer enterprise.DownloadTokenIssuer,
 	opts Options,
-) ([]enterprise.FrontendPlugin, enterprise.SPDXSource, enterprise.NodeTokenVerifier, error) {
+) ([]enterprise.FrontendPlugin, enterprise.SPDXSource, enterprise.TokenVerifier, error) {
 	if !enterprise.Enabled() {
 		return nil, nil, nil, nil
 	}
@@ -355,40 +330,31 @@ func buildEnterprisePlugins(
 
 	plugins := []enterprise.FrontendPlugin{spdxFrontend, vexFrontend, scannerFrontend}
 
-	if downloadTokenIssuer != nil {
-		plugins = append(
-			plugins,
-			enterprise.NewDownloadTokenFrontend(downloadTokenIssuer, authProvider),
-			enterprise.NewJWKSFrontend(downloadTokenIssuer),
-		)
-	}
-
-	var nodeTokenVerifier enterprise.NodeTokenVerifier
+	var tokenVerifier enterprise.TokenVerifier
 
 	if authProvider != nil {
-		var nodeTokenPlugins []enterprise.FrontendPlugin
+		tokenOpts := opts.Authentication.Tokens
 
-		nodeTokenPlugins, nodeTokenVerifier, err = enterprise.NewNodeTokenFrontends(authProvider, enterprise.NodeTokenOptions{
-			KeyPath: opts.Enterprise.NodeTokens.KeyPath,
-			TTL: enterprise.DownloadTokenTTL{
-				Default: opts.Enterprise.NodeTokens.TTL.Default,
-				Min:     opts.Enterprise.NodeTokens.TTL.Min,
-				Max:     opts.Enterprise.NodeTokens.TTL.Max,
-			},
-			StorageRepository:                opts.Enterprise.NodeTokens.Storage.String(),
-			StorageInsecure:                  opts.Enterprise.NodeTokens.Storage.Insecure,
+		var tokenPlugins []enterprise.FrontendPlugin
+
+		tokenPlugins, tokenVerifier, err = enterprise.NewTokenFrontends(authProvider, enterprise.TokenOptions{
+			KeyPath:                          tokenOpts.KeyPath,
+			TTL:                              tokenOpts.ScopeTTLs(),
+			StorageTTL:                       tokenOpts.StorageTTL(),
+			StorageRepository:                tokenOpts.Storage.String(),
+			StorageInsecure:                  tokenOpts.Storage.Insecure,
 			RemoteOptions:                    remoteOptions(),
-			VerificationCacheRefreshInterval: opts.Enterprise.NodeTokens.VerificationCacheRefreshInterval,
-			MaxPerOrg:                        opts.Enterprise.NodeTokens.MaxPerOrg,
+			VerificationCacheRefreshInterval: tokenOpts.VerificationCacheRefreshInterval,
+			MaxPerOrg:                        tokenOpts.MaxPerOrg,
 		})
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to initialize node token frontends: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to initialize token frontends: %w", err)
 		}
 
-		plugins = append(plugins, nodeTokenPlugins...)
+		plugins = append(plugins, tokenPlugins...)
 	}
 
-	return plugins, spdxSource, nodeTokenVerifier, nil
+	return plugins, spdxSource, tokenVerifier, nil
 }
 
 func buildFrontendOptions(cacheImageSigner signer.Signer, authProvider enterprise.AuthProvider, opts Options) (frontendhttp.Options, error) {

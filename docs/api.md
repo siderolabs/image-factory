@@ -6,23 +6,25 @@ It intentionally excludes the HTML UI and its supporting routes and static asset
 ## Authentication
 
 Authentication is an Enterprise feature, enabled with `authentication.enabled`.
-When it is off, every registered endpoint in this reference is public, except that the download-token and JWKS routes are not registered at all.
+When it is off, every registered endpoint in this reference is public, except that the token and JWKS routes are not registered at all.
 When it is on, each endpoint below carries an **Access** table with these four fields; endpoints that never take a credential are marked `Access: public` instead.
 See [Authentication](authentication.md) for the providers, the token formats and the scopes.
 
 With [browser login](authentication.md#browser-login) configured, every endpoint below also accepts the session cookie, and a browser navigation without a credential is redirected to `/login` rather than answered `401`.
 A client that does not ask for `text/html` gets the `401` described here.
 
-| Field             | Values                                                                                                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Auth**          | `public` takes no credential, `required` takes an [`Authorization` header](authentication.md#the-authorization-header) for the configured provider, and a missing or invalid credential is `401`. |
-| **`?token=`**     | Whether a [download token](authentication.md#the-token-query-parameter) in the query string is accepted in place of the header.                                                                   |
-| **Machine scope** | Whether a token carrying `authentication.auth0.machineScope` may call the endpoint. `denied` is `403`, even though the token itself is valid.                                                     |
-| **Ownership**     | Whether the schematic's `owner` must match the caller identity, where a mismatch is `403`; an unauthenticated caller gets `401` whether or not the schematic exists, so existence is not leaked.  |
+| Field | Values |
+| --- | --- |
+| **Auth** | `public` takes no credential, `required` takes an [`Authorization` header](authentication.md#the-authorization-header) for the configured provider, and a missing or invalid credential is `401`. |
+| **Scopes** | Which [API token](authentication.md#api-tokens) scopes may call the endpoint, or `none` when only a full credential can; an Auth0 token carrying `authentication.auth0.machineScope` gets exactly `pull`, and is `403` anywhere that scope is not listed even though the token itself is valid. |
+| **Ownership** | Whether the schematic's `owner` must match the caller identity, where a mismatch is `403`; an unauthenticated caller gets `401` whether or not the schematic exists, so existence is not leaked. |
 
-`machineScope` is the only scope the factory interprets.
-There is no per-endpoint scope model: a token either carries the machine scope, and is then limited to the endpoints that allow it, or it does not and has full access.
-The htpasswd provider has no scopes at all.
+The factory interprets four scopes — `download`, `pull`, `schematic` and `token` — and one
+table defines what each reaches; see [Scopes](authentication.md#scopes).
+A credential either carries scopes, and is then limited to the endpoints its scopes allow, or
+it does not and has full access.
+An Auth0 token carries scopes only when `machineScope` is configured and the token has it;
+the htpasswd provider has no scopes at all.
 
 ## Common HTTP behavior
 
@@ -53,7 +55,7 @@ It permits the `Cache-Control` request header and exposes `Content-Disposition`,
 | Feature | Community build or disabled-feature behavior |
 | ------- | -------------------------------------------- |
 | `/spdx`, `/vex` and `/scans` | Enterprise plugins are not registered, so the routes return `404 Not Found`. |
-| `/download-token` and `/.well-known/jwks.json` | Registered only in an Enterprise build with authentication enabled; otherwise the routes return `404 Not Found`. |
+| `/tokens` and `/.well-known/jwks.json` | Registered only in an Enterprise build with authentication enabled; otherwise the routes return `404 Not Found`. |
 | `/image/.../<asset>.sha256` and `.sha512` suffixes | The image route remains registered but returns `402 Payment Required` without Enterprise checksum support. |
 | `/image/.../<asset>.sigstore.json` suffix | The image route remains registered but returns `402 Payment Required` when Enterprise asset signing is unavailable. |
 
@@ -66,9 +68,9 @@ It permits the `Cache-Control` request header and exposes `Content-Disposition`,
 
 Access:
 
-| Auth     | `?token=`    | Machine scope | Ownership |
-| -------- | ------------ | ------------- | --------- |
-| required | not accepted | denied        | enforced  |
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | none | enforced |
 
 Returns an SPDX 2.3 JSON document containing all packages from Talos Linux and the configured system extensions for the given schematic and version.
 The response is a JSON-encoded SPDX document which can be consumed directly by vulnerability scanners such as grype:
@@ -91,9 +93,9 @@ SPDX bundles are available for Talos versions **v1.11.0** and later.
 
 Access:
 
-| Auth     | `?token=`    | Machine scope | Ownership      |
-| -------- | ------------ | ------------- | -------------- |
-| required | not accepted | denied        | not applicable |
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | none | not applicable |
 
 The document describes a Talos Linux release, not a schematic: it is identical for every caller and contains nothing derived from a schematic, so there is no `owner` to match.
 Any authenticated caller can therefore read it for any version.
@@ -117,9 +119,9 @@ grype sbom:response.spdx.json --vex response.vex.json
 
 Access:
 
-| Auth     | `?token=`    | Machine scope | Ownership |
-| -------- | ------------ | ------------- | --------- |
-| required | not accepted | denied        | enforced  |
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | none | enforced |
 
 Returns a vulnerability scan report for the specified schematic, Talos Linux version and architecture.
 
@@ -139,7 +141,76 @@ Supported report formats:
 | `.sarif`  | `application/sarif+json`         | SARIF                                                                |
 | `.cdx`    | `application/vnd.cyclonedx+json` | CycloneDX                                                            |
 
-### `POST /download-token`
+### `POST /tokens`, `GET /tokens`
+
+> [!NOTE]
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+> These routes are registered only when authentication is enabled.
+
+Access:
+
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | `token` | not applicable |
+
+Mints and lists [API tokens](authentication.md#api-tokens): self-issued JWTs whose
+scopes decide what they may reach.
+A token is always issued to the calling identity, so no request says who it is for.
+
+`POST` takes a JSON body and answers `200 OK` with `Content-Type: application/json` and
+`Cache-Control: no-store`:
+
+```json
+{"name": "rack-3", "scopes": ["pull"], "ttl": "8760h", "stored": true}
+```
+
+```json
+{
+  "id": "0d1c...",
+  "name": "rack-3",
+  "scopes": ["pull"],
+  "token": "eyJ...",
+  "org_id": "org_abc123",
+  "created_at": "2026-08-31T09:00:00Z",
+  "expires_at": "2027-08-31T09:00:00Z",
+  "stored": true
+}
+```
+
+`token` is returned exactly once, here; it is never stored and cannot be read back.
+
+`stored` decides whether the factory records the token, and so whether `GET /tokens` will list it
+and `POST /tokens/:id/revoke` can take it back.
+It is optional and defaults to `true`, so a caller who omits it never ends up with a credential
+nobody can withdraw.
+The response echoes what was recorded.
+
+An unstored token is the only kind accepted from a `?token=` query parameter, and the only kind
+that may be minted without a `name`. There is no listing for a name to distinguish it in.
+
+`ttl` is optional and is a Go duration; it must fall within the bounds configured for the
+requested scopes (`authentication.tokens.ttl.<scope>.min` … `.max`), and omitting it takes
+`.default`, pulled into the window `stored` leaves.
+Lifetime and storage are tied together: below `authentication.tokens.ttl.storedMin` (`1h` by
+default) a token can only be unstored, and above `authentication.tokens.ttl.unstoredMax`
+(`8h` by default) only stored.
+Between the two the caller picks.
+
+A missing `name` on a stored token, an unknown scope, a malformed `ttl` and a lifetime outside the
+bounds, storage bounds included, are each `400`.
+
+`GET` returns the tokens the caller's organization can still revoke:
+
+```json
+{"tokens": [{"id": "0d1c...", "name": "rack-3", "scopes": ["pull"], "created_at": "...", "expires_at": "..."}]}
+```
+
+Unstored tokens never appear: nothing records them, because they expire long before anyone could
+want them back.
+Only stored tokens count against `authentication.tokens.maxPerOrg`, and a `POST` that would
+exceed it is `409`.
+
+### `POST /tokens/:id/revoke`
 
 > [!NOTE]
 > Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
@@ -147,32 +218,16 @@ Supported report formats:
 
 Access:
 
-| Auth     | `?token=`    | Machine scope | Ownership      |
-| -------- | ------------ | ------------- | -------------- |
-| required | not accepted | denied        | not applicable |
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | `token` | not applicable |
 
-Issues a short-lived JWT that authenticates image downloads through the URL alone.
-The token is scoped to the calling identity.
-The request has no body.
-A successful response is `200 OK` with `Content-Type: application/json` and `Cache-Control: no-store`.
-
-```json
-{
-  "access_token": "eyJ...",
-  "token_type": "Bearer",
-  "expires_in": 300
-}
-```
-
-`expires_in` is `authentication.downloadTokenTTL.default` in seconds, `5m` by default.
-
-The lifetime can be requested with the `ttl` query parameter as a Go duration, e.g. `POST /download-token?ttl=1h`.
-It must fall within `authentication.downloadTokenTTL.min` and `authentication.downloadTokenTTL.max`
-(`30s` and `8h` by default); anything else is rejected with `400`.
-
-The token is appended to an image or PXE URL as `?token=<access_token>` and is accepted only on `GET` and `HEAD` under `/image/`, and on `GET` under `/pxe/`, the only method that route registers.
-A `/pxe/` request forwards it into the asset URLs of the script it returns.
-One token covers every schematic owned by the caller, not just the URL it is used with; see [Authentication](authentication.md#download-tokens).
+Takes the token with `:id` out of circulation.
+`:id` is the `id` from `POST /tokens`, and only tokens belonging to the caller's organization
+can be named; an unknown one is `404`.
+A successful response is `204 No Content`.
+Revocation is not instant: it takes effect once every replica's verification cache refreshes,
+within `authentication.tokens.verificationCacheRefreshInterval`.
 
 ### `GET /.well-known/jwks.json`
 
@@ -182,7 +237,7 @@ One token covers every schematic owned by the caller, not just the URL it is use
 
 Access: `public`.
 
-Returns the JSON Web Key Set containing the ECDSA P-256 public key that download tokens are signed with, so that a proxy can verify a token without holding the private key.
+Returns the JSON Web Key Set containing the ECDSA P-256 public key that every API token is signed with, so that a proxy can verify one without holding the private key.
 The response has `Content-Type: application/json`.
 
 ## HTTP Frontend API
@@ -193,9 +248,9 @@ Create a new image schematic.
 
 Access:
 
-| Auth     | `?token=`    | Machine scope | Ownership    |
-| -------- | ------------ | ------------- | ------------ |
-| required | not accepted | denied        | sets `owner` |
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | `schematic` | sets `owner` |
 
 The request body is a YAML or JSON encoded schematic description.
 Clients should send `Content-Type: application/yaml` for YAML.
@@ -289,9 +344,9 @@ Retrieve a specific schematic by its ID.
 
 Access:
 
-| Auth     | `?token=`    | Machine scope | Ownership |
-| -------- | ------------ | ------------- | --------- |
-| required | not accepted | denied        | enforced  |
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | `schematic` | enforced |
 
 If the schematic is found, the response body contains the YAML-encoded schematic representation.
 The successful response is `200 OK` with `Content-Type: application/yaml`.
@@ -303,9 +358,9 @@ Download a Talos Linux boot image with the specified schematic and Talos Linux v
 
 Access:
 
-| Auth     | `?token=` | Machine scope | Ownership |
-| -------- | --------- | ------------- | --------- |
-| required | accepted  | allowed       | enforced  |
+| Auth | Scopes | Ownership |
+| --- | --- | --- |
+| required | `download`, `pull` | enforced |
 
 * `:schematic` is a schematic ID returned by `POST /schematics`
 * `:version` is a Talos Linux version, e.g. `v1.5.0`
@@ -315,7 +370,7 @@ The optional `filename` query parameter overrides the download filename used to 
 On a direct response, the factory returns `200 OK` with `Content-Type`, `Content-Length` and an attachment `Content-Disposition`.
 A `GET` may instead return `302 Found` to a configured object-storage or CDN URL; `HEAD` is always served directly and returns the same headers as a direct `GET`, without a body.
 
-In Enterprise edition this route is the only one that also accepts a [download token](authentication.md#download-tokens) as `?token=<access_token>` in place of the `Authorization` header; see [The `?token=` query parameter](authentication.md#the-token-query-parameter).
+In Enterprise edition this route also accepts an unstored, download-scoped [API token](authentication.md#api-tokens) as `?token=<token>` in place of the `Authorization` header, as does `GET /pxe/`; see [The `?token=` query parameter](authentication.md#the-token-query-parameter).
 
 Common parameters:
 
@@ -555,15 +610,15 @@ Returns an iPXE script which downloads and boots Talos Linux with the specified 
 
 Access:
 
-| Auth     | `?token=` | Machine scope | Ownership |
-| -------- | --------- | ------------- | --------- |
-| required | accepted  | denied        | enforced  |
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | `download` | enforced |
 
 The script embeds the schematic's kernel command line, which is schematic-derived customization, so a machine-scoped token is denied here for the same reason it cannot read a schematic definition.
 
 iPXE cannot send request headers, so the credential goes in the URL, and whichever one authenticated the request is carried into the asset URLs of the returned script:
 
-* a [download token](authentication.md#the-token-query-parameter) - `https://pxe.talos.dev/pxe/...?token=<token>` - is forwarded as `?token=` on the kernel, initramfs and UKI URLs, so no long-lived credential appears in the script.
+* an [unstored download token](authentication.md#the-token-query-parameter) - `https://pxe.talos.dev/pxe/...?token=<token>` - is forwarded as `?token=` on the kernel, initramfs and UKI URLs, so no long-lived credential appears in the script.
   The script expires with the token; nothing is minted here, so re-fetching it with an expiring token does not extend that lifetime.
 * Basic credentials - `https://<user>:<password>@pxe.talos.dev/pxe/...`, which the client encodes into `Authorization: Basic` - are embedded as userinfo on those same URLs.
 
@@ -598,9 +653,9 @@ If the image hasn't been created yet, it will be built on demand automatically.
 
 Access, for every schematic-scoped `/v2/` route in this section, including `docker pull` and referrer discovery:
 
-| Auth     | `?token=`    | Machine scope | Ownership |
-| -------- | ------------ | ------------- | --------- |
-| required | not accepted | allowed       | enforced  |
+| Auth | Scopes | Ownership |
+| --- | --- | --- |
+| required | `pull` | enforced |
 
 Registry clients speak Basic auth, so an Auth0 JWT is presented as the Basic password with any username; see [The `Authorization` header](authentication.md#the-authorization-header).
 
@@ -666,9 +721,9 @@ This is equivalent to pulling with an explicit stable version, ensuring that pre
 
 Access:
 
-| Auth     | `?token=`    | Machine scope | Ownership      |
-| -------- | ------------ | ------------- | -------------- |
-| required | not accepted | allowed       | not applicable |
+| Auth | Scopes | Ownership |
+| --- | --- | --- |
+| required | `pull` | not applicable |
 
 These are upstream Talos Linux images forwarded as-is, with nothing schematic-derived in them, so there is no `owner` to match and authentication alone gates them.
 Any authenticated caller can pull any proxied source image.

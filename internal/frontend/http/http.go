@@ -30,6 +30,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/audit"
@@ -71,8 +72,7 @@ type Options struct {
 	CacheImageSigner                 signer.Signer
 	InstallerSBOMSource              enterprise.SPDXSource
 	AuthProvider                     enterprise.AuthProvider
-	DownloadTokenIssuer              enterprise.DownloadTokenIssuer
-	NodeTokenVerifier                enterprise.NodeTokenVerifier
+	TokenVerifier                    enterprise.TokenVerifier
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
 	AuditSink                        audit.Sink
@@ -197,7 +197,7 @@ func NewFrontend(
 	registerPublicRoute(frontend.router.GET, "/readyz", frontend.handleReady)
 	registerPublicRoute(frontend.router.HEAD, "/readyz", frontend.handleReady)
 
-	// images - require auth (download tokens bypass auth via JWT verification)
+	// images - require auth (API tokens bypass auth via JWT verification)
 	registerRoute(frontend.router.GET, "/image/:schematic/:version/:path", frontend.handleImage)
 	registerRoute(frontend.router.HEAD, "/image/:schematic/:version/:path", frontend.handleImage)
 
@@ -237,7 +237,7 @@ func NewFrontend(
 	registerRoute(frontend.router.POST, "/ui/wizard", frontend.handleUIWizard)
 	registerRoute(frontend.router.GET, "/ui/version-doc", frontend.handleUIVersionDoc)
 	registerRoute(frontend.router.POST, "/ui/extensions-list", frontend.handleUIExtensionsList)
-	registerRoute(frontend.router.GET, "/ui/node-tokens", frontend.handleNodeTokensUI)
+	registerRoute(frontend.router.GET, "/ui/tokens", frontend.handleTokensUI)
 
 	frontend.router.ServeFiles("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
 	frontend.router.ServeFiles("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
@@ -350,25 +350,10 @@ func requestIDFrom(r *http.Request) string {
 	return uuid.NewString()
 }
 
-// tokenAcceptedOn reports whether a download token may authenticate this path.
-//
-// Both paths only read artifacts owned by the token's subject: /image/ serves them,
-// and /pxe/ describes how to fetch them. Everywhere else the parameter is ignored so
-// a token cannot stand in for a full credential.
-func tokenAcceptedOn(path string) bool {
-	return strings.HasPrefix(path, "/image/") || strings.HasPrefix(path, "/pxe/")
-}
-
-// nodeTokenAcceptedOn reports whether path is on the pull-only registry surface a node
-// token may authenticate: schematic-derived images and the OCI registry API.
-func nodeTokenAcceptedOn(path string) bool {
-	return strings.HasPrefix(path, "/image/") || path == "/v2" || strings.HasPrefix(path, "/v2/")
-}
-
-// downloadTokenKey keys the verified download token on the request context.
+// downloadTokenKey keys the verified unstored API token on the request context.
 type downloadTokenKey struct{}
 
-// downloadTokenFromContext returns the download token that authenticated the request.
+// downloadTokenFromContext returns the unstored API token that authenticated the request.
 // It is only ever set after Verify succeeded, so a caller may forward it as-is.
 func downloadTokenFromContext(ctx context.Context) (string, bool) {
 	token, ok := ctx.Value(downloadTokenKey{}).(string)
@@ -389,30 +374,22 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 	authProvider := f.options.AuthProvider
 
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-		// Download token: if the request carries a valid JWT on a path where tokens
-		// are accepted, extract the subject as the authenticated identity.
-		// Ownership is enforced normally by schematicFactory.Get() since the
-		// JWT subject is set on the context. The verified token is also put on the
-		// context so handlePXE can forward it into the asset URLs it emits.
-		if f.options.DownloadTokenIssuer != nil && (r.Method == http.MethodGet || r.Method == http.MethodHead) && tokenAcceptedOn(r.URL.Path) && r.URL.RawQuery != "" {
-			if tokenStr := r.URL.Query().Get("token"); tokenStr != "" {
-				if sub, _, err := f.options.DownloadTokenIssuer.Verify(tokenStr); err == nil {
-					*username = sub
-					ctx = authProvider.ContextWithUsername(ctx, sub)
-					ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)
+		// API token: the JWT subject becomes the authenticated identity, so ownership is then
+		// enforced normally by schematicFactory.Get(). An unstored token is also put on the
+		// context, for handlePXE to forward into the asset URLs it emits.
+		if f.options.TokenVerifier != nil {
+			if tokenStr, fromQuery := extractAPIToken(r); tokenStr != "" {
+				if claims, ok := f.options.TokenVerifier.Verify(ctx, tokenStr); ok &&
+					apitoken.Allows(claims.Scopes, r.Method, r.URL.Path) &&
+					(!fromQuery || !claims.Stored) {
+					*username = claims.Subject
+					ctx = authProvider.ContextWithUsername(ctx, claims.Subject)
 
-					return h(ctx, w, r, p)
-				}
-			}
-		}
+					ctx = apitoken.ContextWithScopes(ctx, claims.Scopes)
 
-		// Node token: a self-issued, long-lived credential nodes present to the registry,
-		// scoped to the same pull-only surface as a machine-scoped Auth0 token.
-		if f.options.NodeTokenVerifier != nil && (r.Method == http.MethodGet || r.Method == http.MethodHead) && nodeTokenAcceptedOn(r.URL.Path) {
-			if tokenStr := extractBearerOrBasicToken(r); tokenStr != "" {
-				if orgID, ok := f.options.NodeTokenVerifier.Verify(ctx, tokenStr); ok {
-					*username = orgID
-					ctx = authProvider.ContextWithUsername(ctx, orgID)
+					if !claims.Stored {
+						ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)
+					}
 
 					return h(ctx, w, r, p)
 				}
@@ -437,6 +414,19 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 
 		return err
 	}
+}
+
+// extractAPIToken pulls an API token off the request, reporting whether it came from the
+// query string, which the caller pairs with the token's stored claim. An unstored token is
+// short-lived enough to survive an access log, and a stored one is not.
+func extractAPIToken(r *http.Request) (token string, fromQuery bool) {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		if token = r.URL.Query().Get("token"); token != "" {
+			return token, true
+		}
+	}
+
+	return extractBearerOrBasicToken(r), false
 }
 
 // extractBearerOrBasicToken pulls a bearer credential from the Authorization header, checking

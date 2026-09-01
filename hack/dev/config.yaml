@@ -39,8 +39,67 @@ http:
   externalURL: http://builder.cat-gacrux.ts.net:8080
 
 authentication:
-  enabled: false
+  enabled: true
+  provider: htpasswd
   htpasswdPath: /etc/image-factory/htpasswd
+
+  # Self-issued API tokens, served at /tokens and /ui/tokens.
+  # These need authentication.enabled above. A token is issued to whatever
+  # identity the provider resolves, so with auth off there is nobody to issue
+  # one to and the factory does not register the routes.
+  tokens:
+    # keyPath is left unset on purpose. The factory then generates a key pair at
+    # startup, which is fine for the single replica this compose file runs. Point
+    # it at a PEM-encoded ECDSA P-256 key to keep tokens valid across restarts.
+    # keyPath: /etc/image-factory/token-signing-key.key
+
+    # private registry repository for the per-org index of stored tokens
+    storage:
+      registry: registry.local:5000
+      namespace: image-factory
+      repository: tokens
+      insecure: true
+
+    # how long a revoked token keeps working. Short here so a revoke shows up
+    # while you are still watching, rather than the 5m default.
+    verificationCacheRefreshInterval: 5s
+
+    maxPerOrg: 10
+
+    ttl:
+      # Where the stored/unstored split falls. Below storedMin a token can only be
+      # unstored; above unstoredMax only stored. In between the caller picks.
+      # These two are what the /ui/tokens lifetime field is checked against.
+      # storedMin is short here so a stored token can be minted and watched expire.
+      storedMin: 1m
+      unstoredMax: 8h
+
+      # short-lived, for ?token= download links and PXE scripts
+      download:
+        default: 5m
+        min: 30s
+        max: 8h
+
+      # long-lived, for the credential a Talos node pulls installers with.
+      # min drops from the 24h default so you can mint one that expires while
+      # you are still watching.
+      pull:
+        default: 8760h
+        min: 1m
+        max: 8760h
+
+      # creating schematics and reading your own back
+      schematic:
+        default: 2160h
+        min: 1m
+        max: 8760h
+
+      # minting, listing and revoking tokens. A token carrying this may only
+      # grant permissions it holds itself, and may never grant this one.
+      token:
+        default: 720h
+        min: 1m
+        max: 2160h
 
 enterprise:
   # extraExtensions:

@@ -22,16 +22,15 @@ func auth0OptsWithSessionKey(sessionKey string) cmd.Options {
 	return cmd.Options{
 		HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 		Authentication: cmd.AuthenticationOptions{
-			Enabled:          true,
-			Provider:         "auth0",
-			DownloadTokenTTL: cmd.DefaultOptions.Authentication.DownloadTokenTTL,
+			Enabled:  true,
+			Provider: "auth0",
+			Tokens:   cmd.DefaultOptions.Authentication.Tokens,
 			Auth0: cmd.Auth0Options{
 				Domain:     "tenant.auth0.com",
 				Audience:   "https://factory.sidero.dev",
 				SessionKey: sessionKey,
 			},
 		},
-		Enterprise: cmd.EnterpriseOptions{NodeTokens: cmd.DefaultOptions.Enterprise.NodeTokens},
 	}
 }
 
@@ -300,43 +299,97 @@ func TestOptionsValidate(t *testing.T) {
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
-					Enabled:          true,
-					Provider:         "auth0",
-					Auth0:            cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
-					DownloadTokenTTL: cmd.DefaultOptions.Authentication.DownloadTokenTTL,
+					Enabled:  true,
+					Provider: "auth0",
+					Auth0:    cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
+					Tokens:   cmd.DefaultOptions.Authentication.Tokens,
 				},
-				Enterprise: cmd.EnterpriseOptions{NodeTokens: cmd.DefaultOptions.Enterprise.NodeTokens},
 			},
 		},
 		{
-			name: "authentication enabled without a positive nodeTokens maxPerOrg",
+			name: "unstoredMax below storedMin",
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
-					Enabled:          true,
-					Provider:         "auth0",
-					Auth0:            cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
-					DownloadTokenTTL: cmd.DefaultOptions.Authentication.DownloadTokenTTL,
+					Enabled:      true,
+					Provider:     "htpasswd",
+					HTPasswdPath: "/etc/factory/htpasswd",
+					Tokens: func() cmd.TokenOptions {
+						tokens := cmd.DefaultOptions.Authentication.Tokens
+						tokens.TTL.StoredMin = 8 * time.Hour
+						tokens.TTL.UnstoredMax = time.Hour
+
+						return tokens
+					}(),
 				},
-				Enterprise: cmd.EnterpriseOptions{NodeTokens: cmd.NodeTokenOptions{
-					TTL:                              cmd.DefaultOptions.Enterprise.NodeTokens.TTL,
-					VerificationCacheRefreshInterval: cmd.DefaultOptions.Enterprise.NodeTokens.VerificationCacheRefreshInterval,
-				}},
 			},
-			expectError: "enterprise.nodeTokens.maxPerOrg must be positive",
+			expectError: "is below .storedMin",
+		},
+		{
+			name: "authentication enabled without a positive tokens storedMin",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:      true,
+					Provider:     "htpasswd",
+					HTPasswdPath: "/etc/factory/htpasswd",
+					Tokens: func() cmd.TokenOptions {
+						tokens := cmd.DefaultOptions.Authentication.Tokens
+						tokens.TTL.StoredMin = 0
+
+						return tokens
+					}(),
+				},
+			},
+			expectError: "authentication.tokens.ttl.storedMin must be positive",
+		},
+		{
+			name: "authentication enabled without a positive tokens maxPerOrg",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:  true,
+					Provider: "auth0",
+					Auth0:    cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
+					Tokens: cmd.TokenOptions{
+						TTL:                              cmd.DefaultOptions.Authentication.Tokens.TTL,
+						VerificationCacheRefreshInterval: cmd.DefaultOptions.Authentication.Tokens.VerificationCacheRefreshInterval,
+					},
+				},
+			},
+			expectError: "authentication.tokens.maxPerOrg must be positive",
 		},
 		{
 			name: "download token TTL without bounds",
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
-					Enabled:          true,
-					Provider:         "htpasswd",
-					HTPasswdPath:     "/etc/factory/htpasswd",
-					DownloadTokenTTL: cmd.DownloadTokenTTL{Default: 5 * time.Minute},
+					Enabled:      true,
+					Provider:     "htpasswd",
+					HTPasswdPath: "/etc/factory/htpasswd",
+					Tokens: cmd.TokenOptions{
+						TTL: cmd.TokenTTLOptions{Download: cmd.TokenTTL{Default: 5 * time.Minute}},
+					},
 				},
 			},
-			expectError: "authentication.downloadTokenTTL.min must be positive",
+			expectError: "authentication.tokens.ttl.download.min must be positive",
+		},
+		{
+			name: "pull token TTL without bounds",
+			opts: cmd.Options{
+				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
+				Authentication: cmd.AuthenticationOptions{
+					Enabled:      true,
+					Provider:     "htpasswd",
+					HTPasswdPath: "/etc/factory/htpasswd",
+					Tokens: cmd.TokenOptions{
+						TTL: cmd.TokenTTLOptions{
+							Download: cmd.DefaultOptions.Authentication.Tokens.TTL.Download,
+						},
+					},
+				},
+			},
+			expectError: "authentication.tokens.ttl.pull.min must be positive",
 		},
 		{
 			name: "download token TTL max below min",
@@ -346,10 +399,12 @@ func TestOptionsValidate(t *testing.T) {
 					Enabled:      true,
 					Provider:     "htpasswd",
 					HTPasswdPath: "/etc/factory/htpasswd",
-					DownloadTokenTTL: cmd.DownloadTokenTTL{
-						Default: 5 * time.Minute,
-						Min:     time.Hour,
-						Max:     time.Minute,
+					Tokens: cmd.TokenOptions{
+						TTL: cmd.TokenTTLOptions{Download: cmd.TokenTTL{
+							Default: 5 * time.Minute,
+							Min:     time.Hour,
+							Max:     time.Minute,
+						}},
 					},
 				},
 			},
@@ -363,10 +418,12 @@ func TestOptionsValidate(t *testing.T) {
 					Enabled:      true,
 					Provider:     "htpasswd",
 					HTPasswdPath: "/etc/factory/htpasswd",
-					DownloadTokenTTL: cmd.DownloadTokenTTL{
-						Default: 24 * time.Hour,
-						Min:     30 * time.Second,
-						Max:     8 * time.Hour,
+					Tokens: cmd.TokenOptions{
+						TTL: cmd.TokenTTLOptions{Download: cmd.TokenTTL{
+							Default: 24 * time.Hour,
+							Min:     30 * time.Second,
+							Max:     8 * time.Hour,
+						}},
 					},
 				},
 			},

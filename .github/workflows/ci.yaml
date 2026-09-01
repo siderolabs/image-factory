@@ -354,7 +354,8 @@ jobs:
             -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache
             -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache
             -test.extra-extensions-manifest=127.0.0.1:5100/extension-testing/extensions
-            -test.spdx-cache-repository=127.0.0.1:5100/image-factory/spdx -test.vex-data-repository=ghcr.io/siderolabs/image-factory/test-vex-data
+            -test.spdx-cache-repository=127.0.0.1:5100/image-factory/spdx -test.token-storage-repository=127.0.0.1:5100/image-factory/tokens
+            -test.vex-data-repository=ghcr.io/siderolabs/image-factory/test-vex-data
         run: |
           make integration-enterprise
       - name: coverage

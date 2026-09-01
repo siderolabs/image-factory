@@ -63,22 +63,7 @@ func NewAuth0Provider(_ context.Context, _ *zap.Logger, _ Auth0Config) (AuthProv
 	return nil, errors.New("authentication is not supported in the non-enterprise version")
 }
 
-// NewDownloadTokenIssuer returns nil when enterprise is not enabled.
-func NewDownloadTokenIssuer(_ string, _ DownloadTokenTTL) (DownloadTokenIssuer, error) {
-	return nil, errors.New("download tokens are not supported in the non-enterprise version")
-}
-
-// NewDownloadTokenFrontend returns nil when enterprise is not enabled.
-func NewDownloadTokenFrontend(_ DownloadTokenIssuer, _ AuthProvider) FrontendPlugin {
-	return nil
-}
-
-// NewJWKSFrontend returns nil when enterprise is not enabled.
-func NewJWKSFrontend(_ DownloadTokenIssuer) FrontendPlugin {
-	return nil
-}
-
-// NewNodeTokenFrontends returns nil when enterprise is not enabled.
-func NewNodeTokenFrontends(_ AuthProvider, _ NodeTokenOptions) ([]FrontendPlugin, NodeTokenVerifier, error) {
+// NewTokenFrontends returns nil when enterprise is not enabled.
+func NewTokenFrontends(_ AuthProvider, _ TokenOptions) ([]FrontendPlugin, TokenVerifier, error) {
 	return nil, nil, nil
 }

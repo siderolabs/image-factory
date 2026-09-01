@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ .Lang }}">
 
 <head>
-	<title>{{ t .Localizer "nodetokens.title" }} - {{ t .Localizer "app.name" }}</title>
+	<title>{{ t .Localizer "tokens.title" }} - {{ t .Localizer "app.name" }}</title>
     <link rel="shortcut icon" href=/favicons/favicon.ico>
     <link rel=apple-touch-icon href=/favicons/apple-touch-icon-180x180.png sizes=180x180>
     <link rel=icon type=image/png href=/favicons/favicon-16x16.png sizes=16x16>
@@ -21,8 +21,9 @@
             <nav class="flex items-center gap-1 text-sm">
                 <a href="/"
                     class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors">
-                    {{ t .Localizer "nodetokens.back_home" }}
+                    {{ t .Localizer "tokens.back_home" }}
                 </a>
+                {{ if .LogoutEnabled }}
                 <div class="w-px h-4 bg-gray-200 dark:bg-gray-700"></div>
                 <form method="POST" action="/logout">
                     <button type="submit"
@@ -30,89 +31,137 @@
                         {{ t .Localizer "nav.logout" }}
                     </button>
                 </form>
+                {{ end }}
             </nav>
         </div>
     </header>
     <main>
         <div class="container mx-auto max-w-3xl px-6 py-8">
             <div class="flex items-center justify-between gap-4 mb-4">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t .Localizer "nodetokens.title" }}</h2>
-                <button type="button" id="node-token-create-open"
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t .Localizer "tokens.title" }}</h2>
+                <button type="button" id="token-create-open"
                     class="shrink-0 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center inline-flex items-center gap-1.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 transition-colors">
                     <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 1v12M1 7h12" />
                     </svg>
-                    {{ t .Localizer "nodetokens.create.button" }}
+                    {{ t .Localizer "tokens.create.button" }}
                 </button>
             </div>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ t .Localizer "nodetokens.description" }}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ t .Localizer "tokens.description" }}</p>
 
-            <div id="node-tokens-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
+            <div id="tokens-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
 
-            <table class="w-full text-sm mb-6 hidden" id="node-tokens-table">
+            <table class="w-full text-sm mb-6 hidden" id="tokens-table">
                 <thead>
                     <tr class="text-left border-b border-gray-200 dark:border-gray-700">
-                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.table.name" }}</th>
-                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "nodetokens.table.created" }}</th>
+                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.table.name" }}</th>
+                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.table.permissions" }}</th>
+                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.table.created" }}</th>
+                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.table.expires" }}</th>
                         <th class="py-2 font-medium text-gray-500 dark:text-gray-400"></th>
                     </tr>
                 </thead>
-                <tbody id="node-tokens-rows"></tbody>
+                <tbody id="tokens-rows"></tbody>
             </table>
-            <p id="node-tokens-empty" class="hidden text-sm text-gray-500 dark:text-gray-400 mb-6">{{ t .Localizer "nodetokens.empty" }}</p>
+            <p id="tokens-empty" class="hidden text-sm text-gray-500 dark:text-gray-400 mb-6">{{ t .Localizer "tokens.empty" }}</p>
         </div>
     </main>
 
-    <div id="node-token-create-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
+    <div id="token-create-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
         <div class="relative w-full max-w-md rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
-            <h2 class="text-base font-semibold mb-4 text-gray-900 dark:text-white">{{ t .Localizer "nodetokens.create.button" }}</h2>
-            <div id="node-token-create-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
-            <form id="node-tokens-create-form">
-                <label for="node-token-name"
-                    class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-1">{{ t .Localizer "nodetokens.create.name_label" }}</label>
-                <input type="text" id="node-token-name" name="name" required
+            <h2 class="text-base font-semibold mb-4 text-gray-900 dark:text-white">{{ t .Localizer "tokens.create.button" }}</h2>
+            <div id="token-create-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
+            <form id="tokens-create-form">
+                <label for="token-name"
+                    class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-1">{{ t .Localizer "tokens.create.name_label" }}</label>
+                <input type="text" id="token-name" name="name" required
                     class="w-full bg-gray-50 border border-gray-300 text-sm text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
+
+                <label for="token-ttl"
+                    class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-1">{{ t .Localizer "tokens.create.ttl_label" }}</label>
+                <input type="text" id="token-ttl" name="ttl" autocomplete="off" placeholder="720h"
+                    class="w-full bg-gray-50 border border-gray-300 text-sm text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                <p class="mt-1 mb-4 text-xs text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.create.ttl_help" }}</p>
+
+                <fieldset class="mb-4">
+                    <legend class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">{{ t .Localizer "tokens.create.permissions_label" }}</legend>
+                    {{ template "checkbox-with-description" (dict
+                        "name" "scopes"
+                        "value" "pull"
+                        "checked" true
+                        "label" (t .Localizer "tokens.create.permission_pull")
+                        "description" (t .Localizer "tokens.create.permission_pull_help")) }}
+                    {{ template "checkbox-with-description" (dict
+                        "name" "scopes"
+                        "value" "download"
+                        "checked" false
+                        "label" (t .Localizer "tokens.create.permission_download")
+                        "description" (t .Localizer "tokens.create.permission_download_help")) }}
+                    {{ template "checkbox-with-description" (dict
+                        "name" "scopes"
+                        "value" "schematic"
+                        "checked" false
+                        "label" (t .Localizer "tokens.create.permission_schematic")
+                        "description" (t .Localizer "tokens.create.permission_schematic_help")) }}
+                    {{ template "checkbox-with-description" (dict
+                        "name" "scopes"
+                        "value" "token"
+                        "checked" false
+                        "label" (t .Localizer "tokens.create.permission_token")
+                        "description" (t .Localizer "tokens.create.permission_token_help")) }}
+                </fieldset>
+
                 <div class="flex justify-end gap-2">
-                    <button type="button" id="node-token-create-cancel"
+                    <button type="button" id="token-create-cancel"
                         class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
-                        {{ t .Localizer "nodetokens.create.cancel" }}
+                        {{ t .Localizer "tokens.create.cancel" }}
                     </button>
                     <button type="submit"
                         class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                        {{ t .Localizer "nodetokens.create.button" }}
+                        {{ t .Localizer "tokens.create.button" }}
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="node-token-secret-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
+    <div id="token-secret-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
         <div class="relative w-full max-w-lg rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
-            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-white">{{ t .Localizer "nodetokens.secret.title" }}</h2>
-            <p class="text-sm text-red-600 dark:text-red-400 mb-4">{{ t .Localizer "nodetokens.secret.warning" }}</p>
-            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ t .Localizer "nodetokens.secret.patch" }}</p>
-            <div id="node-token-secret-patch" class="mb-4"></div>
+            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-white">{{ t .Localizer "tokens.secret.title" }}</h2>
+            <p class="text-sm text-red-600 dark:text-red-400 mb-4">{{ t .Localizer "tokens.secret.warning" }}</p>
+
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ t .Localizer "tokens.secret.identity" }}</p>
+            <div id="token-secret-identity" class="mb-4"></div>
+
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ t .Localizer "tokens.secret.token" }}</p>
+            <div id="token-secret-value" class="mb-4"></div>
+
+            <div id="token-secret-patch-section" class="hidden">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ t .Localizer "tokens.secret.patch" }}</p>
+                <div id="token-secret-patch" class="mb-4"></div>
+            </div>
+
             <div class="flex justify-end">
-                <button type="button" id="node-token-secret-close"
+                <button type="button" id="token-secret-close"
                     class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
-                    {{ t .Localizer "nodetokens.secret.close" }}
+                    {{ t .Localizer "tokens.secret.close" }}
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="node-token-revoke-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
+    <div id="token-revoke-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
         <div class="relative w-full max-w-md rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
-            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-white">{{ t .Localizer "nodetokens.revoke.title" }}</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ t .Localizer "nodetokens.revoke.confirm" }}</p>
+            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-white">{{ t .Localizer "tokens.revoke.title" }}</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ t .Localizer "tokens.revoke.confirm" }}</p>
             <div class="flex justify-end gap-2">
-                <button type="button" id="node-token-revoke-cancel"
+                <button type="button" id="token-revoke-cancel"
                     class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
-                    {{ t .Localizer "nodetokens.create.cancel" }}
+                    {{ t .Localizer "tokens.create.cancel" }}
                 </button>
-                <button type="button" id="node-token-revoke-confirm"
+                <button type="button" id="token-revoke-confirm"
                     class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
-                    {{ t .Localizer "nodetokens.revoke.button" }}
+                    {{ t .Localizer "tokens.revoke.button" }}
                 </button>
             </div>
         </div>
@@ -120,21 +169,26 @@
 
     <script>
     (function() {
-        var errorEl = document.getElementById('node-tokens-error');
-        var createErrorEl = document.getElementById('node-token-create-error');
-        var table = document.getElementById('node-tokens-table');
-        var rowsEl = document.getElementById('node-tokens-rows');
-        var emptyEl = document.getElementById('node-tokens-empty');
-        var createForm = document.getElementById('node-tokens-create-form');
-        var nameInput = document.getElementById('node-token-name');
-        var createModal = document.getElementById('node-token-create-modal');
-        var createOpen = document.getElementById('node-token-create-open');
-        var createCancel = document.getElementById('node-token-create-cancel');
-        var secretModal = document.getElementById('node-token-secret-modal');
-        var secretClose = document.getElementById('node-token-secret-close');
-        var revokeModal = document.getElementById('node-token-revoke-modal');
-        var revokeCancel = document.getElementById('node-token-revoke-cancel');
-        var revokeConfirm = document.getElementById('node-token-revoke-confirm');
+        var errorEl = document.getElementById('tokens-error');
+        var createErrorEl = document.getElementById('token-create-error');
+        var table = document.getElementById('tokens-table');
+        var rowsEl = document.getElementById('tokens-rows');
+        var emptyEl = document.getElementById('tokens-empty');
+        var createForm = document.getElementById('tokens-create-form');
+        var nameInput = document.getElementById('token-name');
+        var ttlInput = document.getElementById('token-ttl');
+        var createModal = document.getElementById('token-create-modal');
+        var createOpen = document.getElementById('token-create-open');
+        var createCancel = document.getElementById('token-create-cancel');
+        var scopeInputs = createForm.querySelectorAll('input[name="scopes"]');
+        var secretModal = document.getElementById('token-secret-modal');
+        var secretClose = document.getElementById('token-secret-close');
+        var secretValueEl = document.getElementById('token-secret-value');
+        var secretIdentityEl = document.getElementById('token-secret-identity');
+        var secretPatchSection = document.getElementById('token-secret-patch-section');
+        var revokeModal = document.getElementById('token-revoke-modal');
+        var revokeCancel = document.getElementById('token-revoke-cancel');
+        var revokeConfirm = document.getElementById('token-revoke-confirm');
         var revokeTargetID = null;
         var copyIcon = '<svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>';
 
@@ -172,15 +226,54 @@
             container.appendChild(div);
         }
 
+        // selectedScopes reads the permission checkboxes. The server decides what each scope
+        // may do. The page only says which ones the operator ticked.
+        function selectedScopes() {
+            var scopes = [];
+
+            scopeInputs.forEach(function(input) {
+                if (input.checked) scopes.push(input.value);
+            });
+
+            return scopes;
+        }
+
         // machineConfigPatch builds the RegistryAuthConfig document a Talos node needs to
-        // authenticate its registry pulls with this node token, scoped to this factory's own
-        // host (window.location.host, since the page and the registry it pulls from share it).
+        // authenticate its registry pulls with this pull-scoped token, scoped to this factory's
+        // own host (window.location.host, since the page and the registry it pulls from share it).
         function machineConfigPatch(created) {
             return 'apiVersion: v1alpha1\n' +
                 'kind: RegistryAuthConfig\n' +
                 'name: ' + window.location.host + '\n' +
                 'username: ' + created.org_id + '\n' +
                 'password: ' + created.token + '\n';
+        }
+
+        // remaining renders how much of a token's life is left, rounded down to the largest unit
+        // that gives a whole number, so a year-long token reads "in 1 year" and not "in 8760 hours".
+        // The caller puts the exact timestamp on the cell's title. A token can outlive its expiry in
+        // the listing, until the index drops it, which is why expired has its own wording.
+        function remaining(expiresAt) {
+            var seconds = Math.round((expiresAt.getTime() - Date.now()) / 1000);
+
+            if (seconds <= 0) return '{{ t .Localizer "tokens.table.expired" }}';
+
+            var units = [
+                ['year', 365 * 24 * 3600],
+                ['day', 24 * 3600],
+                ['hour', 3600],
+                ['minute', 60],
+                ['second', 1]
+            ];
+
+            for (var i = 0; i < units.length; i++) {
+                var name = units[i][0], size = units[i][1];
+
+                if (seconds >= size || name === 'second') {
+                    return new Intl.RelativeTimeFormat('{{ .Lang }}', { numeric: 'always' })
+                        .format(Math.floor(seconds / size), name);
+                }
+            }
         }
 
         function renderRows(tokens) {
@@ -205,17 +298,33 @@
                 nameCell.textContent = tok.name;
                 tr.appendChild(nameCell);
 
+                var scopesCell = document.createElement('td');
+                scopesCell.className = 'py-2 pr-3 font-mono text-xs text-gray-500 dark:text-gray-400';
+                scopesCell.textContent = (tok.scopes || []).join(' ');
+                tr.appendChild(scopesCell);
+
                 var createdCell = document.createElement('td');
                 createdCell.className = 'py-2 pr-3 text-gray-500 dark:text-gray-400';
                 createdCell.textContent = tok.created_at ? new Date(tok.created_at).toLocaleString() : '';
                 tr.appendChild(createdCell);
+
+                var expiresCell = document.createElement('td');
+                expiresCell.className = 'py-2 pr-3 text-gray-500 dark:text-gray-400';
+
+                if (tok.expires_at) {
+                    var expiresAt = new Date(tok.expires_at);
+                    expiresCell.textContent = remaining(expiresAt);
+                    expiresCell.title = expiresAt.toLocaleString();
+                }
+
+                tr.appendChild(expiresCell);
 
                 var actionCell = document.createElement('td');
                 actionCell.className = 'py-2 text-right';
                 var revokeBtn = document.createElement('button');
                 revokeBtn.type = 'button';
                 revokeBtn.className = 'text-red-600 hover:underline dark:text-red-400';
-                revokeBtn.textContent = '{{ t .Localizer "nodetokens.revoke.button" }}';
+                revokeBtn.textContent = '{{ t .Localizer "tokens.revoke.button" }}';
                 revokeBtn.addEventListener('click', function() { showRevoke(tok.id); });
                 actionCell.appendChild(revokeBtn);
                 tr.appendChild(actionCell);
@@ -225,7 +334,7 @@
         }
 
         function loadTokens() {
-            fetch('/node-tokens', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            fetch('/tokens', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function(r) {
                     if (!r.ok) throw new Error('HTTP ' + r.status);
 
@@ -235,7 +344,7 @@
                     renderRows(doc.tokens || []);
                 })
                 .catch(function(err) {
-                    showError('{{ t .Localizer "nodetokens.error.load" }}: ' + err.message);
+                    showError('{{ t .Localizer "tokens.error.load" }}: ' + err.message);
                 });
         }
 
@@ -264,14 +373,14 @@
 
             hideRevoke();
 
-            fetch('/node-tokens/' + encodeURIComponent(id) + '/revoke', { method: 'POST', credentials: 'same-origin' })
+            fetch('/tokens/' + encodeURIComponent(id) + '/revoke', { method: 'POST', credentials: 'same-origin' })
                 .then(function(r) {
                     if (!r.ok) throw new Error('HTTP ' + r.status);
 
                     loadTokens();
                 })
                 .catch(function(err) {
-                    showError('{{ t .Localizer "nodetokens.error.revoke" }}: ' + err.message);
+                    showError('{{ t .Localizer "tokens.error.revoke" }}: ' + err.message);
                 });
         });
 
@@ -283,6 +392,17 @@
         function clearCreateError() {
             createErrorEl.textContent = '';
             createErrorEl.classList.add('hidden');
+        }
+
+        // resetCreateForm puts the modal back to its defaults, because it is reused for
+        // every create. The default is pull on its own, which is what a Talos node needs.
+        function resetCreateForm() {
+            nameInput.value = '';
+            ttlInput.value = '';
+
+            scopeInputs.forEach(function(input) {
+                input.checked = input.value === 'pull';
+            });
         }
 
         function showCreate() {
@@ -306,7 +426,16 @@
         });
 
         function showSecret(created) {
-            copyableBlock(document.getElementById('node-token-secret-patch'), machineConfigPatch(created));
+            copyableBlock(secretIdentityEl, created.org_id || '');
+            copyableBlock(secretValueEl, created.token);
+
+            // The registry patch only means something for a token that can pull.
+            var canPull = (created.scopes || []).indexOf('pull') !== -1;
+            secretPatchSection.classList.toggle('hidden', !canPull);
+
+            if (canPull) {
+                copyableBlock(document.getElementById('token-secret-patch'), machineConfigPatch(created));
+            }
 
             secretModal.classList.remove('hidden');
             secretModal.classList.add('flex');
@@ -331,20 +460,33 @@
             var name = nameInput.value.trim();
             if (!name) return;
 
-            fetch('/node-tokens', {
+            var body = { name: name, stored: true };
+
+            var ttl = ttlInput.value.trim();
+            if (ttl) body.ttl = ttl;
+
+            body.scopes = selectedScopes();
+
+            if (!body.scopes.length) {
+                showCreateError('{{ t .Localizer "tokens.create.permissions_required" }}');
+
+                return;
+            }
+
+            fetch('/tokens', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: name })
+                body: JSON.stringify(body)
             })
                 .then(function(r) {
-                    if (r.status === 409) throw new Error('{{ t .Localizer "nodetokens.error.limit" }}');
+                    if (r.status === 409) throw new Error('{{ t .Localizer "tokens.error.limit" }}');
                     if (!r.ok) throw new Error('HTTP ' + r.status);
 
                     return r.json();
                 })
                 .then(function(created) {
-                    nameInput.value = '';
+                    resetCreateForm();
                     hideCreate();
                     showSecret(created);
                     loadTokens();

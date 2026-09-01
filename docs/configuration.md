@@ -936,7 +936,7 @@ Required.
 
 MachineScope names a scope that marks a token as a machine credential, e.g. `factory:machine`.
 
-Tokens carrying it may only fetch artifacts: `GET`/`HEAD` on `/image/` and the `/v2/` OCI registry.
+Tokens carrying it reach exactly what an API token with the `pull` scope reaches: `GET`/`HEAD` on `/image/` and the `/v2/` OCI registry.
 Everything else is rejected with 403, including reading schematic definitions.
 Intended for the long-lived tokens provisioned onto Talos nodes, which need to pull installers but should not be able to inspect or create schematics.
 
@@ -983,46 +983,251 @@ Optional; part of the browser-login group.
 
 ---
 
-### `authentication.downloadTokenKeyPath`
+### `authentication.tokens`
+
+Tokens holds configuration for self-issued API token management.
+
+---
+
+### `authentication.tokens.keyPath`
 
 - **Type:** `string`
-- **Env:** `AUTHENTICATION_DOWNLOADTOKENKEYPATH`
+- **Env:** `AUTHENTICATION_TOKENS_KEYPATH`
 
-DownloadTokenKeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing download tokens.
-If empty, a key pair is generated on startup (single-replica deployments only).
-
----
-
-### `authentication.downloadTokenTTL`
-
-DownloadTokenTTL defines the validity duration for download tokens.
+KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing API tokens.
+One key signs every scope, so a deployment that used to configure separate download- and
+node-token keys has to pick one of them here.
+If unset, a fresh key is generated at startup, which only works for single-replica deployments.
 
 ---
 
-### `authentication.downloadTokenTTL.max`
+### `authentication.tokens.storage`
+
+Storage is the OCI repository used to persist the per-org token index
+(the list of active stored tokens; presence in the index is what makes such a token valid).
+A token minted with "stored": false is not recorded, so it cannot be listed or revoked and does not count against MaxPerOrg.
+
+---
+
+### `authentication.tokens.storage.registry`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_TOKENS_STORAGE_REGISTRY`
+
+Registry is the hostname of the container registry, e.g., `ghcr.io`.
+This is where images are stored.
+
+---
+
+### `authentication.tokens.storage.namespace`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_TOKENS_STORAGE_NAMESPACE`
+
+Namespace is the repository namespace or organization within the registry, e.g., `sidero-labs`.
+Some registries allow repositories without a namespace.
+
+---
+
+### `authentication.tokens.storage.repository`
+
+- **Type:** `string`
+- **Env:** `AUTHENTICATION_TOKENS_STORAGE_REPOSITORY`
+
+Repository is the name of the repository inside the namespace, e.g., `talos`.
+Combined with Registry and Namespace, it forms the fully qualified repository path.
+
+---
+
+### `authentication.tokens.storage.insecure`
+
+- **Type:** `bool`
+- **Env:** `AUTHENTICATION_TOKENS_STORAGE_INSECURE`
+
+Insecure allows connections to registries over HTTP or with invalid TLS certificates.
+
+---
+
+### `authentication.tokens.ttl`
+
+TTL bounds the lifetime of issued tokens, per scope.
+
+---
+
+### `authentication.tokens.ttl.storedMin`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_DOWNLOADTOKENTTL_MAX`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_STOREDMIN`
+
+StoredMin is the shortest lifetime a stored token may have, whatever its scopes allow.
+Recording a credential that expires in minutes buys a registry write and nothing else, since the
+token is gone before anyone can revoke it, so short lifetimes belong to unstored tokens.
+
+---
+
+### `authentication.tokens.ttl.unstoredMax`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_UNSTOREDMAX`
+
+UnstoredMax is the longest lifetime an unstored token may have, whatever its scopes allow.
+Such a token is not recorded, so expiry is the only way it leaves circulation, and it is the only kind
+of token accepted from a ?token= query parameter, where proxy and CDN access logs keep a copy of it.
+
+It must not be below StoredMin, which would leave lifetimes no token could be issued for.
+
+---
+
+### `authentication.tokens.ttl.download`
+
+Download bounds the lifetime of tokens carrying the "download" scope, which fetch images and PXE scripts.
+
+---
+
+### `authentication.tokens.ttl.download.max`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MAX`
 
 Max is the longest validity duration a caller may request.
 
 ---
 
-### `authentication.downloadTokenTTL.min`
+### `authentication.tokens.ttl.download.min`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_DOWNLOADTOKENTTL_MIN`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MIN`
 
 Min is the shortest validity duration a caller may request.
 
 ---
 
-### `authentication.downloadTokenTTL.default`
+### `authentication.tokens.ttl.download.default`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_DOWNLOADTOKENTTL_DEFAULT`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_DOWNLOAD_DEFAULT`
 
 Default is the validity duration granted when the caller requests no explicit TTL.
+
+---
+
+### `authentication.tokens.ttl.pull`
+
+Pull bounds the lifetime of tokens carrying the "pull" scope, which pull installer images.
+A pull token isn't refreshed once it's written into a Talos machine config, so its default
+lifetime is expected to be long (up to Max).
+
+---
+
+### `authentication.tokens.ttl.pull.max`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_PULL_MAX`
+
+Max is the longest validity duration a caller may request.
+
+---
+
+### `authentication.tokens.ttl.pull.min`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_PULL_MIN`
+
+Min is the shortest validity duration a caller may request.
+
+---
+
+### `authentication.tokens.ttl.pull.default`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_PULL_DEFAULT`
+
+Default is the validity duration granted when the caller requests no explicit TTL.
+
+---
+
+### `authentication.tokens.ttl.schematic`
+
+Schematic bounds the lifetime of tokens carrying the "schematic" scope, which create and read schematics.
+
+---
+
+### `authentication.tokens.ttl.schematic.max`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_SCHEMATIC_MAX`
+
+Max is the longest validity duration a caller may request.
+
+---
+
+### `authentication.tokens.ttl.schematic.min`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_SCHEMATIC_MIN`
+
+Min is the shortest validity duration a caller may request.
+
+---
+
+### `authentication.tokens.ttl.schematic.default`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_SCHEMATIC_DEFAULT`
+
+Default is the validity duration granted when the caller requests no explicit TTL.
+
+---
+
+### `authentication.tokens.ttl.token`
+
+Token bounds the lifetime of tokens carrying the "token" scope, which mint and revoke other tokens.
+
+---
+
+### `authentication.tokens.ttl.token.max`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_TOKEN_MAX`
+
+Max is the longest validity duration a caller may request.
+
+---
+
+### `authentication.tokens.ttl.token.min`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_TOKEN_MIN`
+
+Min is the shortest validity duration a caller may request.
+
+---
+
+### `authentication.tokens.ttl.token.default`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_TOKEN_DEFAULT`
+
+Default is the validity duration granted when the caller requests no explicit TTL.
+
+---
+
+### `authentication.tokens.verificationCacheRefreshInterval`
+
+- **Type:** `time.Duration`
+- **Env:** `AUTHENTICATION_TOKENS_VERIFICATIONCACHEREFRESHINTERVAL`
+
+VerificationCacheRefreshInterval bounds how stale the in-memory verification cache may be before it's refreshed from storage.
+This is also the bound on how long a revoked token may keep working after revocation.
+
+---
+
+### `authentication.tokens.maxPerOrg`
+
+- **Type:** `int`
+- **Env:** `AUTHENTICATION_TOKENS_MAXPERORG`
+
+MaxPerOrg caps how many stored tokens an org may have active at once.
 
 ---
 
@@ -1274,121 +1479,6 @@ Capacity caps the number of cached objects before LRU eviction.
 
 ---
 
-### `enterprise.nodeTokens`
-
-NodeTokens contains configuration for self-issued node token management.
-
----
-
-### `enterprise.nodeTokens.keyPath`
-
-- **Type:** `string`
-- **Env:** `ENTERPRISE_NODETOKENS_KEYPATH`
-
-KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing node tokens.
-Kept separate from the download-token key so compromising one doesn't compromise the other.
-If unset, a fresh key is generated at startup, which only works for single-replica deployments.
-
----
-
-### `enterprise.nodeTokens.storage`
-
-Storage is the OCI repository used to persist the per-org node-token index
-(the list of active tokens; presence in the index is what makes a token valid).
-
----
-
-### `enterprise.nodeTokens.storage.registry`
-
-- **Type:** `string`
-- **Env:** `ENTERPRISE_NODETOKENS_STORAGE_REGISTRY`
-
-Registry is the hostname of the container registry, e.g., `ghcr.io`.
-This is where images are stored.
-
----
-
-### `enterprise.nodeTokens.storage.namespace`
-
-- **Type:** `string`
-- **Env:** `ENTERPRISE_NODETOKENS_STORAGE_NAMESPACE`
-
-Namespace is the repository namespace or organization within the registry, e.g., `sidero-labs`.
-Some registries allow repositories without a namespace.
-
----
-
-### `enterprise.nodeTokens.storage.repository`
-
-- **Type:** `string`
-- **Env:** `ENTERPRISE_NODETOKENS_STORAGE_REPOSITORY`
-
-Repository is the name of the repository inside the namespace, e.g., `talos`.
-Combined with Registry and Namespace, it forms the fully qualified repository path.
-
----
-
-### `enterprise.nodeTokens.storage.insecure`
-
-- **Type:** `bool`
-- **Env:** `ENTERPRISE_NODETOKENS_STORAGE_INSECURE`
-
-Insecure allows connections to registries over HTTP or with invalid TLS certificates.
-
----
-
-### `enterprise.nodeTokens.ttl`
-
-TTL bounds the lifetime of issued node tokens.
-
----
-
-### `enterprise.nodeTokens.ttl.max`
-
-- **Type:** `time.Duration`
-- **Env:** `ENTERPRISE_NODETOKENS_TTL_MAX`
-
-Max is the longest validity duration a caller may request.
-
----
-
-### `enterprise.nodeTokens.ttl.min`
-
-- **Type:** `time.Duration`
-- **Env:** `ENTERPRISE_NODETOKENS_TTL_MIN`
-
-Min is the shortest validity duration a caller may request.
-
----
-
-### `enterprise.nodeTokens.ttl.default`
-
-- **Type:** `time.Duration`
-- **Env:** `ENTERPRISE_NODETOKENS_TTL_DEFAULT`
-
-Default is the validity duration granted when the caller requests no explicit TTL.
-
----
-
-### `enterprise.nodeTokens.verificationCacheRefreshInterval`
-
-- **Type:** `time.Duration`
-- **Env:** `ENTERPRISE_NODETOKENS_VERIFICATIONCACHEREFRESHINTERVAL`
-
-VerificationCacheRefreshInterval bounds how stale the in-memory verification cache may be before it's refreshed from storage.
-This is also the bound on how long a revoked token may keep working after revocation.
-
----
-
-### `enterprise.nodeTokens.maxPerOrg`
-
-- **Type:** `int`
-- **Env:** `ENTERPRISE_NODETOKENS_MAXPERORG`
-
-MaxPerOrg caps how many node tokens an org may have active at once.
-
----
-
 ### `registry`
 
 Registry contains low-level tuning for the registry client (pull/push concurrency, debugging).
@@ -1503,14 +1593,37 @@ authentication:
         domain: ""
         machineScope: ""
         sessionKey: ""
-    downloadTokenKeyPath: ""
-    downloadTokenTTL:
-        default: 5m0s
-        max: 8h0m0s
-        min: 30s
     enabled: false
     htpasswdPath: ""
     provider: htpasswd
+    tokens:
+        keyPath: ""
+        maxPerOrg: 10
+        storage:
+            insecure: false
+            namespace: siderolabs/image-factory
+            registry: ghcr.io
+            repository: tokens
+        ttl:
+            download:
+                default: 5m0s
+                max: 8h0m0s
+                min: 30s
+            pull:
+                default: 8760h0m0s
+                max: 8760h0m0s
+                min: 24h0m0s
+            schematic:
+                default: 2160h0m0s
+                max: 8760h0m0s
+                min: 1h0m0s
+            storedMin: 1h0m0s
+            token:
+                default: 720h0m0s
+                max: 2160h0m0s
+                min: 1h0m0s
+            unstoredMax: 8h0m0s
+        verificationCacheRefreshInterval: 5m0s
 build:
     brokenTalosVersions: []
     maxConcurrency: 6
@@ -1556,19 +1669,6 @@ enterprise:
             namespace: ""
             registry: ""
             repository: ""
-    nodeTokens:
-        keyPath: ""
-        maxPerOrg: 10
-        storage:
-            insecure: false
-            namespace: siderolabs/image-factory
-            registry: ghcr.io
-            repository: node-tokens
-        ttl:
-            default: 8760h0m0s
-            max: 8760h0m0s
-            min: 24h0m0s
-        verificationCacheRefreshInterval: 5m0s
     scanner:
         cache:
             capacity: 4096
@@ -1660,13 +1760,30 @@ IF_AUTHENTICATION_AUTH0_CLIENTSECRET=
 IF_AUTHENTICATION_AUTH0_DOMAIN=
 IF_AUTHENTICATION_AUTH0_MACHINESCOPE=
 IF_AUTHENTICATION_AUTH0_SESSIONKEY=
-IF_AUTHENTICATION_DOWNLOADTOKENKEYPATH=
-IF_AUTHENTICATION_DOWNLOADTOKENTTL_DEFAULT=5m0s
-IF_AUTHENTICATION_DOWNLOADTOKENTTL_MAX=8h0m0s
-IF_AUTHENTICATION_DOWNLOADTOKENTTL_MIN=30s
 IF_AUTHENTICATION_ENABLED=false
 IF_AUTHENTICATION_HTPASSWDPATH=
 IF_AUTHENTICATION_PROVIDER=htpasswd
+IF_AUTHENTICATION_TOKENS_KEYPATH=
+IF_AUTHENTICATION_TOKENS_MAXPERORG=10
+IF_AUTHENTICATION_TOKENS_STORAGE_INSECURE=false
+IF_AUTHENTICATION_TOKENS_STORAGE_NAMESPACE=siderolabs/image-factory
+IF_AUTHENTICATION_TOKENS_STORAGE_REGISTRY=ghcr.io
+IF_AUTHENTICATION_TOKENS_STORAGE_REPOSITORY=tokens
+IF_AUTHENTICATION_TOKENS_TTL_DOWNLOAD_DEFAULT=5m0s
+IF_AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MAX=8h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MIN=30s
+IF_AUTHENTICATION_TOKENS_TTL_PULL_DEFAULT=8760h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_PULL_MAX=8760h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_PULL_MIN=24h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_SCHEMATIC_DEFAULT=2160h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_SCHEMATIC_MAX=8760h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_SCHEMATIC_MIN=1h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_STOREDMIN=1h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_TOKEN_DEFAULT=720h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_TOKEN_MAX=2160h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_TOKEN_MIN=1h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_UNSTOREDMAX=8h0m0s
+IF_AUTHENTICATION_TOKENS_VERIFICATIONCACHEREFRESHINTERVAL=5m0s
 IF_BUILD_BROKENTALOSVERSIONS=[]
 IF_BUILD_MAXCONCURRENCY=6
 IF_BUILD_MINTALOSVERSION=1.2.0
@@ -1701,16 +1818,6 @@ IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_INSECURE=false
 IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_NAMESPACE=
 IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REGISTRY=
 IF_ENTERPRISE_EXTRAEXTENSIONS_MANIFEST_REPOSITORY=
-IF_ENTERPRISE_NODETOKENS_KEYPATH=
-IF_ENTERPRISE_NODETOKENS_MAXPERORG=10
-IF_ENTERPRISE_NODETOKENS_STORAGE_INSECURE=false
-IF_ENTERPRISE_NODETOKENS_STORAGE_NAMESPACE=siderolabs/image-factory
-IF_ENTERPRISE_NODETOKENS_STORAGE_REGISTRY=ghcr.io
-IF_ENTERPRISE_NODETOKENS_STORAGE_REPOSITORY=node-tokens
-IF_ENTERPRISE_NODETOKENS_TTL_DEFAULT=8760h0m0s
-IF_ENTERPRISE_NODETOKENS_TTL_MAX=8760h0m0s
-IF_ENTERPRISE_NODETOKENS_TTL_MIN=24h0m0s
-IF_ENTERPRISE_NODETOKENS_VERIFICATIONCACHEREFRESHINTERVAL=5m0s
 IF_ENTERPRISE_SCANNER_CACHE_CAPACITY=4096
 IF_ENTERPRISE_SCANNER_CACHE_TTL=15m0s
 IF_ENTERPRISE_SCANNER_DATABASEROOTDIR=/var/lib/grype

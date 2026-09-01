@@ -66,6 +66,285 @@ func testAuthFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 		testDownloadTokens(ctx, t, baseURL)
 	})
+
+	t.Run("APITokens", func(t *testing.T) {
+		t.Parallel()
+
+		testAPITokens(ctx, t, baseURL)
+	})
+}
+
+func createToken(ctx context.Context, t *testing.T, baseURL, body string) (status int, decoded map[string]any) {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/tokens", strings.NewReader(body))
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	addTestAuth(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close() //nolint:errcheck
+
+	raw, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	if resp.StatusCode != http.StatusOK {
+		return resp.StatusCode, nil
+	}
+
+	require.NoError(t, json.Unmarshal(raw, &decoded))
+
+	return resp.StatusCode, decoded
+}
+
+func getWithToken(ctx context.Context, t *testing.T, url, token string) int {
+	t.Helper()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	require.NoError(t, err)
+
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close() //nolint:errcheck
+
+	return resp.StatusCode
+}
+
+func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
+	t.Helper()
+
+	c, err := client.New(baseURL, clientAuthCredentials()...)
+	require.NoError(t, err)
+
+	schematicID, _, err := c.SchematicCreate(ctx, schematicpkg.Schematic{})
+	require.NoError(t, err)
+
+	t.Run("RequiresAuth", func(t *testing.T) {
+		t.Parallel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/tokens",
+			strings.NewReader(`{"name":"n","scopes":["pull"]}`))
+		require.NoError(t, err)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assertRequiresAuth(t, resp)
+	})
+
+	t.Run("RejectsBadRequests", func(t *testing.T) {
+		t.Parallel()
+
+		for name, body := range map[string]string{
+			"no name":       `{"scopes":["pull"]}`,
+			"long unstored": `{"scopes":["pull"],"stored":false,"ttl":"8760h"}`,
+			"short stored":  `{"name":"n","scopes":["download"],"stored":true,"ttl":"1m"}`,
+			"no scopes":     `{"name":"n"}`,
+			"unknown scope": `{"name":"n","scopes":["root"]}`,
+			"bad ttl":       `{"name":"n","scopes":["pull"],"ttl":"forever"}`,
+			"ttl too long":  `{"name":"n","scopes":["download"],"ttl":"9000h"}`,
+			"malformed":     `not json`,
+		} {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				status, _ := createToken(ctx, t, baseURL, body)
+				assert.Equal(t, http.StatusBadRequest, status)
+			})
+		}
+	})
+
+	t.Run("PullScope", func(t *testing.T) {
+		t.Parallel()
+
+		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-pull","scopes":["pull"]}`)
+		require.Equal(t, http.StatusOK, status)
+
+		token, _ := created["token"].(string)
+		require.NotEmpty(t, token)
+		assert.Equal(t, true, created["stored"], "a create that does not say otherwise is recorded")
+
+		assert.Equal(t, http.StatusOK, getWithToken(ctx, t, baseURL+"/v2/", token))
+		assert.Equal(t, http.StatusOK,
+			getWithToken(ctx, t, baseURL+"/image/"+schematicID+"/v1.9.0/kernel-amd64", token))
+
+		for _, path := range []string{
+			"/pxe/" + schematicID + "/v1.9.0/metal-amd64",
+			"/schematics/" + schematicID,
+			"/tokens",
+		} {
+			assert.Equal(t, http.StatusUnauthorized, getWithToken(ctx, t, baseURL+path, token),
+				"a pull token must not reach %s", path)
+		}
+
+		assert.Equal(t, http.StatusUnauthorized,
+			getWithToken(ctx, t, baseURL+"/image/"+schematicID+"/v1.9.0/kernel-amd64?token="+token, ""))
+	})
+
+	t.Run("SchematicScope", func(t *testing.T) {
+		t.Parallel()
+
+		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-schematic","scopes":["schematic"]}`)
+		require.Equal(t, http.StatusOK, status)
+
+		token, _ := created["token"].(string)
+		require.NotEmpty(t, token)
+
+		sc, err := client.New(baseURL, client.WithBearerToken(token))
+		require.NoError(t, err)
+
+		ownID, _, err := sc.SchematicCreate(ctx, schematicpkg.Schematic{})
+		require.NoError(t, err)
+
+		assert.Equal(t, http.StatusOK, getWithToken(ctx, t, baseURL+"/schematics/"+ownID, token))
+
+		assert.Equal(t, http.StatusUnauthorized,
+			getWithToken(ctx, t, baseURL+"/image/"+ownID+"/v1.9.0/kernel-amd64", token))
+	})
+
+	t.Run("ListAndRevoke", func(t *testing.T) {
+		t.Parallel()
+
+		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-revoke","scopes":["pull"]}`)
+		require.Equal(t, http.StatusOK, status)
+
+		token, _ := created["token"].(string)
+		id, _ := created["id"].(string)
+		require.NotEmpty(t, id)
+
+		require.Equal(t, http.StatusOK, getWithToken(ctx, t, baseURL+"/v2/", token))
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/tokens", nil)
+		require.NoError(t, err)
+
+		addTestAuth(req)
+
+		listResp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { listResp.Body.Close() }) //nolint:errcheck
+
+		require.Equal(t, http.StatusOK, listResp.StatusCode)
+
+		var listed struct {
+			Tokens []struct {
+				ID     string   `json:"id"`
+				Name   string   `json:"name"`
+				Scopes []string `json:"scopes"`
+			} `json:"tokens"`
+		}
+
+		require.NoError(t, json.NewDecoder(listResp.Body).Decode(&listed))
+
+		found := false
+
+		for _, tok := range listed.Tokens {
+			if tok.ID == id {
+				found = true
+
+				assert.Equal(t, "e2e-revoke", tok.Name)
+				assert.Equal(t, []string{"pull"}, tok.Scopes)
+			}
+		}
+
+		assert.True(t, found, "the minted token should appear in the listing")
+
+		revokeReq, err := http.NewRequestWithContext(ctx, http.MethodPost,
+			baseURL+"/tokens/"+id+"/revoke", nil)
+		require.NoError(t, err)
+
+		addTestAuth(revokeReq)
+
+		revokeResp, err := http.DefaultClient.Do(revokeReq)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { revokeResp.Body.Close() }) //nolint:errcheck
+
+		require.Equal(t, http.StatusNoContent, revokeResp.StatusCode)
+
+		assert.Eventually(t, func() bool {
+			return getWithToken(ctx, t, baseURL+"/v2/", token) == http.StatusUnauthorized
+		}, time.Minute, time.Second, "a revoked token should stop working")
+	})
+
+	t.Run("ClientDownloadToken", func(t *testing.T) {
+		t.Parallel()
+
+		token, err := c.DownloadToken(ctx, time.Hour)
+		require.NoError(t, err)
+		require.NotEmpty(t, token)
+
+		assert.Equal(t, http.StatusOK,
+			getWithToken(ctx, t, baseURL+"/image/"+schematicID+"/v1.9.0/kernel-amd64?token="+token, ""))
+	})
+
+	t.Run("RetiredDownloadTokenRoute", func(t *testing.T) {
+		t.Parallel()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/download-token?ttl=1h", nil)
+		require.NoError(t, err)
+
+		addTestAuth(req)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode, "the alias is gone; /tokens covers it")
+	})
+
+	t.Run("UnstoredTokenIsNotListed", func(t *testing.T) {
+		t.Parallel()
+
+		status, created := createToken(ctx, t, baseURL, `{"scopes":["download"],"stored":false}`)
+		require.Equal(t, http.StatusOK, status)
+
+		assert.Equal(t, false, created["stored"], "the caller asked for a token the factory does not record")
+
+		token, _ := created["token"].(string)
+		require.NotEmpty(t, token)
+
+		assert.Equal(t, http.StatusOK,
+			getWithToken(ctx, t, baseURL+"/image/"+schematicID+"/v1.9.0/kernel-amd64?token="+token, ""))
+	})
+
+	t.Run("TokenScopeCannotEscalate", func(t *testing.T) {
+		t.Parallel()
+
+		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-minter","scopes":["token"]}`)
+		require.Equal(t, http.StatusOK, status)
+
+		minter, _ := created["token"].(string)
+		require.NotEmpty(t, minter)
+
+		mint := func(body string) int {
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/tokens",
+				strings.NewReader(body))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+minter)
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			defer resp.Body.Close() //nolint:errcheck
+
+			return resp.StatusCode
+		}
+
+		assert.Equal(t, http.StatusForbidden, mint(`{"name":"x","scopes":["pull"]}`))
+		assert.Equal(t, http.StatusForbidden, mint(`{"name":"x","scopes":["token"]}`))
+	})
 }
 
 func testAuthEnforcement(ctx context.Context, t *testing.T, baseURL string) {
@@ -210,7 +489,6 @@ func testPublicEndpoints(ctx context.Context, t *testing.T, baseURL string) {
 			req, err := http.NewRequestWithContext(ctx, ep.method, baseURL+ep.path, nil)
 			require.NoError(t, err)
 
-			// deliberately NO auth
 			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
 
@@ -373,8 +651,8 @@ func testOwnership(ctx context.Context, t *testing.T, baseURL string) {
 	})
 }
 
-// testDownloadTokens verifies the download token endpoint: create a schematic,
-// request a download token with auth, then download using the token (no auth headers).
+// testDownloadTokens verifies the download flow of an unstored API token: create a schematic,
+// mint a download-scoped token with auth, then download using the token alone (no auth headers).
 func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Helper()
 
@@ -385,10 +663,11 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	schematicID, _, err := c.SchematicCreate(ctx, schematicpkg.Schematic{})
 	require.NoError(t, err)
 
-	t.Run("DownloadTokenEndpointRequiresAuth", func(t *testing.T) {
+	t.Run("MintRequiresAuth", func(t *testing.T) {
 		t.Parallel()
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/download-token", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/tokens",
+			strings.NewReader(`{"scopes":["download"],"stored":false}`))
 		require.NoError(t, err)
 
 		resp, err := http.DefaultClient.Do(req)
@@ -406,40 +685,26 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 			name       string
 			ttl        string
 			expectCode int
-			expiresIn  int
 		}{
-			{name: "in range", ttl: "1h", expectCode: http.StatusOK, expiresIn: 3600},
+			{name: "in range", ttl: "1h", expectCode: http.StatusOK},
 			{name: "below min", ttl: "1s", expectCode: http.StatusBadRequest},
-			{name: "above max", ttl: "24h", expectCode: http.StatusBadRequest},
+			{name: "above unstoredMax", ttl: "24h", expectCode: http.StatusBadRequest},
 			{name: "not a duration", ttl: "forever", expectCode: http.StatusBadRequest},
 		} {
 			t.Run(test.name, func(t *testing.T) {
 				t.Parallel()
 
-				req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/download-token?ttl="+test.ttl, nil)
-				require.NoError(t, err)
+				status, created := createToken(ctx, t, baseURL,
+					fmt.Sprintf(`{"scopes":["download"],"stored":false,"ttl":%q}`, test.ttl))
 
-				addTestAuth(req)
-
-				resp, err := http.DefaultClient.Do(req)
-				require.NoError(t, err)
-
-				t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
-
-				require.Equal(t, test.expectCode, resp.StatusCode)
+				require.Equal(t, test.expectCode, status)
 
 				if test.expectCode != http.StatusOK {
 					return
 				}
 
-				var result struct {
-					AccessToken string `json:"access_token"`
-					ExpiresIn   int    `json:"expires_in"`
-				}
-
-				require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
-				assert.Equal(t, test.expiresIn, result.ExpiresIn)
-				assert.NotEmpty(t, result.AccessToken)
+				token, _ := created["token"].(string)
+				assert.NotEmpty(t, token)
 			})
 		}
 	})
@@ -450,7 +715,6 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 		token := getDownloadToken(ctx, t, baseURL)
 		downloadURL := baseURL + "/image/" + schematicID + "/v1.9.0/kernel-amd64?token=" + token
 
-		// Download with the token — no auth headers.
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 		require.NoError(t, err)
 
@@ -474,6 +738,7 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 			require.NoError(t, err)
 
+			// deliberately NO auth
 			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
 
@@ -529,13 +794,10 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("TokenRejectedOnWrite", func(t *testing.T) {
 		t.Parallel()
 
-		// Download tokens are only accepted on GET/HEAD. A POST with a
-		// token in the query string should fall through to regular auth,
-		// which rejects the request because no credentials are provided.
 		token := getDownloadToken(ctx, t, baseURL)
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-			baseURL+"/download-token?token="+token, nil)
+			baseURL+"/tokens?token="+token, strings.NewReader(`{"scopes":["download"],"stored":false}`))
 		require.NoError(t, err)
 
 		resp, err := http.DefaultClient.Do(req)
@@ -544,6 +806,12 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
 
 		assertRequiresAuth(t, resp)
+	})
+
+	t.Run("Scopes", func(t *testing.T) {
+		t.Parallel()
+
+		testDownloadTokenScopes(ctx, t, baseURL, schematicID)
 	})
 
 	t.Run("PXE", func(t *testing.T) {
@@ -578,6 +846,53 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	})
 }
 
+func testDownloadTokenScopes(ctx context.Context, t *testing.T, baseURL, schematicID string) {
+	t.Helper()
+
+	t.Run("AcceptedInAuthorizationHeader", func(t *testing.T) {
+		t.Parallel()
+
+		token := getDownloadToken(ctx, t, baseURL)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+			baseURL+"/image/"+schematicID+"/v1.9.0/kernel-amd64", nil)
+		require.NoError(t, err)
+
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("RejectedOutsideItsScope", func(t *testing.T) {
+		t.Parallel()
+
+		token := getDownloadToken(ctx, t, baseURL)
+
+		for _, target := range []string{"/v2/", "/schematics/" + schematicID} {
+			t.Run(target, func(t *testing.T) {
+				t.Parallel()
+
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+target, nil)
+				require.NoError(t, err)
+
+				req.Header.Set("Authorization", "Bearer "+token)
+
+				resp, err := http.DefaultClient.Do(req)
+				require.NoError(t, err)
+
+				t.Cleanup(func() { resp.Body.Close() }) //nolint:errcheck
+
+				assertRequiresAuth(t, resp)
+			})
+		}
+	})
+}
+
 // testDownloadTokenPXE verifies that /pxe accepts a download token and forwards that
 // same token into the asset URLs of the script it returns, so a boot needs no
 // credential of its own anywhere.
@@ -590,18 +905,28 @@ func testDownloadTokenPXE(ctx context.Context, t *testing.T, baseURL, schematicI
 		name       string
 		path       string
 		directives []string
+		inHeader   bool
 	}{
 		{name: "standard", path: "metal-amd64", directives: []string{"kernel", "initrd"}},
 		{name: "secureboot", path: "metal-amd64-secureboot", directives: []string{"kernel"}},
+		{name: "token in header", path: "metal-amd64", directives: []string{"kernel", "initrd"}, inHeader: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			token := getDownloadToken(ctx, t, baseURL)
 
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-				baseURL+"/pxe/"+schematicID+"/"+talosVersion+"/"+test.path+"?token="+token, nil)
+			scriptURL := baseURL + "/pxe/" + schematicID + "/" + talosVersion + "/" + test.path
+			if !test.inHeader {
+				scriptURL += "?token=" + token
+			}
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, scriptURL, nil)
 			require.NoError(t, err)
+
+			if test.inHeader {
+				req.Header.Set("Authorization", "Bearer "+token)
+			}
 
 			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
@@ -664,37 +989,18 @@ func testDownloadTokenPXE(ctx context.Context, t *testing.T, baseURL, schematicI
 	})
 }
 
-// getDownloadToken calls the download-token endpoint with htpasswd auth and returns the token.
+// getDownloadToken mints an unstored download-scoped API token, the kind a URL may carry.
 func getDownloadToken(ctx context.Context, t *testing.T, baseURL string) string {
 	t.Helper()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/download-token", nil)
-	require.NoError(t, err)
+	status, created := createToken(ctx, t, baseURL, `{"scopes":["download"],"stored":false}`)
+	require.Equal(t, http.StatusOK, status)
 
-	addTestAuth(req)
+	token, _ := created["token"].(string)
+	require.NotEmpty(t, token)
+	require.Equal(t, false, created["stored"])
 
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-
-	defer resp.Body.Close() //nolint:errcheck
-
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	var result struct {
-		AccessToken string `json:"access_token"`
-		TokenType   string `json:"token_type"`
-		ExpiresIn   int    `json:"expires_in"`
-	}
-
-	require.NoError(t, json.Unmarshal(body, &result))
-	require.NotEmpty(t, result.AccessToken)
-	assert.Equal(t, "Bearer", result.TokenType)
-	assert.Greater(t, result.ExpiresIn, 0)
-
-	return result.AccessToken
+	return token
 }
 
 // testAuthS3NoRedirect asserts that the factory serves assets directly (no
@@ -713,7 +1019,6 @@ func testAuthS3NoRedirect(t *testing.T, pool dockertest.Pool) {
 	ctx, listenAddr, _ := setupFactory(t, options)
 	baseURL := "http://" + listenAddr
 
-	// Ensure schematic exists.
 	{
 		c, err := client.New(baseURL, clientAuthCredentials()...)
 		require.NoError(t, err)
@@ -722,13 +1027,11 @@ func testAuthS3NoRedirect(t *testing.T, pool dockertest.Pool) {
 		require.NoError(t, err)
 	}
 
-	// First download - builds and caches the asset in S3.
 	resp := downloadAsset(ctx, t, baseURL, emptySchematicID, "v1.9.4", "kernel-amd64")
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	io.Copy(io.Discard, resp.Body) //nolint:errcheck
 
-	// Second download - asset is in S3, but auth is active: must NOT redirect.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		baseURL+"/image/"+emptySchematicID+"/v1.9.4/kernel-amd64", nil)
 	require.NoError(t, err)
@@ -749,10 +1052,6 @@ func testAuthS3NoRedirect(t *testing.T, pool dockertest.Pool) {
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 }
 
-// testAuthCDNNoRedirect asserts that the factory never redirects to CDN URLs
-// when authentication is active. CDN URLs are fully public (no auth) so they
-// must never be issued from an auth-gated factory.
-// S3 credentials must already be set in the environment by the caller.
 func testAuthCDNNoRedirect(t *testing.T, pool dockertest.Pool) {
 	options := cmd.DefaultOptions
 	options.Cache.OCI = signingCacheRepository.OCIRepositoryOptions
@@ -778,13 +1077,11 @@ func testAuthCDNNoRedirect(t *testing.T, pool dockertest.Pool) {
 		require.NoError(t, err)
 	}
 
-	// Build and cache the asset.
 	resp := downloadAsset(ctx, t, baseURL, emptySchematicID, "v1.9.4", "kernel-amd64")
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	io.Copy(io.Discard, resp.Body) //nolint:errcheck
 
-	// Cached asset available via CDN, but auth active - must NOT redirect.
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		baseURL+"/image/"+emptySchematicID+"/v1.9.4/kernel-amd64", nil)
 	require.NoError(t, err)
@@ -805,11 +1102,6 @@ func testAuthCDNNoRedirect(t *testing.T, pool dockertest.Pool) {
 	assert.Equal(t, http.StatusOK, resp2.StatusCode)
 }
 
-// tamperSignature flips a bit in the token's signature, so it no longer matches the payload.
-//
-// Flipping the last character of the encoded signature instead changes nothing reliably:
-// base64url packs the 64-byte ES256 signature into 86 characters, so the final character
-// carries four significant bits and several values decode to the same bytes.
 func tamperSignature(t *testing.T, token string) string {
 	t.Helper()
 
@@ -826,8 +1118,6 @@ func tamperSignature(t *testing.T, token string) string {
 	return strings.Join(parts, ".")
 }
 
-// assertRequiresAuth checks that the response is 401 with WWW-Authenticate set,
-// as required by RFC 7235 and the OCI Distribution Spec.
 func assertRequiresAuth(t *testing.T, resp *http.Response) {
 	t.Helper()
 

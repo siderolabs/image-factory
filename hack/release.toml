@@ -9,6 +9,39 @@ previous = "v1.6.0"
 pre_release = false
 
 [notes]
+    [notes.api_tokens]
+        title = "API Tokens"
+        description = """\
+Download tokens and node tokens are now one credential, an API token, and its scopes decide what it may reach.
+There are four. `download` authenticates image downloads and PXE scripts, `pull` authenticates the OCI registry a Talos node fetches installers from, `schematic` creates and reads schematics, and `token` mints and revokes tokens.
+One key signs all four.
+
+`token` is the only scope that hands out authority, so it is limited in two ways.
+A token may not grant a scope it does not hold, and may not grant `token` at all.
+A stolen minting credential can spend its own lifetime, but it cannot mint a replacement that outlives revoking it.
+
+The Auth0 machine scope now reads the same route table as `pull`, so widening one widens the other.
+
+Each token also carries a `stored` claim saying whether the factory keeps a record of it, decided once when it is minted rather than inferred from its scopes on every request.
+A stored token is in the per-org index, which is what lists it, what keeps it valid and what a revoke removes. An unstored one is a signed string and nothing else. It needs no name, costs no registry write, and is the only kind accepted from a `?token=` query parameter, on any scope.
+
+Lifetime and storage are tied together, so neither kind can be misused. Below `authentication.tokens.ttl.storedMin` (`1h`) a token can only be unstored, since recording something that expires in minutes buys nothing. Above `authentication.tokens.ttl.unstoredMax` (`8h`) it can only be stored, so a long-lived credential can always be withdrawn. In between, the caller picks.
+
+`POST /tokens`, `GET /tokens` and `POST /tokens/:id/revoke` are the only token endpoints.
+The `/node-tokens` and `/download-token` routes are gone. A node token is now `{"scopes":["pull"]}` and a download link `{"scopes":["download"],"stored":false}`.
+Only the factory's own UI and Go client used them, and this release rejects the tokens they issued anyway.
+
+Breaking changes:
+
+* Node tokens issued by v1.6.0 are rejected. Re-issue them.
+* `POST /download-token` is gone. Use `POST /tokens` with `{"scopes":["download"],"stored":false}`.
+* `POST /tokens` takes a `stored` field, defaulting to `true`, and its response reports `stored` where it reported `revocable`. `authentication.tokens.ttl.storedMin` and `.unstoredMax` are new.
+* `pkg/client`'s `TokenCreate` takes a `stored` argument; `DownloadToken` passes `false` and is otherwise unchanged.
+* `authentication.downloadTokenKeyPath`, `authentication.downloadTokenTTL` and `enterprise.nodeTokens` move to `authentication.tokens`. The factory rejects the old keys at startup instead of ignoring them, so a stale config fails loudly.
+* One key now signs every scope. A deployment that pointed the download and node tokens at separate key files has to pick one for `authentication.tokens.keyPath`.
+
+See the [authentication docs](https://github.com/siderolabs/image-factory/blob/main/docs/authentication.md#api-tokens) for the upgrade steps.
+"""
 
 [make_deps]
 

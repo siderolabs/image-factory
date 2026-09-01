@@ -5,7 +5,7 @@
 
 //go:build enterprise
 
-package downloadtoken
+package tokens
 
 import (
 	"context"

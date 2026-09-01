@@ -14,10 +14,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/julienschmidt/httprouter"
 
+	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
-	"github.com/siderolabs/image-factory/internal/downloadtoken"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/image/verify"
 	"github.com/siderolabs/image-factory/internal/installer"
@@ -137,39 +137,48 @@ type SignatureWriter interface {
 	WriteSignature(ctx context.Context, w http.ResponseWriter, r *http.Request, asset assetcache.BootAsset, assetKey, filename string) error
 }
 
-// DownloadTokenIssuer creates and verifies identity-scoped JWT download tokens.
-// The implementation lives behind the enterprise build tag; when enterprise is
-// not enabled the issuer is nil and the download-token routes are not registered.
-type DownloadTokenIssuer interface {
-	// Issue creates a signed JWT for the given subject (org_id or username), valid for
-	// the requested lifetime, and returns the token, granted lifetime, and the token's jti.
-	// A non-positive request selects the configured default.
-	Issue(subject string, requestedTTL time.Duration) (token string, ttl time.Duration, jti string, err error)
+// TokenScope names a class of request an API token may authenticate.
+type TokenScope = apitoken.Scope
 
-	// Verify parses and validates the JWT, returning the subject and jti claims on success.
-	Verify(tokenStr string) (subject, jti string, err error)
+const (
+	// TokenScopeDownload authenticates artifact downloads and PXE scripts.
+	TokenScopeDownload = apitoken.ScopeDownload
 
-	// JWKS returns the pre-built JSON Web Key Set containing the public key.
-	JWKS() []byte
+	// TokenScopePull authenticates installer pulls.
+	TokenScopePull = apitoken.ScopePull
+
+	// TokenScopeSchematic authenticates schematic access.
+	TokenScopeSchematic = apitoken.ScopeSchematic
+
+	// TokenScopeToken authenticates API token management.
+	TokenScopeToken = apitoken.ScopeToken
+)
+
+// TokenTTL configures token lifetimes for one scope.
+type TokenTTL = apitoken.TTL
+
+// TokenStorageTTL splits token lifetimes by whether the factory records the token: below
+// StoredMin a token can only be unstored, past UnstoredMax only stored.
+type TokenStorageTTL = apitoken.StorageTTL
+
+// TokenClaims are the verified contents of an API token: who it authenticates, what it reaches,
+// and whether the factory keeps a revocable record of it.
+type TokenClaims = apitoken.Claims
+
+// TokenVerifier reports the claims a bearer credential authenticates, or ok=false if it isn't a
+// currently valid, self-issued API token.
+type TokenVerifier interface {
+	Verify(ctx context.Context, tokenStr string) (claims TokenClaims, ok bool)
 }
 
-// DownloadTokenTTL is the token lifetime configuration: the default granted when the
-// caller does not ask for one, and the bounds a caller may request within.
-type DownloadTokenTTL = downloadtoken.TTL
-
-// NodeTokenVerifier reports the org ID a bearer credential authenticates, or ok=false if it
-// isn't a currently valid, self-issued node token.
-type NodeTokenVerifier interface {
-	Verify(ctx context.Context, tokenStr string) (orgID string, ok bool)
-}
-
-// NodeTokenOptions holds configuration for self-issued node token issuance, storage, and
+// TokenOptions holds configuration for self-issued API token issuance, storage, and
 // verification.
-type NodeTokenOptions struct {
+type TokenOptions struct {
+	TTL                              map[TokenScope]TokenTTL
 	KeyPath                          string
 	StorageRepository                string
 	RemoteOptions                    []remote.Option
-	TTL                              DownloadTokenTTL
+	StorageTTL                       TokenStorageTTL
 	VerificationCacheRefreshInterval time.Duration
 	MaxPerOrg                        int
 	StorageInsecure                  bool
@@ -194,7 +203,7 @@ type AuthProvider interface {
 	UsernameFromContext(ctx context.Context) (string, bool)
 
 	// ContextWithUsername returns a context carrying the given username as if
-	// the middleware had set it. Used by the download-token path to inject the
+	// the middleware had set it. Used by the API token path to inject the
 	// JWT subject so that downstream ownership checks work normally.
 	ContextWithUsername(ctx context.Context, username string) context.Context
 }

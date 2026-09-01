@@ -236,6 +236,7 @@ func setupEnterprise(t *testing.T, options *cmd.Options) {
 	}
 
 	options.Enterprise.VEX.Data = vexDataRepositoryFlag.OCIRepositoryOptions
+	options.Authentication.Tokens.Storage = tokenStorageRepositoryFlag.OCIRepositoryOptions
 
 	// Only when the caller has not chosen one: testScannerDBRotation runs a second factory
 	// that needs its own, and this would otherwise overwrite it.
@@ -437,6 +438,7 @@ var (
 	signingCacheRepository         = mustNewDefaultOCIRepository(cmd.DefaultOptions.Cache.OCI.String() + "sign")
 	vexDataRepositoryFlag          = mustNewDefaultOCIRepository(cmd.DefaultOptions.Enterprise.VEX.Data.String())
 	spdxCacheRepositoryFlag        = mustNewDefaultOCIRepository(cmd.DefaultOptions.Enterprise.SPDX.Cache.String())
+	tokenStorageRepositoryFlag     = mustNewDefaultOCIRepository(cmd.DefaultOptions.Authentication.Tokens.Storage.String())
 	extraExtensionsManifestFlag    = mustNewDefaultOCIRepository(cmd.DefaultOptions.Enterprise.ExtraExtensions.Manifest.String())
 )
 
@@ -450,5 +452,6 @@ func init() {
 	flag.Var(&signingCacheRepository, "test.signing-cache-repository", "image repository for signatures of cached boot assets (used for S3+CDN tests)")
 	flag.Var(&vexDataRepositoryFlag, "test.vex-data-repository", "OCI repository for VEX data")
 	flag.Var(&spdxCacheRepositoryFlag, "test.spdx-cache-repository", "OCI repository for cached SPDX data")
+	flag.Var(&tokenStorageRepositoryFlag, "test.token-storage-repository", "OCI repository for the API token index")
 	flag.Var(&extraExtensionsManifestFlag, "test.extra-extensions-manifest", "OCI repository for extra extensions")
 }

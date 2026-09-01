@@ -388,62 +388,113 @@
 - id: final.booter.command_post
   translation: " avec ce schéma, exécutez la commande suivante sur un hôte dans le même sous-réseau :"
 
-- id: nodetokens.nav_link
-  translation: "Gérer les jetons de nœud"
+- id: tokens.nav_link
+  translation: "Gérer les jetons d'API"
 
-- id: nodetokens.title
-  translation: "Jetons de nœud"
+- id: tokens.title
+  translation: "Jetons d'API"
 
-- id: nodetokens.back_home
+- id: tokens.back_home
   translation: "Accueil"
 
-- id: nodetokens.description
-  translation: "Les jetons de nœud sont des identifiants de longue durée que les nœuds Talos utilisent pour extraire des images directement depuis cette factory."
+- id: tokens.description
+  translation: "Les jetons d'API sont des identifiants que cette factory émet elle-même. Chacun porte les autorisations que vous choisissez à sa création, et rien de plus."
 
-- id: nodetokens.table.name
+- id: tokens.table.name
   translation: "Nom"
 
-- id: nodetokens.table.created
+- id: tokens.table.expires
+  translation: "Expiration"
+
+- id: tokens.table.expired
+  translation: "expiré"
+
+- id: tokens.table.created
   translation: "Créé le"
 
-- id: nodetokens.empty
-  translation: "Aucun jeton de nœud pour le moment."
+- id: tokens.table.permissions
+  translation: "Autorisations"
 
-- id: nodetokens.create.name_label
+- id: tokens.empty
+  translation: "Aucun jeton pour le moment."
+
+- id: tokens.create.name_label
   translation: "Nom"
 
-- id: nodetokens.create.button
-  translation: "Créer un jeton de nœud"
+- id: tokens.create.ttl_label
+  translation: "Durée de vie"
 
-- id: nodetokens.create.cancel
+- id: tokens.create.ttl_help
+  translation: "Une durée au format Go, par exemple 24h ou 90m. Le jour n'est pas une unité, écrivez donc 720h plutôt que 30d. Laissez vide pour prendre la valeur par défaut du serveur."
+
+- id: tokens.create.permissions_label
+  translation: "Autorisations"
+
+- id: tokens.create.permission_pull
+  translation: "Extraire des images"
+
+- id: tokens.create.permission_pull_help
+  translation: "Un nœud Talos l'utilise pour extraire des installateurs."
+
+- id: tokens.create.permission_download
+  translation: "Télécharger des images"
+
+- id: tokens.create.permission_download_help
+  translation: "Récupère des images et des scripts PXE avec l'en-tête Authorization. Un lien de téléchargement portant le jeton dans son URL est autre chose, et c'est l'API qui les émet."
+
+- id: tokens.create.permission_schematic
+  translation: "Créer des schémas"
+
+- id: tokens.create.permission_schematic_help
+  translation: "Un pipeline de build l'utilise pour créer des schémas et relire les siens."
+
+- id: tokens.create.permission_token
+  translation: "Gérer les jetons"
+
+- id: tokens.create.permission_token_help
+  translation: "Crée, liste et révoque des jetons. Un jeton ne peut transmettre que les autorisations qu'il possède déjà, et jamais celle-ci."
+
+- id: tokens.create.permissions_required
+  translation: "Sélectionnez au moins une autorisation."
+
+- id: tokens.create.button
+  translation: "Créer un jeton"
+
+- id: tokens.create.cancel
   translation: "Annuler"
 
-- id: nodetokens.secret.title
-  translation: "Jeton de nœud créé"
+- id: tokens.secret.title
+  translation: "Jeton créé"
 
-- id: nodetokens.secret.warning
-  translation: "Ce secret ne s'affiche qu'une seule fois. Copiez-le maintenant — vous ne pourrez plus le consulter ensuite."
+- id: tokens.secret.warning
+  translation: "Ce secret ne s'affiche qu'une seule fois. Copiez-le maintenant, car vous ne pourrez plus le consulter ensuite."
 
-- id: nodetokens.secret.patch
+- id: tokens.secret.identity
+  translation: "ID d'organisation / nom d'utilisateur"
+
+- id: tokens.secret.token
+  translation: "Jeton"
+
+- id: tokens.secret.patch
   translation: "Patch de configuration machine"
 
-- id: nodetokens.secret.close
+- id: tokens.secret.close
   translation: "Fermer"
 
-- id: nodetokens.revoke.button
+- id: tokens.revoke.button
   translation: "Révoquer"
 
-- id: nodetokens.revoke.title
-  translation: "Révoquer le jeton de nœud"
+- id: tokens.revoke.title
+  translation: "Révoquer le jeton"
 
-- id: nodetokens.revoke.confirm
-  translation: "Révoquer ce jeton de nœud ? Les nœuds Talos qui l'utilisent perdront l'accès."
+- id: tokens.revoke.confirm
+  translation: "Révoquer ce jeton ? Les nœuds Talos qui l'utilisent perdront l'accès."
 
-- id: nodetokens.error.load
-  translation: "Échec du chargement des jetons de nœud"
+- id: tokens.error.load
+  translation: "Échec du chargement des jetons"
 
-- id: nodetokens.error.revoke
-  translation: "Échec de la révocation du jeton de nœud"
+- id: tokens.error.revoke
+  translation: "Échec de la révocation du jeton"
 
-- id: nodetokens.error.limit
-  translation: "Limite de jetons de nœud atteinte pour cette organisation"
+- id: tokens.error.limit
+  translation: "Limite de jetons atteinte pour cette organisation"

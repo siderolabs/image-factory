@@ -62,15 +62,7 @@ func (o *Options) Validate() error {
 		return fmt.Errorf("audit.mode must be one of %v, got %q", auditModeOptions, o.Audit.Mode)
 	}
 
-	if err := o.Authentication.validate(); err != nil {
-		return err
-	}
-
-	if o.Authentication.Enabled {
-		return o.Enterprise.NodeTokens.validate()
-	}
-
-	return nil
+	return o.Authentication.validate()
 }
 
 // validate checks the settings required by the selected provider, so that a misconfiguration
@@ -109,17 +101,11 @@ func (o AuthenticationOptions) validate() error {
 		return fmt.Errorf("authentication.provider must be one of %v, got %q", authProviderOptions, o.Provider)
 	}
 
-	return o.DownloadTokenTTL.validate()
-}
-
-// validate checks that the download token lifetime bounds are sane and contain the default,
-// so that a bad range fails at startup rather than on the first token request.
-func (o DownloadTokenTTL) validate() error {
-	return validateTTLBounds("authentication.downloadTokenTTL", o.Min, o.Max, o.Default)
+	return o.Tokens.validate()
 }
 
 // validateTTLBounds checks that a [min, max] TTL range is sane and contains default. prefix
-// identifies the config path in error messages, e.g. "authentication.downloadTokenTTL".
+// identifies the config path in error messages, e.g. "authentication.tokens.ttl.download".
 func validateTTLBounds(prefix string, minTTL, maxTTL, defaultTTL time.Duration) error {
 	switch {
 	case minTTL <= 0:
@@ -679,19 +665,68 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 	// The browser-login fields are optional, and add the sign-in routes on top when set.
 	Auth0 Auth0Options `koanf:"auth0"`
 
-	// DownloadTokenKeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing download tokens.
-	// If empty, a key pair is generated on startup (single-replica deployments only).
-	DownloadTokenKeyPath string `koanf:"downloadTokenKeyPath"`
-
-	// DownloadTokenTTL defines the validity duration for download tokens.
-	DownloadTokenTTL DownloadTokenTTL `koanf:"downloadTokenTTL"`
+	// Tokens holds configuration for self-issued API token management.
+	Tokens TokenOptions `koanf:"tokens"`
 }
 
-// DownloadTokenTTL defines the validity duration for download tokens.
+// TokenOptions configures self-issued API token issuance, storage, and verification.
+type TokenOptions struct {
+	// KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing API tokens.
+	// One key signs every scope, so a deployment that used to configure separate download- and
+	// node-token keys has to pick one of them here.
+	// If unset, a fresh key is generated at startup, which only works for single-replica deployments.
+	KeyPath string `koanf:"keyPath"`
+
+	// Storage is the OCI repository used to persist the per-org token index
+	// (the list of active stored tokens; presence in the index is what makes such a token valid).
+	// A token minted with "stored": false is not recorded, so it cannot be listed or revoked and does not count against MaxPerOrg.
+	Storage OCIRepositoryOptions `koanf:"storage"`
+
+	// TTL bounds the lifetime of issued tokens, per scope.
+	TTL TokenTTLOptions `koanf:"ttl"`
+
+	// VerificationCacheRefreshInterval bounds how stale the in-memory verification cache may be before it's refreshed from storage.
+	// This is also the bound on how long a revoked token may keep working after revocation.
+	VerificationCacheRefreshInterval time.Duration `koanf:"verificationCacheRefreshInterval"`
+
+	// MaxPerOrg caps how many stored tokens an org may have active at once.
+	MaxPerOrg int `koanf:"maxPerOrg"`
+}
+
+// TokenTTLOptions bounds the lifetime of issued tokens, one entry per scope.
 //
-// A caller picks a lifetime with POST /download-token?ttl=<duration> (e.g. ?ttl=1h);
+// A caller picks a lifetime with the `ttl` field of POST /tokens (e.g. `"ttl": "720h"`);
 // requests outside [min, max] are rejected with HTTP 400.
-type DownloadTokenTTL struct {
+type TokenTTLOptions struct {
+	// StoredMin is the shortest lifetime a stored token may have, whatever its scopes allow.
+	// Recording a credential that expires in minutes buys a registry write and nothing else, since the
+	// token is gone before anyone can revoke it, so short lifetimes belong to unstored tokens.
+	StoredMin time.Duration `koanf:"storedMin"`
+
+	// UnstoredMax is the longest lifetime an unstored token may have, whatever its scopes allow.
+	// Such a token is not recorded, so expiry is the only way it leaves circulation, and it is the only kind
+	// of token accepted from a ?token= query parameter, where proxy and CDN access logs keep a copy of it.
+	//
+	// It must not be below StoredMin, which would leave lifetimes no token could be issued for.
+	UnstoredMax time.Duration `koanf:"unstoredMax"`
+
+	// Download bounds the lifetime of tokens carrying the "download" scope, which fetch images and PXE scripts.
+	Download TokenTTL `koanf:"download"`
+
+	// Pull bounds the lifetime of tokens carrying the "pull" scope, which pull installer images.
+	// A pull token isn't refreshed once it's written into a Talos machine config, so its default
+	// lifetime is expected to be long (up to Max).
+	Pull TokenTTL `koanf:"pull"`
+
+	// Schematic bounds the lifetime of tokens carrying the "schematic" scope, which create and read schematics.
+	Schematic TokenTTL `koanf:"schematic"`
+
+	// Token bounds the lifetime of tokens carrying the "token" scope, which mint and revoke other tokens.
+	Token TokenTTL `koanf:"token"`
+}
+
+// TokenTTL defines the validity duration for one token scope.
+type TokenTTL struct {
 	// Max is the longest validity duration a caller may request.
 	Max time.Duration `koanf:"max"`
 
@@ -700,6 +735,58 @@ type DownloadTokenTTL struct {
 
 	// Default is the validity duration granted when the caller requests no explicit TTL.
 	Default time.Duration `koanf:"default"`
+}
+
+// StorageTTL renders the stored/unstored lifetime split in the form the token issuer takes.
+func (o TokenOptions) StorageTTL() enterprise.TokenStorageTTL {
+	return enterprise.TokenStorageTTL{StoredMin: o.TTL.StoredMin, UnstoredMax: o.TTL.UnstoredMax}
+}
+
+// ScopeTTLs renders the configured bounds in the form the token issuer takes.
+func (o TokenOptions) ScopeTTLs() map[enterprise.TokenScope]enterprise.TokenTTL {
+	return map[enterprise.TokenScope]enterprise.TokenTTL{
+		enterprise.TokenScopeDownload:  {Default: o.TTL.Download.Default, Min: o.TTL.Download.Min, Max: o.TTL.Download.Max},
+		enterprise.TokenScopePull:      {Default: o.TTL.Pull.Default, Min: o.TTL.Pull.Min, Max: o.TTL.Pull.Max},
+		enterprise.TokenScopeSchematic: {Default: o.TTL.Schematic.Default, Min: o.TTL.Schematic.Min, Max: o.TTL.Schematic.Max},
+		enterprise.TokenScopeToken:     {Default: o.TTL.Token.Default, Min: o.TTL.Token.Min, Max: o.TTL.Token.Max},
+	}
+}
+
+// validate checks that the per-scope token lifetime bounds are sane and contain the default,
+// and that the per-org cap is positive, so a bad config fails at startup rather than on
+// the first token request.
+func (o TokenOptions) validate() error {
+	if err := validateTTLBounds("authentication.tokens.ttl.download", o.TTL.Download.Min, o.TTL.Download.Max, o.TTL.Download.Default); err != nil {
+		return err
+	}
+
+	if err := validateTTLBounds("authentication.tokens.ttl.pull", o.TTL.Pull.Min, o.TTL.Pull.Max, o.TTL.Pull.Default); err != nil {
+		return err
+	}
+
+	if err := validateTTLBounds("authentication.tokens.ttl.schematic", o.TTL.Schematic.Min, o.TTL.Schematic.Max, o.TTL.Schematic.Default); err != nil {
+		return err
+	}
+
+	if err := validateTTLBounds("authentication.tokens.ttl.token", o.TTL.Token.Min, o.TTL.Token.Max, o.TTL.Token.Default); err != nil {
+		return err
+	}
+
+	switch {
+	case o.TTL.StoredMin <= 0:
+		return fmt.Errorf("authentication.tokens.ttl.storedMin must be positive, got %s", o.TTL.StoredMin)
+	case o.TTL.UnstoredMax <= 0:
+		return fmt.Errorf("authentication.tokens.ttl.unstoredMax must be positive, got %s", o.TTL.UnstoredMax)
+	case o.TTL.UnstoredMax < o.TTL.StoredMin:
+		return fmt.Errorf("authentication.tokens.ttl.unstoredMax %s is below .storedMin %s, leaving lifetimes no token could be issued for",
+			o.TTL.UnstoredMax, o.TTL.StoredMin)
+	case o.MaxPerOrg <= 0:
+		return fmt.Errorf("authentication.tokens.maxPerOrg must be positive, got %d", o.MaxPerOrg)
+	case o.VerificationCacheRefreshInterval <= 0:
+		return fmt.Errorf("authentication.tokens.verificationCacheRefreshInterval must be positive, got %s", o.VerificationCacheRefreshInterval)
+	default:
+		return nil
+	}
 }
 
 // Auth0Options holds configuration for the Auth0 authentication provider.
@@ -716,7 +803,7 @@ type Auth0Options struct {
 
 	// MachineScope names a scope that marks a token as a machine credential, e.g. `factory:machine`.
 	//
-	// Tokens carrying it may only fetch artifacts: `GET`/`HEAD` on `/image/` and the `/v2/` OCI registry.
+	// Tokens carrying it reach exactly what an API token with the `pull` scope reaches: `GET`/`HEAD` on `/image/` and the `/v2/` OCI registry.
 	// Everything else is rejected with 403, including reading schematic definitions.
 	// Intended for the long-lived tokens provisioned onto Talos nodes, which need to pull installers but should not be able to inspect or create schematics.
 	//
@@ -772,64 +859,6 @@ type EnterpriseOptions struct {
 
 	// VEX contains configuration for VEX data fetching.
 	VEX VEXOptions `koanf:"vex"`
-
-	// NodeTokens contains configuration for self-issued node token management.
-	NodeTokens NodeTokenOptions `koanf:"nodeTokens"`
-}
-
-// NodeTokenOptions configures self-issued node token issuance, storage, and verification.
-type NodeTokenOptions struct {
-	// KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing node tokens.
-	// Kept separate from the download-token key so compromising one doesn't compromise the other.
-	// If unset, a fresh key is generated at startup, which only works for single-replica deployments.
-	KeyPath string `koanf:"keyPath"`
-
-	// Storage is the OCI repository used to persist the per-org node-token index
-	// (the list of active tokens; presence in the index is what makes a token valid).
-	Storage OCIRepositoryOptions `koanf:"storage"`
-
-	// TTL bounds the lifetime of issued node tokens.
-	TTL NodeTokenTTL `koanf:"ttl"`
-
-	// VerificationCacheRefreshInterval bounds how stale the in-memory verification cache may be before it's refreshed from storage.
-	// This is also the bound on how long a revoked token may keep working after revocation.
-	VerificationCacheRefreshInterval time.Duration `koanf:"verificationCacheRefreshInterval"`
-
-	// MaxPerOrg caps how many node tokens an org may have active at once.
-	MaxPerOrg int `koanf:"maxPerOrg"`
-}
-
-// NodeTokenTTL defines the validity duration for node tokens.
-//
-// Unlike download tokens, a node token isn't refreshed once it's written into a Talos machine
-// config, so its default lifetime is expected to be long (up to Max).
-type NodeTokenTTL struct {
-	// Max is the longest validity duration a caller may request.
-	Max time.Duration `koanf:"max"`
-
-	// Min is the shortest validity duration a caller may request.
-	Min time.Duration `koanf:"min"`
-
-	// Default is the validity duration granted when the caller requests no explicit TTL.
-	Default time.Duration `koanf:"default"`
-}
-
-// validate checks that the node token lifetime bounds are sane and contain the default,
-// and that the per-org cap is positive, so a bad config fails at startup rather than on
-// the first node-token request.
-func (o NodeTokenOptions) validate() error {
-	if err := validateTTLBounds("enterprise.nodeTokens.ttl", o.TTL.Min, o.TTL.Max, o.TTL.Default); err != nil {
-		return err
-	}
-
-	switch {
-	case o.MaxPerOrg <= 0:
-		return fmt.Errorf("enterprise.nodeTokens.maxPerOrg must be positive, got %d", o.MaxPerOrg)
-	case o.VerificationCacheRefreshInterval <= 0:
-		return fmt.Errorf("enterprise.nodeTokens.verificationCacheRefreshInterval must be positive, got %s", o.VerificationCacheRefreshInterval)
-	default:
-		return nil
-	}
 }
 
 // ExtraExtensionsOptions configures custom extensions offered alongside the official ones.
@@ -959,10 +988,38 @@ var DefaultOptions = Options{
 
 	Authentication: AuthenticationOptions{
 		Provider: AuthProviderHTPasswd,
-		DownloadTokenTTL: DownloadTokenTTL{
-			Default: 5 * time.Minute,
-			Max:     8 * time.Hour,
-			Min:     30 * time.Second,
+		Tokens: TokenOptions{
+			Storage: OCIRepositoryOptions{
+				Registry:   "ghcr.io",
+				Namespace:  "siderolabs/image-factory",
+				Repository: "tokens",
+			},
+			TTL: TokenTTLOptions{
+				StoredMin:   time.Hour,
+				UnstoredMax: 8 * time.Hour,
+				Download: TokenTTL{
+					Default: 5 * time.Minute,
+					Max:     8 * time.Hour,
+					Min:     30 * time.Second,
+				},
+				Pull: TokenTTL{
+					Default: 365 * 24 * time.Hour,
+					Max:     365 * 24 * time.Hour,
+					Min:     24 * time.Hour,
+				},
+				Schematic: TokenTTL{
+					Default: 90 * 24 * time.Hour,
+					Max:     365 * 24 * time.Hour,
+					Min:     time.Hour,
+				},
+				Token: TokenTTL{
+					Default: 30 * 24 * time.Hour,
+					Max:     90 * 24 * time.Hour,
+					Min:     time.Hour,
+				},
+			},
+			VerificationCacheRefreshInterval: 5 * time.Minute,
+			MaxPerOrg:                        10,
 		},
 	},
 
@@ -992,20 +1049,6 @@ var DefaultOptions = Options{
 				Namespace:  "siderolabs/image-factory",
 				Repository: "spdx-cache",
 			},
-		},
-		NodeTokens: NodeTokenOptions{
-			Storage: OCIRepositoryOptions{
-				Registry:   "ghcr.io",
-				Namespace:  "siderolabs/image-factory",
-				Repository: "node-tokens",
-			},
-			TTL: NodeTokenTTL{
-				Default: 365 * 24 * time.Hour,
-				Max:     365 * 24 * time.Hour,
-				Min:     24 * time.Hour,
-			},
-			VerificationCacheRefreshInterval: 5 * time.Minute,
-			MaxPerOrg:                        10,
 		},
 		Scanner: ScannerOptions{
 			DatabaseURL:      "https://grype.anchore.io/databases",
