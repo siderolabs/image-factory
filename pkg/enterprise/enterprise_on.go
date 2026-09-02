@@ -228,9 +228,10 @@ func NewHTPasswdProvider(logger *zap.Logger, configPath string) (AuthProvider, e
 // NewAuth0Provider creates a new Auth0 JWT authentication provider.
 func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) (AuthProvider, error) {
 	return auth0.NewProvider(ctx, logger, auth0.Config{
-		Domain:            cfg.Domain,
-		Audience:          cfg.Audience,
-		MachineScope:      cfg.MachineScope,
+		Domain:       cfg.Domain,
+		Audience:     cfg.Audience,
+		MachineScope: cfg.MachineScope,
+
 		ClientID:          cfg.ClientID,
 		ClientSecret:      cfg.ClientSecret,
 		ExternalURL:       cfg.ExternalURL,
@@ -239,34 +240,44 @@ func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) 
 	})
 }
 
-// MintAdminToken issues an admin-scoped API token, the bootstrap credential that mints
-// token-scoped tokens over the API. It is deliberately not reachable over HTTP: the binary's
+// MintBootstrapToken issues the CLI-only bootstrap credential that mints
+// API tokens over the HTTP API. It is deliberately not reachable over HTTP: the binary's
 // `admin-token` subcommand is the only caller.
 //
-// subject is the identity the token authenticates as, an org_id or an htpasswd username, and is
-// what every token minted with it will belong to. A non-positive ttl takes the configured default.
+// subject is the identity the bootstrap credential authenticates as, an org_id or an htpasswd
+// username, and is the default identity for child tokens. Its any_subject authority permits an
+// explicit child subject to name another identity. A non-positive ttl takes the configured default.
 //
-// The signing key has to come from opts.KeyPath. Generating one here would sign the token with a
+// The signing key has to come from the first entry in opts.KeyPaths. Generating one here would sign the token with a
 // key no running replica holds, so the token would be printed and then rejected everywhere.
-func MintAdminToken(opts TokenOptions, subject string, ttl time.Duration) (apitoken.Token, error) {
-	if opts.KeyPath == "" {
-		return apitoken.Token{}, errors.New("authentication.tokens.keyPath must be set to mint an admin token, " +
+func MintBootstrapToken(opts TokenOptions, subject string, ttl time.Duration) (apitoken.Token, error) {
+	if len(opts.KeyPaths) == 0 {
+		return apitoken.Token{}, errors.New("authentication.tokens.keyPaths must contain an active signing key to mint a bootstrap credential, " +
 			"otherwise the token is signed with a key no replica holds")
 	}
 
-	issuer, err := apitoken.LoadIssuer(opts.KeyPath, opts.TTL, opts.StorageTTL)
+	issuer, err := apitoken.LoadIssuerFromPaths(opts.KeyPaths, opts.BootstrapTTL, opts.StorageTTL)
 	if err != nil {
 		return apitoken.Token{}, fmt.Errorf("failed to initialize token issuer: %w", err)
 	}
 
-	// Never stored: nothing records this token, so nothing can revoke it either. Rotating the
-	// signing key is what retires one early.
-	return issuer.Issue(subject, []TokenScope{TokenScopeAdmin}, false, ttl)
+	// Never stored: nothing records this token, so nothing can revoke it either. Removing its
+	// signing key from the verification set retires it early. Its own capabilities are limited to
+	// token lifecycle operations; the independent delegation ceiling contains every current public
+	// capability.
+	return issuer.IssueWithDelegation(subject, []string{
+		"token:issue",
+		"token:read",
+		"token:revoke",
+	}, apitoken.Delegation{
+		IssuableScopes: apitoken.Scopes(),
+		AnySubject:     true,
+	}, false, ttl)
 }
 
 // NewTokenFrontends returns the API-token FrontendPlugins together with a TokenVerifier.
 //
-// If opts.KeyPath is non-empty the signing key is loaded from the PEM file; otherwise a
+// If opts.KeyPaths is non-empty the first key signs and every key verifies; otherwise a
 // fresh ECDSA P-256 key pair is generated (suitable for single-replica deployments).
 func NewTokenFrontends(authProvider AuthProvider, opts TokenOptions) ([]FrontendPlugin, TokenVerifier, error) {
 	var (
@@ -274,10 +285,10 @@ func NewTokenFrontends(authProvider AuthProvider, opts TokenOptions) ([]Frontend
 		err    error
 	)
 
-	if opts.KeyPath != "" {
-		issuer, err = apitoken.LoadIssuer(opts.KeyPath, opts.TTL, opts.StorageTTL)
+	if len(opts.KeyPaths) > 0 {
+		issuer, err = apitoken.LoadIssuerFromPaths(opts.KeyPaths, opts.BootstrapTTL, opts.StorageTTL)
 	} else {
-		issuer, err = apitoken.GenerateIssuer(opts.TTL, opts.StorageTTL)
+		issuer, err = apitoken.GenerateIssuer(opts.BootstrapTTL, opts.StorageTTL)
 	}
 
 	if err != nil {

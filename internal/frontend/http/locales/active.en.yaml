@@ -430,29 +430,59 @@
 - id: tokens.create.permissions_label
   translation: "Permissions"
 
-- id: tokens.create.permission_pull
-  translation: "Pull images"
+- id: tokens.create.permission_image_read
+  translation: "image:read"
 
-- id: tokens.create.permission_pull_help
-  translation: "A Talos node uses this to pull installers."
+- id: tokens.create.permission_image_read_help
+  translation: "Read generated images, PXE scripts and generated installer OCI images."
 
-- id: tokens.create.permission_download
-  translation: "Download images"
+- id: tokens.create.permission_source_pull
+  translation: "source:pull"
 
-- id: tokens.create.permission_download_help
-  translation: "Fetches images and PXE scripts with the Authorization header. A download link that carries the token in its URL is a different thing, and the API mints those."
+- id: tokens.create.permission_source_pull_help
+  translation: "Pull proxied upstream OCI images."
 
-- id: tokens.create.permission_schematic
-  translation: "Create schematics"
+- id: tokens.create.permission_schematic_create
+  translation: "schematic:create"
 
-- id: tokens.create.permission_schematic_help
-  translation: "A build pipeline uses this to create schematics and read its own back."
+- id: tokens.create.permission_schematic_create_help
+  translation: "Create immutable schematics."
 
-- id: tokens.create.permission_token
-  translation: "Manage tokens"
+- id: tokens.create.permission_schematic_read
+  translation: "schematic:read"
 
-- id: tokens.create.permission_token_help
-  translation: "Creates, lists and revokes tokens. A token can only pass on permissions it already has, and can never pass on this one."
+- id: tokens.create.permission_schematic_read_help
+  translation: "Read schematics owned by this identity."
+
+- id: tokens.create.permission_report_read
+  translation: "report:read"
+
+- id: tokens.create.permission_report_read_help
+  translation: "Read SPDX and VEX security reports."
+
+- id: tokens.create.permission_token_issue
+  translation: "token:issue"
+
+- id: tokens.create.permission_token_issue_help
+  translation: "Issue API tokens within a separate delegation ceiling."
+
+- id: tokens.create.permission_token_read
+  translation: "token:read"
+
+- id: tokens.create.permission_token_read_help
+  translation: "List active stored tokens."
+
+- id: tokens.create.permission_token_revoke
+  translation: "token:revoke"
+
+- id: tokens.create.permission_token_revoke_help
+  translation: "Revoke stored tokens."
+
+- id: tokens.create.delegation_label
+  translation: "Delegation ceiling"
+
+- id: tokens.create.delegation_help
+  translation: "These permissions are grantable to child tokens. They do not become executable permissions on this token."
 
 - id: tokens.create.permissions_required
   translation: "Select at least one permission."

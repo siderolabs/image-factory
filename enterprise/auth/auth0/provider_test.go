@@ -365,7 +365,7 @@ func TestAuth0ProviderMachineScope(t *testing.T) {
 
 		{name: "schematic creation", token: scopeClaimToken, method: http.MethodPost, path: "/schematics", scope: machineScope, expectDenied: true},
 		{name: "schematic read", token: scopeClaimToken, method: http.MethodGet, path: "/schematics/abc", scope: machineScope, expectDenied: true},
-		{name: "pxe", token: scopeClaimToken, method: http.MethodGet, path: "/pxe/abc/v1.9.0/metal-amd64", scope: machineScope, expectDenied: true},
+		{name: "pxe", token: scopeClaimToken, method: http.MethodGet, path: "/pxe/abc/v1.9.0/metal-amd64", scope: machineScope},
 		{name: "sbom", token: scopeClaimToken, method: http.MethodGet, path: "/spdx/abc/v1.9.0/amd64", scope: machineScope, expectDenied: true},
 		{name: "ui", token: scopeClaimToken, method: http.MethodGet, path: "/ui/schematics", scope: machineScope, expectDenied: true},
 

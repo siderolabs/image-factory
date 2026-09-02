@@ -66,6 +66,7 @@ var templateFuncs template.FuncMap
 
 func init() {
 	templateFuncs = template.FuncMap{
+		"list": func(values ...string) []string { return values },
 		"dict": func(values ...any) (map[string]any, error) {
 			if len(values)%2 != 0 {
 				return nil, errors.New("invalid dict call")

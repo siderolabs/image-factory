@@ -19,7 +19,6 @@ import (
 	"io"
 	"net/http"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -43,11 +42,12 @@ var ErrNotFound = errors.New("tokens: token not found")
 
 // Record describes a stored token.
 type Record struct {
-	CreatedAt time.Time        `json:"created_at"`
-	ExpiresAt time.Time        `json:"expires_at"`
-	ID        string           `json:"id"`
-	Name      string           `json:"name"`
-	Scopes    []apitoken.Scope `json:"scopes"`
+	CreatedAt      time.Time        `json:"created_at"`
+	ExpiresAt      time.Time        `json:"expires_at"`
+	ID             string           `json:"id"`
+	Name           string           `json:"name"`
+	Scopes         []apitoken.Scope `json:"scopes"`
+	IssuableScopes []apitoken.Scope `json:"issuable_scopes,omitempty"`
 }
 
 // storedRecord is the immutable token record or its revocation tombstone stored under a
@@ -58,28 +58,17 @@ type storedRecord struct {
 	Revoked bool   `json:"revoked"`
 }
 
-// orgCache is the last record set read for one org, used to serve verification without a
-// registry round-trip on every request.
-type orgCache struct {
-	fetchedAt time.Time
-	tokens    []Record
-}
-
 // Storage is a registry-backed set of stored tokens.
 //
 // Each token lives under its own deterministic tag in a dedicated repository. This avoids
 // lost updates between factory replicas: independent creates never write the same mutable tag,
-// while revocation replaces only that token's tag with a tombstone. Verification reads go
-// through an in-memory cache refreshed at most every refreshInterval, so revocation has a
-// bounded propagation delay rather than taking effect instantly across replicas.
+// while revocation replaces only that token's tag with a tombstone. Verification reads that
+// exact tag, avoiding a repository-wide listing and observing writes from every replica.
 type Storage struct {
-	pusher          remotewrap.Pusher
-	puller          remotewrap.Puller
-	cache           map[string]orgCache
-	repository      name.Repository
-	remoteOpts      []remote.Option
-	refreshInterval time.Duration
-	mu              sync.Mutex
+	pusher     remotewrap.Pusher
+	puller     remotewrap.Puller
+	repository name.Repository
+	remoteOpts []remote.Option
 }
 
 // NewStorage creates registry-backed token storage, mirroring the schematic/SPDX registry
@@ -96,12 +85,10 @@ func NewStorage(repository name.Repository, refreshInterval time.Duration, remot
 	}
 
 	return &Storage{
-		pusher:          pusher,
-		puller:          puller,
-		repository:      repository,
-		refreshInterval: refreshInterval,
-		remoteOpts:      slices.Clone(remoteOpts),
-		cache:           map[string]orgCache{},
+		pusher:     pusher,
+		puller:     puller,
+		repository: repository,
+		remoteOpts: slices.Clone(remoteOpts),
 	}, nil
 }
 
@@ -113,8 +100,6 @@ func (s *Storage) List(ctx context.Context, orgID string) ([]Record, error) {
 		return nil, err
 	}
 
-	s.setCache(orgID, tokens)
-
 	return tokens, nil
 }
 
@@ -123,8 +108,6 @@ func (s *Storage) Create(ctx context.Context, orgID string, record Record) error
 	if err := s.pushRecord(ctx, orgID, record, false); err != nil {
 		return err
 	}
-
-	s.invalidateCache(orgID)
 
 	return nil
 }
@@ -148,65 +131,25 @@ func (s *Storage) Revoke(ctx context.Context, orgID, id string) error {
 		return err
 	}
 
-	s.invalidateCache(orgID)
-
 	return nil
 }
 
-// Valid reports whether jti is currently a live (non-revoked) token for orgID, consulting the
-// in-memory cache and refreshing it from the registry if it's older than refreshInterval.
+// Valid reports whether jti is currently a live (non-revoked and unexpired) token for orgID.
+// The deterministic tag makes this one registry read rather than an all-org repository listing.
 func (s *Storage) Valid(ctx context.Context, orgID, jti string) (bool, error) {
-	tokens, err := s.cachedRecords(ctx, orgID)
+	stored, err := s.readRecord(ctx, tokenTag(s.repository, orgID, jti))
 	if err != nil {
-		return false, err
-	}
-
-	for _, token := range tokens {
-		if token.ID == jti {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-func (s *Storage) cachedRecords(ctx context.Context, orgID string) ([]Record, error) {
-	s.mu.Lock()
-	cached, ok := s.cache[orgID]
-	s.mu.Unlock()
-
-	if ok && time.Since(cached.fetchedAt) < s.refreshInterval {
-		return cached.tokens, nil
-	}
-
-	tokens, err := s.readRecords(ctx, orgID)
-	if err != nil {
-		// Serve the stale cache rather than failing verification outright on a transient
-		// registry error; an empty, never-populated cache still surfaces the error.
-		if ok {
-			return cached.tokens, nil
+		if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
+			return false, nil
 		}
 
-		return nil, err
+		return false, fmt.Errorf("tokens: failed to read token %q for org %q: %w", jti, orgID, err)
 	}
 
-	s.setCache(orgID, tokens)
-
-	return tokens, nil
-}
-
-func (s *Storage) setCache(orgID string, tokens []Record) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.cache[orgID] = orgCache{tokens: tokens, fetchedAt: time.Now()}
-}
-
-func (s *Storage) invalidateCache(orgID string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	delete(s.cache, orgID)
+	return stored.OrgID == orgID &&
+		stored.Record.ID == jti &&
+		!stored.Revoked &&
+		stored.Record.ExpiresAt.After(time.Now()), nil
 }
 
 func (s *Storage) readRecords(ctx context.Context, orgID string) ([]Record, error) {
@@ -236,7 +179,7 @@ func (s *Storage) readRecords(ctx context.Context, orgID string) ([]Record, erro
 
 		// Verify the embedded org ID as well as the hashed tag prefix so even a theoretical
 		// prefix collision cannot expose another organization's record.
-		if stored.OrgID != orgID || stored.Revoked {
+		if stored.OrgID != orgID || stored.Revoked || !stored.Record.ExpiresAt.After(time.Now()) {
 			continue
 		}
 

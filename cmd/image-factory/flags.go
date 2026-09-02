@@ -68,8 +68,9 @@ func initFlags(args []string) error {
 // removedConfigKeys maps a config key that no longer exists to the key that replaced it.
 // Keys are lowercased, since koanf lowercases what it reads from the environment provider.
 var removedConfigKeys = map[string]string{
-	"authentication.downloadtokenkeypath": "authentication.tokens.keyPath",
-	"authentication.downloadtokenttl":     "authentication.tokens.ttl.download",
+	"authentication.downloadtokenkeypath": "authentication.tokens.keyPaths",
+	"authentication.downloadtokenttl":     "authentication.tokens.ttl.ephemeral",
+	"authentication.tokens.keypath":       "authentication.tokens.keyPaths",
 	"enterprise.nodetokens":               "authentication.tokens",
 }
 

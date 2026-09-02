@@ -939,8 +939,8 @@ Required.
 
 MachineScope names a scope that marks a token as a machine credential, e.g. `factory:machine`.
 
-Tokens carrying it reach exactly what an API token with the `pull` scope reaches: `GET`/`HEAD` on `/image/` and the `/v2/` OCI registry.
-Everything else is rejected with 403, including reading schematic definitions.
+Tokens carrying it receive exactly `image:read`: generated downloads, PXE assets, and generated installer OCI pulls.
+Everything else is rejected with 403, including schematic definitions and proxied source images.
 Intended for the long-lived tokens provisioned onto Talos nodes, which need to pull installers but should not be able to inspect or create schematics.
 
 Optional; when empty every valid token has full access.
@@ -992,14 +992,15 @@ Tokens holds configuration for self-issued API token management.
 
 ---
 
-### `authentication.tokens.keyPath`
+### `authentication.tokens.keyPaths`
 
-- **Type:** `string`
-- **Env:** `AUTHENTICATION_TOKENS_KEYPATH`
+- **Type:** `[]string`
+- **Env:** `AUTHENTICATION_TOKENS_KEYPATHS`
 
-KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing API tokens.
-One key signs every scope, so a deployment that used to configure separate download- and node-token keys has to pick one of them here.
-If unset, a fresh key is generated at startup, which only works for single-replica deployments.
+KeyPaths is an ordered list of PEM-encoded ECDSA P-256 keys or certificates.
+The first entry must be a private key and is the only key used to mint tokens.
+Later entries are verification-only and may contain private keys, public keys, or X.509 certificates.
+If empty, a fresh key is generated at startup, which only works for single-replica deployments.
 
 ---
 
@@ -1051,196 +1052,106 @@ Insecure allows connections to registries over HTTP or with invalid TLS certific
 
 ### `authentication.tokens.ttl`
 
-TTL bounds the lifetime of issued tokens, per scope.
+TTL bounds token lifetimes by whether they are stored, plus the CLI-only bootstrap policy.
 
 ---
 
-### `authentication.tokens.ttl.storedMin`
+### `authentication.tokens.ttl.stored`
+
+Stored bounds revocable tokens persisted in the configured OCI repository.
+
+---
+
+### `authentication.tokens.ttl.stored.max`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_STOREDMIN`
-
-StoredMin is the shortest lifetime a stored token may have, whatever its scopes allow.
-Recording a credential that expires in minutes buys a registry write and nothing else, since the token is gone before anyone can revoke it, so short lifetimes belong to unstored tokens.
-
----
-
-### `authentication.tokens.ttl.unstoredMax`
-
-- **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_UNSTOREDMAX`
-
-UnstoredMax is the longest lifetime an unstored token may have, whatever its scopes allow.
-Such a token is not recorded, so expiry is the only way it leaves circulation.
-It is also the only kind accepted from a ?token= query parameter, where proxy and CDN access logs keep a copy of it.
-
-It must not be below StoredMin, which would leave lifetimes no token could be issued for.
-
----
-
-### `authentication.tokens.ttl.download`
-
-Download bounds the lifetime of tokens carrying the "download" scope, which fetch images and PXE scripts.
-
----
-
-### `authentication.tokens.ttl.download.max`
-
-- **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MAX`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_STORED_MAX`
 
 Max is the longest validity duration a caller may request.
 
 ---
 
-### `authentication.tokens.ttl.download.min`
+### `authentication.tokens.ttl.stored.min`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MIN`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_STORED_MIN`
 
 Min is the shortest validity duration a caller may request.
 
 ---
 
-### `authentication.tokens.ttl.download.default`
+### `authentication.tokens.ttl.stored.default`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_DOWNLOAD_DEFAULT`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_STORED_DEFAULT`
 
 Default is the validity duration granted when the caller requests no explicit TTL.
 
 ---
 
-### `authentication.tokens.ttl.pull`
+### `authentication.tokens.ttl.ephemeral`
 
-Pull bounds the lifetime of tokens carrying the "pull" scope, which pull installer images.
-A pull token isn't refreshed once it's written into a Talos machine config, so its default
-lifetime is expected to be long (up to Max).
+Ephemeral bounds tokens whose expiry is the only way to take them out of circulation.
 
 ---
 
-### `authentication.tokens.ttl.pull.max`
+### `authentication.tokens.ttl.ephemeral.max`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_PULL_MAX`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_EPHEMERAL_MAX`
 
 Max is the longest validity duration a caller may request.
 
 ---
 
-### `authentication.tokens.ttl.pull.min`
+### `authentication.tokens.ttl.ephemeral.min`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_PULL_MIN`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_EPHEMERAL_MIN`
 
 Min is the shortest validity duration a caller may request.
 
 ---
 
-### `authentication.tokens.ttl.pull.default`
+### `authentication.tokens.ttl.ephemeral.default`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_PULL_DEFAULT`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_EPHEMERAL_DEFAULT`
 
 Default is the validity duration granted when the caller requests no explicit TTL.
 
 ---
 
-### `authentication.tokens.ttl.schematic`
+### `authentication.tokens.ttl.bootstrap`
 
-Schematic bounds the lifetime of tokens carrying the "schematic" scope, which create and read schematics.
+Bootstrap bounds the CLI-only cross-subject credential.
+It is never stored and may live longer than ordinary ephemeral tokens because it is kept
+offline and retired by removing its signing key from KeyPaths.
 
 ---
 
-### `authentication.tokens.ttl.schematic.max`
+### `authentication.tokens.ttl.bootstrap.max`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_SCHEMATIC_MAX`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_BOOTSTRAP_MAX`
 
 Max is the longest validity duration a caller may request.
 
 ---
 
-### `authentication.tokens.ttl.schematic.min`
+### `authentication.tokens.ttl.bootstrap.min`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_SCHEMATIC_MIN`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_BOOTSTRAP_MIN`
 
 Min is the shortest validity duration a caller may request.
 
 ---
 
-### `authentication.tokens.ttl.schematic.default`
+### `authentication.tokens.ttl.bootstrap.default`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_SCHEMATIC_DEFAULT`
-
-Default is the validity duration granted when the caller requests no explicit TTL.
-
----
-
-### `authentication.tokens.ttl.token`
-
-Token bounds the lifetime of tokens carrying the "token" scope, which mint and revoke other tokens.
-
----
-
-### `authentication.tokens.ttl.token.max`
-
-- **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_TOKEN_MAX`
-
-Max is the longest validity duration a caller may request.
-
----
-
-### `authentication.tokens.ttl.token.min`
-
-- **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_TOKEN_MIN`
-
-Min is the shortest validity duration a caller may request.
-
----
-
-### `authentication.tokens.ttl.token.default`
-
-- **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_TOKEN_DEFAULT`
-
-Default is the validity duration granted when the caller requests no explicit TTL.
-
----
-
-### `authentication.tokens.ttl.admin`
-
-Admin bounds the lifetime of tokens carrying the "admin" scope, the bootstrap credential that mints "token"-scoped tokens.
-An admin token is never recorded, so UnstoredMax does not apply to it and nothing can revoke it: it is expected to be long-lived, held offline, and retired by rotating KeyPath.
-
----
-
-### `authentication.tokens.ttl.admin.max`
-
-- **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_ADMIN_MAX`
-
-Max is the longest validity duration a caller may request.
-
----
-
-### `authentication.tokens.ttl.admin.min`
-
-- **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_ADMIN_MIN`
-
-Min is the shortest validity duration a caller may request.
-
----
-
-### `authentication.tokens.ttl.admin.default`
-
-- **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_TTL_ADMIN_DEFAULT`
+- **Env:** `AUTHENTICATION_TOKENS_TTL_BOOTSTRAP_DEFAULT`
 
 Default is the validity duration granted when the caller requests no explicit TTL.
 
@@ -1251,8 +1162,10 @@ Default is the validity duration granted when the caller requests no explicit TT
 - **Type:** `time.Duration`
 - **Env:** `AUTHENTICATION_TOKENS_VERIFICATIONCACHEREFRESHINTERVAL`
 
-VerificationCacheRefreshInterval bounds how stale the in-memory verification cache may be before it's refreshed from storage.
-This is also the bound on how long a revoked token may keep working after revocation.
+VerificationCacheRefreshInterval controls how often the backing registry clients are rebuilt
+so refreshed credentials are picked up.
+
+The legacy name is retained for configuration compatibility.
 
 ---
 
@@ -1631,7 +1544,7 @@ authentication:
     htpasswdPath: ""
     provider: htpasswd
     tokens:
-        keyPath: ""
+        keyPaths: []
         maxPerOrg: 10
         storage:
             insecure: false
@@ -1639,28 +1552,18 @@ authentication:
             registry: ghcr.io
             repository: tokens
         ttl:
-            admin:
+            bootstrap:
                 default: 2160h0m0s
                 max: 87600h0m0s
                 min: 1h0m0s
-            download:
+            ephemeral:
                 default: 5m0s
                 max: 8h0m0s
                 min: 30s
-            pull:
+            stored:
                 default: 8760h0m0s
                 max: 8760h0m0s
-                min: 24h0m0s
-            schematic:
-                default: 2160h0m0s
-                max: 8760h0m0s
                 min: 1h0m0s
-            storedMin: 1h0m0s
-            token:
-                default: 720h0m0s
-                max: 2160h0m0s
-                min: 1h0m0s
-            unstoredMax: 8h0m0s
         verificationCacheRefreshInterval: 5m0s
 build:
     brokenTalosVersions: []
@@ -1801,29 +1704,21 @@ IF_AUTHENTICATION_AUTH0_SESSIONKEY=
 IF_AUTHENTICATION_ENABLED=false
 IF_AUTHENTICATION_HTPASSWDPATH=
 IF_AUTHENTICATION_PROVIDER=htpasswd
-IF_AUTHENTICATION_TOKENS_KEYPATH=
+IF_AUTHENTICATION_TOKENS_KEYPATHS=[]
 IF_AUTHENTICATION_TOKENS_MAXPERORG=10
 IF_AUTHENTICATION_TOKENS_STORAGE_INSECURE=false
 IF_AUTHENTICATION_TOKENS_STORAGE_NAMESPACE=siderolabs/image-factory
 IF_AUTHENTICATION_TOKENS_STORAGE_REGISTRY=ghcr.io
 IF_AUTHENTICATION_TOKENS_STORAGE_REPOSITORY=tokens
-IF_AUTHENTICATION_TOKENS_TTL_ADMIN_DEFAULT=2160h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_ADMIN_MAX=87600h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_ADMIN_MIN=1h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_DOWNLOAD_DEFAULT=5m0s
-IF_AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MAX=8h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_DOWNLOAD_MIN=30s
-IF_AUTHENTICATION_TOKENS_TTL_PULL_DEFAULT=8760h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_PULL_MAX=8760h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_PULL_MIN=24h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_SCHEMATIC_DEFAULT=2160h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_SCHEMATIC_MAX=8760h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_SCHEMATIC_MIN=1h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_STOREDMIN=1h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_TOKEN_DEFAULT=720h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_TOKEN_MAX=2160h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_TOKEN_MIN=1h0m0s
-IF_AUTHENTICATION_TOKENS_TTL_UNSTOREDMAX=8h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_BOOTSTRAP_DEFAULT=2160h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_BOOTSTRAP_MAX=87600h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_BOOTSTRAP_MIN=1h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_EPHEMERAL_DEFAULT=5m0s
+IF_AUTHENTICATION_TOKENS_TTL_EPHEMERAL_MAX=8h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_EPHEMERAL_MIN=30s
+IF_AUTHENTICATION_TOKENS_TTL_STORED_DEFAULT=8760h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_STORED_MAX=8760h0m0s
+IF_AUTHENTICATION_TOKENS_TTL_STORED_MIN=1h0m0s
 IF_AUTHENTICATION_TOKENS_VERIFICATIONCACHEREFRESHINTERVAL=5m0s
 IF_BUILD_BROKENTALOSVERSIONS=[]
 IF_BUILD_MAXCONCURRENCY=6

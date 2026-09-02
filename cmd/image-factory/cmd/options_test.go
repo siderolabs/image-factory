@@ -307,7 +307,7 @@ func TestOptionsValidate(t *testing.T) {
 			},
 		},
 		{
-			name: "admin token TTL without bounds",
+			name: "bootstrap credential TTL without bounds",
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
@@ -316,16 +316,16 @@ func TestOptionsValidate(t *testing.T) {
 					HTPasswdPath: "/etc/factory/htpasswd",
 					Tokens: func() cmd.TokenOptions {
 						tokens := cmd.DefaultOptions.Authentication.Tokens
-						tokens.TTL.Admin = cmd.TokenTTL{Default: 90 * 24 * time.Hour}
+						tokens.TTL.Bootstrap = cmd.TokenTTL{Default: 90 * 24 * time.Hour}
 
 						return tokens
 					}(),
 				},
 			},
-			expectError: "authentication.tokens.ttl.admin.min must be positive",
+			expectError: "authentication.tokens.ttl.bootstrap.min must be positive",
 		},
 		{
-			name: "unstoredMax below storedMin",
+			name: "authentication enabled without stored token TTL bounds",
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
@@ -334,32 +334,13 @@ func TestOptionsValidate(t *testing.T) {
 					HTPasswdPath: "/etc/factory/htpasswd",
 					Tokens: func() cmd.TokenOptions {
 						tokens := cmd.DefaultOptions.Authentication.Tokens
-						tokens.TTL.StoredMin = 8 * time.Hour
-						tokens.TTL.UnstoredMax = time.Hour
+						tokens.TTL.Stored = cmd.TokenTTL{Default: 365 * 24 * time.Hour}
 
 						return tokens
 					}(),
 				},
 			},
-			expectError: "is below .storedMin",
-		},
-		{
-			name: "authentication enabled without a positive tokens storedMin",
-			opts: cmd.Options{
-				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
-				Authentication: cmd.AuthenticationOptions{
-					Enabled:      true,
-					Provider:     "htpasswd",
-					HTPasswdPath: "/etc/factory/htpasswd",
-					Tokens: func() cmd.TokenOptions {
-						tokens := cmd.DefaultOptions.Authentication.Tokens
-						tokens.TTL.StoredMin = 0
-
-						return tokens
-					}(),
-				},
-			},
-			expectError: "authentication.tokens.ttl.storedMin must be positive",
+			expectError: "authentication.tokens.ttl.stored.min must be positive",
 		},
 		{
 			name: "authentication enabled without a positive tokens maxPerOrg",
@@ -378,22 +359,25 @@ func TestOptionsValidate(t *testing.T) {
 			expectError: "authentication.tokens.maxPerOrg must be positive",
 		},
 		{
-			name: "download token TTL without bounds",
+			name: "ephemeral token TTL without bounds",
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
 					Enabled:      true,
 					Provider:     "htpasswd",
 					HTPasswdPath: "/etc/factory/htpasswd",
-					Tokens: cmd.TokenOptions{
-						TTL: cmd.TokenTTLOptions{Download: cmd.TokenTTL{Default: 5 * time.Minute}},
-					},
+					Tokens: func() cmd.TokenOptions {
+						tokens := cmd.DefaultOptions.Authentication.Tokens
+						tokens.TTL.Ephemeral = cmd.TokenTTL{Default: 5 * time.Minute}
+
+						return tokens
+					}(),
 				},
 			},
-			expectError: "authentication.tokens.ttl.download.min must be positive",
+			expectError: "authentication.tokens.ttl.ephemeral.min must be positive",
 		},
 		{
-			name: "pull token TTL without bounds",
+			name: "stored token TTL without bounds",
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
@@ -402,47 +386,53 @@ func TestOptionsValidate(t *testing.T) {
 					HTPasswdPath: "/etc/factory/htpasswd",
 					Tokens: cmd.TokenOptions{
 						TTL: cmd.TokenTTLOptions{
-							Download: cmd.DefaultOptions.Authentication.Tokens.TTL.Download,
+							Ephemeral: cmd.DefaultOptions.Authentication.Tokens.TTL.Ephemeral,
 						},
 					},
 				},
 			},
-			expectError: "authentication.tokens.ttl.pull.min must be positive",
+			expectError: "authentication.tokens.ttl.stored.min must be positive",
 		},
 		{
-			name: "download token TTL max below min",
+			name: "ephemeral token TTL max below min",
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
 					Enabled:      true,
 					Provider:     "htpasswd",
 					HTPasswdPath: "/etc/factory/htpasswd",
-					Tokens: cmd.TokenOptions{
-						TTL: cmd.TokenTTLOptions{Download: cmd.TokenTTL{
+					Tokens: func() cmd.TokenOptions {
+						tokens := cmd.DefaultOptions.Authentication.Tokens
+						tokens.TTL.Ephemeral = cmd.TokenTTL{
 							Default: 5 * time.Minute,
 							Min:     time.Hour,
 							Max:     time.Minute,
-						}},
-					},
+						}
+
+						return tokens
+					}(),
 				},
 			},
 			expectError: "is below .min",
 		},
 		{
-			name: "download token TTL default outside bounds",
+			name: "ephemeral token TTL default outside bounds",
 			opts: cmd.Options{
 				HTTP: cmd.HTTPOptions{ExternalURL: "https://factory.sidero.dev/"},
 				Authentication: cmd.AuthenticationOptions{
 					Enabled:      true,
 					Provider:     "htpasswd",
 					HTPasswdPath: "/etc/factory/htpasswd",
-					Tokens: cmd.TokenOptions{
-						TTL: cmd.TokenTTLOptions{Download: cmd.TokenTTL{
+					Tokens: func() cmd.TokenOptions {
+						tokens := cmd.DefaultOptions.Authentication.Tokens
+						tokens.TTL.Ephemeral = cmd.TokenTTL{
 							Default: 24 * time.Hour,
 							Min:     30 * time.Second,
 							Max:     8 * time.Hour,
-						}},
-					},
+						}
+
+						return tokens
+					}(),
 				},
 			},
 			expectError: "is outside [30s, 8h0m0s]",
@@ -528,6 +518,17 @@ func TestOptionsValidate(t *testing.T) {
 			assert.ErrorContains(t, err, tc.expectError)
 		})
 	}
+}
+
+func TestTokenEnterpriseOptionsPreservesKeyOrder(t *testing.T) {
+	t.Parallel()
+
+	opts := cmd.TokenOptions{KeyPaths: []string{"active.pem", "previous.pem"}}
+
+	got := opts.EnterpriseOptions(nil)
+	opts.KeyPaths[0] = "changed.pem"
+
+	assert.Equal(t, []string{"active.pem", "previous.pem"}, got.KeyPaths)
 }
 
 // Test that every cmd.ComponentsOptions field is mapped in the ImageMap method,

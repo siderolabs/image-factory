@@ -427,29 +427,59 @@
 - id: tokens.create.permissions_label
   translation: "Разрешения"
 
-- id: tokens.create.permission_pull
-  translation: "Загрузка образов (pull)"
+- id: tokens.create.permission_image_read
+  translation: "image:read"
 
-- id: tokens.create.permission_pull_help
-  translation: "Узел Talos использует его для загрузки инсталляторов."
+- id: tokens.create.permission_image_read_help
+  translation: "Читает созданные образы, PXE-скрипты и OCI-образы инсталляторов."
 
-- id: tokens.create.permission_download
-  translation: "Скачивание образов (download)"
+- id: tokens.create.permission_source_pull
+  translation: "source:pull"
 
-- id: tokens.create.permission_download_help
-  translation: "Получает образы и PXE-скрипты с заголовком Authorization. Ссылка на скачивание с токеном в URL — это другое, и такие токены выдаёт API."
+- id: tokens.create.permission_source_pull_help
+  translation: "Загружает исходные OCI-образы через прокси."
 
-- id: tokens.create.permission_schematic
-  translation: "Создание схем"
+- id: tokens.create.permission_schematic_create
+  translation: "schematic:create"
 
-- id: tokens.create.permission_schematic_help
-  translation: "Конвейер сборки использует его для создания схем и чтения своих собственных."
+- id: tokens.create.permission_schematic_create_help
+  translation: "Создаёт неизменяемые схемы."
 
-- id: tokens.create.permission_token
-  translation: "Управление токенами"
+- id: tokens.create.permission_schematic_read
+  translation: "schematic:read"
 
-- id: tokens.create.permission_token_help
-  translation: "Создаёт, показывает и отзывает токены. Токен может передать только те разрешения, которые уже имеет, и никогда это разрешение."
+- id: tokens.create.permission_schematic_read_help
+  translation: "Читает схемы, принадлежащие этой учётной записи."
+
+- id: tokens.create.permission_report_read
+  translation: "report:read"
+
+- id: tokens.create.permission_report_read_help
+  translation: "Читает отчёты безопасности SPDX и VEX."
+
+- id: tokens.create.permission_token_issue
+  translation: "token:issue"
+
+- id: tokens.create.permission_token_issue_help
+  translation: "Выдаёт API-токены в пределах отдельного лимита делегирования."
+
+- id: tokens.create.permission_token_read
+  translation: "token:read"
+
+- id: tokens.create.permission_token_read_help
+  translation: "Показывает активные сохранённые токены."
+
+- id: tokens.create.permission_token_revoke
+  translation: "token:revoke"
+
+- id: tokens.create.permission_token_revoke_help
+  translation: "Отзывает сохранённые токены."
+
+- id: tokens.create.delegation_label
+  translation: "Лимит делегирования"
+
+- id: tokens.create.delegation_help
+  translation: "Эти разрешения можно выдавать дочерним токенам. Они не становятся исполняемыми разрешениями этого токена."
 
 - id: tokens.create.permissions_required
   translation: "Выберите хотя бы одно разрешение."

@@ -61,10 +61,10 @@ func testAuthFrontend(ctx context.Context, t *testing.T, baseURL string) {
 
 	t.Run("Reload", testAuthReload)
 
-	t.Run("DownloadTokens", func(t *testing.T) {
+	t.Run("ImageReadTokens", func(t *testing.T) {
 		t.Parallel()
 
-		testDownloadTokens(ctx, t, baseURL)
+		testImageReadTokens(ctx, t, baseURL)
 	})
 
 	t.Run("APITokens", func(t *testing.T) {
@@ -129,7 +129,7 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 		t.Parallel()
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/tokens",
-			strings.NewReader(`{"name":"n","scopes":["pull"]}`))
+			strings.NewReader(`{"name":"n","scopes":["image:read"]}`))
 		require.NoError(t, err)
 
 		resp, err := http.DefaultClient.Do(req)
@@ -144,14 +144,14 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 		t.Parallel()
 
 		for name, body := range map[string]string{
-			"no name":       `{"scopes":["pull"]}`,
-			"long unstored": `{"scopes":["pull"],"stored":false,"ttl":"8760h"}`,
-			"short stored":  `{"name":"n","scopes":["download"],"stored":true,"ttl":"1m"}`,
-			"no scopes":     `{"name":"n"}`,
-			"unknown scope": `{"name":"n","scopes":["root"]}`,
-			"bad ttl":       `{"name":"n","scopes":["pull"],"ttl":"forever"}`,
-			"ttl too long":  `{"name":"n","scopes":["download"],"ttl":"9000h"}`,
-			"malformed":     `not json`,
+			"no name":        `{"scopes":["image:read"]}`,
+			"long ephemeral": `{"scopes":["image:read"],"stored":false,"ttl":"8760h"}`,
+			"short stored":   `{"name":"n","scopes":["image:read"],"stored":true,"ttl":"1m"}`,
+			"no scopes":      `{"name":"n"}`,
+			"unknown scope":  `{"name":"n","scopes":["root"]}`,
+			"bad ttl":        `{"name":"n","scopes":["image:read"],"ttl":"forever"}`,
+			"ttl too long":   `{"name":"n","scopes":["image:read"],"ttl":"9000h"}`,
+			"malformed":      `not json`,
 		} {
 			t.Run(name, func(t *testing.T) {
 				t.Parallel()
@@ -162,10 +162,10 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 		}
 	})
 
-	t.Run("PullScope", func(t *testing.T) {
+	t.Run("ImageReadScope", func(t *testing.T) {
 		t.Parallel()
 
-		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-pull","scopes":["pull"]}`)
+		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-image-read","scopes":["image:read"]}`)
 		require.Equal(t, http.StatusOK, status)
 
 		token, _ := created["token"].(string)
@@ -192,7 +192,7 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("SchematicScope", func(t *testing.T) {
 		t.Parallel()
 
-		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-schematic","scopes":["schematic"]}`)
+		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-schematic","scopes":["schematic:create","schematic:read","report:read"]}`)
 		require.Equal(t, http.StatusOK, status)
 
 		token, _ := created["token"].(string)
@@ -213,7 +213,7 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("ListAndRevoke", func(t *testing.T) {
 		t.Parallel()
 
-		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-revoke","scopes":["pull"]}`)
+		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-revoke","scopes":["image:read"]}`)
 		require.Equal(t, http.StatusOK, status)
 
 		token, _ := created["token"].(string)
@@ -251,7 +251,7 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 				found = true
 
 				assert.Equal(t, "e2e-revoke", tok.Name)
-				assert.Equal(t, []string{"pull"}, tok.Scopes)
+				assert.Equal(t, []string{"image:read"}, tok.Scopes)
 			}
 		}
 
@@ -302,10 +302,10 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 		assert.Equal(t, http.StatusNotFound, resp.StatusCode, "the alias is gone; /tokens covers it")
 	})
 
-	t.Run("UnstoredTokenIsNotListed", func(t *testing.T) {
+	t.Run("EphemeralTokenIsNotListed", func(t *testing.T) {
 		t.Parallel()
 
-		status, created := createToken(ctx, t, baseURL, `{"scopes":["download"],"stored":false}`)
+		status, created := createToken(ctx, t, baseURL, `{"scopes":["image:read"],"stored":false}`)
 		require.Equal(t, http.StatusOK, status)
 
 		assert.Equal(t, false, created["stored"], "the caller asked for a token the factory does not record")
@@ -328,8 +328,8 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("MintingTokenIsRefusedFromQueryString", func(t *testing.T) {
 		t.Parallel()
 
-		// Short enough to be unstored, which is what would otherwise let it into a URL.
-		status, created := createToken(ctx, t, baseURL, `{"scopes":["token"],"stored":false,"ttl":"1h"}`)
+		// Short enough to be ephemeral, which is what would otherwise let it into a URL.
+		status, created := createToken(ctx, t, baseURL, `{"scopes":["token:read"],"stored":false,"ttl":"1h"}`)
 		require.Equal(t, http.StatusOK, status)
 
 		minter, _ := created["token"].(string)
@@ -353,22 +353,23 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 		t.Parallel()
 
 		// The caller is a full htpasswd credential, the most authority the API recognizes.
-		status, _ := createToken(ctx, t, baseURL, `{"name":"e2e-other","scopes":["pull"],"subject":"org_someone_else"}`)
+		status, _ := createToken(ctx, t, baseURL, `{"name":"e2e-other","scopes":["image:read"],"subject":"org_someone_else"}`)
 		assert.Equal(t, http.StatusForbidden, status, "a tenant must not mint into another tenant")
 
 		// Naming your own identity is not a cross-tenant mint, so it is allowed.
 		self, _ := authCredentials()
 
 		status, created := createToken(ctx, t, baseURL,
-			fmt.Sprintf(`{"name":"e2e-self","scopes":["pull"],"subject":%q}`, self))
+			fmt.Sprintf(`{"name":"e2e-self","scopes":["image:read"],"subject":%q}`, self))
 		require.Equal(t, http.StatusOK, status)
 		assert.Equal(t, self, created["org_id"])
 	})
 
-	t.Run("TokenScopeCannotEscalate", func(t *testing.T) {
+	t.Run("DelegationCeilingCannotEscalate", func(t *testing.T) {
 		t.Parallel()
 
-		status, created := createToken(ctx, t, baseURL, `{"name":"e2e-minter","scopes":["token"]}`)
+		status, created := createToken(ctx, t, baseURL,
+			`{"name":"e2e-minter","scopes":["token:issue"],"issuable_scopes":["image:read"]}`)
 		require.Equal(t, http.StatusOK, status)
 
 		minter, _ := created["token"].(string)
@@ -390,8 +391,9 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 			return resp.StatusCode
 		}
 
-		assert.Equal(t, http.StatusForbidden, mint(`{"name":"x","scopes":["pull"]}`))
-		assert.Equal(t, http.StatusForbidden, mint(`{"name":"x","scopes":["token"]}`))
+		assert.Equal(t, http.StatusOK, mint(`{"name":"x","scopes":["image:read"]}`))
+		assert.Equal(t, http.StatusForbidden, mint(`{"name":"x","scopes":["token:issue"]}`))
+		assert.Equal(t, http.StatusForbidden, mint(`{"name":"x","scopes":["report:read"]}`))
 	})
 }
 
@@ -699,9 +701,9 @@ func testOwnership(ctx context.Context, t *testing.T, baseURL string) {
 	})
 }
 
-// testDownloadTokens verifies the download flow of an unstored API token: create a schematic,
-// mint a download-scoped token with auth, then download using the token alone (no auth headers).
-func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
+// testImageReadTokens verifies the download flow of an ephemeral API token: create a schematic,
+// mint an ephemeral image:read token with auth, then download using the token alone (no auth headers).
+func testImageReadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Helper()
 
 	// Create a schematic with auth.
@@ -715,7 +717,7 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 		t.Parallel()
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/tokens",
-			strings.NewReader(`{"scopes":["download"],"stored":false}`))
+			strings.NewReader(`{"scopes":["image:read"],"stored":false}`))
 		require.NoError(t, err)
 
 		resp, err := http.DefaultClient.Do(req)
@@ -736,14 +738,14 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 		}{
 			{name: "in range", ttl: "1h", expectCode: http.StatusOK},
 			{name: "below min", ttl: "1s", expectCode: http.StatusBadRequest},
-			{name: "above unstoredMax", ttl: "24h", expectCode: http.StatusBadRequest},
+			{name: "above ephemeral maximum", ttl: "24h", expectCode: http.StatusBadRequest},
 			{name: "not a duration", ttl: "forever", expectCode: http.StatusBadRequest},
 		} {
 			t.Run(test.name, func(t *testing.T) {
 				t.Parallel()
 
 				status, created := createToken(ctx, t, baseURL,
-					fmt.Sprintf(`{"scopes":["download"],"stored":false,"ttl":%q}`, test.ttl))
+					fmt.Sprintf(`{"scopes":["image:read"],"stored":false,"ttl":%q}`, test.ttl))
 
 				require.Equal(t, test.expectCode, status)
 
@@ -760,7 +762,7 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("TokenAndDownload", func(t *testing.T) {
 		t.Parallel()
 
-		token := getDownloadToken(ctx, t, baseURL)
+		token := getImageReadToken(ctx, t, baseURL)
 		downloadURL := baseURL + "/image/" + schematicID + "/v1.9.0/kernel-amd64?token=" + token
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
@@ -777,7 +779,7 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("TokenReusableAcrossFiles", func(t *testing.T) {
 		t.Parallel()
 
-		token := getDownloadToken(ctx, t, baseURL)
+		token := getImageReadToken(ctx, t, baseURL)
 
 		// Same token works for multiple files under the same schematic.
 		for _, path := range []string{"kernel-amd64", "cmdline-metal-amd64"} {
@@ -800,7 +802,7 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("TamperedTokenRejected", func(t *testing.T) {
 		t.Parallel()
 
-		tampered := tamperSignature(t, getDownloadToken(ctx, t, baseURL))
+		tampered := tamperSignature(t, getImageReadToken(ctx, t, baseURL))
 		downloadURL := baseURL + "/image/" + schematicID + "/v1.9.0/kernel-amd64?token=" + tampered
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
@@ -824,8 +826,8 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 		bobSchematicID, _, err := bobClient.SchematicCreate(ctx, schematicpkg.Schematic{})
 		require.NoError(t, err)
 
-		// Get alice's download token.
-		aliceToken := getDownloadToken(ctx, t, baseURL)
+		// Get alice's image-read token.
+		aliceToken := getImageReadToken(ctx, t, baseURL)
 		downloadURL := baseURL + "/image/" + bobSchematicID + "/v1.9.0/kernel-amd64?token=" + aliceToken
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
@@ -842,10 +844,10 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("TokenRejectedOnWrite", func(t *testing.T) {
 		t.Parallel()
 
-		token := getDownloadToken(ctx, t, baseURL)
+		token := getImageReadToken(ctx, t, baseURL)
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-			baseURL+"/tokens?token="+token, strings.NewReader(`{"scopes":["download"],"stored":false}`))
+			baseURL+"/tokens?token="+token, strings.NewReader(`{"scopes":["image:read"],"stored":false}`))
 		require.NoError(t, err)
 
 		resp, err := http.DefaultClient.Do(req)
@@ -859,13 +861,13 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	t.Run("Scopes", func(t *testing.T) {
 		t.Parallel()
 
-		testDownloadTokenScopes(ctx, t, baseURL, schematicID)
+		testImageReadTokenScopes(ctx, t, baseURL, schematicID)
 	})
 
 	t.Run("PXE", func(t *testing.T) {
 		t.Parallel()
 
-		testDownloadTokenPXE(ctx, t, baseURL, schematicID)
+		testImageReadTokenPXE(ctx, t, baseURL, schematicID)
 	})
 
 	t.Run("JWKSEndpoint", func(t *testing.T) {
@@ -894,13 +896,13 @@ func testDownloadTokens(ctx context.Context, t *testing.T, baseURL string) {
 	})
 }
 
-func testDownloadTokenScopes(ctx context.Context, t *testing.T, baseURL, schematicID string) {
+func testImageReadTokenScopes(ctx context.Context, t *testing.T, baseURL, schematicID string) {
 	t.Helper()
 
 	t.Run("AcceptedInAuthorizationHeader", func(t *testing.T) {
 		t.Parallel()
 
-		token := getDownloadToken(ctx, t, baseURL)
+		token := getImageReadToken(ctx, t, baseURL)
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 			baseURL+"/image/"+schematicID+"/v1.9.0/kernel-amd64", nil)
@@ -919,9 +921,12 @@ func testDownloadTokenScopes(ctx context.Context, t *testing.T, baseURL, schemat
 	t.Run("RejectedOutsideItsScope", func(t *testing.T) {
 		t.Parallel()
 
-		token := getDownloadToken(ctx, t, baseURL)
+		token := getImageReadToken(ctx, t, baseURL)
 
-		for _, target := range []string{"/v2/", "/schematics/" + schematicID} {
+		for _, target := range []string{
+			"/v2/siderolabs/imager/manifests/latest",
+			"/schematics/" + schematicID,
+		} {
 			t.Run(target, func(t *testing.T) {
 				t.Parallel()
 
@@ -941,10 +946,10 @@ func testDownloadTokenScopes(ctx context.Context, t *testing.T, baseURL, schemat
 	})
 }
 
-// testDownloadTokenPXE verifies that /pxe accepts a download token and forwards that
+// testImageReadTokenPXE verifies that /pxe accepts an image-read token and forwards that
 // same token into the asset URLs of the script it returns, so a boot needs no
 // credential of its own anywhere.
-func testDownloadTokenPXE(ctx context.Context, t *testing.T, baseURL, schematicID string) {
+func testImageReadTokenPXE(ctx context.Context, t *testing.T, baseURL, schematicID string) {
 	t.Helper()
 
 	const talosVersion = "v1.11.0"
@@ -962,7 +967,7 @@ func testDownloadTokenPXE(ctx context.Context, t *testing.T, baseURL, schematicI
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			token := getDownloadToken(ctx, t, baseURL)
+			token := getImageReadToken(ctx, t, baseURL)
 
 			scriptURL := baseURL + "/pxe/" + schematicID + "/" + talosVersion + "/" + test.path
 			if !test.inHeader {
@@ -1022,7 +1027,7 @@ func testDownloadTokenPXE(ctx context.Context, t *testing.T, baseURL, schematicI
 	t.Run("tampered", func(t *testing.T) {
 		t.Parallel()
 
-		tampered := tamperSignature(t, getDownloadToken(ctx, t, baseURL))
+		tampered := tamperSignature(t, getImageReadToken(ctx, t, baseURL))
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 			baseURL+"/pxe/"+schematicID+"/"+talosVersion+"/metal-amd64?token="+tampered, nil)
@@ -1037,11 +1042,11 @@ func testDownloadTokenPXE(ctx context.Context, t *testing.T, baseURL, schematicI
 	})
 }
 
-// getDownloadToken mints an unstored download-scoped API token, the kind a URL may carry.
-func getDownloadToken(ctx context.Context, t *testing.T, baseURL string) string {
+// getImageReadToken mints an ephemeral image:read API token, the kind a URL may carry.
+func getImageReadToken(ctx context.Context, t *testing.T, baseURL string) string {
 	t.Helper()
 
-	status, created := createToken(ctx, t, baseURL, `{"scopes":["download"],"stored":false}`)
+	status, created := createToken(ctx, t, baseURL, `{"scopes":["image:read"],"stored":false}`)
 	require.Equal(t, http.StatusOK, status)
 
 	token, _ := created["token"].(string)

@@ -65,8 +65,8 @@ func NewAuth0Provider(_ context.Context, _ *zap.Logger, _ Auth0Config) (AuthProv
 	return nil, errors.New("authentication is not supported in the non-enterprise version")
 }
 
-// MintAdminToken is not available when enterprise is not enabled.
-func MintAdminToken(_ TokenOptions, _ string, _ time.Duration) (apitoken.Token, error) {
+// MintBootstrapToken is not available when enterprise is not enabled.
+func MintBootstrapToken(_ TokenOptions, _ string, _ time.Duration) (apitoken.Token, error) {
 	return apitoken.Token{}, errors.New("API tokens are not supported in the non-enterprise version")
 }
 

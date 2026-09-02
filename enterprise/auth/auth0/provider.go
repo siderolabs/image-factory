@@ -256,7 +256,7 @@ func newVerifier(issuer string, keySet oidc.KeySet, clientID string) *oidc.IDTok
 // Nodes pull installers through the OCI registry and boot artifacts from /image, and need
 // nothing else. In particular the schematic body stays out of reach, so a credential sitting
 // on a node cannot enumerate how the org's images are built.
-var machineScopes = []apitoken.Scope{apitoken.ScopePull}
+var machineScopes = []apitoken.Scope{"image:read"}
 
 // Run blocks until ctx is canceled, satisfying the enterprise.AuthProvider lifecycle.
 // There is nothing to start: the key set is fetched on demand.
@@ -316,7 +316,8 @@ func (p *Provider) Middleware(next Handler) Handler {
 
 		// Forbidden rather than a challenge: the token is valid, it just isn't allowed here,
 		// and re-authenticating with the same credential would not change that.
-		if p.machineScope != "" && claims.hasScope(p.machineScope) && !apitoken.Allows(machineScopes, r.Method, r.URL.Path) {
+		if p.machineScope != "" && claims.hasScope(p.machineScope) &&
+			!apitoken.Allows(machineScopes, r.Method, r.URL.Path) {
 			logger.Debug("auth0: machine-scoped token denied",
 				zap.String("org_id", claims.OrgID), zap.String("path", r.URL.Path))
 

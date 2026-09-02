@@ -38,17 +38,18 @@ func (f fakeAuthProvider) UsernameFromContext(context.Context) (string, bool) {
 }
 
 type fakeManager struct {
-	listErr       error
-	createErr     error
-	revokeErr     error
-	createdName   string
-	createdOrgID  string
-	revokedOrgID  string
-	revokedID     string
-	createdScopes []apitoken.Scope
-	records       []tokens.Record
-	createdTTL    time.Duration
-	createdStored bool
+	listErr           error
+	createErr         error
+	revokeErr         error
+	createdName       string
+	createdOrgID      string
+	revokedOrgID      string
+	revokedID         string
+	createdScopes     []apitoken.Scope
+	records           []tokens.Record
+	createdDelegation apitoken.Delegation
+	createdTTL        time.Duration
+	createdStored     bool
 }
 
 func (f *fakeManager) List(_ context.Context, _ string) ([]tokens.Record, error) {
@@ -59,7 +60,7 @@ func (f *fakeManager) List(_ context.Context, _ string) ([]tokens.Record, error)
 	return f.records, nil
 }
 
-func (f *fakeManager) Create(_ context.Context, orgID, name string, scopes []apitoken.Scope, stored bool, requestedTTL time.Duration) (tokens.Record, string, error) {
+func (f *fakeManager) Create(_ context.Context, orgID, name string, scopes []apitoken.Scope, delegation apitoken.Delegation, stored bool, requestedTTL time.Duration) (tokens.Record, string, error) {
 	if f.createErr != nil {
 		return tokens.Record{}, "", f.createErr
 	}
@@ -67,6 +68,7 @@ func (f *fakeManager) Create(_ context.Context, orgID, name string, scopes []api
 	f.createdOrgID = orgID
 	f.createdName = name
 	f.createdScopes = scopes
+	f.createdDelegation = delegation
 	f.createdStored = stored
 	f.createdTTL = requestedTTL
 
@@ -100,7 +102,7 @@ func doRequest(t *testing.T, f interface {
 func TestListCreateFrontendListHappyPath(t *testing.T) {
 	t.Parallel()
 
-	mgr := &fakeManager{records: []tokens.Record{{ID: "abc", Name: "my-node", Scopes: pullScope}}}
+	mgr := &fakeManager{records: []tokens.Record{{ID: "abc", Name: "my-node", Scopes: imageScopes}}}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
 	w := doRequest(t, f, http.MethodGet, "/tokens", "", nil)
@@ -118,7 +120,7 @@ func TestListCreateFrontendListHappyPath(t *testing.T) {
 	require.Len(t, resp.Tokens, 1)
 	require.Equal(t, "abc", resp.Tokens[0].ID)
 	require.Equal(t, "my-node", resp.Tokens[0].Name)
-	require.Equal(t, []string{"pull"}, resp.Tokens[0].Scopes)
+	require.Equal(t, []string{"image:read"}, resp.Tokens[0].Scopes)
 }
 
 func TestListCreateFrontendListRequiresAuth(t *testing.T) {
@@ -137,12 +139,12 @@ func TestListCreateFrontendCreateHappyPath(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"my-node","scopes":["pull"],"ttl":"720h"}`, nil)
+	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"my-node","scopes":["image:read"],"ttl":"720h"}`, nil)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, testOrgID, mgr.createdOrgID)
 	require.Equal(t, "my-node", mgr.createdName)
-	require.Equal(t, pullScope, mgr.createdScopes)
+	require.Equal(t, imageScopes, mgr.createdScopes)
 	require.Equal(t, 720*time.Hour, mgr.createdTTL)
 
 	var resp createResponse
@@ -152,7 +154,7 @@ func TestListCreateFrontendCreateHappyPath(t *testing.T) {
 	require.Equal(t, "my-node", resp.Name)
 	require.Equal(t, "new-token-value", resp.Token)
 	require.Equal(t, testOrgID, resp.OrgID)
-	require.Equal(t, []string{"pull"}, resp.Scopes)
+	require.Equal(t, []string{"image:read"}, resp.Scopes)
 	require.True(t, resp.Stored, "a create that does not say otherwise is recorded, so it can be listed and revoked")
 	require.True(t, mgr.createdStored)
 }
@@ -172,7 +174,7 @@ func TestListCreateFrontendReportsStorage(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"a-link","scopes":["download"],"stored":false}`, nil)
+	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"a-link","scopes":["image:read"],"stored":false}`, nil)
 
 	require.Equal(t, http.StatusOK, w.Code)
 
@@ -191,7 +193,7 @@ func TestListCreateFrontendStoresByDefault(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"a-link","scopes":["download"]}`, nil)
+	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"a-link","scopes":["image:read"]}`, nil)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	require.True(t, mgr.createdStored)
@@ -221,6 +223,39 @@ func TestListCreateFrontendCreateRejectsUnknownScope(t *testing.T) {
 	require.Empty(t, mgr.createdName)
 }
 
+func TestListCreateFrontendRejectsInvalidDelegation(t *testing.T) {
+	t.Parallel()
+
+	for name, body := range map[string]string{
+		"unknown issuable scope": `{"name":"n","scopes":["token:issue"],"issuable_scopes":["future:scope"]}`,
+		"without issue scope":    `{"name":"n","scopes":["image:read"],"issuable_scopes":["image:read"]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			mgr := &fakeManager{}
+			f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+			w := doRequest(t, f, http.MethodPost, "/tokens", body, nil)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Empty(t, mgr.createdScopes)
+		})
+	}
+}
+
+func TestListCreateFrontendNeverPropagatesCrossSubjectAuthority(t *testing.T) {
+	t.Parallel()
+
+	mgr := &fakeManager{}
+	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+	w := doRequest(t, f, http.MethodPost, "/tokens",
+		`{"name":"n","scopes":["token:issue"],"issuable_scopes":["image:read"],"any_subject":true}`, nil)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.False(t, mgr.createdDelegation.AnySubject)
+}
+
 // TestListCreateFrontendRefusesAdminScope covers the rule that the bootstrap credential is not an
 // HTTP feature: the caller here holds a full provider credential, the most authority the API
 // recognizes, and still cannot mint one.
@@ -229,8 +264,8 @@ func TestListCreateFrontendRefusesAdminScope(t *testing.T) {
 
 	for name, body := range map[string]string{
 		"alone":          `{"name":"n","scopes":["admin"]}`,
-		"alongside pull": `{"name":"n","scopes":["pull","admin"]}`,
-		"unstored":       `{"scopes":["admin"],"stored":false}`,
+		"alongside pull": `{"name":"n","scopes":["image:read","admin"]}`,
+		"ephemeral":      `{"scopes":["admin"],"stored":false}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -241,44 +276,43 @@ func TestListCreateFrontendRefusesAdminScope(t *testing.T) {
 			w := doRequest(t, f, http.MethodPost, "/tokens", body, nil)
 
 			require.Equal(t, http.StatusBadRequest, w.Code)
-			require.Contains(t, w.Body.String(), "admin-token subcommand")
+			require.Contains(t, w.Body.String(), "unknown scope")
 			require.Empty(t, mgr.createdScopes, "the token must never be minted")
 		})
 	}
 }
 
-// TestCreateFromAdminTokenMayGrantMinting is the other side: an admin token authenticating over
-// HTTP is exactly how a token-scoped token gets made.
-func TestCreateFromAdminTokenMayGrantMinting(t *testing.T) {
+// TestCreateFromBootstrapMayGrantMinting proves that the CLI credential can create a bounded minter.
+func TestCreateFromBootstrapMayGrantMinting(t *testing.T) {
 	t.Parallel()
 
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin}, `{"name":"n","scopes":["token"]}`)
+	w := doRequestAsBootstrap(t, f, `{"name":"n","scopes":["token:issue"]}`)
 
 	require.Equal(t, http.StatusOK, w.Code)
-	require.Equal(t, []apitoken.Scope{apitoken.ScopeToken}, mgr.createdScopes)
+	require.Equal(t, []apitoken.Scope{"token:issue"}, mgr.createdScopes)
 
-	refused := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin}, `{"name":"n","scopes":["admin"]}`)
-	require.Equal(t, http.StatusBadRequest, refused.Code, "not even an admin token mints another one")
+	refused := doRequestAsBootstrap(t, f, `{"name":"n","scopes":["admin"]}`)
+	require.Equal(t, http.StatusBadRequest, refused.Code, "the retired admin scope stays invalid")
 }
 
-// TestCreateForAnotherIdentity covers the cross-tenant rule from both ends: an admin token may
+// TestCreateForAnotherIdentity covers the cross-tenant rule from both ends: a bootstrap credential may
 // name the identity a token belongs to, and nothing else may, a full provider credential included.
 func TestCreateForAnotherIdentity(t *testing.T) {
 	t.Parallel()
 
 	const other = "org_other"
 
-	t.Run("admin token may", func(t *testing.T) {
+	t.Run("bootstrap credential may", func(t *testing.T) {
 		t.Parallel()
 
 		mgr := &fakeManager{}
 		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-		w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin},
-			`{"name":"n","scopes":["pull"],"subject":"`+other+`"}`)
+		w := doRequestAsBootstrap(t, f,
+			`{"name":"n","scopes":["image:read"],"subject":"`+other+`"}`)
 
 		require.Equal(t, http.StatusOK, w.Code)
 		require.Equal(t, other, mgr.createdOrgID, "the record belongs to the named identity")
@@ -296,7 +330,7 @@ func TestCreateForAnotherIdentity(t *testing.T) {
 		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
 		w := doRequest(t, f, http.MethodPost, "/tokens",
-			`{"name":"n","scopes":["pull"],"subject":"`+other+`"}`, nil)
+			`{"name":"n","scopes":["image:read"],"subject":"`+other+`"}`, nil)
 
 		require.Equal(t, http.StatusForbidden, w.Code, "an htpasswd user must not reach another tenant")
 		require.Empty(t, mgr.createdOrgID)
@@ -308,8 +342,8 @@ func TestCreateForAnotherIdentity(t *testing.T) {
 		mgr := &fakeManager{}
 		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-		w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeToken, apitoken.ScopePull},
-			`{"name":"n","scopes":["pull"],"subject":"`+other+`"}`)
+		w := doRequestAs(t, f, []apitoken.Scope{"token:issue", "image:read"},
+			`{"name":"n","scopes":["image:read"],"subject":"`+other+`"}`)
 
 		require.Equal(t, http.StatusForbidden, w.Code)
 		require.Empty(t, mgr.createdOrgID)
@@ -322,7 +356,7 @@ func TestCreateForAnotherIdentity(t *testing.T) {
 		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
 		w := doRequest(t, f, http.MethodPost, "/tokens",
-			`{"name":"n","scopes":["pull"],"subject":"`+testOrgID+`"}`, nil)
+			`{"name":"n","scopes":["image:read"],"subject":"`+testOrgID+`"}`, nil)
 
 		require.Equal(t, http.StatusOK, w.Code)
 		require.Equal(t, testOrgID, mgr.createdOrgID)
@@ -334,7 +368,7 @@ func TestCreateForAnotherIdentity(t *testing.T) {
 		mgr := &fakeManager{}
 		f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-		w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin}, `{"name":"n","scopes":["pull"]}`)
+		w := doRequestAsBootstrap(t, f, `{"name":"n","scopes":["image:read"]}`)
 
 		require.Equal(t, http.StatusOK, w.Code)
 		require.Equal(t, testOrgID, mgr.createdOrgID)
@@ -359,10 +393,10 @@ func TestCreateRejectsMalformedSubject(t *testing.T) {
 			mgr := &fakeManager{}
 			f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-			body, err := json.Marshal(map[string]any{"name": "n", "scopes": []string{"pull"}, "subject": subject})
+			body, err := json.Marshal(map[string]any{"name": "n", "scopes": []string{"image:read"}, "subject": subject})
 			require.NoError(t, err)
 
-			w := doRequestAs(t, f, []apitoken.Scope{apitoken.ScopeAdmin}, string(body))
+			w := doRequestAsBootstrap(t, f, string(body))
 
 			require.Equal(t, http.StatusBadRequest, w.Code)
 			require.Empty(t, mgr.createdOrgID)
@@ -376,7 +410,7 @@ func TestListCreateFrontendCreateRejectsBadTTL(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"my-node","scopes":["pull"],"ttl":"forever"}`, nil)
+	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"my-node","scopes":["image:read"],"ttl":"forever"}`, nil)
 
 	require.Equal(t, http.StatusBadRequest, w.Code)
 	require.Empty(t, mgr.createdName)
@@ -388,7 +422,7 @@ func TestListCreateFrontendCreateRejectsEmptyName(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"","scopes":["pull"]}`, nil)
+	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"","scopes":["image:read"]}`, nil)
 
 	require.Equal(t, http.StatusBadRequest, w.Code)
 	require.Empty(t, mgr.createdScopes)
@@ -400,10 +434,10 @@ func TestListCreateFrontendAllowsEmptyNameWhenNotRecorded(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequest(t, f, http.MethodPost, "/tokens", `{"scopes":["download"],"stored":false}`, nil)
+	w := doRequest(t, f, http.MethodPost, "/tokens", `{"scopes":["image:read"],"stored":false}`, nil)
 
 	require.Equal(t, http.StatusOK, w.Code)
-	require.Equal(t, downloadScope, mgr.createdScopes)
+	require.Equal(t, imageScopes, mgr.createdScopes)
 	require.Empty(t, mgr.createdName)
 }
 
@@ -424,22 +458,22 @@ func TestListCreateFrontendCreateRejectsAtCap(t *testing.T) {
 	mgr := &fakeManager{records: []tokens.Record{{ID: "a"}, {ID: "b"}}}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 2)
 
-	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"my-node","scopes":["pull"]}`, nil)
+	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"my-node","scopes":["image:read"]}`, nil)
 
 	require.Equal(t, http.StatusConflict, w.Code)
 	require.Empty(t, mgr.createdName)
 }
 
-func TestListCreateFrontendCapIgnoresUnstoredTokens(t *testing.T) {
+func TestListCreateFrontendCapIgnoresEphemeralTokens(t *testing.T) {
 	t.Parallel()
 
 	mgr := &fakeManager{records: []tokens.Record{{ID: "a"}, {ID: "b"}}}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 2)
 
-	w := doRequest(t, f, http.MethodPost, "/tokens", `{"scopes":["download"],"stored":false}`, nil)
+	w := doRequest(t, f, http.MethodPost, "/tokens", `{"scopes":["image:read"],"stored":false}`, nil)
 
 	require.Equal(t, http.StatusOK, w.Code)
-	require.Equal(t, downloadScope, mgr.createdScopes)
+	require.Equal(t, imageScopes, mgr.createdScopes)
 }
 
 func TestListCreateFrontendListSurfacesManagerError(t *testing.T) {
@@ -459,7 +493,7 @@ func TestListCreateFrontendCreateSurfacesManagerError(t *testing.T) {
 
 	f := tokens.NewListCreateFrontend(&fakeManager{createErr: errBoom}, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/tokens", strings.NewReader(`{"name":"my-node","scopes":["pull"]}`))
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/tokens", strings.NewReader(`{"name":"my-node","scopes":["image:read"]}`))
 	w := httptest.NewRecorder()
 
 	err := f.Handle(t.Context(), w, r, nil)
@@ -512,13 +546,42 @@ func TestRevokeFrontendSurfacesOtherErrors(t *testing.T) {
 	require.ErrorIs(t, err, errBoom)
 }
 
-func doRequestAs(t *testing.T, f interface {
-	Handle(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error
-}, scopes []apitoken.Scope, body string,
+func doRequestAs(
+	t *testing.T,
+	f *tokens.ListCreateFrontend,
+	scopes []apitoken.Scope,
+	body string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 
-	ctx := apitoken.ContextWithScopes(t.Context(), scopes)
+	ctx := apitoken.ContextWithClaims(t.Context(), apitoken.Claims{
+		Scopes:         []apitoken.Scope{"token:issue"},
+		IssuableScopes: scopes,
+	})
+
+	return doRequestWithContext(t, f, ctx, body)
+}
+
+func doRequestAsBootstrap(t *testing.T, f *tokens.ListCreateFrontend, body string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	ctx := apitoken.ContextWithClaims(t.Context(), apitoken.Claims{
+		Scopes:         []apitoken.Scope{"token:issue"},
+		IssuableScopes: apitoken.Scopes(),
+		AnySubject:     true,
+	})
+
+	return doRequestWithContext(t, f, ctx, body)
+}
+
+func doRequestWithContext(
+	t *testing.T,
+	f *tokens.ListCreateFrontend,
+	ctx context.Context,
+	body string,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
 	r := httptest.NewRequestWithContext(ctx, http.MethodPost, "/tokens", strings.NewReader(body))
 	w := httptest.NewRecorder()
 
@@ -527,7 +590,7 @@ func doRequestAs(t *testing.T, f interface {
 	return w
 }
 
-var minterScope = []apitoken.Scope{apitoken.ScopeToken}
+var minterScope = []apitoken.Scope{"token:issue"}
 
 func TestCreateRefusesToGrantMoreThanTheCallerHolds(t *testing.T) {
 	t.Parallel()
@@ -535,22 +598,22 @@ func TestCreateRefusesToGrantMoreThanTheCallerHolds(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequestAs(t, f, minterScope, `{"name":"n","scopes":["pull"]}`)
+	w := doRequestAs(t, f, minterScope, `{"name":"n","scopes":["image:read"]}`)
 
 	require.Equal(t, http.StatusForbidden, w.Code)
 	require.Empty(t, mgr.createdName, "the token must never be minted")
 }
 
-func TestCreateRefusesToGrantMinting(t *testing.T) {
+func TestCreateAllowsGrantingMintingWhenWithinDelegationCeiling(t *testing.T) {
 	t.Parallel()
 
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequestAs(t, f, minterScope, `{"name":"n","scopes":["token"]}`)
+	w := doRequestAs(t, f, minterScope, `{"name":"n","scopes":["token:issue"]}`)
 
-	require.Equal(t, http.StatusForbidden, w.Code)
-	require.Empty(t, mgr.createdName)
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, []apitoken.Scope{"token:issue"}, mgr.createdScopes)
 }
 
 func TestCreateAllowsGrantingWhatTheCallerHolds(t *testing.T) {
@@ -559,12 +622,47 @@ func TestCreateAllowsGrantingWhatTheCallerHolds(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	caller := []apitoken.Scope{apitoken.ScopeToken, apitoken.ScopePull}
+	caller := []apitoken.Scope{"token:issue", "image:read"}
 
-	w := doRequestAs(t, f, caller, `{"name":"n","scopes":["pull"]}`)
+	w := doRequestAs(t, f, caller, `{"name":"n","scopes":["image:read"]}`)
 
 	require.Equal(t, http.StatusOK, w.Code)
-	require.Equal(t, pullScope, mgr.createdScopes)
+	require.Equal(t, imageScopes, mgr.createdScopes)
+}
+
+func TestCreateAttenuatesChildDelegationCeiling(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name       string
+		body       string
+		want       []apitoken.Scope
+		wantStatus int
+	}{
+		{
+			name:       "within parent ceiling",
+			body:       `{"name":"n","scopes":["token:issue"],"issuable_scopes":["image:read"]}`,
+			wantStatus: http.StatusOK,
+			want:       []apitoken.Scope{"image:read"},
+		},
+		{
+			name:       "outside parent ceiling",
+			body:       `{"name":"n","scopes":["token:issue"],"issuable_scopes":["report:read"]}`,
+			wantStatus: http.StatusForbidden,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			mgr := &fakeManager{}
+			f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+			w := doRequestAs(t, f, []apitoken.Scope{"token:issue", "image:read"}, test.body)
+
+			require.Equal(t, test.wantStatus, w.Code)
+			require.Equal(t, test.want, mgr.createdDelegation.IssuableScopes)
+		})
+	}
 }
 
 func TestCreateFromFullCredentialIsUnrestricted(t *testing.T) {
@@ -573,8 +671,11 @@ func TestCreateFromFullCredentialIsUnrestricted(t *testing.T) {
 	mgr := &fakeManager{}
 	f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
 
-	w := doRequest(t, f, http.MethodPost, "/tokens", `{"name":"n","scopes":["token"]}`, nil)
+	w := doRequest(t, f, http.MethodPost, "/tokens",
+		`{"name":"n","scopes":["token:issue"],"issuable_scopes":["image:read","token:issue"]}`, nil)
 
 	require.Equal(t, http.StatusOK, w.Code)
-	require.Equal(t, []apitoken.Scope{apitoken.ScopeToken}, mgr.createdScopes)
+	require.Equal(t, []apitoken.Scope{"token:issue"}, mgr.createdScopes)
+	require.Equal(t, []apitoken.Scope{"image:read", "token:issue"},
+		mgr.createdDelegation.IssuableScopes)
 }

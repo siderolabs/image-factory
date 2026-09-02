@@ -12,55 +12,48 @@ pre_release = false
     [notes.api_tokens]
         title = "API Tokens"
         description = """\
-Download tokens and node tokens are now one credential, an API token, and its scopes decide what it may reach.
-There are four. `download` authenticates image downloads and PXE scripts, `pull` authenticates the OCI registry a Talos node fetches installers from, `schematic` creates and reads schematics, and `token` mints and revokes tokens.
-One key signs all four.
+Download tokens and node tokens are now one self-issued API token with atomic, resource-first capabilities.
+The catalog is `image:read`, `source:pull`, `schematic:create`, `schematic:read`, `report:read`, `token:issue`, `token:read` and `token:revoke`. One code-defined route map validates every scope and authorizes every request; there are no deployment-defined meanings or compatibility aliases for the unreleased intermediate names.
 
-`token` is the only scope that hands out authority, so it is limited in two ways.
-A token may not grant a scope it does not hold, and may not grant `token` at all.
-A stolen minting credential can spend its own lifetime, but it cannot mint a replacement that outlives revoking it.
+Generated image downloads, PXE assets and generated installer OCI pulls share `image:read`. Proxied upstream OCI images use the distinct `source:pull` capability. Schematic creation, schematic reading, report reading, token issuance, token listing and token revocation are independent permissions.
 
-The Auth0 machine scope now reads the same route table as `pull`, so widening one widens the other.
+Executable capabilities and delegation are separate. The JWT `scope` claim controls what the credential may do, while `issuable_scopes` is an explicit ceiling on what it may grant. Child capabilities and child delegation ceilings must both be subsets of the parent's ceiling. Unknown values fail closed, and no wildcard silently acquires future capabilities.
 
-Each token also carries a `stored` claim saying whether the factory keeps a record of it, decided once when it is minted rather than inferred from its scopes on every request.
-A stored token is in the per-org index, which is what lists it, what keeps it valid and what a revoke removes. An unstored one is a signed string and nothing else. It needs no name, costs no registry write, and is the only kind accepted from a `?token=` query parameter, on any scope.
+Each token also carries a `stored` claim. A stored token is recorded per identity, listed, checked on every use and revocable. An ephemeral token is a signed string and nothing else; it is the only kind accepted from `?token=`. Token-management credentials are refused in query strings because those are copied into access logs.
 
-Lifetime and storage are tied together, so neither kind can be misused. Below `authentication.tokens.ttl.storedMin` (`1h`) a token can only be unstored, since recording something that expires in minutes buys nothing. Above `authentication.tokens.ttl.unstoredMax` (`8h`) it can only be stored, so a long-lived credential can always be withdrawn. In between, the caller picks.
+Lifetime follows storage rather than capability. Stored tokens default to one year and remain revocable. Ephemeral tokens default to five minutes and may live up to eight hours. The CLI bootstrap credential has its own `authentication.tokens.ttl.bootstrap` policy.
 
-`POST /tokens`, `GET /tokens` and `POST /tokens/:id/revoke` are the only token endpoints.
-The `/node-tokens` and `/download-token` routes are gone. A node token is now `{"scopes":["pull"]}` and a download link `{"scopes":["download"],"stored":false}`.
-Only the factory's own UI and Go client used them, and this release rejects the tokens they issued anyway.
+`POST /tokens`, `GET /tokens` and `POST /tokens/:id/revoke` are the only token endpoints. The `/node-tokens` and `/download-token` routes are gone; use `{"scopes":["image:read"]}` and add `"stored":false` for a short-lived URL credential.
 
 Breaking changes:
 
-* Node tokens issued by v1.6.0 are rejected. Re-issue them.
-* `POST /download-token` is gone. Use `POST /tokens` with `{"scopes":["download"],"stored":false}`.
-* `POST /tokens` takes a `stored` field, defaulting to `true`, and its response reports `stored` where it reported `revocable`. `authentication.tokens.ttl.storedMin` and `.unstoredMax` are new.
-* `pkg/client`'s `TokenCreate` takes a `stored` argument; `DownloadToken` passes `false` and is otherwise unchanged.
-* `authentication.downloadTokenKeyPath`, `authentication.downloadTokenTTL` and `enterprise.nodeTokens` move to `authentication.tokens`. The factory rejects the old keys at startup instead of ignoring them, so a stale config fails loudly.
-* One key now signs every scope. A deployment that pointed the download and node tokens at separate key files has to pick one for `authentication.tokens.keyPath`.
+* Node and download tokens issued by earlier versions are rejected and must be reissued.
+* The intermediate `download`, `pull`, `schematic`, `token` and `admin` scope values are rejected.
+* `POST /tokens` accepts `stored` and `issuable_scopes`; token records report both executable and issuable scopes.
+* Token TTL configuration is grouped under `authentication.tokens.ttl.stored`, `.ephemeral` and `.bootstrap`.
+* `pkg/client`'s `TokenCreate` takes a `stored` argument; `DownloadToken` passes `false` and otherwise keeps its behavior.
+* `authentication.downloadTokenKeyPath`, `authentication.downloadTokenTTL` and `enterprise.nodeTokens` move to `authentication.tokens`; stale keys fail startup.
+* `authentication.tokens.keyPaths` is ordered: the first private key signs new tokens, while every later key or certificate is verification-only. This supports two-phase key rotation without immediately invalidating existing tokens.
 
-See the [authentication docs](https://github.com/siderolabs/image-factory/blob/main/docs/authentication.md#api-tokens) for the upgrade steps.
+See the [authentication docs](https://github.com/siderolabs/image-factory/blob/main/docs/authentication.md#api-tokens) for the complete model and upgrade steps.
 """
 
-    [notes.admin_tokens]
-        title = "Admin Tokens"
+    [notes.bootstrap_credentials]
+        title = "Bootstrap Credentials"
         description = """\
-A new `admin` scope is the bootstrap credential for API token management. It reaches the same routes as `token` and differs in one way: it may hand out `token`, which no other scope can.
+Cross-subject provisioning uses a CLI-only bootstrap credential rather than an `admin` scope. It carries `token:issue`, `token:read` and `token:revoke` for its own operations, an explicit snapshot of the current public catalog in `issuable_scopes`, and the independent `any_subject` claim.
 
-It cannot be minted over HTTP. `POST /tokens` rejects the scope for every caller, an htpasswd user or Auth0 client included, so no request can produce the credential that hands out minting authority. A new subcommand issues it instead:
+No HTTP request can create this credential. The Enterprise-only command is:
 
 ```
 image-factory admin-token --config /etc/image-factory/config.yaml --subject org_abc123
 ```
 
-The command is Enterprise-only, and `image-factory --help` lists the commands a build has. The token goes to stdout and the notice about it to stderr, so redirecting stdout gives a usable file. `--ttl` requests a lifetime within `authentication.tokens.ttl.admin`, which defaults to 90 days and allows up to 10 years. `authentication.tokens.keyPath` has to be set, otherwise the token would be signed with a key no replica holds.
+The command writes the token to stdout and diagnostics to stderr. `--ttl` uses `authentication.tokens.ttl.bootstrap`, and `authentication.tokens.keyPaths` must contain an active private key so the credential is signed by the key running replicas trust.
 
-An admin token is never recorded, so nothing can revoke it. Rotating `authentication.tokens.keyPath` is what retires one early, and that invalidates every other self-issued token as well. Keep it offline and give it the shortest lifetime the deployment can live with.
+The bootstrap credential is never recorded, so expiry or removal of its signing key from `keyPaths` retires it. It cannot propagate `any_subject`, cannot create a successor bootstrap credential, and cannot be used through `?token=`. Keep it offline and give it the shortest practical lifetime.
 
-An admin token is also the only credential that may mint for another identity. `POST /tokens` takes a `subject` field, and the minted token belongs to that identity in every sense: it authenticates as it, its record lands in that organization's index, and it counts against that organization's cap. Anything else sending `subject` is refused with `403`, a full htpasswd or Auth0 credential included, since naming another identity reaches across tenants rather than within one. Listing and revocation stay per-identity, so a token minted into another organization is revoked with a credential belonging to it.
-
-Two limits bound it. It may not mint another `admin` token, not even from an admin token, so a leaked one cannot mint a successor that outlives it. And it is refused in a `?token=` query parameter, as is any `token`-scoped credential, because query strings are copied into proxy and CDN access logs.
+`POST /tokens` normally issues to the caller identity. A bootstrap credential may supply `subject` to provision another identity; listing and revocation remain per-identity.
 """
 
 [make_deps]

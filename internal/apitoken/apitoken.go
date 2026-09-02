@@ -17,7 +17,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"slices"
 	"strings"
@@ -65,71 +64,96 @@ func (t TTL) resolve(requested time.Duration) (time.Duration, error) {
 	return requested, nil
 }
 
-// StorageTTL splits token lifetimes by whether the factory records the token. A credential short
-// enough to be worth putting in a URL is never worth a registry write, and one long enough to
-// outlive an incident has to stay revocable.
-//
-// The two bounds may overlap. For StoredMin <= ttl < UnstoredMax the caller picks; below
-// StoredMin a token can only be unstored, and past UnstoredMax only stored.
+// StorageTTL configures token lifetimes by whether the factory records the token. Stored tokens
+// may safely live longer because they can be revoked; ephemeral tokens need a short expiry because
+// expiry is the only way to take them out of circulation.
 type StorageTTL struct {
-	// StoredMin is the shortest lifetime a stored token may have.
-	StoredMin time.Duration
-
-	// UnstoredMax is the longest lifetime an unstored token may have. Nothing records such a
-	// token, so expiry is the only way it leaves circulation.
-	UnstoredMax time.Duration
+	Stored    TTL
+	Ephemeral TTL
 }
 
 // Issuer creates and verifies ECDSA-signed JWTs for every scope the factory issues.
 type Issuer struct {
-	signer   jose.Signer
-	ttl      map[Scope]TTL
-	jwksJSON []byte
-	key      jose.JSONWebKey
-	storage  StorageTTL
+	signer           jose.Signer
+	verificationKeys map[string]jose.JSONWebKey
+	jwksJSON         []byte
+	bootstrap        TTL
+	storage          StorageTTL
 }
 
 // GenerateIssuer creates an Issuer with a freshly generated ECDSA P-256 key pair.
-func GenerateIssuer(ttl map[Scope]TTL, storage StorageTTL) (*Issuer, error) {
+func GenerateIssuer(bootstrap TTL, storage StorageTTL) (*Issuer, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("apitoken: failed to generate ECDSA key: %w", err)
 	}
 
-	return NewIssuer(key, ttl, storage)
+	return NewIssuer(key, bootstrap, storage)
 }
 
 // NewIssuer creates an Issuer from an existing ECDSA private key.
-func NewIssuer(privateKey *ecdsa.PrivateKey, ttl map[Scope]TTL, storage StorageTTL) (*Issuer, error) {
-	for scope := range ttl {
-		if !scope.Valid() {
-			return nil, fmt.Errorf("%w: %q", ErrUnknownScope, scope)
+func NewIssuer(privateKey *ecdsa.PrivateKey, bootstrap TTL, storage StorageTTL) (*Issuer, error) {
+	return NewIssuerWithVerificationKeys(privateKey, nil, bootstrap, storage)
+}
+
+// NewIssuerWithVerificationKeys creates an Issuer whose private key signs new tokens and whose
+// remaining public keys verify tokens minted before a key rotation.
+func NewIssuerWithVerificationKeys(
+	privateKey *ecdsa.PrivateKey,
+	verificationKeys []*ecdsa.PublicKey,
+	bootstrap TTL,
+	storage StorageTTL,
+) (*Issuer, error) {
+	if privateKey == nil || privateKey.Curve != elliptic.P256() {
+		return nil, errors.New("apitoken: signing key must be ECDSA P-256")
+	}
+
+	keys := make([]*ecdsa.PublicKey, 0, len(verificationKeys)+1)
+	keys = append(keys, &privateKey.PublicKey)
+	keys = append(keys, verificationKeys...)
+
+	publicKeys := make([]jose.JSONWebKey, 0, len(keys))
+	keysByID := make(map[string]jose.JSONWebKey, len(keys))
+
+	for _, key := range keys {
+		if key == nil || key.Curve != elliptic.P256() {
+			return nil, errors.New("apitoken: verification key must be ECDSA P-256")
 		}
+
+		publicKey := *key
+
+		pubJWK := jose.JSONWebKey{
+			Key:       &publicKey,
+			Use:       "sig",
+			Algorithm: string(jose.ES256),
+		}
+
+		thumb, err := pubJWK.Thumbprint(crypto.SHA256)
+		if err != nil {
+			return nil, fmt.Errorf("apitoken: failed to compute key thumbprint: %w", err)
+		}
+
+		kid := base64.RawURLEncoding.EncodeToString(thumb)
+		if _, exists := keysByID[kid]; exists {
+			return nil, fmt.Errorf("apitoken: duplicate verification key %q", kid)
+		}
+
+		pubJWK.KeyID = kid
+		publicKeys = append(publicKeys, pubJWK)
+		keysByID[kid] = pubJWK
 	}
 
-	pubJWK := jose.JSONWebKey{
-		Key:       &privateKey.PublicKey,
-		Use:       "sig",
-		Algorithm: string(jose.ES256),
-	}
-
-	thumb, err := pubJWK.Thumbprint(crypto.SHA256)
-	if err != nil {
-		return nil, fmt.Errorf("apitoken: failed to compute key thumbprint: %w", err)
-	}
-
-	kid := base64.RawURLEncoding.EncodeToString(thumb)
-	pubJWK.KeyID = kid
+	activeKey := publicKeys[0]
 
 	sig, err := jose.NewSigner(
 		jose.SigningKey{Algorithm: jose.ES256, Key: privateKey},
-		(&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", kid),
+		(&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", activeKey.KeyID),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("apitoken: failed to create signer: %w", err)
 	}
 
-	jwksDoc := jose.JSONWebKeySet{Keys: []jose.JSONWebKey{pubJWK}}
+	jwksDoc := jose.JSONWebKeySet{Keys: publicKeys}
 
 	jwksJSON, err := json.Marshal(jwksDoc)
 	if err != nil {
@@ -137,114 +161,161 @@ func NewIssuer(privateKey *ecdsa.PrivateKey, ttl map[Scope]TTL, storage StorageT
 	}
 
 	return &Issuer{
-		signer:   sig,
-		key:      pubJWK,
-		ttl:      ttl,
-		storage:  storage,
-		jwksJSON: jwksJSON,
+		signer:           sig,
+		verificationKeys: keysByID,
+		bootstrap:        bootstrap,
+		storage:          storage,
+		jwksJSON:         jwksJSON,
 	}, nil
 }
 
 // LoadIssuer reads a PEM-encoded ECDSA private key from path and creates an Issuer.
-func LoadIssuer(path string, ttl map[Scope]TTL, storage StorageTTL) (*Issuer, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("apitoken: failed to read key file: %w", err)
+func LoadIssuer(path string, bootstrap TTL, storage StorageTTL) (*Issuer, error) {
+	return LoadIssuerFromPaths([]string{path}, bootstrap, storage)
+}
+
+// LoadIssuerFromPaths creates an Issuer from an ordered list of PEM files. The first file must
+// contain the active ECDSA P-256 private key. Later files contribute verification keys only and
+// may contain ECDSA private keys, public keys, or X.509 certificates.
+func LoadIssuerFromPaths(paths []string, bootstrap TTL, storage StorageTTL) (*Issuer, error) {
+	if len(paths) == 0 {
+		return nil, errors.New("apitoken: at least one key path is required")
 	}
 
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return nil, fmt.Errorf("apitoken: no PEM block found in %s", path)
+	activeKey, err := loadPrivateKey(paths[0])
+	if err != nil {
+		return nil, fmt.Errorf("apitoken: failed to load active signing key: %w", err)
+	}
+
+	verificationKeys := make([]*ecdsa.PublicKey, 0, len(paths)-1)
+
+	for _, path := range paths[1:] {
+		key, err := loadPublicKey(path)
+		if err != nil {
+			return nil, fmt.Errorf("apitoken: failed to load verification key %q: %w", path, err)
+		}
+
+		verificationKeys = append(verificationKeys, key)
+	}
+
+	return NewIssuerWithVerificationKeys(activeKey, verificationKeys, bootstrap, storage)
+}
+
+func loadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
+	block, err := readPEMBlock(path)
+	if err != nil {
+		return nil, err
 	}
 
 	key, err := parseECPrivateKey(block.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("apitoken: failed to parse EC private key: %w", err)
+		return nil, fmt.Errorf("failed to parse EC private key: %w", err)
 	}
 
 	if key.Curve != elliptic.P256() {
-		return nil, fmt.Errorf("apitoken: expected P-256 key, got %s", key.Curve.Params().Name)
+		return nil, fmt.Errorf("expected P-256 key, got %s", key.Curve.Params().Name)
 	}
 
-	return NewIssuer(key, ttl, storage)
+	return key, nil
+}
+
+func loadPublicKey(path string) (*ecdsa.PublicKey, error) {
+	block, err := readPEMBlock(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if privateKey, privateErr := parseECPrivateKey(block.Bytes); privateErr == nil {
+		publicKey := privateKey.PublicKey
+
+		return &publicKey, nil
+	}
+
+	if parsed, publicErr := x509.ParsePKIXPublicKey(block.Bytes); publicErr == nil {
+		key, ok := parsed.(*ecdsa.PublicKey)
+		if !ok {
+			return nil, errors.New("public key is not ECDSA")
+		}
+
+		if key.Curve != elliptic.P256() {
+			return nil, fmt.Errorf("expected P-256 key, got %s", key.Curve.Params().Name)
+		}
+
+		return key, nil
+	}
+
+	certificate, certificateErr := x509.ParseCertificate(block.Bytes)
+	if certificateErr != nil {
+		return nil, fmt.Errorf("failed to parse as an EC private key, public key, or X.509 certificate: %w", certificateErr)
+	}
+
+	key, ok := certificate.PublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("certificate public key is not ECDSA")
+	}
+
+	if key.Curve != elliptic.P256() {
+		return nil, fmt.Errorf("expected P-256 key, got %s", key.Curve.Params().Name)
+	}
+
+	return key, nil
+}
+
+func readPEMBlock(path string) (*pem.Block, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read key file: %w", err)
+	}
+
+	block, rest := pem.Decode(data)
+	if block == nil {
+		return nil, fmt.Errorf("no PEM block found in %s", path)
+	}
+
+	if len(strings.TrimSpace(string(rest))) != 0 {
+		return nil, fmt.Errorf("multiple PEM blocks found in %s", path)
+	}
+
+	return block, nil
 }
 
 type claims struct {
 	jwt.Claims
 
 	// Stored is a pointer so that a token minted without the claim is rejected rather than read
-	// as unstored, which would take it out of reach of the revocation index.
+	// as ephemeral, which would take it out of reach of the revocation index.
 	Stored *bool `json:"stored"`
 
-	Scope string `json:"scope"`
+	Scope          string `json:"scope"`
+	IssuableScopes string `json:"issuable_scopes,omitempty"`
+	AnySubject     bool   `json:"any_subject,omitempty"`
 }
 
-// resolveTTL combines the per-scope bounds so that adding a scope can only shorten a token's
-// life: the ceiling and the default take the tightest of the scopes, and the floor takes the
-// loosest, since a token shorter than one scope's minimum is never the dangerous direction.
-// Whether the factory will record the token then narrows that window further. The default is
-// pulled into whatever window survives, so a caller who requests no lifetime gets a valid one
-// rather than an error.
-//
-// storageRule explains the two bounds this applies; the third case, a scope that is never stored,
-// keeps its own window.
-func (i *Issuer) resolveTTL(scopes []Scope, stored bool, requested time.Duration) (time.Duration, error) {
-	bounds := TTL{Min: math.MaxInt64, Max: math.MaxInt64, Default: math.MaxInt64}
-
-	for _, scope := range scopes {
-		scopeTTL, ok := i.ttl[scope]
-		if !ok {
-			return 0, fmt.Errorf("apitoken: no TTL configured for scope %q", scope)
+// resolveTTL selects the stored or ephemeral lifetime policy. A credential with cross-subject
+// delegation authority uses the separately configured bootstrap bounds.
+func (i *Issuer) resolveTTL(stored bool, requested time.Duration, administrative bool) (time.Duration, error) {
+	if administrative {
+		if i.bootstrap == (TTL{}) {
+			return 0, errors.New("apitoken: no TTL configured for administrative delegation")
 		}
 
-		bounds.Min = min(bounds.Min, scopeTTL.Min)
-		bounds.Max = min(bounds.Max, scopeTTL.Max)
-		bounds.Default = min(bounds.Default, scopeTTL.Default)
+		return i.bootstrap.resolve(requested)
 	}
 
-	// A scope the factory never records, ScopeAdmin, is unstored by construction rather than by
-	// the caller's choice, so UnstoredMax says nothing about it and its own window governs.
-	// Rotating the signing key is what retires one of those early.
+	bounds := i.storage.Ephemeral
+	rule := "the lifetime of an ephemeral token"
+
 	if stored {
-		bounds.Min = max(bounds.Min, i.storage.StoredMin)
-	} else if Storable(scopes) {
-		// The caller declined a record the factory would have kept, so the lifetime is capped.
-		// Nothing can withdraw this token, and it could have been withdrawn.
-		bounds.Max = min(bounds.Max, i.storage.UnstoredMax)
+		bounds = i.storage.Stored
+		rule = "the lifetime of a stored token"
 	}
-
-	rule := storageRule(scopes, stored)
-
-	if bounds.Min > bounds.Max {
-		return 0, fmt.Errorf("%w: no lifetime satisfies both the scopes and %s", ErrTTLOutOfRange, rule)
-	}
-
-	bounds.Default = min(max(bounds.Default, bounds.Min), bounds.Max)
 
 	ttl, err := bounds.resolve(requested)
 	if err != nil {
-		if rule == "" {
-			return 0, err
-		}
-
 		return 0, fmt.Errorf("%w (%s)", err, rule)
 	}
 
 	return ttl, nil
-}
-
-// storageRule names the storage bound that narrowed the window, so a rejection says which rule
-// fired. It is empty when no storage bound applied and the scopes' own window is the whole story,
-// which would otherwise blame UnstoredMax for a ceiling it did not set.
-func storageRule(scopes []Scope, stored bool) string {
-	switch {
-	case stored:
-		return "the minimum lifetime of a stored token"
-	case Storable(scopes):
-		return "the maximum lifetime of an unstored token"
-	default:
-		return ""
-	}
 }
 
 // Token is a freshly minted API token.
@@ -256,9 +327,11 @@ type Token struct {
 
 	ID string
 
-	Scopes []Scope
+	Scopes         []Scope
+	IssuableScopes []Scope
 
-	Stored bool
+	Stored     bool
+	AnySubject bool
 }
 
 // Claims are the verified contents of an API token.
@@ -267,9 +340,23 @@ type Claims struct {
 	ID      string
 	Scopes  []Scope
 
+	// IssuableScopes bounds the authority this token may place on a child token.
+	IssuableScopes []Scope
+
 	// Stored says whether the factory keeps a record of this token, which is both what makes it
 	// revocable and what keeps it valid. A stored token is never read from a URL.
 	Stored bool
+
+	// AnySubject permits token creation for an identity other than Subject. Only the offline
+	// bootstrap credential receives it.
+	AnySubject bool
+}
+
+// Delegation describes authority a token may hand to child tokens, independently of what the
+// token may do itself. AnySubject is reserved for the offline bootstrap credential.
+type Delegation struct {
+	IssuableScopes []Scope
+	AnySubject     bool
 }
 
 // Issue creates a signed JWT for the given subject (org_id or username) carrying scopes,
@@ -281,6 +368,18 @@ type Claims struct {
 // stored is written into the token, so what the factory does with it later is decided once,
 // here, and not re-derived on every request.
 func (i *Issuer) Issue(subject string, scopes []Scope, stored bool, requestedTTL time.Duration) (Token, error) {
+	return i.IssueWithDelegation(subject, scopes, Delegation{}, stored, requestedTTL)
+}
+
+// IssueWithDelegation creates a signed JWT carrying both request capabilities and an independent
+// ceiling on the capabilities it may grant to child tokens.
+func (i *Issuer) IssueWithDelegation(
+	subject string,
+	scopes []Scope,
+	delegation Delegation,
+	stored bool,
+	requestedTTL time.Duration,
+) (Token, error) {
 	if subject == "" {
 		return Token{}, errors.New("apitoken: subject must not be empty")
 	}
@@ -290,16 +389,26 @@ func (i *Issuer) Issue(subject string, scopes []Scope, stored bool, requestedTTL
 	}
 
 	for _, scope := range scopes {
-		if !scope.Valid() {
+		if !Valid(scope) {
 			return Token{}, fmt.Errorf("%w: %q", ErrUnknownScope, scope)
 		}
 	}
 
-	if stored && !Storable(scopes) {
+	for _, scope := range delegation.IssuableScopes {
+		if !Valid(scope) {
+			return Token{}, fmt.Errorf("%w: %q", ErrUnknownScope, scope)
+		}
+	}
+
+	if (len(delegation.IssuableScopes) > 0 || delegation.AnySubject) && !slices.Contains(scopes, "token:issue") {
+		return Token{}, errors.New("apitoken: delegation requires the token:issue scope")
+	}
+
+	if stored && (delegation.AnySubject || !Storable(scopes)) {
 		return Token{}, fmt.Errorf("%w: %s", ErrUnstorableScope, FormatScopes(scopes))
 	}
 
-	ttl, err := i.resolveTTL(scopes, stored, requestedTTL)
+	ttl, err := i.resolveTTL(stored, requestedTTL, delegation.AnySubject)
 	if err != nil {
 		return Token{}, err
 	}
@@ -317,20 +426,24 @@ func (i *Issuer) Issue(subject string, scopes []Scope, stored bool, requestedTTL
 			IssuedAt: jwt.NewNumericDate(now),
 			Expiry:   jwt.NewNumericDate(now.Add(ttl)),
 		},
-		Scope:  FormatScopes(scopes),
-		Stored: &stored,
+		Scope:          FormatScopes(scopes),
+		IssuableScopes: FormatScopes(delegation.IssuableScopes),
+		AnySubject:     delegation.AnySubject,
+		Stored:         &stored,
 	}).Serialize()
 	if err != nil {
 		return Token{}, fmt.Errorf("apitoken: failed to sign token: %w", err)
 	}
 
 	return Token{
-		Signed:    signed,
-		ID:        jti,
-		Scopes:    scopes,
-		Stored:    stored,
-		IssuedAt:  now,
-		ExpiresAt: now.Add(ttl),
+		Signed:         signed,
+		ID:             jti,
+		Scopes:         slices.Clone(scopes),
+		IssuableScopes: slices.Clone(delegation.IssuableScopes),
+		Stored:         stored,
+		AnySubject:     delegation.AnySubject,
+		IssuedAt:       now,
+		ExpiresAt:      now.Add(ttl),
 	}, nil
 }
 
@@ -343,7 +456,16 @@ func (i *Issuer) Verify(tokenStr string) (Claims, error) {
 
 	var parsed claims
 
-	if err = tok.Claims(i.key, &parsed); err != nil {
+	if len(tok.Headers) != 1 || tok.Headers[0].KeyID == "" {
+		return Claims{}, errors.New("apitoken: token must identify exactly one signing key")
+	}
+
+	key, ok := i.verificationKeys[tok.Headers[0].KeyID]
+	if !ok {
+		return Claims{}, fmt.Errorf("apitoken: unknown signing key %q", tok.Headers[0].KeyID)
+	}
+
+	if err = tok.Claims(key, &parsed); err != nil {
 		return Claims{}, fmt.Errorf("apitoken: failed to verify token: %w", err)
 	}
 
@@ -371,10 +493,29 @@ func (i *Issuer) Verify(tokenStr string) (Claims, error) {
 		return Claims{}, err
 	}
 
-	return Claims{Subject: parsed.Subject, ID: parsed.ID, Scopes: scopes, Stored: *parsed.Stored}, nil
+	var issuableScopes []Scope
+	if parsed.IssuableScopes != "" {
+		issuableScopes, err = ParseScopes(parsed.IssuableScopes)
+		if err != nil {
+			return Claims{}, err
+		}
+	}
+
+	if (len(issuableScopes) > 0 || parsed.AnySubject) && !slices.Contains(scopes, "token:issue") {
+		return Claims{}, errors.New("apitoken: delegation requires the token:issue scope")
+	}
+
+	return Claims{
+		Subject:        parsed.Subject,
+		ID:             parsed.ID,
+		Scopes:         scopes,
+		IssuableScopes: issuableScopes,
+		Stored:         *parsed.Stored,
+		AnySubject:     parsed.AnySubject,
+	}, nil
 }
 
-// JWKS returns the pre-built JSON Web Key Set containing the public key.
+// JWKS returns the pre-built JSON Web Key Set containing every configured public key in order.
 func (i *Issuer) JWKS() []byte {
 	return i.jwksJSON
 }
@@ -409,8 +550,8 @@ func ParseScopes(claim string) ([]Scope, error) {
 	scopes := make([]Scope, 0, len(fields))
 
 	for _, field := range fields {
-		scope := Scope(field)
-		if !scope.Valid() {
+		scope := field
+		if !Valid(scope) {
 			return nil, fmt.Errorf("%w: %q", ErrUnknownScope, field)
 		}
 
@@ -424,11 +565,5 @@ func ParseScopes(claim string) ([]Scope, error) {
 
 // FormatScopes renders scopes as a space-delimited scope claim.
 func FormatScopes(scopes []Scope) string {
-	fields := make([]string, 0, len(scopes))
-
-	for _, scope := range scopes {
-		fields = append(fields, string(scope))
-	}
-
-	return strings.Join(fields, " ")
+	return strings.Join(scopes, " ")
 }

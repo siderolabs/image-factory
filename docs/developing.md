@@ -23,8 +23,8 @@ To stop:
 make docker-compose-down
 ```
 
-By default, authentication is disabled for local development, enable it by setting `authentication.enabled` to `true` in the config file (`hack/dev/config.yaml`), and providing a valid `htpasswd` file at the path specified by `authentication.htpasswdPath`.
-Optionally use the existing htpasswd file at `hack/dev/htpasswd` for testing.
+Local development enables authentication by default and uses the htpasswd provider.
+The Compose configuration mounts `hack/dev/htpasswd` at the configured `/etc/image-factory/htpasswd` path.
 
 When running `make docker-compose-up` or the integration tests, the extra extension catalog and an extra extension image and their signatures are automatically pushed to the local registry.
 You can push the extra images manually with `push-extra-extensions`, optionally setting the `EXTRA_EXTENSIONS_REGISTRY`.

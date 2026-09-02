@@ -11,65 +11,66 @@ import (
 	"strings"
 )
 
-// Scope names a class of request an API token may authenticate.
-type Scope string
-
-const (
-	// ScopeDownload authenticates image downloads and PXE scripts.
-	ScopeDownload Scope = "download"
-
-	// ScopePull authenticates installer pulls.
-	ScopePull Scope = "pull"
-
-	// ScopeSchematic authenticates schematic access.
-	ScopeSchematic Scope = "schematic"
-
-	// ScopeToken authenticates API token management.
-	ScopeToken Scope = "token"
-
-	// ScopeAdmin authenticates API token management and, unlike ScopeToken, may hand out
-	// ScopeToken. It is the bootstrap credential: POST /tokens refuses to mint it, the factory
-	// never records it, and the `admin-token` subcommand of the binary is the only thing that
-	// issues one. See CanGrant, APIMintable and Storable.
-	ScopeAdmin Scope = "admin"
-)
+// Scope names a class of request an API token may authenticate. It is an alias rather than a
+// separate enum: scopeRoutes below is the only catalog and therefore the only source of truth.
+type Scope = string
 
 // scopeRoutes is the single route table every scoped credential is checked against, the
-// machine-scoped Auth0 tokens included: they map onto ScopePull.
-var scopeRoutes = map[Scope]func(method, path string) bool{
-	// /image/ serves the artifacts, /pxe/ describes how to fetch them.
-	ScopeDownload: func(method, path string) bool {
-		return readOnly(method) &&
-			(strings.HasPrefix(path, "/image/") || strings.HasPrefix(path, "/pxe/"))
-	},
-	// A node pulls installers and boot artifacts; the schematic body stays out of reach, so a
-	// credential sitting on a node cannot enumerate how the org's images are built.
-	ScopePull: func(method, path string) bool {
-		return readOnly(method) &&
-			(strings.HasPrefix(path, "/image/") || path == "/v2" || strings.HasPrefix(path, "/v2/"))
-	},
-	ScopeSchematic: func(method, path string) bool {
-		if method == http.MethodPost {
-			return path == "/schematics"
+// machine-scoped Auth0 tokens included: they use the image:read entry.
+var scopeRoutes = map[string]func(method, path string) bool{
+	"image:read": func(method, path string) bool {
+		if !readOnly(method) {
+			return false
 		}
 
+		return strings.HasPrefix(path, "/image/") || strings.HasPrefix(path, "/pxe/") ||
+			(registryPath(path) && !sourcePath(path))
+	},
+	"source:pull": func(method, path string) bool {
+		return readOnly(method) && (registryPing(path) || sourcePath(path))
+	},
+	"schematic:create": func(method, path string) bool {
+		return method == http.MethodPost && path == "/schematics"
+	},
+	"schematic:read": func(method, path string) bool {
 		return readOnly(method) && strings.HasPrefix(path, "/schematics/")
 	},
-	ScopeToken: tokenRoutes,
-	ScopeAdmin: tokenRoutes,
+	"report:read": func(method, path string) bool {
+		return readOnly(method) && (strings.HasPrefix(path, "/spdx/") ||
+			strings.HasPrefix(path, "/vex/") || strings.HasPrefix(path, "/scans/"))
+	},
+	"token:issue": func(method, path string) bool {
+		return method == http.MethodPost && path == "/tokens"
+	},
+	"token:read": func(method, path string) bool {
+		return method == http.MethodGet && path == "/tokens"
+	},
+	"token:revoke": func(method, path string) bool {
+		return method == http.MethodPost && tokenRevokePath(path)
+	},
 }
 
-// tokenRoutes is the surface both minting scopes reach. They differ in what they may grant, not
-// in where they may be used.
-func tokenRoutes(method, path string) bool {
-	switch {
-	case path == "/tokens":
-		return method == http.MethodGet || method == http.MethodPost
-	case strings.HasPrefix(path, "/tokens/"):
-		return method == http.MethodPost
-	default:
+func registryPath(path string) bool {
+	return registryPing(path) || strings.HasPrefix(path, "/v2/")
+}
+
+func registryPing(path string) bool {
+	return path == "/v2" || path == "/v2/"
+}
+
+func sourcePath(path string) bool {
+	return strings.HasPrefix(path, "/v2/siderolabs/")
+}
+
+func tokenRevokePath(path string) bool {
+	id, ok := strings.CutPrefix(path, "/tokens/")
+	if !ok {
 		return false
 	}
+
+	id, ok = strings.CutSuffix(id, "/revoke")
+
+	return ok && id != "" && !strings.ContainsRune(id, '/')
 }
 
 // Scopes returns every scope this package defines, sorted.
@@ -85,9 +86,9 @@ func Scopes() []Scope {
 	return all
 }
 
-// Valid reports whether s is a scope this package defines.
-func (s Scope) Valid() bool {
-	_, ok := scopeRoutes[s]
+// Valid reports whether scope belongs to the code-defined catalog.
+func Valid(scope string) bool {
+	_, ok := scopeRoutes[scope]
 
 	return ok
 }
@@ -114,70 +115,62 @@ func Covers(have, want []Scope) bool {
 	return true
 }
 
-// CanGrant reports whether a caller holding have may mint a token carrying want.
-//
-// ScopeAdmin is the one scope that may hand out ScopeToken, which is what makes it the bootstrap
-// credential. It may not hand out ScopeAdmin: an admin token cannot be revoked, so a leaked one
-// that could mint its own successor would never fall out of circulation.
-func CanGrant(have, want []Scope) bool {
-	if slices.Contains(want, ScopeAdmin) {
-		return false
-	}
-
-	if slices.Contains(have, ScopeAdmin) {
-		return true
-	}
-
-	if slices.Contains(want, ScopeToken) {
-		return false
-	}
-
-	return Covers(have, want)
+// CanGrant reports whether the requested child capabilities fit within a token's independent
+// delegation ceiling.
+func CanGrant(issuable, want []Scope) bool {
+	return Covers(issuable, want)
 }
 
-// CanMintForOthers reports whether a caller authenticated by a token carrying scopes may mint a
-// token whose subject is an identity other than its own.
-//
-// Only ScopeAdmin may. Note that this is not the pattern CanGrant follows: there, a full provider
-// credential is unrestricted, because it can only ever hand out authority over its own identity.
-// Minting for another identity reaches across tenants instead, so holding an htpasswd password or
-// an Auth0 client secret is not enough on its own.
-func CanMintForOthers(have []Scope) bool {
-	return slices.Contains(have, ScopeAdmin)
-}
-
-// APIMintable reports whether POST /tokens may mint a token carrying scopes, whatever credential
-// the caller holds. ScopeAdmin is not mintable over HTTP at all, so no compromise of the web path,
-// and no htpasswd or Auth0 credential either, can produce one; the `admin-token` subcommand can.
+// APIMintable reports whether every requested scope belongs to the code-defined catalog.
 func APIMintable(scopes []Scope) bool {
-	return !slices.Contains(scopes, ScopeAdmin)
+	for _, scope := range scopes {
+		if !Valid(scope) {
+			return false
+		}
+	}
+
+	return true
 }
 
-// Storable reports whether the factory may record a token carrying scopes. ScopeAdmin never is,
-// by request: its lifetime is its only bound, which is why Issue caps it at StorageTTL.UnstoredMax.
+// Storable reports whether the factory may record a token carrying scopes. Cross-subject
+// bootstrap authority is a separate claim and is checked by Issuer.IssueWithDelegation.
 func Storable(scopes []Scope) bool {
-	return !slices.Contains(scopes, ScopeAdmin)
+	return APIMintable(scopes)
 }
 
-// URLSafe reports whether a token carrying scopes may travel in a query string. A scope that
-// hands out authority never may, however short-lived the token is: query strings are copied into
-// proxy and CDN access logs, and a minting credential there is a minting credential leaked.
+// URLSafe reports whether a token carrying scopes may travel in a query string. Token-management
+// capabilities never may: query strings are copied into proxy and CDN access logs.
 func URLSafe(scopes []Scope) bool {
-	return !slices.Contains(scopes, ScopeToken) && !slices.Contains(scopes, ScopeAdmin)
+	return !slices.Contains(scopes, "token:issue") &&
+		!slices.Contains(scopes, "token:read") &&
+		!slices.Contains(scopes, "token:revoke")
 }
 
-type scopesKey struct{}
+type claimsKey struct{}
 
-// ContextWithScopes records that an API token carrying scopes authenticated the request.
+// ContextWithClaims records the claims of the API token that authenticated the request.
+func ContextWithClaims(ctx context.Context, claims Claims) context.Context {
+	return context.WithValue(ctx, claimsKey{}, claims)
+}
+
+// ClaimsFromContext returns the claims of the API token that authenticated the request.
+func ClaimsFromContext(ctx context.Context) (Claims, bool) {
+	claims, ok := ctx.Value(claimsKey{}).(Claims)
+
+	return claims, ok
+}
+
+// ContextWithScopes records a capability-only token context. Prefer ContextWithClaims in
+// production paths; this compatibility helper intentionally carries no delegation authority.
 func ContextWithScopes(ctx context.Context, scopes []Scope) context.Context {
-	return context.WithValue(ctx, scopesKey{}, scopes)
+	return ContextWithClaims(ctx, Claims{Scopes: scopes})
 }
 
 // ScopesFromContext returns the scopes of the API token that authenticated the request.
 func ScopesFromContext(ctx context.Context) (scopes []Scope, ok bool) {
-	scopes, ok = ctx.Value(scopesKey{}).([]Scope)
+	claims, ok := ClaimsFromContext(ctx)
 
-	return scopes, ok
+	return claims.Scopes, ok
 }
 
 func readOnly(method string) bool {

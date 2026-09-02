@@ -137,31 +137,10 @@ type SignatureWriter interface {
 	WriteSignature(ctx context.Context, w http.ResponseWriter, r *http.Request, asset assetcache.BootAsset, assetKey, filename string) error
 }
 
-// TokenScope names a class of request an API token may authenticate.
-type TokenScope = apitoken.Scope
-
-const (
-	// TokenScopeDownload authenticates artifact downloads and PXE scripts.
-	TokenScopeDownload = apitoken.ScopeDownload
-
-	// TokenScopePull authenticates installer pulls.
-	TokenScopePull = apitoken.ScopePull
-
-	// TokenScopeSchematic authenticates schematic access.
-	TokenScopeSchematic = apitoken.ScopeSchematic
-
-	// TokenScopeToken authenticates API token management.
-	TokenScopeToken = apitoken.ScopeToken
-
-	// TokenScopeAdmin authenticates API token management and may grant TokenScopeToken.
-	TokenScopeAdmin = apitoken.ScopeAdmin
-)
-
-// TokenTTL configures token lifetimes for one scope.
+// TokenTTL configures the CLI bootstrap credential lifetime.
 type TokenTTL = apitoken.TTL
 
-// TokenStorageTTL splits token lifetimes by whether the factory records the token: below
-// StoredMin a token can only be unstored, past UnstoredMax only stored.
+// TokenStorageTTL configures ordinary token lifetimes by whether the factory records them.
 type TokenStorageTTL = apitoken.StorageTTL
 
 // MintedToken is a freshly issued API token: the signed string, plus the lifetime and jti the
@@ -181,10 +160,10 @@ type TokenVerifier interface {
 // TokenOptions holds configuration for self-issued API token issuance, storage, and
 // verification.
 type TokenOptions struct {
-	TTL                              map[TokenScope]TokenTTL
-	KeyPath                          string
 	StorageRepository                string
+	KeyPaths                         []string
 	RemoteOptions                    []remote.Option
+	BootstrapTTL                     TokenTTL
 	StorageTTL                       TokenStorageTTL
 	VerificationCacheRefreshInterval time.Duration
 	MaxPerOrg                        int

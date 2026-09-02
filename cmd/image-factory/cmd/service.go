@@ -227,9 +227,10 @@ func buildAuthProvider(ctx context.Context, logger *zap.Logger, opts Options) (e
 		}
 
 		authProvider, err = enterprise.NewAuth0Provider(ctx, logger, enterprise.Auth0Config{
-			Domain:            opts.Authentication.Auth0.Domain,
-			Audience:          opts.Authentication.Auth0.Audience,
-			MachineScope:      opts.Authentication.Auth0.MachineScope,
+			Domain:       opts.Authentication.Auth0.Domain,
+			Audience:     opts.Authentication.Auth0.Audience,
+			MachineScope: opts.Authentication.Auth0.MachineScope,
+
 			ClientID:          opts.Authentication.Auth0.ClientID,
 			ClientSecret:      opts.Authentication.Auth0.ClientSecret,
 			ExternalURL:       opts.HTTP.ExternalURL,

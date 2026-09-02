@@ -27,18 +27,19 @@ func NewManager(issuer *apitoken.Issuer, storage *Storage) *Manager {
 
 // Create mints a token for orgID carrying scopes. A stored token is recorded in storage
 // under its jti, which is both what lists it and what keeps it valid.
-func (m *Manager) Create(ctx context.Context, orgID, name string, scopes []apitoken.Scope, stored bool, requestedTTL time.Duration) (Record, string, error) {
-	token, err := m.issuer.Issue(orgID, scopes, stored, requestedTTL)
+func (m *Manager) Create(ctx context.Context, orgID, name string, scopes []apitoken.Scope, delegation apitoken.Delegation, stored bool, requestedTTL time.Duration) (Record, string, error) {
+	token, err := m.issuer.IssueWithDelegation(orgID, scopes, delegation, stored, requestedTTL)
 	if err != nil {
 		return Record{}, "", err
 	}
 
 	record := Record{
-		ID:        token.ID,
-		Name:      name,
-		Scopes:    token.Scopes,
-		CreatedAt: token.IssuedAt,
-		ExpiresAt: token.ExpiresAt,
+		ID:             token.ID,
+		Name:           name,
+		Scopes:         token.Scopes,
+		IssuableScopes: token.IssuableScopes,
+		CreatedAt:      token.IssuedAt,
+		ExpiresAt:      token.ExpiresAt,
 	}
 
 	if !token.Stored {
@@ -57,8 +58,7 @@ func (m *Manager) List(ctx context.Context, orgID string) ([]Record, error) {
 	return m.storage.List(ctx, orgID)
 }
 
-// Revoke tombstones id in orgID's storage, taking it out of circulation once the
-// verification cache next refreshes.
+// Revoke tombstones id in orgID's storage, taking it out of circulation for every replica.
 func (m *Manager) Revoke(ctx context.Context, orgID, id string) error {
 	return m.storage.Revoke(ctx, orgID, id)
 }

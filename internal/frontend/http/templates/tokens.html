@@ -87,28 +87,65 @@
                     <legend class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">{{ t .Localizer "tokens.create.permissions_label" }}</legend>
                     {{ template "checkbox-with-description" (dict
                         "name" "scopes"
-                        "value" "pull"
+                        "value" "image:read"
                         "checked" true
-                        "label" (t .Localizer "tokens.create.permission_pull")
-                        "description" (t .Localizer "tokens.create.permission_pull_help")) }}
+                        "label" (t .Localizer "tokens.create.permission_image_read")
+                        "description" (t .Localizer "tokens.create.permission_image_read_help")) }}
                     {{ template "checkbox-with-description" (dict
                         "name" "scopes"
-                        "value" "download"
+                        "value" "source:pull"
                         "checked" false
-                        "label" (t .Localizer "tokens.create.permission_download")
-                        "description" (t .Localizer "tokens.create.permission_download_help")) }}
+                        "label" (t .Localizer "tokens.create.permission_source_pull")
+                        "description" (t .Localizer "tokens.create.permission_source_pull_help")) }}
                     {{ template "checkbox-with-description" (dict
                         "name" "scopes"
-                        "value" "schematic"
+                        "value" "schematic:create"
                         "checked" false
-                        "label" (t .Localizer "tokens.create.permission_schematic")
-                        "description" (t .Localizer "tokens.create.permission_schematic_help")) }}
+                        "label" (t .Localizer "tokens.create.permission_schematic_create")
+                        "description" (t .Localizer "tokens.create.permission_schematic_create_help")) }}
                     {{ template "checkbox-with-description" (dict
                         "name" "scopes"
-                        "value" "token"
+                        "value" "schematic:read"
                         "checked" false
-                        "label" (t .Localizer "tokens.create.permission_token")
-                        "description" (t .Localizer "tokens.create.permission_token_help")) }}
+                        "label" (t .Localizer "tokens.create.permission_schematic_read")
+                        "description" (t .Localizer "tokens.create.permission_schematic_read_help")) }}
+                    {{ template "checkbox-with-description" (dict
+                        "name" "scopes"
+                        "value" "report:read"
+                        "checked" false
+                        "label" (t .Localizer "tokens.create.permission_report_read")
+                        "description" (t .Localizer "tokens.create.permission_report_read_help")) }}
+                    {{ template "checkbox-with-description" (dict
+                        "name" "scopes"
+                        "value" "token:issue"
+                        "checked" false
+                        "label" (t .Localizer "tokens.create.permission_token_issue")
+                        "description" (t .Localizer "tokens.create.permission_token_issue_help")) }}
+                    {{ template "checkbox-with-description" (dict
+                        "name" "scopes"
+                        "value" "token:read"
+                        "checked" false
+                        "label" (t .Localizer "tokens.create.permission_token_read")
+                        "description" (t .Localizer "tokens.create.permission_token_read_help")) }}
+                    {{ template "checkbox-with-description" (dict
+                        "name" "scopes"
+                        "value" "token:revoke"
+                        "checked" false
+                        "label" (t .Localizer "tokens.create.permission_token_revoke")
+                        "description" (t .Localizer "tokens.create.permission_token_revoke_help")) }}
+                </fieldset>
+
+                <fieldset id="token-issuable-scopes" class="hidden mb-4">
+                    <legend class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">{{ t .Localizer "tokens.create.delegation_label" }}</legend>
+                    <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.create.delegation_help" }}</p>
+                    {{ range $scope := (list "image:read" "source:pull" "schematic:create" "schematic:read" "report:read" "token:issue" "token:read" "token:revoke") }}
+                    {{ template "checkbox-with-description" (dict
+                        "name" "issuable_scopes"
+                        "value" $scope
+                        "checked" false
+                        "label" $scope
+                        "description" "") }}
+                    {{ end }}
                 </fieldset>
 
                 <div class="flex justify-end gap-2">
@@ -181,6 +218,8 @@
         var createOpen = document.getElementById('token-create-open');
         var createCancel = document.getElementById('token-create-cancel');
         var scopeInputs = createForm.querySelectorAll('input[name="scopes"]');
+        var issuableFieldset = document.getElementById('token-issuable-scopes');
+        var issuableScopeInputs = createForm.querySelectorAll('input[name="issuable_scopes"]');
         var secretModal = document.getElementById('token-secret-modal');
         var secretClose = document.getElementById('token-secret-close');
         var secretValueEl = document.getElementById('token-secret-value');
@@ -228,10 +267,10 @@
 
         // selectedScopes reads the permission checkboxes. The server decides what each scope
         // may do. The page only says which ones the operator ticked.
-        function selectedScopes() {
+        function selectedScopes(inputs) {
             var scopes = [];
 
-            scopeInputs.forEach(function(input) {
+            inputs.forEach(function(input) {
                 if (input.checked) scopes.push(input.value);
             });
 
@@ -244,9 +283,9 @@
         function machineConfigPatch(created) {
             return 'apiVersion: v1alpha1\n' +
                 'kind: RegistryAuthConfig\n' +
-                'name: ' + window.location.host + '\n' +
-                'username: ' + created.org_id + '\n' +
-                'password: ' + created.token + '\n';
+                'name: ' + JSON.stringify(window.location.host) + '\n' +
+                'username: ' + JSON.stringify(created.org_id) + '\n' +
+                'password: ' + JSON.stringify(created.token) + '\n';
         }
 
         // remaining renders how much of a token's life is left, rounded down to the largest unit
@@ -301,6 +340,9 @@
                 var scopesCell = document.createElement('td');
                 scopesCell.className = 'py-2 pr-3 font-mono text-xs text-gray-500 dark:text-gray-400';
                 scopesCell.textContent = (tok.scopes || []).join(' ');
+                if ((tok.issuable_scopes || []).length) {
+                    scopesCell.textContent += ' → ' + tok.issuable_scopes.join(' ');
+                }
                 tr.appendChild(scopesCell);
 
                 var createdCell = document.createElement('td');
@@ -395,15 +437,27 @@
         }
 
         // resetCreateForm puts the modal back to its defaults, because it is reused for
-        // every create. The default is pull on its own, which is what a Talos node needs.
+        // every create. The default is image:read on its own, which is what a Talos node needs.
         function resetCreateForm() {
             nameInput.value = '';
             ttlInput.value = '';
 
             scopeInputs.forEach(function(input) {
-                input.checked = input.value === 'pull';
+                input.checked = input.value === 'image:read';
             });
+
+            issuableScopeInputs.forEach(function(input) { input.checked = false; });
+            issuableFieldset.classList.add('hidden');
         }
+
+        scopeInputs.forEach(function(input) {
+            input.addEventListener('change', function() {
+                var mayIssue = selectedScopes(scopeInputs).indexOf('token:issue') !== -1;
+                issuableFieldset.classList.toggle('hidden', !mayIssue);
+
+                if (!mayIssue) issuableScopeInputs.forEach(function(item) { item.checked = false; });
+            });
+        });
 
         function showCreate() {
             clearCreateError();
@@ -429,8 +483,8 @@
             copyableBlock(secretIdentityEl, created.org_id || '');
             copyableBlock(secretValueEl, created.token);
 
-            // The registry patch only means something for a token that can pull.
-            var canPull = (created.scopes || []).indexOf('pull') !== -1;
+            // The registry patch only means something for a token that can read generated images.
+            var canPull = (created.scopes || []).indexOf('image:read') !== -1;
             secretPatchSection.classList.toggle('hidden', !canPull);
 
             if (canPull) {
@@ -465,7 +519,10 @@
             var ttl = ttlInput.value.trim();
             if (ttl) body.ttl = ttl;
 
-            body.scopes = selectedScopes();
+            body.scopes = selectedScopes(scopeInputs);
+
+            var issuableScopes = selectedScopes(issuableScopeInputs);
+            if (issuableScopes.length) body.issuable_scopes = issuableScopes;
 
             if (!body.scopes.length) {
                 showCreateError('{{ t .Localizer "tokens.create.permissions_required" }}');

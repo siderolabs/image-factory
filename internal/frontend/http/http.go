@@ -68,11 +68,12 @@ type Frontend struct {
 
 // Options configures the HTTP frontend.
 type Options struct {
-	ImageProxy                       ImageProxyOptions
-	CacheImageSigner                 signer.Signer
-	InstallerSBOMSource              enterprise.SPDXSource
-	AuthProvider                     enterprise.AuthProvider
-	TokenVerifier                    enterprise.TokenVerifier
+	ImageProxy          ImageProxyOptions
+	CacheImageSigner    signer.Signer
+	InstallerSBOMSource enterprise.SPDXSource
+	AuthProvider        enterprise.AuthProvider
+	TokenVerifier       enterprise.TokenVerifier
+
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
 	AuditSink                        audit.Sink
@@ -350,10 +351,10 @@ func requestIDFrom(r *http.Request) string {
 	return uuid.NewString()
 }
 
-// downloadTokenKey keys the verified unstored API token on the request context.
+// downloadTokenKey keys the verified ephemeral API token on the request context.
 type downloadTokenKey struct{}
 
-// downloadTokenFromContext returns the unstored API token that authenticated the request.
+// downloadTokenFromContext returns the ephemeral API token that authenticated the request.
 // It is only ever set after Verify succeeded, so a caller may forward it as-is.
 func downloadTokenFromContext(ctx context.Context) (string, bool) {
 	token, ok := ctx.Value(downloadTokenKey{}).(string)
@@ -375,7 +376,7 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 		// API token: the JWT subject becomes the authenticated identity, so ownership is then
-		// enforced normally by schematicFactory.Get(). An unstored token is also put on the
+		// enforced normally by schematicFactory.Get(). An ephemeral token is also put on the
 		// context, for handlePXE to forward into the asset URLs it emits.
 		if f.options.TokenVerifier != nil {
 			if tokenStr, fromQuery := extractAPIToken(r); tokenStr != "" {
@@ -385,7 +386,7 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 					*username = claims.Subject
 					ctx = authProvider.ContextWithUsername(ctx, claims.Subject)
 
-					ctx = apitoken.ContextWithScopes(ctx, claims.Scopes)
+					ctx = apitoken.ContextWithClaims(ctx, claims)
 
 					if !claims.Stored && apitoken.URLSafe(claims.Scopes) {
 						ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)
@@ -418,7 +419,7 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 
 // extractAPIToken pulls an API token off the request, reporting whether it came from the
 // query string, which the caller pairs with the token's stored claim and apitoken.URLSafe. An
-// unstored token is short-lived enough to survive an access log; a stored one is not, and neither
+// ephemeral token is short-lived enough to survive an access log; a stored one is not, and neither
 // is a minting credential of any lifetime.
 func extractAPIToken(r *http.Request) (token string, fromQuery bool) {
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {

@@ -8,8 +8,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
+	"math/big"
+	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -22,40 +28,54 @@ import (
 	"github.com/siderolabs/image-factory/internal/apitoken"
 )
 
-// testStorage is deliberately wide enough to not narrow any bound in defaultTTLs, so that the
-// tests below see the per-scope bounds alone; TestStorageSplitsLifetimes narrows it on purpose.
-var testStorage = apitoken.StorageTTL{StoredMin: time.Second, UnstoredMax: 365 * 24 * time.Hour}
+// testStorage gives stored and ephemeral API tokens the same bounds in tests that are not about
+// the storage policy. Focused tests below exercise the different policies.
+var testStorage = apitoken.StorageTTL{
+	Stored:    ordinaryTTL,
+	Ephemeral: ordinaryTTL,
+}
 
 var (
-	downloadTTL = apitoken.TTL{Default: 5 * time.Minute, Min: 30 * time.Second, Max: 8 * time.Hour}
+	ordinaryTTL = apitoken.TTL{Default: 5 * time.Minute, Min: 30 * time.Second, Max: 8 * time.Hour}
 	adminTTL    = apitoken.TTL{Default: 90 * 24 * time.Hour, Min: time.Hour, Max: 10 * 365 * 24 * time.Hour}
-	pullTTL     = apitoken.TTL{Default: 365 * 24 * time.Hour, Min: 24 * time.Hour, Max: 365 * 24 * time.Hour}
-
-	defaultTTLs = map[apitoken.Scope]apitoken.TTL{
-		apitoken.ScopeDownload: downloadTTL,
-		apitoken.ScopePull:     pullTTL,
-	}
 )
 
-func download() []apitoken.Scope { return []apitoken.Scope{apitoken.ScopeDownload} }
-func pull() []apitoken.Scope     { return []apitoken.Scope{apitoken.ScopePull} }
+func image() []apitoken.Scope { return []apitoken.Scope{"image:read"} }
 
-func TestNewIssuerRejectsUnknownScope(t *testing.T) {
+func TestIssueWithDelegationRoundTripsClaims(t *testing.T) {
 	t.Parallel()
 
-	_, err := apitoken.GenerateIssuer(map[apitoken.Scope]apitoken.TTL{
-		"not-a-real-scope": downloadTTL,
-	}, testStorage)
-	require.ErrorIs(t, err, apitoken.ErrUnknownScope)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
+	require.NoError(t, err)
+
+	token, err := issuer.IssueWithDelegation(
+		"org_abc123",
+		[]apitoken.Scope{"token:issue", "image:read"},
+		apitoken.Delegation{
+			IssuableScopes: []apitoken.Scope{"image:read", "report:read"},
+			AnySubject:     true,
+		},
+		false,
+		0,
+	)
+	require.NoError(t, err)
+
+	claims, err := issuer.Verify(token.Signed)
+	require.NoError(t, err)
+
+	assert.Equal(t, []apitoken.Scope{"image:read", "report:read"}, claims.IssuableScopes)
+	assert.True(t, claims.AnySubject)
+	assert.Equal(t, claims.IssuableScopes, token.IssuableScopes)
+	assert.True(t, token.AnySubject)
 }
 
 func TestIssueRejectsEmptySubject(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
-	token, issueErr := issuer.Issue("", download(), true, 0)
+	token, issueErr := issuer.Issue("", image(), true, 0)
 	require.Error(t, issueErr)
 	assert.Empty(t, token.Signed)
 }
@@ -63,7 +83,7 @@ func TestIssueRejectsEmptySubject(t *testing.T) {
 func TestIssueRejectsNoScope(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
 	_, err = issuer.Issue("org_abc123", nil, true, 0)
@@ -73,32 +93,30 @@ func TestIssueRejectsNoScope(t *testing.T) {
 func TestIssueRejectsUnknownScope(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
 	_, err = issuer.Issue("org_abc123", []apitoken.Scope{"not-a-scope"}, true, 0)
 	require.ErrorIs(t, err, apitoken.ErrUnknownScope)
 }
 
-func TestIssueRejectsUnconfiguredScope(t *testing.T) {
+func TestIssueRejectsRetiredAdminScope(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(map[apitoken.Scope]apitoken.TTL{
-		apitoken.ScopeDownload: downloadTTL,
-	}, testStorage)
+	issuer, err := apitoken.GenerateIssuer(apitoken.TTL{}, testStorage)
 	require.NoError(t, err)
 
-	_, err = issuer.Issue("org_abc123", pull(), true, 0)
+	_, err = issuer.Issue("org_abc123", []apitoken.Scope{"admin"}, false, 0)
 	require.Error(t, err)
 }
 
 func TestRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
-	token, err := issuer.Issue("org_abc123", download(), true, 0)
+	token, err := issuer.Issue("org_abc123", image(), true, 0)
 	require.NoError(t, err)
 	require.NotEmpty(t, token.ID)
 
@@ -106,70 +124,55 @@ func TestRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "org_abc123", claims.Subject)
 	assert.Equal(t, token.ID, claims.ID)
-	assert.Equal(t, download(), claims.Scopes)
+	assert.Equal(t, image(), claims.Scopes)
 }
 
-func TestScopeIsolation(t *testing.T) {
+func TestImageAndSourceScopesStayIsolated(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
-	require.NoError(t, err)
+	assert.True(t, apitoken.Allows(image(), http.MethodGet, "/v2/installer/abc/manifests/v1.13.0"))
+	assert.True(t, apitoken.Allows(image(), http.MethodGet, "/pxe/abc/v1.13.0/metal-amd64"))
+	assert.False(t, apitoken.Allows(image(), http.MethodGet, "/v2/siderolabs/imager/manifests/v1.13.0"))
 
-	pullToken, err := issuer.Issue("org_abc123", pull(), true, 0)
-	require.NoError(t, err)
-
-	claims, err := issuer.Verify(pullToken.Signed)
-	require.NoError(t, err)
-
-	assert.True(t, apitoken.Allows(claims.Scopes, "GET", "/v2/foo/manifests/latest"))
-	assert.False(t, apitoken.Allows(claims.Scopes, "GET", "/pxe/abc/v1.13.0/metal-amd64"))
-
-	downloadToken, err := issuer.Issue("org_abc123", download(), true, 0)
-	require.NoError(t, err)
-
-	claims, err = issuer.Verify(downloadToken.Signed)
-	require.NoError(t, err)
-
-	assert.True(t, apitoken.Allows(claims.Scopes, "GET", "/pxe/abc/v1.13.0/metal-amd64"))
-	assert.False(t, apitoken.Allows(claims.Scopes, "GET", "/v2/foo/manifests/latest"))
+	source := []apitoken.Scope{"source:pull"}
+	assert.True(t, apitoken.Allows(source, http.MethodGet, "/v2/siderolabs/imager/manifests/v1.13.0"))
+	assert.False(t, apitoken.Allows(source, http.MethodGet, "/v2/installer/abc/manifests/v1.13.0"))
+	assert.False(t, apitoken.Allows(source, http.MethodGet, "/pxe/abc/v1.13.0/metal-amd64"))
 }
 
 func TestMultiScopeToken(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
-	both := []apitoken.Scope{apitoken.ScopeDownload, apitoken.ScopePull}
+	scopes := []apitoken.Scope{"image:read", "report:read"}
 
-	token, err := issuer.Issue("org_abc123", both, true, 0)
+	token, err := issuer.Issue("org_abc123", scopes, true, 0)
 	require.NoError(t, err)
-	assert.Equal(t, downloadTTL.Default, token.ExpiresAt.Sub(token.IssuedAt))
+	assert.Equal(t, ordinaryTTL.Default, token.ExpiresAt.Sub(token.IssuedAt))
 
 	claims, err := issuer.Verify(token.Signed)
 	require.NoError(t, err)
-	assert.ElementsMatch(t, both, claims.Scopes)
+	assert.ElementsMatch(t, scopes, claims.Scopes)
 
-	assert.True(t, apitoken.Allows(claims.Scopes, "GET", "/pxe/abc/v1.13.0/metal-amd64"))
-	assert.True(t, apitoken.Allows(claims.Scopes, "GET", "/v2/foo/manifests/latest"))
+	assert.True(t, apitoken.Allows(claims.Scopes, http.MethodGet, "/pxe/abc/v1.13.0/metal-amd64"))
+	assert.True(t, apitoken.Allows(claims.Scopes, http.MethodGet, "/spdx/abc/v1.13.0/amd64"))
 
-	_, err = issuer.Issue("org_abc123", both, true, 48*time.Hour)
+	_, err = issuer.Issue("org_abc123", scopes, true, 48*time.Hour)
 	require.ErrorIs(t, err, apitoken.ErrTTLOutOfRange)
-
-	token, err = issuer.Issue("org_abc123", both, true, time.Minute)
-	require.NoError(t, err)
-	assert.Equal(t, time.Minute, token.ExpiresAt.Sub(token.IssuedAt))
 }
 
 func TestExpiredToken(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(map[apitoken.Scope]apitoken.TTL{
-		apitoken.ScopeDownload: {Default: -time.Minute, Min: -time.Hour, Max: time.Hour},
-	}, apitoken.StorageTTL{StoredMin: -time.Hour, UnstoredMax: time.Hour})
+	issuer, err := apitoken.GenerateIssuer(adminTTL, apitoken.StorageTTL{
+		Stored:    apitoken.TTL{Default: -time.Minute, Min: -time.Hour, Max: time.Hour},
+		Ephemeral: apitoken.TTL{Default: -time.Minute, Min: -time.Hour, Max: time.Hour},
+	})
 	require.NoError(t, err)
 
-	token, err := issuer.Issue("org_abc123", download(), true, 0)
+	token, err := issuer.Issue("org_abc123", image(), true, 0)
 	require.NoError(t, err)
 
 	_, err = issuer.Verify(token.Signed)
@@ -180,10 +183,10 @@ func TestExpiredToken(t *testing.T) {
 func TestTamperedToken(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
-	token, err := issuer.Issue("org_abc123", download(), true, 0)
+	token, err := issuer.Issue("org_abc123", image(), true, 0)
 	require.NoError(t, err)
 
 	parts := splitJWT(token.Signed)
@@ -198,13 +201,13 @@ func TestTamperedToken(t *testing.T) {
 func TestWrongKey(t *testing.T) {
 	t.Parallel()
 
-	issuer1, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer1, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
-	issuer2, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer2, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
-	token, err := issuer1.Issue("org_abc123", download(), true, 0)
+	token, err := issuer1.Issue("org_abc123", image(), true, 0)
 	require.NoError(t, err)
 
 	_, err = issuer2.Verify(token.Signed)
@@ -217,10 +220,10 @@ func TestNewIssuerFromKey(t *testing.T) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 
-	issuer, err := apitoken.NewIssuer(key, defaultTTLs, testStorage)
+	issuer, err := apitoken.NewIssuer(key, adminTTL, testStorage)
 	require.NoError(t, err)
 
-	token, err := issuer.Issue("alice", download(), true, 0)
+	token, err := issuer.Issue("alice", image(), true, 0)
 	require.NoError(t, err)
 
 	claims, err := issuer.Verify(token.Signed)
@@ -228,10 +231,173 @@ func TestNewIssuerFromKey(t *testing.T) {
 	assert.Equal(t, "alice", claims.Subject)
 }
 
+func TestIssuerVerifiesWithPreviousKeyButMintsWithActiveKey(t *testing.T) {
+	t.Parallel()
+
+	activeKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	previousKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	previousIssuer, err := apitoken.NewIssuer(previousKey, adminTTL, testStorage)
+	require.NoError(t, err)
+
+	previousToken, err := previousIssuer.Issue("alice", image(), true, 0)
+	require.NoError(t, err)
+
+	rotatedIssuer, err := apitoken.NewIssuerWithVerificationKeys(
+		activeKey,
+		[]*ecdsa.PublicKey{&previousKey.PublicKey},
+		adminTTL,
+		testStorage,
+	)
+	require.NoError(t, err)
+
+	claims, err := rotatedIssuer.Verify(previousToken.Signed)
+	require.NoError(t, err)
+	assert.Equal(t, "alice", claims.Subject)
+
+	activeToken, err := rotatedIssuer.Issue("bob", image(), true, 0)
+	require.NoError(t, err)
+
+	_, err = previousIssuer.Verify(activeToken.Signed)
+	require.Error(t, err, "the previous key must never mint tokens signed by the active key")
+}
+
+func TestLoadIssuerFromPathsUsesFirstPrivateKeyAndLoadsPublicVerificationKey(t *testing.T) {
+	t.Parallel()
+
+	activeKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	previousKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	activePath := filepath.Join(dir, "active.pem")
+	previousPath := filepath.Join(dir, "previous.pem")
+
+	activeDER, err := x509.MarshalECPrivateKey(activeKey)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(activePath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: activeDER}), 0o600))
+
+	previousDER, err := x509.MarshalPKIXPublicKey(&previousKey.PublicKey)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(previousPath, pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: previousDER}), 0o600))
+
+	previousIssuer, err := apitoken.NewIssuer(previousKey, adminTTL, testStorage)
+	require.NoError(t, err)
+	previousToken, err := previousIssuer.Issue("alice", image(), true, 0)
+	require.NoError(t, err)
+
+	issuer, err := apitoken.LoadIssuerFromPaths([]string{activePath, previousPath}, adminTTL, testStorage)
+	require.NoError(t, err)
+
+	_, err = issuer.Verify(previousToken.Signed)
+	require.NoError(t, err)
+
+	activeToken, err := issuer.Issue("bob", image(), true, 0)
+	require.NoError(t, err)
+	_, err = previousIssuer.Verify(activeToken.Signed)
+	require.Error(t, err)
+}
+
+func TestLoadIssuerFromPathsSupportsCertificateVerificationKey(t *testing.T) {
+	t.Parallel()
+
+	activeKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	previousKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	activePath := filepath.Join(dir, "active.pem")
+	certificatePath := filepath.Join(dir, "previous.crt")
+
+	activeDER, err := x509.MarshalECPrivateKey(activeKey)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(activePath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: activeDER}), 0o600))
+
+	now := time.Now()
+	certificateTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		NotBefore:    now.Add(-time.Hour),
+		NotAfter:     now.Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+	}
+	certificateDER, err := x509.CreateCertificate(
+		rand.Reader,
+		certificateTemplate,
+		certificateTemplate,
+		&previousKey.PublicKey,
+		previousKey,
+	)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(certificatePath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificateDER}), 0o600))
+
+	previousIssuer, err := apitoken.NewIssuer(previousKey, adminTTL, testStorage)
+	require.NoError(t, err)
+	previousToken, err := previousIssuer.Issue("alice", image(), true, 0)
+	require.NoError(t, err)
+
+	issuer, err := apitoken.LoadIssuerFromPaths([]string{activePath, certificatePath}, adminTTL, testStorage)
+	require.NoError(t, err)
+	_, err = issuer.Verify(previousToken.Signed)
+	require.NoError(t, err)
+}
+
+func TestLoadIssuerFromPathsRejectsPublicActiveKey(t *testing.T) {
+	t.Parallel()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	publicDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	require.NoError(t, err)
+
+	path := filepath.Join(t.TempDir(), "active-public.pem")
+	require.NoError(t, os.WriteFile(path, pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicDER}), 0o600))
+
+	_, err = apitoken.LoadIssuerFromPaths([]string{path}, adminTTL, testStorage)
+	require.ErrorContains(t, err, "active signing key")
+}
+
+func TestLoadIssuerFromPathsRejectsDuplicateKey(t *testing.T) {
+	t.Parallel()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	privatePath := filepath.Join(dir, "active.pem")
+	publicPath := filepath.Join(dir, "duplicate.pem")
+
+	privateDER, err := x509.MarshalECPrivateKey(key)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(privatePath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privateDER}), 0o600))
+
+	publicDER, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(publicPath, pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicDER}), 0o600))
+
+	_, err = apitoken.LoadIssuerFromPaths([]string{privatePath, publicPath}, adminTTL, testStorage)
+	require.ErrorContains(t, err, "duplicate verification key")
+}
+
 func TestJWKS(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	activeKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	previousKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	issuer, err := apitoken.NewIssuerWithVerificationKeys(
+		activeKey,
+		[]*ecdsa.PublicKey{&previousKey.PublicKey},
+		adminTTL,
+		testStorage,
+	)
 	require.NoError(t, err)
 
 	jwksData := issuer.JWKS()
@@ -250,7 +416,7 @@ func TestJWKS(t *testing.T) {
 	}
 
 	require.NoError(t, json.Unmarshal(jwksData, &doc))
-	require.Len(t, doc.Keys, 1)
+	require.Len(t, doc.Keys, 2)
 	assert.Equal(t, "EC", doc.Keys[0].Kty)
 	assert.Equal(t, "P-256", doc.Keys[0].Crv)
 	assert.Equal(t, "sig", doc.Keys[0].Use)
@@ -258,8 +424,26 @@ func TestJWKS(t *testing.T) {
 	assert.NotEmpty(t, doc.Keys[0].X)
 	assert.NotEmpty(t, doc.Keys[0].Y)
 	assert.NotEmpty(t, doc.Keys[0].Kid, "JWKS should include a kid (key ID)")
+	assert.NotEmpty(t, doc.Keys[1].Kid, "JWKS should include the verification-only key ID")
+	assert.NotEqual(t, doc.Keys[0].Kid, doc.Keys[1].Kid)
 
-	for _, scopes := range [][]apitoken.Scope{download(), pull()} {
+	previousIssuer, err := apitoken.NewIssuer(previousKey, adminTTL, testStorage)
+	require.NoError(t, err)
+	previousToken, err := previousIssuer.Issue("test", image(), true, 0)
+	require.NoError(t, err)
+
+	var previousHeader struct {
+		Kid string `json:"kid"`
+	}
+
+	previousParts := splitJWT(previousToken.Signed)
+	require.Len(t, previousParts, 3)
+	previousHeaderBytes, err := base64.RawURLEncoding.DecodeString(previousParts[0])
+	require.NoError(t, err)
+	require.NoError(t, json.Unmarshal(previousHeaderBytes, &previousHeader))
+	assert.Equal(t, doc.Keys[1].Kid, previousHeader.Kid)
+
+	for _, scopes := range [][]apitoken.Scope{image(), image()} {
 		token, err := issuer.Issue("test", scopes, true, 0)
 		require.NoError(t, err)
 
@@ -280,7 +464,7 @@ func TestJWKS(t *testing.T) {
 func TestRequestedTTL(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
 	for _, test := range []struct {
@@ -289,17 +473,17 @@ func TestRequestedTTL(t *testing.T) {
 		expected  time.Duration
 		expectErr bool
 	}{
-		{name: "unspecified", requested: 0, expected: downloadTTL.Default},
+		{name: "unspecified", requested: 0, expected: ordinaryTTL.Default},
 		{name: "in range", requested: time.Hour, expected: time.Hour},
-		{name: "at min", requested: downloadTTL.Min, expected: downloadTTL.Min},
-		{name: "at max", requested: downloadTTL.Max, expected: downloadTTL.Max},
+		{name: "at min", requested: ordinaryTTL.Min, expected: ordinaryTTL.Min},
+		{name: "at max", requested: ordinaryTTL.Max, expected: ordinaryTTL.Max},
 		{name: "below min", requested: time.Second, expectErr: true},
 		{name: "above max", requested: 24 * time.Hour, expectErr: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			token, err := issuer.Issue("org_abc123", download(), true, test.requested)
+			token, err := issuer.Issue("org_abc123", image(), true, test.requested)
 
 			if test.expectErr {
 				require.ErrorIs(t, err, apitoken.ErrTTLOutOfRange)
@@ -326,12 +510,13 @@ func TestParseScopes(t *testing.T) {
 		expected  []apitoken.Scope
 		expectErr bool
 	}{
-		{name: "single", claim: "pull", expected: pull()},
-		{name: "both", claim: "download pull", expected: []apitoken.Scope{apitoken.ScopeDownload, apitoken.ScopePull}},
-		{name: "extra whitespace", claim: "  download   pull ", expected: []apitoken.Scope{apitoken.ScopeDownload, apitoken.ScopePull}},
-		{name: "deduplicated", claim: "pull download pull", expected: []apitoken.Scope{apitoken.ScopePull, apitoken.ScopeDownload}},
+		{name: "single", claim: "image:read", expected: image()},
+		{name: "both", claim: "image:read report:read", expected: []apitoken.Scope{"image:read", "report:read"}},
+		{name: "extra whitespace", claim: "  image:read   report:read ", expected: []apitoken.Scope{"image:read", "report:read"}},
+		{name: "deduplicated", claim: "report:read image:read report:read", expected: []apitoken.Scope{"report:read", "image:read"}},
 		{name: "empty", claim: "", expectErr: true},
-		{name: "unknown", claim: "download not-a-scope", expectErr: true},
+		{name: "retired", claim: "download", expectErr: true},
+		{name: "unknown", claim: "image:read not-a-scope", expectErr: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -351,68 +536,58 @@ func TestParseScopes(t *testing.T) {
 	}
 }
 
-func TestAllows(t *testing.T) {
+func TestResourceFirstScopeCatalog(t *testing.T) {
+	t.Parallel()
+
+	want := []apitoken.Scope{
+		"image:read",
+		"report:read",
+		"schematic:create",
+		"schematic:read",
+		"source:pull",
+		"token:issue",
+		"token:read",
+		"token:revoke",
+	}
+
+	assert.ElementsMatch(t, want, apitoken.Scopes())
+
+	for _, retired := range []apitoken.Scope{"admin", "download", "pull", "schematic", "token"} {
+		assert.False(t, apitoken.Valid(retired), "retired scope %q must fail closed", retired)
+	}
+}
+
+func TestResourceFirstScopesAuthorizeDistinctResources(t *testing.T) {
 	t.Parallel()
 
 	for _, test := range []struct {
-		name      string
-		method    string
-		path      string
-		download  bool
-		pull      bool
-		schematic bool
-		token     bool
-		admin     bool
+		name   string
+		scope  apitoken.Scope
+		method string
+		path   string
+		want   bool
 	}{
-		{name: "image get", method: "GET", path: "/image/abc/v1.13.0/metal-amd64.iso", download: true, pull: true},
-		{name: "image head", method: "HEAD", path: "/image/abc/v1.13.0/metal-amd64.iso", download: true, pull: true},
-		{name: "image post", method: "POST", path: "/image/abc/v1.13.0/metal-amd64.iso"},
-		{name: "pxe get", method: "GET", path: "/pxe/abc/v1.13.0/metal-amd64", download: true},
-		{name: "registry root", method: "GET", path: "/v2", pull: true},
-		{name: "registry api", method: "GET", path: "/v2/foo/manifests/latest", pull: true},
-		{name: "registry head", method: "HEAD", path: "/v2/foo/blobs/sha256:abc", pull: true},
-		{name: "registry write", method: "PUT", path: "/v2/foo/manifests/latest"},
-		{name: "schematic create", method: "POST", path: "/schematics", schematic: true},
-		{name: "schematic read", method: "GET", path: "/schematics/abc", schematic: true},
-		{name: "schematic write to one", method: "POST", path: "/schematics/abc"},
-		{name: "schematic collection read", method: "GET", path: "/schematics"},
-		{name: "token mint", method: "POST", path: "/tokens", token: true, admin: true},
-		{name: "token list", method: "GET", path: "/tokens", token: true, admin: true},
-		{name: "token revoke", method: "POST", path: "/tokens/abc/revoke", token: true, admin: true},
-		{name: "retired download token alias", method: "POST", path: "/download-token"},
-		{name: "retired node token alias", method: "POST", path: "/node-tokens"},
-		{name: "sbom", method: "GET", path: "/spdx/abc/v1.13.0/amd64"},
-		{name: "ui", method: "GET", path: "/ui/tokens"},
-		{name: "image lookalike", method: "GET", path: "/images/abc"},
-		{name: "registry lookalike", method: "GET", path: "/v20/foo"},
-		{name: "schematic lookalike", method: "POST", path: "/schematicsfoo"},
-		{name: "token lookalike", method: "POST", path: "/tokensfoo"},
+		{name: "image HTTP artifact", scope: "image:read", method: http.MethodGet, path: "/image/abc/v1.13.0/metal-amd64.iso", want: true},
+		{name: "image PXE", scope: "image:read", method: http.MethodGet, path: "/pxe/abc/v1.13.0/metal-amd64", want: true},
+		{name: "image registry ping", scope: "image:read", method: http.MethodGet, path: "/v2/", want: true},
+		{name: "image installer", scope: "image:read", method: http.MethodGet, path: "/v2/installer/abc/manifests/v1.13.0", want: true},
+		{name: "image excludes source", scope: "image:read", method: http.MethodGet, path: "/v2/siderolabs/imager/manifests/v1.13.0"},
+		{name: "source proxy", scope: "source:pull", method: http.MethodGet, path: "/v2/siderolabs/imager/manifests/v1.13.0", want: true},
+		{name: "source excludes installer", scope: "source:pull", method: http.MethodGet, path: "/v2/installer/abc/manifests/v1.13.0"},
+		{name: "schematic create", scope: "schematic:create", method: http.MethodPost, path: "/schematics", want: true},
+		{name: "schematic create cannot read", scope: "schematic:create", method: http.MethodGet, path: "/schematics/abc"},
+		{name: "schematic read", scope: "schematic:read", method: http.MethodGet, path: "/schematics/abc", want: true},
+		{name: "report read", scope: "report:read", method: http.MethodGet, path: "/spdx/abc/v1.13.0/amd64", want: true},
+		{name: "report excludes schematic", scope: "report:read", method: http.MethodGet, path: "/schematics/abc"},
+		{name: "token issue", scope: "token:issue", method: http.MethodPost, path: "/tokens", want: true},
+		{name: "token issue cannot list", scope: "token:issue", method: http.MethodGet, path: "/tokens"},
+		{name: "token read", scope: "token:read", method: http.MethodGet, path: "/tokens", want: true},
+		{name: "token revoke", scope: "token:revoke", method: http.MethodPost, path: "/tokens/abc/revoke", want: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			want := map[apitoken.Scope]bool{
-				apitoken.ScopeDownload:  test.download,
-				apitoken.ScopePull:      test.pull,
-				apitoken.ScopeSchematic: test.schematic,
-				apitoken.ScopeToken:     test.token,
-				apitoken.ScopeAdmin:     test.admin,
-			}
-
-			all := make([]apitoken.Scope, 0, len(want))
-			anyAllowed := false
-
-			for scope, allowed := range want {
-				assert.Equal(t, allowed, apitoken.Allows([]apitoken.Scope{scope}, test.method, test.path),
-					"scope %q on %s %s", scope, test.method, test.path)
-
-				all = append(all, scope)
-
-				anyAllowed = anyAllowed || allowed
-			}
-
-			assert.Equal(t, anyAllowed, apitoken.Allows(all, test.method, test.path))
-			assert.False(t, apitoken.Allows(nil, test.method, test.path))
+			assert.Equal(t, test.want, apitoken.Allows([]apitoken.Scope{test.scope}, test.method, test.path))
 		})
 	}
 }
@@ -420,127 +595,88 @@ func TestAllows(t *testing.T) {
 func TestCanGrant(t *testing.T) {
 	t.Parallel()
 
-	var (
-		minter    = []apitoken.Scope{apitoken.ScopeToken}
-		fullish   = []apitoken.Scope{apitoken.ScopeToken, apitoken.ScopePull, apitoken.ScopeDownload}
-		puller    = []apitoken.Scope{apitoken.ScopePull}
-		schematic = []apitoken.Scope{apitoken.ScopeSchematic}
-	)
+	issuable := []apitoken.Scope{
+		"image:read",
+		"report:read",
+	}
 
-	assert.True(t, apitoken.CanGrant(fullish, puller), "a minter may hand out a scope it holds")
-	assert.True(t, apitoken.CanGrant(fullish, download()))
-	assert.False(t, apitoken.CanGrant(fullish, schematic), "it does not hold the schematic scope")
-	assert.False(t, apitoken.CanGrant(fullish, minter), "minting never propagates, even to a holder")
-	assert.False(t, apitoken.CanGrant(minter, puller), "holding only token grants nothing else")
-
-	assert.False(t, apitoken.Allows(puller, "POST", "/tokens"), "a pull token never reaches the mint endpoint")
-	assert.True(t, apitoken.Allows(minter, "POST", "/tokens"))
-
-	assert.True(t, apitoken.Covers(fullish, puller))
-	assert.True(t, apitoken.Covers(fullish, minter))
-	assert.False(t, apitoken.Covers(puller, fullish))
-	assert.True(t, apitoken.Covers(puller, nil))
-}
-
-// TestCanGrantAdmin covers the one asymmetry between the two minting scopes: admin hands out
-// token, token does not, and neither hands out admin.
-func TestCanGrantAdmin(t *testing.T) {
-	t.Parallel()
-
-	var (
-		admin  = []apitoken.Scope{apitoken.ScopeAdmin}
-		minter = []apitoken.Scope{apitoken.ScopeToken}
-		puller = []apitoken.Scope{apitoken.ScopePull}
-	)
-
-	assert.True(t, apitoken.CanGrant(admin, minter), "handing out minting authority is what admin is for")
-	assert.True(t, apitoken.CanGrant(admin, puller), "and it may hand out anything else it does not hold")
-	assert.True(t, apitoken.CanGrant(admin, []apitoken.Scope{apitoken.ScopeToken, apitoken.ScopePull}))
-
-	assert.False(t, apitoken.CanGrant(admin, admin), "an admin token cannot mint its own successor")
-	assert.False(t, apitoken.CanGrant(minter, admin), "nor can a minting token promote itself")
-	assert.False(t, apitoken.CanGrant(puller, admin))
-	assert.False(t, apitoken.CanGrant(admin, []apitoken.Scope{apitoken.ScopePull, apitoken.ScopeAdmin}),
-		"admin anywhere in the request is refused, not filtered out")
-}
-
-func TestCanMintForOthers(t *testing.T) {
-	t.Parallel()
-
-	assert.True(t, apitoken.CanMintForOthers([]apitoken.Scope{apitoken.ScopeAdmin}))
-	assert.True(t, apitoken.CanMintForOthers([]apitoken.Scope{apitoken.ScopeAdmin, apitoken.ScopePull}))
-	assert.False(t, apitoken.CanMintForOthers([]apitoken.Scope{apitoken.ScopeToken}),
-		"minting authority over your own identity is not authority over another's")
-	assert.False(t, apitoken.CanMintForOthers(pull()))
-	assert.False(t, apitoken.CanMintForOthers(nil), "a full provider credential carries no scopes")
+	assert.True(t, apitoken.CanGrant(issuable, image()))
+	assert.True(t, apitoken.CanGrant(issuable, []apitoken.Scope{"image:read", "report:read"}))
+	assert.False(t, apitoken.CanGrant(issuable, []apitoken.Scope{"schematic:read"}))
+	assert.False(t, apitoken.CanGrant(issuable, []apitoken.Scope{"token:issue"}),
+		"request capability and delegation authority are independent")
+	assert.True(t, apitoken.CanGrant(issuable, nil))
 }
 
 func TestAPIMintable(t *testing.T) {
 	t.Parallel()
 
-	assert.False(t, apitoken.APIMintable([]apitoken.Scope{apitoken.ScopeAdmin}),
-		"POST /tokens must never produce the bootstrap credential")
-	assert.False(t, apitoken.APIMintable([]apitoken.Scope{apitoken.ScopePull, apitoken.ScopeAdmin}))
-	assert.True(t, apitoken.APIMintable([]apitoken.Scope{apitoken.ScopeToken}))
-	assert.True(t, apitoken.APIMintable(download()))
+	assert.True(t, apitoken.APIMintable([]apitoken.Scope{"token:issue"}))
+	assert.True(t, apitoken.APIMintable(image()))
+	assert.False(t, apitoken.APIMintable([]apitoken.Scope{"download"}))
+	assert.False(t, apitoken.APIMintable([]apitoken.Scope{"future:scope"}))
 }
 
 func TestURLSafe(t *testing.T) {
 	t.Parallel()
 
-	assert.True(t, apitoken.URLSafe(download()), "a download link is the whole point of the query parameter")
-	assert.True(t, apitoken.URLSafe(pull()))
-	assert.False(t, apitoken.URLSafe([]apitoken.Scope{apitoken.ScopeToken}),
-		"a minting credential in an access log is a minting credential leaked")
-	assert.False(t, apitoken.URLSafe([]apitoken.Scope{apitoken.ScopeAdmin}))
-	assert.False(t, apitoken.URLSafe([]apitoken.Scope{apitoken.ScopeDownload, apitoken.ScopeAdmin}),
-		"one authority-granting scope is enough to keep the whole token out of a URL")
+	assert.True(t, apitoken.URLSafe(image()), "an image link is the purpose of the query parameter")
+	assert.True(t, apitoken.URLSafe([]apitoken.Scope{"report:read"}))
+
+	for _, scope := range []apitoken.Scope{
+		"token:issue",
+		"token:read",
+		"token:revoke",
+	} {
+		assert.False(t, apitoken.URLSafe([]apitoken.Scope{scope}),
+			"token-management credentials must stay out of access logs")
+		assert.False(t, apitoken.URLSafe([]apitoken.Scope{"image:read", scope}))
+	}
 }
 
-// TestIssueRefusesToStoreAdmin pins the request that an admin token is never recorded: asking for
-// one is an error rather than a silently unstored token.
-func TestIssueRefusesToStoreAdmin(t *testing.T) {
+func TestIssueRefusesToStoreCrossSubjectDelegation(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(map[apitoken.Scope]apitoken.TTL{
-		apitoken.ScopeAdmin: adminTTL,
-	}, testStorage)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
-	_, err = issuer.Issue("org_abc123", []apitoken.Scope{apitoken.ScopeAdmin}, true, 0)
+	_, err = issuer.IssueWithDelegation(
+		"org_abc123",
+		[]apitoken.Scope{"token:issue"},
+		apitoken.Delegation{IssuableScopes: image(), AnySubject: true},
+		true,
+		0,
+	)
 	require.ErrorIs(t, err, apitoken.ErrUnstorableScope)
-
-	token, err := issuer.Issue("org_abc123", []apitoken.Scope{apitoken.ScopeAdmin}, false, 0)
-	require.NoError(t, err)
-	assert.False(t, token.Stored)
-
-	claims, err := issuer.Verify(token.Signed)
-	require.NoError(t, err)
-	assert.False(t, claims.Stored, "so verification never looks it up in an index it is not in")
 }
 
-// TestAdminTokenIsNotCappedByUnstoredMax covers why UnstoredMax cannot apply to admin: the cap
-// exists for a caller who declined a record the factory would have kept, and admin never had that
-// choice. An admin token is long-lived on purpose.
-func TestAdminTokenIsNotCappedByUnstoredMax(t *testing.T) {
+func TestAdministrativeDelegationUsesItsOwnPolicy(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(map[apitoken.Scope]apitoken.TTL{
-		apitoken.ScopeAdmin:    adminTTL,
-		apitoken.ScopeDownload: downloadTTL,
-	}, apitoken.StorageTTL{StoredMin: time.Hour, UnstoredMax: 8 * time.Hour})
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
-	token, err := issuer.Issue("org_abc123", []apitoken.Scope{apitoken.ScopeAdmin}, false, 0)
+	token, err := issuer.IssueWithDelegation(
+		"org_abc123",
+		[]apitoken.Scope{"token:issue", "token:read", "token:revoke"},
+		apitoken.Delegation{IssuableScopes: apitoken.Scopes(), AnySubject: true},
+		false,
+		0,
+	)
 	require.NoError(t, err)
 	assert.Equal(t, adminTTL.Default, token.ExpiresAt.Sub(token.IssuedAt))
 
-	token, err = issuer.Issue("org_abc123", []apitoken.Scope{apitoken.ScopeAdmin}, false, 5*365*24*time.Hour)
+	token, err = issuer.IssueWithDelegation(
+		"org_abc123",
+		[]apitoken.Scope{"token:issue"},
+		apitoken.Delegation{IssuableScopes: image(), AnySubject: true},
+		false,
+		5*365*24*time.Hour,
+	)
 	require.NoError(t, err)
 	assert.Equal(t, 5*365*24*time.Hour, token.ExpiresAt.Sub(token.IssuedAt))
 
-	// A download token still is capped, so the exemption is admin's and not everyone's.
-	_, err = issuer.Issue("org_abc123", download(), false, 24*time.Hour)
+	_, err = issuer.Issue("org_abc123", image(), false, 24*time.Hour)
 	require.ErrorIs(t, err, apitoken.ErrTTLOutOfRange)
 }
 
@@ -550,19 +686,19 @@ func TestScopesFromContext(t *testing.T) {
 	_, ok := apitoken.ScopesFromContext(t.Context())
 	assert.False(t, ok, "a caller with a full provider credential carries no scopes")
 
-	scopes, ok := apitoken.ScopesFromContext(apitoken.ContextWithScopes(t.Context(), pull()))
+	scopes, ok := apitoken.ScopesFromContext(apitoken.ContextWithScopes(t.Context(), image()))
 	assert.True(t, ok)
-	assert.Equal(t, pull(), scopes)
+	assert.Equal(t, image(), scopes)
 }
 
 func TestStoredClaimRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, testStorage)
+	issuer, err := apitoken.GenerateIssuer(adminTTL, testStorage)
 	require.NoError(t, err)
 
 	for _, stored := range []bool{true, false} {
-		token, err := issuer.Issue("org_abc123", download(), stored, 0)
+		token, err := issuer.Issue("org_abc123", image(), stored, 0)
 		require.NoError(t, err)
 		assert.Equal(t, stored, token.Stored)
 
@@ -573,19 +709,23 @@ func TestStoredClaimRoundTrip(t *testing.T) {
 }
 
 // TestVerifyRejectsMissingStoredClaim covers the fail-closed half of the design: a token without
-// the claim must not be read as unstored, which would put it out of reach of the revocation index.
+// the claim must not be read as ephemeral, which would put it out of reach of the revocation index.
 func TestVerifyRejectsMissingStoredClaim(t *testing.T) {
 	t.Parallel()
 
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 
-	issuer, err := apitoken.NewIssuer(key, defaultTTLs, testStorage)
+	issuer, err := apitoken.NewIssuer(key, adminTTL, testStorage)
 	require.NoError(t, err)
+
+	var jwks jose.JSONWebKeySet
+	require.NoError(t, json.Unmarshal(issuer.JWKS(), &jwks))
+	require.Len(t, jwks.Keys, 1)
 
 	signer, err := jose.NewSigner(
 		jose.SigningKey{Algorithm: jose.ES256, Key: key},
-		(&jose.SignerOptions{}).WithType("JWT"),
+		(&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", jwks.Keys[0].KeyID),
 	)
 	require.NoError(t, err)
 
@@ -603,7 +743,7 @@ func TestVerifyRejectsMissingStoredClaim(t *testing.T) {
 			IssuedAt: jwt.NewNumericDate(now),
 			Expiry:   jwt.NewNumericDate(now.Add(time.Hour)),
 		},
-		Scope: "download",
+		Scope: "image:read",
 	}).Serialize()
 	require.NoError(t, err)
 
@@ -612,83 +752,64 @@ func TestVerifyRejectsMissingStoredClaim(t *testing.T) {
 	assert.Contains(t, err.Error(), "missing stored claim")
 }
 
-// TestStorageSplitsLifetimes covers both halves of the rule: a lifetime below StoredMin is not
-// worth a registry write, and one past UnstoredMax must stay revocable.
-func TestStorageSplitsLifetimes(t *testing.T) {
+// TestStoragePoliciesLifetimes verifies that lifetime bounds follow revocability, not scopes.
+// In particular, a stored Omni credential may combine image access with control-plane scopes
+// without inheriting the ephemeral-link ceiling.
+func TestStoragePoliciesLifetimes(t *testing.T) {
 	t.Parallel()
 
-	// The overlap band is [1h, 8h): either kind may be issued there.
-	storage := apitoken.StorageTTL{StoredMin: time.Hour, UnstoredMax: 8 * time.Hour}
+	const year = 365 * 24 * time.Hour
 
-	issuer, err := apitoken.GenerateIssuer(map[apitoken.Scope]apitoken.TTL{
-		apitoken.ScopeDownload: {Default: 5 * time.Minute, Min: 30 * time.Second, Max: 365 * 24 * time.Hour},
-	}, storage)
+	storage := apitoken.StorageTTL{
+		Stored:    apitoken.TTL{Default: year, Min: time.Hour, Max: year},
+		Ephemeral: apitoken.TTL{Default: 5 * time.Minute, Min: 30 * time.Second, Max: 8 * time.Hour},
+	}
+
+	issuer, err := apitoken.GenerateIssuer(adminTTL, storage)
 	require.NoError(t, err)
+
+	scopes := []apitoken.Scope{
+		"schematic:create",
+		"schematic:read",
+		"image:read",
+		"report:read",
+		"token:issue",
+	}
 
 	for _, test := range []struct {
 		name      string
 		requested time.Duration
+		expected  time.Duration
 		stored    bool
 		expectErr bool
 	}{
-		{name: "short unstored", requested: 5 * time.Minute, stored: false},
-		{name: "short stored", requested: 5 * time.Minute, stored: true, expectErr: true},
-		{name: "overlap unstored", requested: 4 * time.Hour, stored: false},
-		{name: "overlap stored", requested: 4 * time.Hour, stored: true},
-		{name: "long stored", requested: 90 * 24 * time.Hour, stored: true},
-		{name: "long unstored", requested: 90 * 24 * time.Hour, stored: false, expectErr: true},
-		{name: "at unstoredMax, unstored", requested: 8 * time.Hour, stored: false},
-		{name: "just above unstoredMax, unstored", requested: 8*time.Hour + time.Second, stored: false, expectErr: true},
+		{name: "stored default", stored: true, expected: year},
+		{name: "stored Omni credential", requested: 30 * 24 * time.Hour, stored: true, expected: 30 * 24 * time.Hour},
+		{name: "stored below minimum", requested: 5 * time.Minute, stored: true, expectErr: true},
+		{name: "stored above maximum", requested: year + time.Second, stored: true, expectErr: true},
+		{name: "ephemeral default", expected: 5 * time.Minute},
+		{name: "ephemeral image link", requested: time.Hour, expected: time.Hour},
+		{name: "ephemeral above maximum", requested: 8*time.Hour + time.Second, expectErr: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			token, err := issuer.Issue("org_abc123", download(), test.stored, test.requested)
+			token, err := issuer.Issue("org_abc123", scopes, test.stored, test.requested)
 
 			if test.expectErr {
 				require.ErrorIs(t, err, apitoken.ErrTTLOutOfRange)
+
+				if test.stored {
+					require.ErrorContains(t, err, "the lifetime of a stored token")
+				}
 
 				return
 			}
 
 			require.NoError(t, err)
-			assert.Equal(t, test.requested, token.ExpiresAt.Sub(token.IssuedAt))
+			assert.Equal(t, test.expected, token.ExpiresAt.Sub(token.IssuedAt))
 		})
 	}
-}
-
-// TestStorageMovesTheDefault covers the caller who requests no lifetime at all: the scope default
-// is pulled into whatever window the storage rule leaves, rather than rejected for being outside it.
-func TestStorageMovesTheDefault(t *testing.T) {
-	t.Parallel()
-
-	issuer, err := apitoken.GenerateIssuer(map[apitoken.Scope]apitoken.TTL{
-		apitoken.ScopeDownload: {Default: 5 * time.Minute, Min: 30 * time.Second, Max: 365 * 24 * time.Hour},
-		apitoken.ScopePull:     {Default: 365 * 24 * time.Hour, Min: time.Minute, Max: 365 * 24 * time.Hour},
-	}, apitoken.StorageTTL{StoredMin: time.Hour, UnstoredMax: 8 * time.Hour})
-	require.NoError(t, err)
-
-	// download defaults to 5m, below StoredMin: the default rises to the floor.
-	stored, err := issuer.Issue("org_abc123", download(), true, 0)
-	require.NoError(t, err)
-	assert.Equal(t, time.Hour, stored.ExpiresAt.Sub(stored.IssuedAt))
-
-	// pull defaults to a year, above UnstoredMax: the default drops to the ceiling.
-	unstored, err := issuer.Issue("org_abc123", pull(), false, 0)
-	require.NoError(t, err)
-	assert.Equal(t, 8*time.Hour, unstored.ExpiresAt.Sub(unstored.IssuedAt))
-}
-
-// TestStorageCanLeaveNoValidLifetime covers the scope whose whole window sits on the wrong side of
-// the rule: pull may not be issued unstored at all when its floor is above UnstoredMax.
-func TestStorageCanLeaveNoValidLifetime(t *testing.T) {
-	t.Parallel()
-
-	issuer, err := apitoken.GenerateIssuer(defaultTTLs, apitoken.StorageTTL{StoredMin: time.Hour, UnstoredMax: time.Hour})
-	require.NoError(t, err)
-
-	_, err = issuer.Issue("org_abc123", pull(), false, 0)
-	require.ErrorIs(t, err, apitoken.ErrTTLOutOfRange, "pull's shortest lifetime is 24h, above unstoredMax")
 }
 
 func mustParse(t *testing.T, claim string) []apitoken.Scope {

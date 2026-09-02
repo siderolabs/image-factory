@@ -107,7 +107,7 @@ func (o AuthenticationOptions) validate() error {
 }
 
 // validateTTLBounds checks that a [min, max] TTL range is sane and contains default. prefix
-// identifies the config path in error messages, e.g. "authentication.tokens.ttl.download".
+// identifies the config path in error messages, e.g. "authentication.tokens.ttl.ephemeral".
 func validateTTLBounds(prefix string, minTTL, maxTTL, defaultTTL time.Duration) error {
 	switch {
 	case minTTL <= 0:
@@ -673,61 +673,47 @@ type AuthenticationOptions struct { //nolint:govet // keeping order for semantic
 
 // TokenOptions configures self-issued API token issuance, storage, and verification.
 type TokenOptions struct {
-	// KeyPath is an optional path to a PEM-encoded ECDSA P-256 private key for signing API tokens.
-	// One key signs every scope, so a deployment that used to configure separate download- and node-token keys has to pick one of them here.
-	// If unset, a fresh key is generated at startup, which only works for single-replica deployments.
-	KeyPath string `koanf:"keyPath"`
+	// KeyPaths is an ordered list of PEM-encoded ECDSA P-256 keys or certificates.
+	// The first entry must be a private key and is the only key used to mint tokens.
+	// Later entries are verification-only and may contain private keys, public keys, or X.509 certificates.
+	// If empty, a fresh key is generated at startup, which only works for single-replica deployments.
+	KeyPaths []string `koanf:"keyPaths"`
 
 	// Storage is the OCI repository used to persist the per-org token index (the list of active stored tokens; presence in the index is what makes such a token valid).
 	// A token minted with "stored": false is not recorded, so it cannot be listed or revoked and does not count against MaxPerOrg.
 	Storage OCIRepositoryOptions `koanf:"storage"`
 
-	// TTL bounds the lifetime of issued tokens, per scope.
+	// TTL bounds token lifetimes by whether they are stored, plus the CLI-only bootstrap policy.
 	TTL TokenTTLOptions `koanf:"ttl"`
 
-	// VerificationCacheRefreshInterval bounds how stale the in-memory verification cache may be before it's refreshed from storage.
-	// This is also the bound on how long a revoked token may keep working after revocation.
+	// VerificationCacheRefreshInterval controls how often the backing registry clients are rebuilt
+	// so refreshed credentials are picked up.
+	//
+	// The legacy name is retained for configuration compatibility.
 	VerificationCacheRefreshInterval time.Duration `koanf:"verificationCacheRefreshInterval"`
 
 	// MaxPerOrg caps how many stored tokens an org may have active at once.
 	MaxPerOrg int `koanf:"maxPerOrg"`
 }
 
-// TokenTTLOptions bounds the lifetime of issued tokens, one entry per scope.
+// TokenTTLOptions bounds token lifetimes by revocability, plus the CLI-only bootstrap credential.
 //
-// A caller picks a lifetime with the `ttl` field of POST /tokens (e.g. `"ttl": "720h"`); requests outside [min, max] are rejected with HTTP 400.
+// A caller picks a lifetime with the `ttl` field of POST /tokens (e.g. `"ttl": "720h"`);
+// requests outside the selected [min, max] range are rejected with HTTP 400.
 type TokenTTLOptions struct {
-	// StoredMin is the shortest lifetime a stored token may have, whatever its scopes allow.
-	// Recording a credential that expires in minutes buys a registry write and nothing else, since the token is gone before anyone can revoke it, so short lifetimes belong to unstored tokens.
-	StoredMin time.Duration `koanf:"storedMin"`
+	// Stored bounds revocable tokens persisted in the configured OCI repository.
+	Stored TokenTTL `koanf:"stored"`
 
-	// UnstoredMax is the longest lifetime an unstored token may have, whatever its scopes allow.
-	// Such a token is not recorded, so expiry is the only way it leaves circulation.
-	// It is also the only kind accepted from a ?token= query parameter, where proxy and CDN access logs keep a copy of it.
-	//
-	// It must not be below StoredMin, which would leave lifetimes no token could be issued for.
-	UnstoredMax time.Duration `koanf:"unstoredMax"`
+	// Ephemeral bounds tokens whose expiry is the only way to take them out of circulation.
+	Ephemeral TokenTTL `koanf:"ephemeral"`
 
-	// Download bounds the lifetime of tokens carrying the "download" scope, which fetch images and PXE scripts.
-	Download TokenTTL `koanf:"download"`
-
-	// Pull bounds the lifetime of tokens carrying the "pull" scope, which pull installer images.
-	// A pull token isn't refreshed once it's written into a Talos machine config, so its default
-	// lifetime is expected to be long (up to Max).
-	Pull TokenTTL `koanf:"pull"`
-
-	// Schematic bounds the lifetime of tokens carrying the "schematic" scope, which create and read schematics.
-	Schematic TokenTTL `koanf:"schematic"`
-
-	// Token bounds the lifetime of tokens carrying the "token" scope, which mint and revoke other tokens.
-	Token TokenTTL `koanf:"token"`
-
-	// Admin bounds the lifetime of tokens carrying the "admin" scope, the bootstrap credential that mints "token"-scoped tokens.
-	// An admin token is never recorded, so UnstoredMax does not apply to it and nothing can revoke it: it is expected to be long-lived, held offline, and retired by rotating KeyPath.
-	Admin TokenTTL `koanf:"admin"`
+	// Bootstrap bounds the CLI-only cross-subject credential.
+	// It is never stored and may live longer than ordinary ephemeral tokens because it is kept
+	// offline and retired by removing its signing key from KeyPaths.
+	Bootstrap TokenTTL `koanf:"bootstrap"`
 }
 
-// TokenTTL defines the validity duration for one token scope.
+// TokenTTL defines the validity duration for one token lifetime policy.
 type TokenTTL struct {
 	// Max is the longest validity duration a caller may request.
 	Max time.Duration `koanf:"max"`
@@ -743,8 +729,13 @@ type TokenTTL struct {
 // only reaches the token index, so a caller that touches no storage may pass nil.
 func (o TokenOptions) EnterpriseOptions(remoteOptions []remote.Option) enterprise.TokenOptions {
 	return enterprise.TokenOptions{
-		KeyPath:                          o.KeyPath,
-		TTL:                              o.ScopeTTLs(),
+		KeyPaths: slices.Clone(o.KeyPaths),
+		BootstrapTTL: enterprise.TokenTTL{
+			Default: o.TTL.Bootstrap.Default,
+			Min:     o.TTL.Bootstrap.Min,
+			Max:     o.TTL.Bootstrap.Max,
+		},
+
 		StorageTTL:                       o.StorageTTL(),
 		StorageRepository:                o.Storage.String(),
 		StorageInsecure:                  o.Storage.Insecure,
@@ -754,54 +745,38 @@ func (o TokenOptions) EnterpriseOptions(remoteOptions []remote.Option) enterpris
 	}
 }
 
-// StorageTTL renders the stored/unstored lifetime split in the form the token issuer takes.
+// StorageTTL renders the stored/ephemeral lifetime policies in the form the token issuer takes.
 func (o TokenOptions) StorageTTL() enterprise.TokenStorageTTL {
-	return enterprise.TokenStorageTTL{StoredMin: o.TTL.StoredMin, UnstoredMax: o.TTL.UnstoredMax}
-}
-
-// ScopeTTLs renders the configured bounds in the form the token issuer takes.
-func (o TokenOptions) ScopeTTLs() map[enterprise.TokenScope]enterprise.TokenTTL {
-	return map[enterprise.TokenScope]enterprise.TokenTTL{
-		enterprise.TokenScopeDownload:  {Default: o.TTL.Download.Default, Min: o.TTL.Download.Min, Max: o.TTL.Download.Max},
-		enterprise.TokenScopePull:      {Default: o.TTL.Pull.Default, Min: o.TTL.Pull.Min, Max: o.TTL.Pull.Max},
-		enterprise.TokenScopeSchematic: {Default: o.TTL.Schematic.Default, Min: o.TTL.Schematic.Min, Max: o.TTL.Schematic.Max},
-		enterprise.TokenScopeToken:     {Default: o.TTL.Token.Default, Min: o.TTL.Token.Min, Max: o.TTL.Token.Max},
-		enterprise.TokenScopeAdmin:     {Default: o.TTL.Admin.Default, Min: o.TTL.Admin.Min, Max: o.TTL.Admin.Max},
+	return enterprise.TokenStorageTTL{
+		Stored: enterprise.TokenTTL{
+			Default: o.TTL.Stored.Default,
+			Min:     o.TTL.Stored.Min,
+			Max:     o.TTL.Stored.Max,
+		},
+		Ephemeral: enterprise.TokenTTL{
+			Default: o.TTL.Ephemeral.Default,
+			Min:     o.TTL.Ephemeral.Min,
+			Max:     o.TTL.Ephemeral.Max,
+		},
 	}
 }
 
-// validate checks that the per-scope token lifetime bounds are sane and contain the default,
-// and that the per-org cap is positive, so a bad config fails at startup rather than on
-// the first token request.
+// validate checks that token lifetime bounds are sane and contain their defaults, and that the
+// per-org cap is positive, so a bad config fails at startup rather than on the first request.
 func (o TokenOptions) validate() error {
-	if err := validateTTLBounds("authentication.tokens.ttl.download", o.TTL.Download.Min, o.TTL.Download.Max, o.TTL.Download.Default); err != nil {
+	if err := validateTTLBounds("authentication.tokens.ttl.stored", o.TTL.Stored.Min, o.TTL.Stored.Max, o.TTL.Stored.Default); err != nil {
 		return err
 	}
 
-	if err := validateTTLBounds("authentication.tokens.ttl.pull", o.TTL.Pull.Min, o.TTL.Pull.Max, o.TTL.Pull.Default); err != nil {
+	if err := validateTTLBounds("authentication.tokens.ttl.ephemeral", o.TTL.Ephemeral.Min, o.TTL.Ephemeral.Max, o.TTL.Ephemeral.Default); err != nil {
 		return err
 	}
 
-	if err := validateTTLBounds("authentication.tokens.ttl.schematic", o.TTL.Schematic.Min, o.TTL.Schematic.Max, o.TTL.Schematic.Default); err != nil {
-		return err
-	}
-
-	if err := validateTTLBounds("authentication.tokens.ttl.token", o.TTL.Token.Min, o.TTL.Token.Max, o.TTL.Token.Default); err != nil {
-		return err
-	}
-
-	if err := validateTTLBounds("authentication.tokens.ttl.admin", o.TTL.Admin.Min, o.TTL.Admin.Max, o.TTL.Admin.Default); err != nil {
+	if err := validateTTLBounds("authentication.tokens.ttl.bootstrap", o.TTL.Bootstrap.Min, o.TTL.Bootstrap.Max, o.TTL.Bootstrap.Default); err != nil {
 		return err
 	}
 
 	switch {
-	case o.TTL.StoredMin <= 0:
-		return fmt.Errorf("authentication.tokens.ttl.storedMin must be positive, got %s", o.TTL.StoredMin)
-	case o.TTL.UnstoredMax <= 0:
-		return fmt.Errorf("authentication.tokens.ttl.unstoredMax must be positive, got %s", o.TTL.UnstoredMax)
-	case o.TTL.UnstoredMax < o.TTL.StoredMin:
-		return fmt.Errorf("authentication.tokens.ttl.unstoredMax %s is below .storedMin %s, leaving lifetimes no token could be issued for",
-			o.TTL.UnstoredMax, o.TTL.StoredMin)
 	case o.MaxPerOrg <= 0:
 		return fmt.Errorf("authentication.tokens.maxPerOrg must be positive, got %d", o.MaxPerOrg)
 	case o.VerificationCacheRefreshInterval <= 0:
@@ -825,8 +800,8 @@ type Auth0Options struct {
 
 	// MachineScope names a scope that marks a token as a machine credential, e.g. `factory:machine`.
 	//
-	// Tokens carrying it reach exactly what an API token with the `pull` scope reaches: `GET`/`HEAD` on `/image/` and the `/v2/` OCI registry.
-	// Everything else is rejected with 403, including reading schematic definitions.
+	// Tokens carrying it receive exactly `image:read`: generated downloads, PXE assets, and generated installer OCI pulls.
+	// Everything else is rejected with 403, including schematic definitions and proxied source images.
 	// Intended for the long-lived tokens provisioned onto Talos nodes, which need to pull installers but should not be able to inspect or create schematics.
 	//
 	// Optional; when empty every valid token has full access.
@@ -1017,29 +992,17 @@ var DefaultOptions = Options{
 				Repository: "tokens",
 			},
 			TTL: TokenTTLOptions{
-				StoredMin:   time.Hour,
-				UnstoredMax: 8 * time.Hour,
-				Download: TokenTTL{
+				Stored: TokenTTL{
+					Default: 365 * 24 * time.Hour,
+					Max:     365 * 24 * time.Hour,
+					Min:     time.Hour,
+				},
+				Ephemeral: TokenTTL{
 					Default: 5 * time.Minute,
 					Max:     8 * time.Hour,
 					Min:     30 * time.Second,
 				},
-				Pull: TokenTTL{
-					Default: 365 * 24 * time.Hour,
-					Max:     365 * 24 * time.Hour,
-					Min:     24 * time.Hour,
-				},
-				Schematic: TokenTTL{
-					Default: 90 * 24 * time.Hour,
-					Max:     365 * 24 * time.Hour,
-					Min:     time.Hour,
-				},
-				Token: TokenTTL{
-					Default: 30 * 24 * time.Hour,
-					Max:     90 * 24 * time.Hour,
-					Min:     time.Hour,
-				},
-				Admin: TokenTTL{
+				Bootstrap: TokenTTL{
 					Default: 90 * 24 * time.Hour,
 					Max:     10 * 365 * 24 * time.Hour,
 					Min:     time.Hour,

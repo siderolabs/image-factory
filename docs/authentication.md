@@ -77,9 +77,9 @@ A client serving several organizations requests one token per organization.
 Talos nodes need a long-lived credential to pull installers, but a credential sitting on a node is more exposed than one held by a person.
 Setting `authentication.auth0.machineScope` names a scope that marks a token as such a credential.
 
-A token carrying it gets exactly the [`pull` scope](#scopes): `GET` and `HEAD` on `/image/` and on the `/v2/` OCI registry, and nothing else.
-Everything else is rejected with `403`, including reading a schematic definition, so a stolen node credential cannot enumerate how the organization's images are built.
-This is the same table a self-issued pull token is checked against, so the two cannot drift apart.
+A token carrying it gets exactly the [`image:read` capability](#scopes): generated image downloads, PXE assets and generated installer OCI pulls.
+Everything else is rejected with `403`, including schematic definitions and proxied source images.
+This uses the same code-defined route entry as a self-issued `image:read` token, so the two cannot drift apart.
 
 Both the `scope` and `permissions` claims are consulted, since Auth0 uses the former for plain client-credentials grants and the latter when RBAC is enabled on the API.
 Tokens without the scope are unaffected, and leaving the setting empty gives every valid token full access.
@@ -87,7 +87,7 @@ Tokens without the scope are unaffected, and leaving the setting empty gives eve
 The factory does not refresh these tokens: whatever is provisioned onto the node is used until it expires, and the node then needs a new one from somewhere.
 Because validation is offline (see [Revocation](#revocation)), the token's Auth0 lifetime is the entire exposure window for a credential lifted off a node, so choose it deliberately rather than taking the tenant default.
 
-A [self-issued pull token](#api-tokens) is the alternative: the factory signs and tracks it, so it can be listed and revoked, which an Auth0 token cannot.
+A [stored self-issued `image:read` token](#api-tokens) is the alternative: the factory signs and tracks it, so it can be listed and revoked, which an Auth0 token cannot.
 
 A machine-scoped token also cannot mint an [API token](#api-tokens), since `POST /tokens` is not an artifact fetch.
 A deployment that both provisions nodes and hands out download links needs two clients: one carrying the machine scope, one without it.
@@ -144,7 +144,7 @@ Those remain usable until they expire; keep token lifetimes short if that matter
 
 The same applies to an [API token](#api-tokens) minted from a JWT.
 It stays valid for its own lifetime regardless of what happens to the JWT it was obtained with.
-A [stored](#stored-and-unstored-tokens) token can at least be taken back explicitly; an unstored one cannot, which is what caps its lifetime at `authentication.tokens.ttl.unstoredMax`.
+A [stored](#stored-and-ephemeral-tokens) token can at least be taken back explicitly; an ephemeral one cannot, which is why `authentication.tokens.ttl.ephemeral` gives it a shorter lifetime policy.
 
 ## Ownership
 
@@ -162,37 +162,40 @@ Neither is reachable in an authenticated deployment; each identity creates its o
 
 ## API tokens
 
-A API token is a JWT the factory issues and verifies with its own key, rather than one obtained from the configured provider.
+An API token is a JWT the factory issues and verifies with its own key, rather than one obtained from the configured provider.
 What it may do is decided by the **scopes** it carries, not by the endpoint that minted it.
 
-There is one token type, one signing key and one JWKS.
+There is one token type, one active signing key and one JWKS containing every configured verification key.
 A short-lived download link and a year-long node credential are the same credential with different scopes, lifetimes and storage.
 
 ### Scopes
 
-| Scope       | Authenticates                                                             |
-| ----------- | ------------------------------------------------------------------------- |
-| `download`  | `GET`/`HEAD` under `/image/`, and `GET` under `/pxe/`                     |
-| `pull`      | `GET`/`HEAD` under `/image/`, and `GET`/`HEAD` on the `/v2/` OCI registry |
-| `schematic` | `POST /schematics`, and `GET`/`HEAD` under `/schematics/`                 |
-| `token`     | the `/tokens` routes                                                      |
-| `admin`     | the `/tokens` routes                                                      |
+Scopes are resource-first, atomic capabilities.
+The factory recognizes exactly these values:
 
-One table in the factory defines these route sets, and the Auth0 [machine scope](#machine-credentials) is checked against the `pull` row of it, so a machine credential and a self-issued pull token reach exactly the same surface.
+| Scope | Authenticates |
+| --- | --- |
+| `image:read` | generated image downloads, PXE scripts and generated installer OCI pulls |
+| `source:pull` | proxied upstream/source OCI pulls under `/v2/siderolabs/` |
+| `schematic:create` | `POST /schematics` |
+| `schematic:read` | `GET` and `HEAD` on schematic definitions |
+| `report:read` | `GET` and `HEAD` on SPDX, VEX and vulnerability reports |
+| `token:issue` | `POST /tokens` |
+| `token:read` | `GET /tokens` |
+| `token:revoke` | `POST /tokens/:id/revoke` |
 
-`pull` deliberately excludes `/pxe/`.
-A PXE script exposes the kernel command line a schematic produces, and so the extensions and kernel arguments it was built from; a credential sitting on a node should not be able to read that.
-It also excludes `/schematics/`, for the same reason: `schematic` is the scope for a build pipeline, not for a node.
+The route map is code-defined and is the single source of truth for self-issued credentials and Auth0 machine credentials.
+A machine credential receives `image:read`: it may retrieve generated products, including PXE and generated installer images, but it cannot pull proxied source images or inspect schematic definitions.
 
-`schematic` covers reading as well as creating, since an endpoint that mints an ID and then refuses to return what is behind it is not usable.
-Reads are ownership-enforced like any other request, so the scope never reaches another organization's schematics.
+Scopes do not imply one another.
+`schematic:create` does not grant `schematic:read`, and `token:issue` does not grant listing or revocation.
+A token carrying several scopes reaches the union of their routes.
+Ownership remains a separate mandatory check, so permission to read a schematic-derived resource never grants access to another subject's resources.
 
-A token may carry more than one scope, in which case it reaches the union of their routes and takes the tightest lifetime bound of any of them.
+A token's lifetime and supported transports follow whether it is stored, not which scopes it carries.
+See [Stored and ephemeral tokens](#stored-and-ephemeral-tokens).
 
-Which transports a token may arrive on, and whether it can be listed and revoked, are not scope properties: they follow from whether the factory records it.
-See [Stored and unstored tokens](#stored-and-unstored-tokens).
-
-### Stored and unstored tokens
+### Stored and ephemeral tokens
 
 Every token says, in the JWT itself, whether the factory keeps a record of it.
 That is the `stored` claim, set once when the token is minted and never re-derived afterwards.
@@ -201,74 +204,64 @@ A **stored** token is written to the per-org index.
 Presence in that index is what keeps it valid, which is what makes it revocable, and it is what `GET /tokens` lists.
 It needs a `name`, because the name is what an operator picks it out of that list by, and it counts against `authentication.tokens.maxPerOrg`.
 
-An **unstored** token is a signed string and nothing else.
+An **ephemeral** token is a signed string and nothing else.
 Nothing records it, so it cannot be listed or revoked; expiry is the only way it leaves circulation.
 It needs no name, costs no registry write, and it is the only kind read from a [`?token=` query parameter](#the-token-query-parameter).
 
-Because the only way to withdraw an unstored token is to wait, lifetime and storage are tied together at issue time:
+Because the only way to withdraw an ephemeral token is to wait, stored and ephemeral tokens have separate lifetime policies.
+`authentication.tokens.ttl.stored` defaults to one year with a one-year maximum; `authentication.tokens.ttl.ephemeral` defaults to five minutes with an eight-hour maximum.
+The caller still chooses storage explicitly, but cannot request a lifetime outside the selected policy.
 
-| Requested lifetime                                   | May be issued            |
-| ---------------------------------------------------- | ------------------------ |
-| below `authentication.tokens.ttl.storedMin` (`1h`)   | unstored only            |
-| above `authentication.tokens.ttl.unstoredMax` (`8h`) | stored only              |
-| in between                                           | either, the caller picks |
+On the verification path the claim decides the work: an ephemeral token is accepted on its signature and expiry alone, and a stored one is looked up directly by its deterministic registry tag.
+That makes a create or revoke visible to every replica immediately without listing every organization's tokens.
 
-So a five-minute download link cannot be recorded, a year-long node credential cannot escape revocation, and neither rule depends on which scopes the token carries.
+### Delegation and the bootstrap credential
 
-On the verification path the claim decides the work: an unstored token is accepted on its signature and expiry alone, and a stored one is additionally looked up in the index, so a revoked token stops working without every download paying for a registry read.
+Executable capabilities and delegation authority are separate JWT claims:
 
-### The `token` and `admin` scopes
+- `scope` says what this credential may do itself;
+- `issuable_scopes` says what capabilities it may place in a child credential;
+- `any_subject` is independent cross-subject authority carried only by the CLI bootstrap credential.
 
-`token` is the one scope that hands out authority, so it is attenuating.
-A caller authenticated **by an API token** may mint a token only within these two rules:
+A token authenticated request to `POST /tokens` must carry `token:issue`.
+Both the child's executable scopes and its delegation ceiling must be subsets of the parent's `issuable_scopes`:
 
-- It may not grant a scope it does not hold itself.
-  A token carrying `token` and `pull` can mint pull tokens, and nothing else.
-- It may never grant `token`, even though it holds it.
+```text
+child.scope           ⊆ parent.issuable_scopes
+child.issuable_scopes ⊆ parent.issuable_scopes
+```
 
-The second rule is what bounds the damage.
-Without it a leaked minting token could mint a fresh minting token before anyone noticed, and revoking the original would not reach the successor; with it, every token a minting token produces is a leaf, and revoking the minting token ends the chain.
+This supports explicitly bounded delegation without conflating it with the caller's own capabilities.
+A parent may issue a leaf token by omitting `issuable_scopes`, or an attenuated delegating token by supplying a smaller ceiling.
+Unknown values fail closed.
+The API cannot grant `any_subject`, even when the caller has it.
 
-Neither rule applies to a caller holding a full provider credential — an htpasswd user or an Auth0 client — which carries no scopes and can mint anything.
-That is the credential a person uses in the UI.
+A full htpasswd or interactive Auth0 credential has no signed delegation claim; the server treats it as authorized to issue the current code-defined catalog for its own identity.
+This authority is evaluated at request time and is not a durable wildcard in a JWT.
 
-A `403` with `the authenticating token may not grant these scopes` is one of these rules firing.
+The `admin` scope no longer exists.
+Cross-subject provisioning uses the CLI-only bootstrap credential issued by the `admin-token` subcommand.
+That credential has token lifecycle capabilities, an explicit snapshot of the current catalog in `issuable_scopes`, and `any_subject=true`.
+It is never stored, cannot issue another credential with `any_subject`, and cannot be minted through HTTP.
 
-`admin` is the exception to the first rule and the bootstrap credential for the second.
-It reaches the same routes as `token`, and may hand out `token`, which nothing else can, along with any other scope it does not itself hold.
-It may not hand out `admin`, not even to a caller already holding it, so a leaked admin token cannot mint a successor that outlives it.
-
-It is not mintable over HTTP at all.
-`POST /tokens` rejects the scope for every caller, a full htpasswd or Auth0 credential included, with a `400`.
-The only thing that issues one is the [`admin-token` subcommand](#minting-an-admin-token).
-
-An admin token is also the only credential that may mint for an identity other than its own; see [Minting for another identity](#minting-for-another-identity).
-
-An admin token is never recorded, which means nothing can revoke it.
-That is deliberate, and it is the reason for the other limits on it: it cannot mint another admin token, it is refused in a `?token=` query parameter, and its lifetime is the only bound on a leak.
-Rotating `authentication.tokens.keyPath` retires one early, at the cost of invalidating every other self-issued token too.
-Keep it offline, and give it the shortest lifetime the deployment can work with.
-
-### Minting an admin token
+### Minting a bootstrap credential
 
 ```shell
 image-factory admin-token --config /etc/image-factory/config.yaml --subject org_abc123
 eyJ...
 ```
 
-The command exists in Enterprise builds only, since it is API token management that a community build registers no routes for.
-`image-factory --help` lists the commands a build has, and a community build refuses this one with `unknown command "admin-token"`.
+The command exists in Enterprise builds only.
+The token is written to stdout, while human-readable diagnostics go to stderr, so `> token` leaves a usable credential file.
 
-The token goes to stdout and everything a human should read goes to stderr, so `> token` leaves a usable file.
+`--subject` is required and establishes the bootstrap credential's own identity.
+`--ttl` must fit `authentication.tokens.ttl.bootstrap`; this is a dedicated CLI-only lifetime policy.
+`authentication.tokens.keyPaths` must contain an active private key, because an in-memory key generated by another process would not match the running replicas.
 
-`--subject` is required and is the identity the token authenticates as, an `org_id` under Auth0 or a username under htpasswd.
-Every token minted with it belongs to that identity, so it decides which organization the credential can act for.
-
-`--ttl` requests a lifetime within `authentication.tokens.ttl.admin`, which defaults to 90 days and allows up to 10 years.
-`authentication.tokens.unstoredMax` does not apply: that cap is for a caller who declined a record the factory would have kept, and `admin` never had that choice.
-
-`authentication.tokens.keyPath` has to be set.
-Without it the factory generates a signing key at startup, so the subcommand would print a token signed with a key no running replica holds.
+The bootstrap credential is intentionally exceptional and ephemeral.
+Removing its signing key from the verification list retires it early, along with every other token signed by that key.
+Merely moving a new key to the first position does not invalidate it while its old key remains configured for verification.
+Keep it offline and use the shortest practical lifetime.
 
 ### Minting one
 
@@ -277,8 +270,8 @@ Without it the factory generates a signing key at startup, so the subcommand wou
 ```shell
 curl -s -X POST -H "Authorization: Bearer $TOKEN" https://factory.example.com/tokens \
   -H 'Content-Type: application/json' \
-  -d '{"name":"rack-3","scopes":["pull"],"ttl":"8760h"}'
-{"id":"0d1c...","name":"rack-3","scopes":["pull"],"token":"eyJ...","org_id":"org_abc123","created_at":"...","expires_at":"..."}
+  -d '{"name":"rack-3","scopes":["image:read"],"ttl":"8760h"}'
+{"id":"0d1c...","name":"rack-3","scopes":["image:read"],"issuable_scopes":[],"token":"eyJ...","org_id":"org_abc123","created_at":"...","expires_at":"...","stored":true}
 ```
 
 `token` is shown exactly once.
@@ -291,19 +284,21 @@ A download link asks for the other kind:
 ```shell
 curl -s -X POST -H "Authorization: Bearer $TOKEN" https://factory.example.com/tokens \
   -H 'Content-Type: application/json' \
-  -d '{"scopes":["download"],"stored":false,"ttl":"1h"}'
+  -d '{"scopes":["image:read"],"stored":false,"ttl":"1h"}'
 ```
 
-The `/ui/tokens` page mints stored tokens only: name the token, tick the permissions it should carry, optionally set a lifetime, and copy the result.
-The lifetime field takes the same Go duration the `ttl` field does, and leaving it empty takes the server default.
+The `/ui/tokens` page mints stored tokens only: name the token, select its executable permissions, optionally select a separate delegation ceiling, set a lifetime, and copy the result.
+Delegation controls are shown only when `token:issue` is selected.
+The lifetime field takes the same Go duration as `ttl`; leaving it empty uses the server default.
 The listing shows how long each token has left, with the exact expiry on hover.
-An unstored token has no name and never appears in that list, so there would be nothing for the page to show afterwards; the API is where those are minted.
+An ephemeral token has no name and never appears in that list, so there would be nothing for the page to show afterwards; the API is where those are minted.
 The result is shown with the identity it authenticates as, `org_id` or the username under htpasswd, because that is the registry username the token pairs with as the password.
-A token carrying `pull` is additionally offered as a `RegistryAuthConfig` machine config patch ready to paste into a Talos node.
+A token carrying `image:read` is additionally offered as a `RegistryAuthConfig` machine config patch ready to paste into a Talos node.
 
-`ttl` is optional and must fall within the bounds configured for the requested scopes, and within the [storage bounds](#stored-and-unstored-tokens).
-Omitting it takes `authentication.tokens.ttl.<scope>.default`, pulled into whichever window `stored` leaves.
-An unstored `pull` token therefore defaults to `unstoredMax` rather than a year, and a stored `download` token to `storedMin` rather than five minutes.
+`ttl` is optional and must fall within `authentication.tokens.ttl.stored` or `.ephemeral`, selected by the `stored` field.
+Omitting it takes that policy's default.
+Scopes do not shorten the lifetime.
+A long-lived, revocable Omni credential may combine only the atomic capabilities its workflow needs.
 
 `name` is required only for a stored token, because the name is what an operator picks it out of the list by.
 
@@ -312,18 +307,18 @@ Ownership is then enforced the same way it is for any other request, which means
 
 ### Minting for another identity
 
-`POST /tokens` normally mints for the caller: the subject of the new token is the identity that authenticated the request, and no field says otherwise.
-A `subject` field overrides that, and only an admin token may send it.
+`POST /tokens` normally mints for the caller: the subject of the new token is the identity that authenticated the request.
+A `subject` field overrides that, and only a CLI bootstrap credential carrying `any_subject` may send it.
 
 ```shell
-curl -s -X POST -H "Authorization: Bearer $ADMIN_TOKEN" https://factory.example.com/tokens \
+curl -s -X POST -H "Authorization: Bearer $BOOTSTRAP_TOKEN" https://factory.example.com/tokens \
   -H 'Content-Type: application/json' \
-  -d '{"name":"rack-3","scopes":["pull"],"subject":"org_abc123"}'
+  -d '{"name":"rack-3","scopes":["image:read"],"subject":"org_abc123"}'
 ```
 
 The minted token belongs to `org_abc123` in every sense that matters: it authenticates as that identity, ownership checks resolve against it, the record lands in that organization's index, it counts against that organization's `maxPerOrg`, and the response reports it as `org_id`.
 
-Anything other than an admin token is refused with `403` and `only an admin token may mint for another identity`.
+Anything other than the bootstrap credential is refused with `403` and `only a bootstrap credential may mint for another identity`.
 That includes a full htpasswd or Auth0 credential, which is otherwise unrestricted in what it may mint.
 The asymmetry is deliberate: a provider credential carries authority over its own identity, and naming another identity reaches across tenants instead.
 Naming your own identity is not a cross-tenant mint, so it is allowed and does nothing.
@@ -332,7 +327,7 @@ Naming your own identity is not a cross-tenant mint, so it is allowed and does n
 It ends up in the JWT, in the token index and in every audit record the minted token produces, so whitespace and control characters are refused rather than escaped.
 
 One asymmetry to plan around: minting is cross-tenant, listing and revocation are not.
-`GET /tokens` and `POST /tokens/:id/revoke` still act on the caller's own identity, so a token an admin minted into another organization is revoked by a credential belonging to that organization, not by the admin token that created it.
+`GET /tokens` and `POST /tokens/:id/revoke` still act on the caller's own identity, so a token bootstrapped into another organization is revoked by a credential belonging to that organization, not by the bootstrap credential that created it.
 
 ### The `?token=` query parameter
 
@@ -340,16 +335,16 @@ The query string is for callers that cannot set a header: a browser, an applianc
 
 - Its value is an API token, and nothing else.
   An Auth0 JWT or an htpasswd password is not one and does not work here.
-- Only an [unstored](#stored-and-unstored-tokens) token is read from the query string.
-  A stored one is rejected there and must use the header: query strings are recorded by proxy and CDN access logs, which is survivable for the hours an unstored token can live and not for the year a stored one can.
-- A token carrying `token` or `admin` is refused there whatever its lifetime.
-  A minting credential in an access log is a minting credential leaked, and no expiry short enough to fix that is long enough to be useful.
-  Every other scope may travel this way when the token is unstored, which in practice means `download`, since that is the scope a URL needs.
+- Only an [ephemeral](#stored-and-ephemeral-tokens) token is read from the query string.
+  A stored one is rejected there and must use the header: query strings are recorded by proxy and CDN access logs, which is survivable for the hours an ephemeral token can live and not for the year a stored one can.
+- A token carrying any token-management capability (`token:issue`, `token:read` or `token:revoke`) is refused there whatever its lifetime.
+  Such credentials do not belong in access logs.
+  Other ephemeral scopes may travel this way; in practice `image:read` is the capability used for download and PXE URLs.
 - It is read only on `GET` and `HEAD`, so it never authenticates a write.
 - On `/pxe/` the same token is forwarded into the kernel, initramfs and UKI URLs of the generated script, so an iPXE boot needs no credential of its own.
   This happens whichever transport the token arrived on, since the URL is the only one iPXE has.
   Nothing is minted there: the script expires with the token it was fetched with, and re-fetching the script with an expiring token cannot extend that lifetime.
-  A boot fetches its assets seconds after the script, so the `download` default of `5m` covers it; request a longer lifetime for a script that is kept and reused, up to `authentication.tokens.ttl.unstoredMax`.
+  A boot fetches its assets seconds after the script, so the ephemeral-token default of `5m` covers it; request a longer lifetime for a script that is kept and reused, up to `authentication.tokens.ttl.ephemeral.max`.
 - It is checked before the header.
   A valid token authenticates the request on its own; a missing, expired or malformed one falls back to the header, so a request carrying only a bad token gets the ordinary `401` rather than a distinct error.
 
@@ -360,22 +355,42 @@ Treat such a URL as the credential it is.
 Stored tokens are recorded in a per-org index kept in the OCI repository at `authentication.tokens.storage`.
 Presence in that index is what keeps such a token valid, so `POST /tokens/:id/revoke` takes it out of circulation by removing the record.
 
-Revocation is not instant.
-Each replica reads the index through a cache, so a revoked token keeps working for up to `authentication.tokens.verificationCacheRefreshInterval` (`5m` by default) on replicas that have not refreshed yet.
+Revocation is immediate after the backing registry accepts the tombstone.
+Each replica verifies a stored token by reading its deterministic tag, so it does not wait for an organization-wide listing cache to refresh.
 
-`authentication.tokens.maxPerOrg` (`10` by default) caps how many recorded tokens an organization may hold at once; a create beyond it is `409`.
+`authentication.tokens.maxPerOrg` (`10` by default) caps how many unexpired recorded tokens an organization may hold at once; a create beyond it is `409`.
+Expired records are omitted from the list and no longer count against the cap.
 
-Unstored tokens do not appear in a listing, cannot be revoked and do not count against the cap.
-Indexing them would mean a registry write per download link, to take back a credential that expires in hours anyway.
-That is why the factory refuses to record anything shorter than `authentication.tokens.ttl.storedMin`.
+Ephemeral tokens do not appear in a listing, cannot be revoked and do not count against the cap.
+Indexing them would mean a registry write per download link, so they use the deliberately short `authentication.tokens.ttl.ephemeral` policy.
 
 ### Signing key
 
-`authentication.tokens.keyPath` points at a PEM-encoded ECDSA P-256 private key, in either SEC1 or PKCS#8 form.
-One key signs every scope, and its public half is served unauthenticated at `/.well-known/jwks.json` so that a proxy in front of the factory can verify a token without holding the private key.
+`authentication.tokens.keyPaths` is an ordered list of PEM files.
+The first entry must contain an ECDSA P-256 private key, in either SEC1 or PKCS#8 form, and is the only key used to mint new tokens.
+Later entries are verification-only and may contain an ECDSA P-256 private key, PKIX public key or X.509 certificate.
+The public half of every configured key is served, in the same order, at `/.well-known/jwks.json` so that a proxy in front of the factory can verify tokens without holding private keys.
+Duplicate public keys are rejected at startup.
+An X.509 certificate is treated as an explicitly trusted public-key container; its validity period and chain are not evaluated.
 
-Leaving it empty generates a key pair at startup, which works for a single replica only: a token minted by one replica fails verification on every other, so requests fail intermittently behind a load balancer.
-Configure the key path for any deployment running more than one replica.
+```yaml
+authentication:
+  tokens:
+    keyPaths:
+      - /etc/image-factory/token-active.key
+      - /etc/image-factory/token-previous.crt
+```
+
+Leaving the list empty generates a key pair at startup, which works for a single replica only: a token minted by one replica fails verification on every other, so requests fail intermittently behind a load balancer.
+Configure the key paths for any deployment running more than one replica.
+
+Rotate keys in two deployments so every replica can verify both keys before any replica starts signing with the new one:
+
+1. Append the new key or certificate after the current active key and roll out that verification set everywhere.
+2. Move the new private key to the first position, keep the old key later in the list, and roll out again.
+3. Remove the old verification key only after every token it signed has expired, or when intentionally invalidating those tokens.
+
+Prepending a new key in a single rolling deployment is unsafe: updated replicas can mint tokens that replicas still running the previous configuration cannot verify.
 
 Verification allows 30s of clock leeway.
 
@@ -386,12 +401,13 @@ They are now one token that says what it is, which changes this much for an exis
 
 - **Tokens issued by an earlier version stop working.** They carry either the old audience or no `stored` claim, so the factory does not accept them.
 Re-issue them from `/ui/tokens`; the machine config patch the page produces is unchanged.
-- **The `/node-tokens` and `/download-token` routes are gone.** Use `POST /tokens` with `"scopes": ["pull"]` for the first and `{"scopes":["download"],"stored":false}` for the second.
-Only the factory's own UI and Go client called them, and both moved.
+- **The `/node-tokens` and `/download-token` routes are gone.** Use `POST /tokens` with `"scopes": ["image:read"]`; set `stored:false` for a short-lived URL credential.
+  The unreleased intermediate scope names `download`, `pull`, `schematic`, `token` and `admin` are also gone.
+  Reissue credentials with the atomic resource-first catalog above; there are no compatibility aliases.
 - **The configuration moved.** `authentication.downloadTokenKeyPath`, `authentication.downloadTokenTTL` and `enterprise.nodeTokens` are gone, replaced by `authentication.tokens`.
 The old keys are rejected at startup rather than ignored, so a stale config fails loudly instead of quietly generating a throwaway signing key.
-- **One key signs every scope.** If the two key paths were set to different files, pick one and point `authentication.tokens.keyPath` at it.
-- **`authentication.tokens.ttl.storedMin` and `.unstoredMax` are new**, and decide which lifetimes may be recorded; see [Stored and unstored tokens](#stored-and-unstored-tokens).
+- **One active key signs every scope.** Put the selected private key first in `authentication.tokens.keyPaths`; retain the other legacy key later in the list only while its tokens must continue to verify.
+- **Token lifetimes now follow storage rather than scope.** Configure `authentication.tokens.ttl.stored`, `.ephemeral` and `.bootstrap`; see [Stored and ephemeral tokens](#stored-and-ephemeral-tokens).
 - **`POST /tokens` takes `stored`**, and its response reports `stored` where it used to report `revocable`.
 
 The token index also moved, to `authentication.tokens.storage` (`ghcr.io/siderolabs/image-factory/tokens` by default).

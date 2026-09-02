@@ -430,29 +430,59 @@
 - id: tokens.create.permissions_label
   translation: "Autorisations"
 
-- id: tokens.create.permission_pull
-  translation: "Extraire des images"
+- id: tokens.create.permission_image_read
+  translation: "image:read"
 
-- id: tokens.create.permission_pull_help
-  translation: "Un nœud Talos l'utilise pour extraire des installateurs."
+- id: tokens.create.permission_image_read_help
+  translation: "Lire les images générées, les scripts PXE et les images OCI d'installation générées."
 
-- id: tokens.create.permission_download
-  translation: "Télécharger des images"
+- id: tokens.create.permission_source_pull
+  translation: "source:pull"
 
-- id: tokens.create.permission_download_help
-  translation: "Récupère des images et des scripts PXE avec l'en-tête Authorization. Un lien de téléchargement portant le jeton dans son URL est autre chose, et c'est l'API qui les émet."
+- id: tokens.create.permission_source_pull_help
+  translation: "Extraire les images OCI sources mises en proxy."
 
-- id: tokens.create.permission_schematic
-  translation: "Créer des schémas"
+- id: tokens.create.permission_schematic_create
+  translation: "schematic:create"
 
-- id: tokens.create.permission_schematic_help
-  translation: "Un pipeline de build l'utilise pour créer des schémas et relire les siens."
+- id: tokens.create.permission_schematic_create_help
+  translation: "Créer des schémas immuables."
 
-- id: tokens.create.permission_token
-  translation: "Gérer les jetons"
+- id: tokens.create.permission_schematic_read
+  translation: "schematic:read"
 
-- id: tokens.create.permission_token_help
-  translation: "Crée, liste et révoque des jetons. Un jeton ne peut transmettre que les autorisations qu'il possède déjà, et jamais celle-ci."
+- id: tokens.create.permission_schematic_read_help
+  translation: "Lire les schémas appartenant à cette identité."
+
+- id: tokens.create.permission_report_read
+  translation: "report:read"
+
+- id: tokens.create.permission_report_read_help
+  translation: "Lire les rapports de sécurité SPDX et VEX."
+
+- id: tokens.create.permission_token_issue
+  translation: "token:issue"
+
+- id: tokens.create.permission_token_issue_help
+  translation: "Émettre des jetons API dans une limite de délégation séparée."
+
+- id: tokens.create.permission_token_read
+  translation: "token:read"
+
+- id: tokens.create.permission_token_read_help
+  translation: "Lister les jetons stockés actifs."
+
+- id: tokens.create.permission_token_revoke
+  translation: "token:revoke"
+
+- id: tokens.create.permission_token_revoke_help
+  translation: "Révoquer des jetons stockés."
+
+- id: tokens.create.delegation_label
+  translation: "Limite de délégation"
+
+- id: tokens.create.delegation_help
+  translation: "Ces autorisations peuvent être accordées aux jetons enfants. Elles ne deviennent pas des autorisations exécutables de ce jeton."
 
 - id: tokens.create.permissions_required
   translation: "Sélectionnez au moins une autorisation."

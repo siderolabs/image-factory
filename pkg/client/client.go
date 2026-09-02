@@ -38,11 +38,12 @@ type OverlayInfo struct {
 
 // TokenInfo defines an API token list response item.
 type TokenInfo struct {
-	CreatedAt time.Time `json:"created_at"`
-	ExpiresAt time.Time `json:"expires_at"`
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Scopes    []string  `json:"scopes"`
+	CreatedAt      time.Time `json:"created_at"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Scopes         []string  `json:"scopes"`
+	IssuableScopes []string  `json:"issuable_scopes,omitempty"`
 }
 
 // Client is the Image Factory HTTP API client.
@@ -187,7 +188,7 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 	return versions, nil
 }
 
-// DownloadToken requests a short-lived JWT token carrying the download scope, scoped to the
+// DownloadToken requests a short-lived JWT token carrying image:read, scoped to the
 // authenticated caller's identity. The token can be appended as ?token= to any image download
 // URL, and to a PXE script URL, which forwards it into the asset URLs of the script; one token
 // covers all schematics owned by the caller.
@@ -196,9 +197,9 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 // configured bounds; zero or less takes the server default.
 //
 // The token is not stored, which is what lets it travel in a URL; its lifetime is bounded by
-// the server's authentication.tokens.ttl.unstoredMax.
+// the server's authentication.tokens.ttl.ephemeral policy.
 func (c *Client) DownloadToken(ctx context.Context, ttl time.Duration) (string, error) {
-	_, token, err := c.TokenCreate(ctx, "", []string{"download"}, false, ttl)
+	_, token, err := c.TokenCreate(ctx, "", []string{"image:read"}, false, ttl)
 
 	return token, err
 }
@@ -221,28 +222,46 @@ func (c *Client) TokenList(ctx context.Context) ([]TokenInfo, error) {
 //
 // A stored token is recorded by the factory, so it can be listed and revoked, requires a name
 // to be picked out of that list by, and counts against the per-org cap. A non-stored one is
-// not recorded, needs no name, may travel in a `?token=` query parameter, and is capped at the
-// server's authentication.tokens.ttl.unstoredMax since expiry is the only way to retire it.
+// not recorded, needs no name, may travel in a `?token=` query parameter, and follows the
+// server's authentication.tokens.ttl.ephemeral policy since expiry is the only way to retire it.
 func (c *Client) TokenCreate(ctx context.Context, name string, scopes []string, stored bool, ttl time.Duration) (id, token string, err error) {
-	return c.TokenCreateFor(ctx, "", name, scopes, stored, ttl)
+	return c.TokenCreateWithDelegation(ctx, name, scopes, nil, stored, ttl)
+}
+
+// TokenCreateWithDelegation mints a token for the current identity and independently bounds the
+// scopes it may issue to child credentials.
+func (c *Client) TokenCreateWithDelegation(
+	ctx context.Context, name string, scopes, issuableScopes []string, stored bool, ttl time.Duration,
+) (id, token string, err error) {
+	return c.TokenCreateForWithDelegation(ctx, "", name, scopes, issuableScopes, stored, ttl)
 }
 
 // TokenCreateFor mints a token belonging to subject rather than to the caller. An empty subject
 // means the caller's own identity, which is what TokenCreate asks for.
 //
 // Minting for another identity reaches across tenants, so the server allows it only when the
-// request is authenticated by an admin token; anything else is refused with 403. An admin token
-// comes from the factory binary's `admin-token` subcommand, never from this API.
+// request is authenticated by the CLI bootstrap credential; anything else is refused with 403.
+// The credential comes from the factory binary's `admin-token` subcommand, never from this API.
 func (c *Client) TokenCreateFor(
 	ctx context.Context, subject, name string, scopes []string, stored bool, ttl time.Duration,
 ) (id, token string, err error) {
+	return c.TokenCreateForWithDelegation(ctx, subject, name, scopes, nil, stored, ttl)
+}
+
+// TokenCreateForWithDelegation mints a token and independently bounds the atomic scopes it may
+// issue to child credentials. The server requires token:issue in scopes when issuableScopes is
+// non-empty and applies attenuation against the authenticating token's delegation ceiling.
+func (c *Client) TokenCreateForWithDelegation(
+	ctx context.Context, subject, name string, scopes, issuableScopes []string, stored bool, ttl time.Duration,
+) (id, token string, err error) {
 	request := struct {
-		Name    string   `json:"name"`
-		Subject string   `json:"subject,omitempty"`
-		TTL     string   `json:"ttl,omitempty"`
-		Scopes  []string `json:"scopes"`
-		Stored  bool     `json:"stored"`
-	}{Name: name, Subject: subject, Scopes: scopes, Stored: stored}
+		Name           string   `json:"name"`
+		Subject        string   `json:"subject,omitempty"`
+		TTL            string   `json:"ttl,omitempty"`
+		Scopes         []string `json:"scopes"`
+		IssuableScopes []string `json:"issuable_scopes,omitempty"`
+		Stored         bool     `json:"stored"`
+	}{Name: name, Subject: subject, Scopes: scopes, IssuableScopes: issuableScopes, Stored: stored}
 
 	if ttl > 0 {
 		request.TTL = ttl.String()

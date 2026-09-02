@@ -14,6 +14,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -29,7 +30,7 @@ const maxCreateBodyBytes = 1 << 12
 
 // TokenManager is the subset of Manager used by the HTTP frontends.
 type TokenManager interface {
-	Create(ctx context.Context, orgID, name string, scopes []apitoken.Scope, stored bool, requestedTTL time.Duration) (Record, string, error)
+	Create(ctx context.Context, orgID, name string, scopes []apitoken.Scope, delegation apitoken.Delegation, stored bool, requestedTTL time.Duration) (Record, string, error)
 	List(ctx context.Context, orgID string) ([]Record, error)
 	Revoke(ctx context.Context, orgID, id string) error
 }
@@ -117,20 +118,22 @@ type createRequest struct {
 	Name string `json:"name"`
 
 	// Subject is the identity the minted token belongs to. Empty means the caller's own, which is
-	// all anything short of an admin token may ask for.
+	// all anything short of the CLI bootstrap credential may ask for.
 	Subject string `json:"subject"`
 
-	TTL    string   `json:"ttl"`
-	Scopes []string `json:"scopes"`
+	TTL            string   `json:"ttl"`
+	Scopes         []string `json:"scopes"`
+	IssuableScopes []string `json:"issuable_scopes"`
 }
 
 // createParams is an accepted create request.
 type createParams struct {
-	name    string
-	subject string
-	scopes  []apitoken.Scope
-	ttl     time.Duration
-	stored  bool
+	name           string
+	subject        string
+	scopes         []apitoken.Scope
+	issuableScopes []apitoken.Scope
+	ttl            time.Duration
+	stored         bool
 }
 
 // maxSubjectBytes bounds the identity a token may be minted for. It ends up in the JWT, in the
@@ -183,10 +186,20 @@ func (f *ListCreateFrontend) decodeCreateBody(r *http.Request) (params createPar
 		return createParams{}, err.Error()
 	}
 
-	// Refused for every caller, a full htpasswd or Auth0 credential included, so that no request
-	// can produce the credential that hands out minting authority.
 	if !apitoken.APIMintable(scopes) {
-		return createParams{}, `the "admin" scope cannot be minted over the API; use the image-factory admin-token subcommand`
+		return createParams{}, `the "scopes" list contains an unknown scope`
+	}
+
+	var issuableScopes []apitoken.Scope
+	if len(body.IssuableScopes) > 0 {
+		issuableScopes, err = apitoken.ParseScopes(strings.Join(body.IssuableScopes, " "))
+		if err != nil {
+			return createParams{}, err.Error()
+		}
+
+		if !slices.Contains(scopes, "token:issue") {
+			return createParams{}, `"issuable_scopes" requires "token:issue" in "scopes"`
+		}
 	}
 
 	stored := body.Stored == nil || *body.Stored
@@ -206,7 +219,14 @@ func (f *ListCreateFrontend) decodeCreateBody(r *http.Request) (params createPar
 		return createParams{}, `"subject" must be a single-line identity of at most 256 bytes`
 	}
 
-	return createParams{name: name, subject: subject, scopes: scopes, ttl: ttl, stored: stored}, ""
+	return createParams{
+		name:           name,
+		subject:        subject,
+		scopes:         scopes,
+		issuableScopes: issuableScopes,
+		ttl:            ttl,
+		stored:         stored,
+	}, ""
 }
 
 func (f *ListCreateFrontend) create(ctx context.Context, w http.ResponseWriter, r *http.Request, orgID string) error {
@@ -217,9 +237,10 @@ func (f *ListCreateFrontend) create(ctx context.Context, w http.ResponseWriter, 
 		return nil
 	}
 
-	callerScopes, viaToken := apitoken.ScopesFromContext(ctx)
+	callerClaims, viaToken := apitoken.ClaimsFromContext(ctx)
 
-	if viaToken && !apitoken.CanGrant(callerScopes, params.scopes) {
+	if viaToken && (!apitoken.CanGrant(callerClaims.IssuableScopes, params.scopes) ||
+		!apitoken.CanGrant(callerClaims.IssuableScopes, params.issuableScopes)) {
 		http.Error(w, "the authenticating token may not grant these scopes", http.StatusForbidden)
 
 		return nil
@@ -230,8 +251,8 @@ func (f *ListCreateFrontend) create(ctx context.Context, w http.ResponseWriter, 
 	subject := orgID
 
 	if params.subject != "" && params.subject != orgID {
-		if !viaToken || !apitoken.CanMintForOthers(callerScopes) {
-			http.Error(w, "only an admin token may mint for another identity", http.StatusForbidden)
+		if !viaToken || !callerClaims.AnySubject {
+			http.Error(w, "only a bootstrap credential may mint for another identity", http.StatusForbidden)
 
 			return nil
 		}
@@ -254,7 +275,9 @@ func (f *ListCreateFrontend) create(ctx context.Context, w http.ResponseWriter, 
 		}
 	}
 
-	record, token, err := f.manager.Create(ctx, subject, params.name, params.scopes, params.stored, params.ttl)
+	record, token, err := f.manager.Create(ctx, subject, params.name, params.scopes, apitoken.Delegation{
+		IssuableScopes: params.issuableScopes,
+	}, params.stored, params.ttl)
 	if err != nil {
 		if errors.Is(err, apitoken.ErrTTLOutOfRange) || errors.Is(err, apitoken.ErrUnknownScope) {
 			http.Error(w, err.Error(), http.StatusBadRequest)

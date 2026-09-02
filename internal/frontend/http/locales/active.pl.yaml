@@ -430,29 +430,59 @@
 - id: tokens.create.permissions_label
   translation: "Uprawnienia"
 
-- id: tokens.create.permission_pull
-  translation: "Pobieranie obrazów (pull)"
+- id: tokens.create.permission_image_read
+  translation: "image:read"
 
-- id: tokens.create.permission_pull_help
-  translation: "Węzeł Talos używa go do pobierania instalatorów."
+- id: tokens.create.permission_image_read_help
+  translation: "Odczytuje wygenerowane obrazy, skrypty PXE i obrazy OCI instalatorów."
 
-- id: tokens.create.permission_download
-  translation: "Pobieranie plików (download)"
+- id: tokens.create.permission_source_pull
+  translation: "source:pull"
 
-- id: tokens.create.permission_download_help
-  translation: "Pobiera obrazy i skrypty PXE z nagłówkiem Authorization. Link do pobrania z tokenem w adresie URL to co innego i tworzy je API."
+- id: tokens.create.permission_source_pull_help
+  translation: "Pobiera źródłowe obrazy OCI przez proxy."
 
-- id: tokens.create.permission_schematic
-  translation: "Tworzenie schematów"
+- id: tokens.create.permission_schematic_create
+  translation: "schematic:create"
 
-- id: tokens.create.permission_schematic_help
-  translation: "Potok budowania używa go do tworzenia schematów i odczytu własnych."
+- id: tokens.create.permission_schematic_create_help
+  translation: "Tworzy niezmienne schematy."
 
-- id: tokens.create.permission_token
-  translation: "Zarządzanie tokenami"
+- id: tokens.create.permission_schematic_read
+  translation: "schematic:read"
 
-- id: tokens.create.permission_token_help
-  translation: "Tworzy, wyświetla i odwołuje tokeny. Token może przekazać tylko te uprawnienia, które sam ma, i nigdy tego uprawnienia."
+- id: tokens.create.permission_schematic_read_help
+  translation: "Odczytuje schematy należące do tej tożsamości."
+
+- id: tokens.create.permission_report_read
+  translation: "report:read"
+
+- id: tokens.create.permission_report_read_help
+  translation: "Odczytuje raporty bezpieczeństwa SPDX i VEX."
+
+- id: tokens.create.permission_token_issue
+  translation: "token:issue"
+
+- id: tokens.create.permission_token_issue_help
+  translation: "Wydaje tokeny API w granicach osobnego limitu delegacji."
+
+- id: tokens.create.permission_token_read
+  translation: "token:read"
+
+- id: tokens.create.permission_token_read_help
+  translation: "Wyświetla aktywne zapisane tokeny."
+
+- id: tokens.create.permission_token_revoke
+  translation: "token:revoke"
+
+- id: tokens.create.permission_token_revoke_help
+  translation: "Odwołuje zapisane tokeny."
+
+- id: tokens.create.delegation_label
+  translation: "Limit delegacji"
+
+- id: tokens.create.delegation_help
+  translation: "Te uprawnienia można nadawać tokenom potomnym. Nie stają się one uprawnieniami wykonywalnymi tego tokenu."
 
 - id: tokens.create.permissions_required
   translation: "Wybierz co najmniej jedno uprawnienie."
