@@ -46,6 +46,21 @@ type TokenInfo struct {
 	IssuableScopes []string  `json:"issuable_scopes,omitempty"`
 }
 
+// Actor is a server-defined credential profile. The server expands it into executable and
+// issuable scopes; clients cannot override either scope set when selecting an actor.
+type Actor string
+
+const (
+	// ActorTalos can fetch generated images, PXE assets, and installer OCI artifacts.
+	ActorTalos Actor = "talos"
+	// ActorAutomation can operate schematics and reports and issue bounded Talos or Automation credentials.
+	ActorAutomation Actor = "automation"
+	// ActorOperator can operate schematics and reports, fetch generated products, and pull source artifacts.
+	ActorOperator Actor = "operator"
+	// ActorAdmin can manage credentials and issue every actor profile.
+	ActorAdmin Actor = "admin"
+)
+
 // Client is the Image Factory HTTP API client.
 type Client struct {
 	baseURL      *url.URL
@@ -199,7 +214,11 @@ func (c *Client) OverlaysVersions(ctx context.Context, talosVersion string) ([]O
 // The token is not stored, which is what lets it travel in a URL; its lifetime is bounded by
 // the server's authentication.tokens.ttl.ephemeral policy.
 func (c *Client) DownloadToken(ctx context.Context, ttl time.Duration) (string, error) {
-	_, token, err := c.TokenCreate(ctx, "", []string{"image:read"}, false, ttl)
+	_, token, err := c.TokenCreate(ctx, TokenCreateOptions{
+		Scopes:    []string{"image:read"},
+		TTL:       ttl,
+		Ephemeral: true,
+	})
 
 	return token, err
 }
@@ -217,54 +236,53 @@ func (c *Client) TokenList(ctx context.Context) ([]TokenInfo, error) {
 	return response.Tokens, nil
 }
 
-// TokenCreate mints a token under name carrying scopes, returning its ID and the token itself.
-// The token is only ever returned at creation time; it can't be retrieved again afterward.
+// TokenCreateOptions describes a credential to mint. Actor selects a fixed server-owned profile;
+// otherwise Scopes and IssuableScopes define the executable and delegation capabilities directly.
+// Subject is normally empty; only the CLI bootstrap credential may mint for another identity.
+// Credentials are stored and revocable by default; Ephemeral explicitly opts out.
+type TokenCreateOptions struct {
+	Name           string
+	Subject        string
+	Actor          Actor
+	Scopes         []string
+	IssuableScopes []string
+	TTL            time.Duration
+	Ephemeral      bool
+}
+
+// TokenCreate mints a credential, returning its ID and the credential itself. The credential is
+// only returned at creation time and cannot be retrieved afterward.
 //
-// A stored token is recorded by the factory, so it can be listed and revoked, requires a name
-// to be picked out of that list by, and counts against the per-org cap. A non-stored one is
-// not recorded, needs no name, may travel in a `?token=` query parameter, and follows the
-// server's authentication.tokens.ttl.ephemeral policy since expiry is the only way to retire it.
-func (c *Client) TokenCreate(ctx context.Context, name string, scopes []string, stored bool, ttl time.Duration) (id, token string, err error) {
-	return c.TokenCreateWithDelegation(ctx, name, scopes, nil, stored, ttl)
-}
+// A stored credential is recorded by the factory, so it can be listed and revoked, requires a
+// name, and counts against the per-org cap. A non-stored credential is retired only by expiry.
+// Actor cannot be combined with Scopes or IssuableScopes; the server expands actor profiles.
+func (c *Client) TokenCreate(ctx context.Context, opts TokenCreateOptions) (id, token string, err error) {
+	if opts.Actor != "" && (opts.Scopes != nil || opts.IssuableScopes != nil) {
+		return "", "", fmt.Errorf("actor cannot be combined with explicit scopes")
+	}
 
-// TokenCreateWithDelegation mints a token for the current identity and independently bounds the
-// scopes it may issue to child credentials.
-func (c *Client) TokenCreateWithDelegation(
-	ctx context.Context, name string, scopes, issuableScopes []string, stored bool, ttl time.Duration,
-) (id, token string, err error) {
-	return c.TokenCreateForWithDelegation(ctx, "", name, scopes, issuableScopes, stored, ttl)
-}
-
-// TokenCreateFor mints a token belonging to subject rather than to the caller. An empty subject
-// means the caller's own identity, which is what TokenCreate asks for.
-//
-// Minting for another identity reaches across tenants, so the server allows it only when the
-// request is authenticated by the CLI bootstrap credential; anything else is refused with 403.
-// The credential comes from the factory binary's `admin-token` subcommand, never from this API.
-func (c *Client) TokenCreateFor(
-	ctx context.Context, subject, name string, scopes []string, stored bool, ttl time.Duration,
-) (id, token string, err error) {
-	return c.TokenCreateForWithDelegation(ctx, subject, name, scopes, nil, stored, ttl)
-}
-
-// TokenCreateForWithDelegation mints a token and independently bounds the atomic scopes it may
-// issue to child credentials. The server requires token:issue in scopes when issuableScopes is
-// non-empty and applies attenuation against the authenticating token's delegation ceiling.
-func (c *Client) TokenCreateForWithDelegation(
-	ctx context.Context, subject, name string, scopes, issuableScopes []string, stored bool, ttl time.Duration,
-) (id, token string, err error) {
 	request := struct {
+		Stored         *bool    `json:"stored,omitempty"`
 		Name           string   `json:"name"`
 		Subject        string   `json:"subject,omitempty"`
+		Actor          Actor    `json:"actor,omitempty"`
 		TTL            string   `json:"ttl,omitempty"`
-		Scopes         []string `json:"scopes"`
+		Scopes         []string `json:"scopes,omitempty"`
 		IssuableScopes []string `json:"issuable_scopes,omitempty"`
-		Stored         bool     `json:"stored"`
-	}{Name: name, Subject: subject, Scopes: scopes, IssuableScopes: issuableScopes, Stored: stored}
+	}{
+		Name:           opts.Name,
+		Subject:        opts.Subject,
+		Actor:          opts.Actor,
+		Scopes:         opts.Scopes,
+		IssuableScopes: opts.IssuableScopes,
+	}
 
-	if ttl > 0 {
-		request.TTL = ttl.String()
+	if opts.Ephemeral {
+		request.Stored = new(false)
+	}
+
+	if opts.TTL > 0 {
+		request.TTL = opts.TTL.String()
 	}
 
 	body, err := json.Marshal(request)

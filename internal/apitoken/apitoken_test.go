@@ -557,6 +557,55 @@ func TestResourceFirstScopeCatalog(t *testing.T) {
 	}
 }
 
+func TestActorScopeProfiles(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, []string{"talos", "automation", "operator", "admin"}, apitoken.Actors())
+
+	for actor, expected := range map[string]struct {
+		scopes   []apitoken.Scope
+		issuable []apitoken.Scope
+	}{
+		"talos": {scopes: []apitoken.Scope{"image:read"}},
+		"automation": {
+			scopes:   []apitoken.Scope{"image:read", "report:read", "schematic:create", "schematic:read", "token:issue"},
+			issuable: []apitoken.Scope{"image:read", "report:read", "schematic:create", "schematic:read", "token:issue"},
+		},
+		"operator": {
+			scopes: []apitoken.Scope{"image:read", "report:read", "schematic:create", "schematic:read", "source:pull"},
+		},
+		"admin": {
+			scopes:   []apitoken.Scope{"image:read", "report:read", "schematic:create", "schematic:read", "source:pull", "token:issue", "token:read", "token:revoke"},
+			issuable: []apitoken.Scope{"image:read", "report:read", "schematic:create", "schematic:read", "source:pull", "token:issue", "token:read", "token:revoke"},
+		},
+	} {
+		t.Run(actor, func(t *testing.T) {
+			t.Parallel()
+
+			scopes, issuable, ok := apitoken.ScopesForActor(actor)
+			require.True(t, ok)
+			require.Equal(t, expected.scopes, scopes)
+			require.Equal(t, expected.issuable, issuable)
+
+			scopes[0] = "token:issue"
+
+			if len(issuable) > 0 {
+				issuable[0] = "token:revoke"
+			}
+
+			againScopes, againIssuable, ok := apitoken.ScopesForActor(actor)
+			require.True(t, ok)
+			require.Equal(t, expected.scopes, againScopes, "callers must not mutate code-owned actor scopes")
+			require.Equal(t, expected.issuable, againIssuable, "callers must not mutate code-owned actor issuance ceilings")
+		})
+	}
+
+	scopes, issuable, ok := apitoken.ScopesForActor("unknown")
+	require.False(t, ok)
+	require.Empty(t, scopes)
+	require.Empty(t, issuable)
+}
+
 func TestResourceFirstScopesAuthorizeDistinctResources(t *testing.T) {
 	t.Parallel()
 

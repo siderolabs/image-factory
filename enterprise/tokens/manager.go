@@ -11,18 +11,26 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/siderolabs/image-factory/internal/apitoken"
+	"github.com/siderolabs/image-factory/internal/ctxlog"
 )
 
 // Manager mints, tracks and verifies self-issued API tokens.
 type Manager struct {
+	logger  *zap.Logger
 	issuer  *apitoken.Issuer
 	storage *Storage
 }
 
 // NewManager creates a Manager from a token issuer and its backing storage.
-func NewManager(issuer *apitoken.Issuer, storage *Storage) *Manager {
-	return &Manager{issuer: issuer, storage: storage}
+func NewManager(logger *zap.Logger, issuer *apitoken.Issuer, storage *Storage) *Manager {
+	return &Manager{
+		logger:  logger.With(zap.String("component", "api-tokens")),
+		issuer:  issuer,
+		storage: storage,
+	}
 }
 
 // Create mints a token for orgID carrying scopes. A stored token is recorded in storage
@@ -65,9 +73,19 @@ func (m *Manager) Revoke(ctx context.Context, orgID, id string) error {
 
 // Verify reports the claims a bearer credential authenticates, or ok=false if it isn't a
 // currently valid API token. Satisfies enterprise.TokenVerifier.
+//
+// Every rejection is logged, because the caller falls back to the configured auth provider and
+// would otherwise report a plain credential failure for a request that never had one. The
+// credential itself is never logged.
 func (m *Manager) Verify(ctx context.Context, tokenStr string) (apitoken.Claims, bool) {
+	logger := ctxlog.Logger(ctx, m.logger)
+
 	claims, err := m.issuer.Verify(tokenStr)
 	if err != nil {
+		// Debug: the HTTP frontend offers every Basic password here, so an ordinary
+		// username/password login reaches this branch on every request.
+		logger.Debug("credential is not an API token", zap.Error(err))
+
 		return apitoken.Claims{}, false
 	}
 
@@ -76,7 +94,24 @@ func (m *Manager) Verify(ctx context.Context, tokenStr string) (apitoken.Claims,
 	}
 
 	valid, err := m.storage.Valid(ctx, claims.Subject, claims.ID)
-	if err != nil || !valid {
+	if err != nil {
+		logger.Warn(
+			"failed to look up stored API token",
+			zap.Error(err),
+			zap.String("sub", claims.Subject),
+			zap.String("jti", claims.ID),
+		)
+
+		return apitoken.Claims{}, false
+	}
+
+	if !valid {
+		logger.Warn(
+			"stored API token is revoked, expired or unknown",
+			zap.String("sub", claims.Subject),
+			zap.String("jti", claims.ID),
+		)
+
 		return apitoken.Claims{}, false
 	}
 

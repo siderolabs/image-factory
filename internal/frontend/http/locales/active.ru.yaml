@@ -395,7 +395,7 @@
   translation: "Главная"
 
 - id: tokens.description
-  translation: "API-токены — это учётные данные, которые фабрика выпускает сама. Каждый имеет только те разрешения, которые вы выберете при создании."
+  translation: "API-токены — это учётные данные, выпускаемые фабрикой. Выберите роль, которая будет использовать токен; фабрика назначит ей фиксированный минимальный набор разрешений."
 
 - id: tokens.table.name
   translation: "Имя"
@@ -424,65 +424,35 @@
 - id: tokens.create.ttl_help
   translation: "Длительность в формате Go, например 24h или 90m. Дни не являются единицей, поэтому пишите 720h вместо 30d. Оставьте пустым, чтобы использовать значение сервера по умолчанию."
 
-- id: tokens.create.permissions_label
-  translation: "Разрешения"
+- id: tokens.create.actor_label
+  translation: "Роль токена"
 
-- id: tokens.create.permission_image_read
-  translation: "image:read"
+- id: tokens.create.actor_talos
+  translation: "Talos"
 
-- id: tokens.create.permission_image_read_help
-  translation: "Читает созданные образы, PXE-скрипты и OCI-образы инсталляторов."
+- id: tokens.create.actor_talos_help
+  translation: "Загрузка созданных образов и PXE-скриптов, а также установщиков и других OCI-артефактов."
 
-- id: tokens.create.permission_source_pull
-  translation: "source:pull"
+- id: tokens.create.actor_automation
+  translation: "Автоматизация (Omni / Terraform)"
 
-- id: tokens.create.permission_source_pull_help
-  translation: "Загружает исходные OCI-образы через прокси."
+- id: tokens.create.actor_automation_help
+  translation: "Создание и чтение схем, загрузка созданных образов, чтение отчётов и выпуск ограниченных токенов для Talos или автоматизации."
 
-- id: tokens.create.permission_schematic_create
-  translation: "schematic:create"
+- id: tokens.create.actor_operator
+  translation: "Оператор"
 
-- id: tokens.create.permission_schematic_create_help
-  translation: "Создаёт неизменяемые схемы."
+- id: tokens.create.actor_operator_help
+  translation: "Работа с образами, схемами, прокси источников и отчётами. Без управления токенами."
 
-- id: tokens.create.permission_schematic_read
-  translation: "schematic:read"
+- id: tokens.create.actor_admin
+  translation: "Администратор"
 
-- id: tokens.create.permission_schematic_read_help
-  translation: "Читает схемы, принадлежащие этой учётной записи."
+- id: tokens.create.actor_admin_help
+  translation: "Права оператора, а также выпуск, просмотр и отзыв токенов. Может выпускать токены любого профиля."
 
-- id: tokens.create.permission_report_read
-  translation: "report:read"
-
-- id: tokens.create.permission_report_read_help
-  translation: "Читает отчёты безопасности SPDX и VEX."
-
-- id: tokens.create.permission_token_issue
-  translation: "token:issue"
-
-- id: tokens.create.permission_token_issue_help
-  translation: "Выдаёт API-токены в пределах отдельного лимита делегирования."
-
-- id: tokens.create.permission_token_read
-  translation: "token:read"
-
-- id: tokens.create.permission_token_read_help
-  translation: "Показывает активные сохранённые токены."
-
-- id: tokens.create.permission_token_revoke
-  translation: "token:revoke"
-
-- id: tokens.create.permission_token_revoke_help
-  translation: "Отзывает сохранённые токены."
-
-- id: tokens.create.delegation_label
-  translation: "Лимит делегирования"
-
-- id: tokens.create.delegation_help
-  translation: "Эти разрешения можно выдавать дочерним токенам. Они не становятся исполняемыми разрешениями этого токена."
-
-- id: tokens.create.permissions_required
-  translation: "Выберите хотя бы одно разрешение."
+- id: tokens.create.actor_required
+  translation: "Выберите роль токена."
 
 - id: tokens.create.button
   translation: "Создать токен"

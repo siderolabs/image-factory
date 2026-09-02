@@ -160,14 +160,14 @@ type TokenVerifier interface {
 // TokenOptions holds configuration for self-issued API token issuance, storage, and
 // verification.
 type TokenOptions struct {
-	StorageRepository                string
-	KeyPaths                         []string
-	RemoteOptions                    []remote.Option
-	BootstrapTTL                     TokenTTL
-	StorageTTL                       TokenStorageTTL
-	VerificationCacheRefreshInterval time.Duration
-	MaxPerOrg                        int
-	StorageInsecure                  bool
+	StorageRepository string
+	KeyPaths          []string
+	RemoteOptions     []remote.Option
+	BootstrapTTL      TokenTTL
+	StorageTTL        TokenStorageTTL
+	RefreshInterval   time.Duration
+	MaxPerOrg         int
+	StorageInsecure   bool
 }
 
 // Handler is the type of HTTP handlers used by the enterprise frontend.
@@ -204,9 +204,8 @@ const Auth0SessionKeySize = 32
 // This restates cmd.Auth0Options rather than reusing it because auth0.Config lives behind
 // the enterprise build tag, so cmd cannot name it; this struct is the seam between them.
 type Auth0Config struct {
-	Domain       string
-	Audience     string
-	MachineScope string
+	Domain   string
+	Audience string
 
 	// Browser login, additive on top of the bearer-token validation Domain and Audience
 	// always enable. These two and SessionKey are all-or-nothing; a partial set fails at

@@ -227,9 +227,8 @@ func buildAuthProvider(ctx context.Context, logger *zap.Logger, opts Options) (e
 		}
 
 		authProvider, err = enterprise.NewAuth0Provider(ctx, logger, enterprise.Auth0Config{
-			Domain:       opts.Authentication.Auth0.Domain,
-			Audience:     opts.Authentication.Auth0.Audience,
-			MachineScope: opts.Authentication.Auth0.MachineScope,
+			Domain:   opts.Authentication.Auth0.Domain,
+			Audience: opts.Authentication.Auth0.Audience,
 
 			ClientID:          opts.Authentication.Auth0.ClientID,
 			ClientSecret:      opts.Authentication.Auth0.ClientSecret,
@@ -338,7 +337,7 @@ func buildEnterprisePlugins(
 
 		var tokenPlugins []enterprise.FrontendPlugin
 
-		tokenPlugins, tokenVerifier, err = enterprise.NewTokenFrontends(authProvider, tokenOpts.EnterpriseOptions(remoteOptions()))
+		tokenPlugins, tokenVerifier, err = enterprise.NewTokenFrontends(logger, authProvider, tokenOpts.EnterpriseOptions(remoteOptions()))
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to initialize token frontends: %w", err)
 		}

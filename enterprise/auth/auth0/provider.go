@@ -25,7 +25,6 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/siderolabs/image-factory/enterprise/auth"
-	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
@@ -92,10 +91,6 @@ type Config struct {
 	Domain   string
 	Audience string
 
-	// MachineScope, when set, marks tokens carrying it as machine credentials, limited to
-	// artifact fetches. Leave empty to give every token full access.
-	MachineScope string
-
 	// Browser login via authorization code + PKCE, on top of the bearer-token validation
 	// Domain and Audience always enable. These two and SessionKey are all-or-nothing.
 	ClientID     string
@@ -137,19 +132,9 @@ func normalizeDomain(domain string) (string, error) {
 // customClaims holds Auth0-specific JWT claims beyond the standard registered set.
 type customClaims struct {
 	// if_org_id, not org_id: Auth0 treats org_id as a protected claim name tied to native
-	// Organizations and silently drops attempts to set it from an Action, so both the M2M
-	// and browser-login paths mirror it into this custom claim name instead.
+	// Organizations and silently drops attempts to set it from an Action, so the Auth0 flow
+	// mirrors it into this custom claim name instead.
 	OrgID string `json:"if_org_id"`
-
-	// Auth0 puts granted scopes in scope for plain client-credentials tokens and in
-	// permissions when RBAC is enabled on the API, so both have to be consulted.
-	Scope       string   `json:"scope"`
-	Permissions []string `json:"permissions"`
-}
-
-// hasScope reports whether the token was granted scope.
-func (c *customClaims) hasScope(scope string) bool {
-	return slices.Contains(strings.Fields(c.Scope), scope) || slices.Contains(c.Permissions, scope)
 }
 
 // Validate rejects claims that cannot produce an identity principal.
@@ -169,8 +154,7 @@ type Provider struct {
 
 	browser *browserLogin
 
-	audience     string
-	machineScope string
+	audience string
 }
 
 // NewProvider creates a new Auth0 authentication provider.
@@ -220,10 +204,9 @@ func NewProvider(ctx context.Context, logger *zap.Logger, cfg Config) (*Provider
 	keySet := oidc.NewRemoteKeySet(keyCtx, tenantURL.JoinPath("/.well-known/jwks.json").String())
 
 	p := &Provider{
-		verifier:     newVerifier(issuer, keySet, cfg.Audience),
-		audience:     cfg.Audience,
-		machineScope: cfg.MachineScope,
-		logger:       providerLogger,
+		verifier: newVerifier(issuer, keySet, cfg.Audience),
+		audience: cfg.Audience,
+		logger:   providerLogger,
 	}
 
 	browserLoginRequested, err := cfg.browserLoginRequested()
@@ -249,14 +232,6 @@ func newVerifier(issuer string, keySet oidc.KeySet, clientID string) *oidc.IDTok
 		Now:                  func() time.Time { return time.Now().Add(-clockSkew) },
 	})
 }
-
-// machineScopes is what a machine-scoped token may reach, expressed as the API token scope
-// with the same route set rather than a second copy of the list.
-//
-// Nodes pull installers through the OCI registry and boot artifacts from /image, and need
-// nothing else. In particular the schematic body stays out of reach, so a credential sitting
-// on a node cannot enumerate how the org's images are built.
-var machineScopes = []apitoken.Scope{"image:read"}
 
 // Run blocks until ctx is canceled, satisfying the enterprise.AuthProvider lifecycle.
 // There is nothing to start: the key set is fetched on demand.
@@ -313,16 +288,6 @@ func (p *Provider) Middleware(next Handler) Handler {
 		// Written back to the request so the principal survives a denial below: next never
 		// runs then, and the request context is the only channel the caller still sees.
 		*r = *r.WithContext(ctx)
-
-		// Forbidden rather than a challenge: the token is valid, it just isn't allowed here,
-		// and re-authenticating with the same credential would not change that.
-		if p.machineScope != "" && claims.hasScope(p.machineScope) &&
-			!apitoken.Allows(machineScopes, r.Method, r.URL.Path) {
-			logger.Debug("auth0: machine-scoped token denied",
-				zap.String("org_id", claims.OrgID), zap.String("path", r.URL.Path))
-
-			return xerrors.NewTagged[schematicpkg.ForbiddenTag](errors.New("machine-scoped token"))
-		}
 
 		logger.Debug("auth0: authenticated", zap.String("org_id", claims.OrgID))
 

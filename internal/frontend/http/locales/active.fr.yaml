@@ -398,7 +398,7 @@
   translation: "Accueil"
 
 - id: tokens.description
-  translation: "Les jetons d'API sont des identifiants que cette factory émet elle-même. Chacun porte les autorisations que vous choisissez à sa création, et rien de plus."
+  translation: "Les jetons d'API sont des identifiants émis par cette factory. Choisissez l'acteur qui utilisera le jeton ; la factory lui attribue un ensemble fixe de permissions minimales."
 
 - id: tokens.table.name
   translation: "Nom"
@@ -427,65 +427,35 @@
 - id: tokens.create.ttl_help
   translation: "Une durée au format Go, par exemple 24h ou 90m. Le jour n'est pas une unité, écrivez donc 720h plutôt que 30d. Laissez vide pour prendre la valeur par défaut du serveur."
 
-- id: tokens.create.permissions_label
-  translation: "Autorisations"
+- id: tokens.create.actor_label
+  translation: "Acteur du jeton"
 
-- id: tokens.create.permission_image_read
-  translation: "image:read"
+- id: tokens.create.actor_talos
+  translation: "Talos"
 
-- id: tokens.create.permission_image_read_help
-  translation: "Lire les images générées, les scripts PXE et les images OCI d'installation générées."
+- id: tokens.create.actor_talos_help
+  translation: "Télécharger les images et scripts PXE générés, ainsi que les programmes d’installation et autres artefacts OCI générés."
 
-- id: tokens.create.permission_source_pull
-  translation: "source:pull"
+- id: tokens.create.actor_automation
+  translation: "Automatisation (Omni / Terraform)"
 
-- id: tokens.create.permission_source_pull_help
-  translation: "Extraire les images OCI sources mises en proxy."
+- id: tokens.create.actor_automation_help
+  translation: "Créer et lire des schémas, télécharger les images générées, lire les rapports et émettre des jetons limités pour Talos ou l’automatisation."
 
-- id: tokens.create.permission_schematic_create
-  translation: "schematic:create"
+- id: tokens.create.actor_operator
+  translation: "Opérateur"
 
-- id: tokens.create.permission_schematic_create_help
-  translation: "Créer des schémas immuables."
+- id: tokens.create.actor_operator_help
+  translation: "Exploiter les images, les schémas, les proxys de sources et les rapports. Ne peut pas gérer les jetons."
 
-- id: tokens.create.permission_schematic_read
-  translation: "schematic:read"
+- id: tokens.create.actor_admin
+  translation: "Administrateur"
 
-- id: tokens.create.permission_schematic_read_help
-  translation: "Lire les schémas appartenant à cette identité."
+- id: tokens.create.actor_admin_help
+  translation: "Accès opérateur, plus émission, consultation et révocation des jetons. Peut émettre tout profil d’acteur."
 
-- id: tokens.create.permission_report_read
-  translation: "report:read"
-
-- id: tokens.create.permission_report_read_help
-  translation: "Lire les rapports de sécurité SPDX et VEX."
-
-- id: tokens.create.permission_token_issue
-  translation: "token:issue"
-
-- id: tokens.create.permission_token_issue_help
-  translation: "Émettre des jetons API dans une limite de délégation séparée."
-
-- id: tokens.create.permission_token_read
-  translation: "token:read"
-
-- id: tokens.create.permission_token_read_help
-  translation: "Lister les jetons stockés actifs."
-
-- id: tokens.create.permission_token_revoke
-  translation: "token:revoke"
-
-- id: tokens.create.permission_token_revoke_help
-  translation: "Révoquer des jetons stockés."
-
-- id: tokens.create.delegation_label
-  translation: "Limite de délégation"
-
-- id: tokens.create.delegation_help
-  translation: "Ces autorisations peuvent être accordées aux jetons enfants. Elles ne deviennent pas des autorisations exécutables de ce jeton."
-
-- id: tokens.create.permissions_required
-  translation: "Sélectionnez au moins une autorisation."
+- id: tokens.create.actor_required
+  translation: "Sélectionnez un acteur du jeton."
 
 - id: tokens.create.button
   translation: "Créer un jeton"

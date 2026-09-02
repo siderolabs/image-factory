@@ -380,19 +380,38 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 		// context, for handlePXE to forward into the asset URLs it emits.
 		if f.options.TokenVerifier != nil {
 			if tokenStr, fromQuery := extractAPIToken(r); tokenStr != "" {
-				if claims, ok := f.options.TokenVerifier.Verify(ctx, tokenStr); ok &&
-					apitoken.Allows(claims.Scopes, r.Method, r.URL.Path) &&
-					(!fromQuery || (!claims.Stored && apitoken.URLSafe(claims.Scopes))) {
-					*username = claims.Subject
-					ctx = authProvider.ContextWithUsername(ctx, claims.Subject)
+				// Verify logs its own rejection reasons; the two checks below are this layer's,
+				// and are logged here so an authorization failure is never mistaken for the
+				// credential failure the fallback provider goes on to report.
+				if claims, ok := f.options.TokenVerifier.Verify(ctx, tokenStr); ok {
+					switch {
+					case !apitoken.Allows(claims.Scopes, r.Method, r.URL.Path):
+						ctxlog.Logger(ctx, f.logger).Warn(
+							"API token scopes do not cover this request",
+							zap.String("sub", claims.Subject),
+							zap.String("jti", claims.ID),
+							zap.Strings("scopes", claims.Scopes),
+						)
+					case fromQuery && (claims.Stored || !apitoken.URLSafe(claims.Scopes)):
+						ctxlog.Logger(ctx, f.logger).Warn(
+							"API token may not travel in a query string",
+							zap.String("sub", claims.Subject),
+							zap.String("jti", claims.ID),
+							zap.Strings("scopes", claims.Scopes),
+							zap.Bool("stored", claims.Stored),
+						)
+					default:
+						*username = claims.Subject
+						ctx = authProvider.ContextWithUsername(ctx, claims.Subject)
 
-					ctx = apitoken.ContextWithClaims(ctx, claims)
+						ctx = apitoken.ContextWithClaims(ctx, claims)
 
-					if !claims.Stored && apitoken.URLSafe(claims.Scopes) {
-						ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)
+						if !claims.Stored && apitoken.URLSafe(claims.Scopes) {
+							ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)
+						}
+
+						return h(ctx, w, r, p)
 					}
-
-					return h(ctx, w, r, p)
 				}
 			}
 		}

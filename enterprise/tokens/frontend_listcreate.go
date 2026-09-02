@@ -113,17 +113,21 @@ func (f *ListCreateFrontend) list(ctx context.Context, w http.ResponseWriter, or
 type createRequest struct {
 	// Stored is a pointer so that an absent field means "stored", which is the safe default.
 	// A caller who forgets it never ends up with a credential nobody can take back.
-	Stored *bool `json:"stored"`
+	Stored         *bool     `json:"stored"`
+	Scopes         *[]string `json:"scopes"`
+	IssuableScopes *[]string `json:"issuable_scopes"`
 
-	Name string `json:"name"`
+	Name  string `json:"name"`
+	Actor string `json:"actor"`
 
 	// Subject is the identity the minted token belongs to. Empty means the caller's own, which is
 	// all anything short of the CLI bootstrap credential may ask for.
 	Subject string `json:"subject"`
+	TTL     string `json:"ttl"`
+}
 
-	TTL            string   `json:"ttl"`
-	Scopes         []string `json:"scopes"`
-	IssuableScopes []string `json:"issuable_scopes"`
+func (r createRequest) hasExplicitScopes() bool {
+	return r.Scopes != nil || r.IssuableScopes != nil
 }
 
 // createParams is an accepted create request.
@@ -177,22 +181,42 @@ func (f *ListCreateFrontend) decodeCreateBody(r *http.Request) (params createPar
 		return createParams{}, "malformed request body"
 	}
 
-	if len(body.Scopes) == 0 {
-		return createParams{}, `a non-empty "scopes" list is required`
+	actor := strings.TrimSpace(body.Actor)
+	if actor != "" && body.hasExplicitScopes() {
+		return createParams{}, `"actor" cannot be combined with explicit scopes`
 	}
 
-	scopes, err := apitoken.ParseScopes(strings.Join(body.Scopes, " "))
-	if err != nil {
-		return createParams{}, err.Error()
+	var (
+		scopes         []apitoken.Scope
+		issuableScopes []apitoken.Scope
+		err            error
+	)
+
+	if actor != "" {
+		actorScopes, actorIssuableScopes, ok := apitoken.ScopesForActor(actor)
+		if !ok {
+			return createParams{}, `unknown "actor"`
+		}
+
+		scopes = actorScopes
+		issuableScopes = actorIssuableScopes
+	} else {
+		if body.Scopes == nil || len(*body.Scopes) == 0 {
+			return createParams{}, `a non-empty "scopes" list is required`
+		}
+
+		scopes, err = apitoken.ParseScopes(strings.Join(*body.Scopes, " "))
+		if err != nil {
+			return createParams{}, err.Error()
+		}
+
+		if !apitoken.APIMintable(scopes) {
+			return createParams{}, `the "scopes" list contains an unknown scope`
+		}
 	}
 
-	if !apitoken.APIMintable(scopes) {
-		return createParams{}, `the "scopes" list contains an unknown scope`
-	}
-
-	var issuableScopes []apitoken.Scope
-	if len(body.IssuableScopes) > 0 {
-		issuableScopes, err = apitoken.ParseScopes(strings.Join(body.IssuableScopes, " "))
+	if body.IssuableScopes != nil && len(*body.IssuableScopes) > 0 {
+		issuableScopes, err = apitoken.ParseScopes(strings.Join(*body.IssuableScopes, " "))
 		if err != nil {
 			return createParams{}, err.Error()
 		}

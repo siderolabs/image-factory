@@ -78,7 +78,7 @@ func (f *Frontend) handlePXE(ctx context.Context, w http.ResponseWriter, r *http
 	}
 
 	// Image asset URLs carry a credential so iPXE can authenticate when fetching kernel/initramfs:
-	// the image-read token this request was authenticated with, or the Basic credentials it arrived
+	// the image:read token this request was authenticated with, or the Basic credentials it arrived
 	// with. Forwarding the token as-is means the script expires with it; nothing is minted here.
 	imageBaseURL := f.options.ExternalPXEURL
 

@@ -351,8 +351,8 @@ func TestOptionsValidate(t *testing.T) {
 					Provider: "auth0",
 					Auth0:    cmd.Auth0Options{Domain: "tenant.auth0.com", Audience: "https://factory.sidero.dev"},
 					Tokens: cmd.TokenOptions{
-						TTL:                              cmd.DefaultOptions.Authentication.Tokens.TTL,
-						VerificationCacheRefreshInterval: cmd.DefaultOptions.Authentication.Tokens.VerificationCacheRefreshInterval,
+						TTL:             cmd.DefaultOptions.Authentication.Tokens.TTL,
+						RefreshInterval: cmd.DefaultOptions.Authentication.Tokens.RefreshInterval,
 					},
 				},
 			},

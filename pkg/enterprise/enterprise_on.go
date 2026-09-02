@@ -228,9 +228,8 @@ func NewHTPasswdProvider(logger *zap.Logger, configPath string) (AuthProvider, e
 // NewAuth0Provider creates a new Auth0 JWT authentication provider.
 func NewAuth0Provider(ctx context.Context, logger *zap.Logger, cfg Auth0Config) (AuthProvider, error) {
 	return auth0.NewProvider(ctx, logger, auth0.Config{
-		Domain:       cfg.Domain,
-		Audience:     cfg.Audience,
-		MachineScope: cfg.MachineScope,
+		Domain:   cfg.Domain,
+		Audience: cfg.Audience,
 
 		ClientID:          cfg.ClientID,
 		ClientSecret:      cfg.ClientSecret,
@@ -279,7 +278,7 @@ func MintBootstrapToken(opts TokenOptions, subject string, ttl time.Duration) (a
 //
 // If opts.KeyPaths is non-empty the first key signs and every key verifies; otherwise a
 // fresh ECDSA P-256 key pair is generated (suitable for single-replica deployments).
-func NewTokenFrontends(authProvider AuthProvider, opts TokenOptions) ([]FrontendPlugin, TokenVerifier, error) {
+func NewTokenFrontends(logger *zap.Logger, authProvider AuthProvider, opts TokenOptions) ([]FrontendPlugin, TokenVerifier, error) {
 	var (
 		issuer *apitoken.Issuer
 		err    error
@@ -306,12 +305,12 @@ func NewTokenFrontends(authProvider AuthProvider, opts TokenOptions) ([]Frontend
 		return nil, nil, fmt.Errorf("failed to parse token storage repository: %w", err)
 	}
 
-	storage, err := tokens.NewStorage(repo, opts.VerificationCacheRefreshInterval, opts.RemoteOptions)
+	storage, err := tokens.NewStorage(repo, opts.RefreshInterval, opts.RemoteOptions)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to initialize token storage: %w", err)
 	}
 
-	manager := tokens.NewManager(issuer, storage)
+	manager := tokens.NewManager(logger, issuer, storage)
 
 	plugins := []FrontendPlugin{
 		tokens.NewListCreateFrontend(manager, authProvider, opts.MaxPerOrg),

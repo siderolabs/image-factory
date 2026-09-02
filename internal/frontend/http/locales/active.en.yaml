@@ -398,7 +398,7 @@
   translation: "Home"
 
 - id: tokens.description
-  translation: "API tokens are credentials this factory issues itself. Each one carries the permissions you pick when you create it, and nothing more."
+  translation: "API tokens are credentials this factory issues itself. Choose the actor that will use the token; the factory grants that actor a fixed, least-privilege permission set."
 
 - id: tokens.table.name
   translation: "Name"
@@ -427,65 +427,35 @@
 - id: tokens.create.ttl_help
   translation: "A Go duration, such as 24h or 90m. Days are not a unit, so write 720h rather than 30d. Leave it empty to take the server default."
 
-- id: tokens.create.permissions_label
-  translation: "Permissions"
+- id: tokens.create.actor_label
+  translation: "Token actor"
 
-- id: tokens.create.permission_image_read
-  translation: "image:read"
+- id: tokens.create.actor_talos
+  translation: "Talos"
 
-- id: tokens.create.permission_image_read_help
-  translation: "Read generated images, PXE scripts and generated installer OCI images."
+- id: tokens.create.actor_talos_help
+  translation: "Download generated images and PXE scripts, and pull generated installers and other OCI artifacts."
 
-- id: tokens.create.permission_source_pull
-  translation: "source:pull"
+- id: tokens.create.actor_automation
+  translation: "Automation (Omni / Terraform)"
 
-- id: tokens.create.permission_source_pull_help
-  translation: "Pull proxied upstream OCI images."
+- id: tokens.create.actor_automation_help
+  translation: "Create and read schematics, pull generated images, read reports, and issue bounded Talos or Automation credentials."
 
-- id: tokens.create.permission_schematic_create
-  translation: "schematic:create"
+- id: tokens.create.actor_operator
+  translation: "Operator"
 
-- id: tokens.create.permission_schematic_create_help
-  translation: "Create immutable schematics."
+- id: tokens.create.actor_operator_help
+  translation: "Operate images, schematics, source proxies, and reports. Cannot manage tokens."
 
-- id: tokens.create.permission_schematic_read
-  translation: "schematic:read"
+- id: tokens.create.actor_admin
+  translation: "Admin"
 
-- id: tokens.create.permission_schematic_read_help
-  translation: "Read schematics owned by this identity."
+- id: tokens.create.actor_admin_help
+  translation: "Operator access plus issuing, listing, and revoking tokens. Can issue any actor profile."
 
-- id: tokens.create.permission_report_read
-  translation: "report:read"
-
-- id: tokens.create.permission_report_read_help
-  translation: "Read SPDX and VEX security reports."
-
-- id: tokens.create.permission_token_issue
-  translation: "token:issue"
-
-- id: tokens.create.permission_token_issue_help
-  translation: "Issue API tokens within a separate delegation ceiling."
-
-- id: tokens.create.permission_token_read
-  translation: "token:read"
-
-- id: tokens.create.permission_token_read_help
-  translation: "List active stored tokens."
-
-- id: tokens.create.permission_token_revoke
-  translation: "token:revoke"
-
-- id: tokens.create.permission_token_revoke_help
-  translation: "Revoke stored tokens."
-
-- id: tokens.create.delegation_label
-  translation: "Delegation ceiling"
-
-- id: tokens.create.delegation_help
-  translation: "These permissions are grantable to child tokens. They do not become executable permissions on this token."
-
-- id: tokens.create.permissions_required
-  translation: "Select at least one permission."
+- id: tokens.create.actor_required
+  translation: "Select a token actor."
 
 - id: tokens.create.button
   translation: "Create Token"

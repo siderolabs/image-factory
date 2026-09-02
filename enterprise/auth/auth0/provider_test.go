@@ -311,91 +311,45 @@ func TestAuth0ProviderMiddleware(t *testing.T) {
 	}
 }
 
-// TestAuth0ProviderMachineScope covers the artifact-only allowlist applied to tokens
-// carrying the machine scope.
-func TestAuth0ProviderMachineScope(t *testing.T) {
+// TestAuth0ProviderIgnoresOAuthScopes proves Auth0 scopes do not become Image Factory
+// authorization policy; scoped capabilities belong to self-issued API tokens.
+func TestAuth0ProviderIgnoresOAuthScopes(t *testing.T) {
 	t.Parallel()
-
-	const machineScope = "factory:machine"
 
 	privateKey := testoidc.GenerateKey()
 	issuerURL := testoidc.StartServer(t, privateKey, testKeyID)
 
-	newProvider := func(scope string) *auth0.Provider {
-		p, err := auth0.NewProvider(t.Context(), zaptest.NewLogger(t), auth0.Config{
-			Domain:            testDomain,
-			Audience:          testAudience,
-			MachineScope:      scope,
-			IssuerURLOverride: issuerURL,
-		})
-		require.NoError(t, err)
-
-		return p
-	}
-
-	signMachineToken := func(opts testoidc.TokenOptions) string {
-		opts.KeyID = testKeyID
-		opts.Issuer = issuerURL
-		opts.Subject = testSubject
-		opts.Audience = []string{testAudience}
-		opts.OrgID = testOrgID
-		opts.Expiry = time.Now().Add(time.Hour)
-
-		return testoidc.SignToken(t, privateKey, opts)
-	}
-
-	// Auth0 puts the grant in scope for client credentials and in permissions under RBAC.
-	scopeClaimToken := signMachineToken(testoidc.TokenOptions{Scope: "openid " + machineScope})
-	permissionsClaimToken := signMachineToken(testoidc.TokenOptions{Permissions: []string{machineScope}})
-	humanToken := signMachineToken(testoidc.TokenOptions{Scope: "openid profile"})
+	provider, err := auth0.NewProvider(t.Context(), zaptest.NewLogger(t), auth0.Config{
+		Domain:            testDomain,
+		Audience:          testAudience,
+		IssuerURLOverride: issuerURL,
+	})
+	require.NoError(t, err)
 
 	for _, test := range []struct {
-		name         string
-		token        string
-		method       string
-		path         string
-		scope        string
-		expectDenied bool
+		name   string
+		claims testoidc.TokenOptions
 	}{
-		{name: "image download", token: scopeClaimToken, method: http.MethodGet, path: "/image/abc/v1.9.0/metal-amd64.iso", scope: machineScope},
-		{name: "image head", token: scopeClaimToken, method: http.MethodHead, path: "/image/abc/v1.9.0/metal-amd64.iso", scope: machineScope},
-		{name: "registry root", token: scopeClaimToken, method: http.MethodGet, path: "/v2", scope: machineScope},
-		{name: "registry manifest", token: scopeClaimToken, method: http.MethodGet, path: "/v2/installer/manifests/v1.9.0", scope: machineScope},
-		{name: "permissions claim is read too", token: permissionsClaimToken, method: http.MethodGet, path: "/schematics/abc", scope: machineScope, expectDenied: true},
-
-		{name: "schematic creation", token: scopeClaimToken, method: http.MethodPost, path: "/schematics", scope: machineScope, expectDenied: true},
-		{name: "schematic read", token: scopeClaimToken, method: http.MethodGet, path: "/schematics/abc", scope: machineScope, expectDenied: true},
-		{name: "pxe", token: scopeClaimToken, method: http.MethodGet, path: "/pxe/abc/v1.9.0/metal-amd64", scope: machineScope},
-		{name: "sbom", token: scopeClaimToken, method: http.MethodGet, path: "/spdx/abc/v1.9.0/amd64", scope: machineScope, expectDenied: true},
-		{name: "ui", token: scopeClaimToken, method: http.MethodGet, path: "/ui/schematics", scope: machineScope, expectDenied: true},
-
-		// A token without the scope, and any token when no scope is configured, keep full access.
-		{name: "token without the scope", token: humanToken, method: http.MethodPost, path: "/schematics", scope: machineScope},
-		{name: "scope not configured", token: scopeClaimToken, method: http.MethodPost, path: "/schematics"},
+		{name: "scope claim", claims: testoidc.TokenOptions{Scope: "openid profile"}},
+		{name: "permissions claim", claims: testoidc.TokenOptions{Permissions: []string{"factory:operator"}}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
+			test.claims.KeyID = testKeyID
+			test.claims.Issuer = issuerURL
+			test.claims.Subject = testSubject
+			test.claims.Audience = []string{testAudience}
+			test.claims.OrgID = testOrgID
+			test.claims.Expiry = time.Now().Add(time.Hour)
+
+			token := testoidc.SignToken(t, privateKey, test.claims)
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/schematics", nil)
+			r.Header.Set("Authorization", "Bearer "+token)
+
 			var capturedUsername string
 
-			r := httptest.NewRequestWithContext(t.Context(), test.method, test.path, nil)
-			r.Header.Set("Authorization", "Bearer "+test.token)
-
-			err := newProvider(test.scope).Middleware(captureHandler(&capturedUsername))(t.Context(), httptest.NewRecorder(), r, nil)
-
-			if test.expectDenied {
-				require.Error(t, err)
-				require.Truef(t, xerrors.TagIs[schematicpkg.ForbiddenTag](err), "expected ForbiddenTag error, got: %v", err)
-
-				// The frontend reads the principal back off the request to attribute the
-				// denial in the audit log, since the wrapped handler never runs.
-				principal, ok := auth.GetAuthUsername(r.Context())
-				require.True(t, ok, "denied request should still carry the principal")
-				require.Equal(t, testOrgID, principal)
-
-				return
-			}
-
+			err := provider.Middleware(captureHandler(&capturedUsername))(t.Context(), httptest.NewRecorder(), r, nil)
 			require.NoError(t, err)
 			require.Equal(t, testOrgID, capturedUsername)
 		})

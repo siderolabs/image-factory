@@ -63,7 +63,7 @@ authentication:
       insecure: true
 
     # how often the registry clients are rebuilt so refreshed credentials are picked up
-    verificationCacheRefreshInterval: 5s
+    refreshInterval: 5s
 
     maxPerOrg: 10
 

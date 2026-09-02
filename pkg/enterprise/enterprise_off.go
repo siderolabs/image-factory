@@ -71,6 +71,6 @@ func MintBootstrapToken(_ TokenOptions, _ string, _ time.Duration) (apitoken.Tok
 }
 
 // NewTokenFrontends returns nil when enterprise is not enabled.
-func NewTokenFrontends(_ AuthProvider, _ TokenOptions) ([]FrontendPlugin, TokenVerifier, error) {
+func NewTokenFrontends(_ *zap.Logger, _ AuthProvider, _ TokenOptions) ([]FrontendPlugin, TokenVerifier, error) {
 	return nil, nil, nil
 }

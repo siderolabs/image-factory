@@ -133,6 +133,144 @@ func TestListCreateFrontendListRequiresAuth(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
+func TestListCreateFrontendExpandsUIActors(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name     string
+		actor    string
+		scopes   []apitoken.Scope
+		issuable []apitoken.Scope
+	}{
+		{name: "Talos", actor: "talos", scopes: []apitoken.Scope{"image:read"}},
+		{
+			name:  "Automation",
+			actor: "automation",
+			scopes: []apitoken.Scope{
+				"image:read",
+				"report:read",
+				"schematic:create",
+				"schematic:read",
+				"token:issue",
+			},
+			issuable: []apitoken.Scope{
+				"image:read",
+				"report:read",
+				"schematic:create",
+				"schematic:read",
+				"token:issue",
+			},
+		},
+		{
+			name:  "Operator",
+			actor: "operator",
+			scopes: []apitoken.Scope{
+				"image:read",
+				"report:read",
+				"schematic:create",
+				"schematic:read",
+				"source:pull",
+			},
+		},
+		{
+			name:  "Admin",
+			actor: "admin",
+			scopes: []apitoken.Scope{
+				"image:read",
+				"report:read",
+				"schematic:create",
+				"schematic:read",
+				"source:pull",
+				"token:issue",
+				"token:read",
+				"token:revoke",
+			},
+			issuable: []apitoken.Scope{
+				"image:read",
+				"report:read",
+				"schematic:create",
+				"schematic:read",
+				"source:pull",
+				"token:issue",
+				"token:read",
+				"token:revoke",
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			mgr := &fakeManager{}
+			f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+			w := doRequest(t, f, http.MethodPost, "/tokens",
+				`{"name":"ui-token","actor":"`+test.actor+`"}`, nil)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			require.Equal(t, test.scopes, mgr.createdScopes)
+			require.Equal(t, test.issuable, mgr.createdDelegation.IssuableScopes)
+			require.False(t, mgr.createdDelegation.AnySubject)
+		})
+	}
+}
+
+func TestIssuingActorProfilesStayWithinTheirDelegationCeilings(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		issuer     string
+		target     string
+		wantStatus int
+	}{
+		{issuer: "automation", target: "talos", wantStatus: http.StatusOK},
+		{issuer: "automation", target: "automation", wantStatus: http.StatusOK},
+		{issuer: "automation", target: "operator", wantStatus: http.StatusForbidden},
+		{issuer: "automation", target: "admin", wantStatus: http.StatusForbidden},
+		{issuer: "admin", target: "talos", wantStatus: http.StatusOK},
+		{issuer: "admin", target: "automation", wantStatus: http.StatusOK},
+		{issuer: "admin", target: "operator", wantStatus: http.StatusOK},
+		{issuer: "admin", target: "admin", wantStatus: http.StatusOK},
+	} {
+		t.Run(test.issuer+" to "+test.target, func(t *testing.T) {
+			t.Parallel()
+
+			_, issuableScopes, ok := apitoken.ScopesForActor(test.issuer)
+			require.True(t, ok)
+
+			mgr := &fakeManager{}
+			f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+			w := doRequestAs(t, f, issuableScopes,
+				`{"name":"child","actor":"`+test.target+`"}`)
+
+			require.Equal(t, test.wantStatus, w.Code)
+		})
+	}
+}
+
+func TestListCreateFrontendRejectsAmbiguousOrUnknownActor(t *testing.T) {
+	t.Parallel()
+
+	for name, body := range map[string]string{
+		"actor and explicit scopes":         `{"name":"n","actor":"talos","scopes":["image:read"]}`,
+		"actor and empty explicit scopes":   `{"name":"n","actor":"talos","scopes":[]}`,
+		"actor and delegation scopes":       `{"name":"n","actor":"talos","issuable_scopes":["image:read"]}`,
+		"actor and empty delegation scopes": `{"name":"n","actor":"talos","issuable_scopes":[]}`,
+		"unknown actor":                     `{"name":"n","actor":"super-admin"}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			mgr := &fakeManager{}
+			f := tokens.NewListCreateFrontend(mgr, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+			w := doRequest(t, f, http.MethodPost, "/tokens", body, nil)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			require.Empty(t, mgr.createdScopes)
+		})
+	}
+}
+
 func TestListCreateFrontendCreateHappyPath(t *testing.T) {
 	t.Parallel()
 

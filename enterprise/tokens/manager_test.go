@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/siderolabs/image-factory/enterprise/tokens"
 	"github.com/siderolabs/image-factory/internal/apitoken"
@@ -34,7 +37,7 @@ func newTestIssuer(t *testing.T) *apitoken.Issuer {
 func newTestManager(t *testing.T) *tokens.Manager {
 	t.Helper()
 
-	return tokens.NewManager(newTestIssuer(t), newTestStorage(t, time.Minute))
+	return tokens.NewManager(zaptest.NewLogger(t), newTestIssuer(t), newTestStorage(t, time.Minute))
 }
 
 func TestManagerCreateIsVerifiable(t *testing.T) {
@@ -42,7 +45,7 @@ func TestManagerCreateIsVerifiable(t *testing.T) {
 
 	issuer := newTestIssuer(t)
 	storage := newTestStorage(t, time.Minute)
-	mgr := tokens.NewManager(issuer, storage)
+	mgr := tokens.NewManager(zaptest.NewLogger(t), issuer, storage)
 	ctx := t.Context()
 
 	record, token, err := mgr.Create(ctx, "org_a", "my-node", imageScopes, apitoken.Delegation{}, true, 0)
@@ -66,7 +69,7 @@ func TestManagerCreatePersistsDelegationCeiling(t *testing.T) {
 	t.Parallel()
 
 	issuer := newTestIssuer(t)
-	mgr := tokens.NewManager(issuer, newTestStorage(t, time.Minute))
+	mgr := tokens.NewManager(zaptest.NewLogger(t), issuer, newTestStorage(t, time.Minute))
 	delegation := apitoken.Delegation{IssuableScopes: []apitoken.Scope{
 		"image:read",
 		"report:read",
@@ -221,7 +224,7 @@ func TestManagerVerifyRejectsRevokedToken(t *testing.T) {
 	storage := newTestStorage(t, time.Millisecond)
 	ctx := t.Context()
 
-	mgr := tokens.NewManager(issuer, storage)
+	mgr := tokens.NewManager(zaptest.NewLogger(t), issuer, storage)
 
 	record, token, err := mgr.Create(ctx, "org_a", "my-node", imageScopes, apitoken.Delegation{}, true, 0)
 	require.NoError(t, err)
@@ -232,4 +235,38 @@ func TestManagerVerifyRejectsRevokedToken(t *testing.T) {
 
 		return !ok
 	}, time.Second, time.Millisecond)
+}
+
+func TestManagerVerifyLogsRejectionReason(t *testing.T) {
+	t.Parallel()
+
+	core, logs := observer.New(zap.DebugLevel)
+	issuer := newTestIssuer(t)
+	storage := newTestStorage(t, time.Minute)
+	mgr := tokens.NewManager(zap.New(core), issuer, storage)
+	ctx := t.Context()
+
+	// An ordinary htpasswd password reaches Verify too, so this must stay at debug level.
+	_, ok := mgr.Verify(ctx, "SideroTest")
+	require.False(t, ok)
+
+	entries := logs.TakeAll()
+	require.Len(t, entries, 1)
+	require.Equal(t, zap.DebugLevel, entries[0].Level)
+	require.Equal(t, "credential is not an API token", entries[0].Message)
+
+	// A correctly signed stored token whose record was never written: revoked, expired or
+	// unknown are indistinguishable to Verify, but the rejection itself has to be visible.
+	token, err := issuer.IssueWithDelegation("org_a", imageScopes, apitoken.Delegation{}, true, 0)
+	require.NoError(t, err)
+
+	_, ok = mgr.Verify(ctx, token.Signed)
+	require.False(t, ok)
+
+	entries = logs.TakeAll()
+	require.Len(t, entries, 1)
+	require.Equal(t, zap.WarnLevel, entries[0].Level)
+	require.Equal(t, "stored API token is revoked, expired or unknown", entries[0].Message)
+	require.Equal(t, "org_a", entries[0].ContextMap()["sub"])
+	require.Equal(t, token.ID, entries[0].ContextMap()["jti"])
 }

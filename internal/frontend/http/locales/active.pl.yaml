@@ -398,7 +398,7 @@
   translation: "Strona główna"
 
 - id: tokens.description
-  translation: "Tokeny API to poświadczenia, które ta fabryka wydaje sama. Każdy ma tylko te uprawnienia, które wybierzesz przy tworzeniu."
+  translation: "Tokeny API to poświadczenia wydawane przez tę fabrykę. Wybierz aktora, który będzie używać tokenu; fabryka przyzna mu stały zestaw minimalnych uprawnień."
 
 - id: tokens.table.name
   translation: "Nazwa"
@@ -427,65 +427,35 @@
 - id: tokens.create.ttl_help
   translation: "Czas trwania w formacie Go, na przykład 24h lub 90m. Dni nie są jednostką, więc wpisz 720h zamiast 30d. Pozostaw puste, aby użyć wartości domyślnej serwera."
 
-- id: tokens.create.permissions_label
-  translation: "Uprawnienia"
+- id: tokens.create.actor_label
+  translation: "Aktor tokenu"
 
-- id: tokens.create.permission_image_read
-  translation: "image:read"
+- id: tokens.create.actor_talos
+  translation: "Talos"
 
-- id: tokens.create.permission_image_read_help
-  translation: "Odczytuje wygenerowane obrazy, skrypty PXE i obrazy OCI instalatorów."
+- id: tokens.create.actor_talos_help
+  translation: "Pobieranie wygenerowanych obrazów i skryptów PXE oraz instalatorów i innych artefaktów OCI."
 
-- id: tokens.create.permission_source_pull
-  translation: "source:pull"
+- id: tokens.create.actor_automation
+  translation: "Automatyzacja (Omni / Terraform)"
 
-- id: tokens.create.permission_source_pull_help
-  translation: "Pobiera źródłowe obrazy OCI przez proxy."
+- id: tokens.create.actor_automation_help
+  translation: "Tworzenie i odczyt schematów, pobieranie wygenerowanych obrazów, odczyt raportów oraz wystawianie ograniczonych tokenów dla Talosa i automatyzacji."
 
-- id: tokens.create.permission_schematic_create
-  translation: "schematic:create"
+- id: tokens.create.actor_operator
+  translation: "Operator"
 
-- id: tokens.create.permission_schematic_create_help
-  translation: "Tworzy niezmienne schematy."
+- id: tokens.create.actor_operator_help
+  translation: "Obsługa obrazów, schematów, serwerów proxy źródeł i raportów. Bez zarządzania tokenami."
 
-- id: tokens.create.permission_schematic_read
-  translation: "schematic:read"
+- id: tokens.create.actor_admin
+  translation: "Administrator"
 
-- id: tokens.create.permission_schematic_read_help
-  translation: "Odczytuje schematy należące do tej tożsamości."
+- id: tokens.create.actor_admin_help
+  translation: "Uprawnienia operatora oraz wystawianie, wyświetlanie i unieważnianie tokenów. Może wystawiać tokeny dla dowolnego profilu aktora."
 
-- id: tokens.create.permission_report_read
-  translation: "report:read"
-
-- id: tokens.create.permission_report_read_help
-  translation: "Odczytuje raporty bezpieczeństwa SPDX i VEX."
-
-- id: tokens.create.permission_token_issue
-  translation: "token:issue"
-
-- id: tokens.create.permission_token_issue_help
-  translation: "Wydaje tokeny API w granicach osobnego limitu delegacji."
-
-- id: tokens.create.permission_token_read
-  translation: "token:read"
-
-- id: tokens.create.permission_token_read_help
-  translation: "Wyświetla aktywne zapisane tokeny."
-
-- id: tokens.create.permission_token_revoke
-  translation: "token:revoke"
-
-- id: tokens.create.permission_token_revoke_help
-  translation: "Odwołuje zapisane tokeny."
-
-- id: tokens.create.delegation_label
-  translation: "Limit delegacji"
-
-- id: tokens.create.delegation_help
-  translation: "Te uprawnienia można nadawać tokenom potomnym. Nie stają się one uprawnieniami wykonywalnymi tego tokenu."
-
-- id: tokens.create.permissions_required
-  translation: "Wybierz co najmniej jedno uprawnienie."
+- id: tokens.create.actor_required
+  translation: "Wybierz aktora tokenu."
 
 - id: tokens.create.button
   translation: "Utwórz token"

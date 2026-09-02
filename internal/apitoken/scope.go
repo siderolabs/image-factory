@@ -15,10 +15,20 @@ import (
 // separate enum: scopeRoutes below is the only catalog and therefore the only source of truth.
 type Scope = string
 
-// scopeRoutes is the single route table every scoped credential is checked against, the
-// machine-scoped Auth0 tokens included: they use the image:read entry.
+const (
+	scopeImageRead       Scope = "image:read"
+	scopeReportRead      Scope = "report:read"
+	scopeSchematicCreate Scope = "schematic:create"
+	scopeSchematicRead   Scope = "schematic:read"
+	scopeSourcePull      Scope = "source:pull"
+	scopeTokenIssue      Scope = "token:issue"
+	scopeTokenRead       Scope = "token:read"
+	scopeTokenRevoke     Scope = "token:revoke"
+)
+
+// scopeRoutes is the single route table every self-issued scoped credential is checked against.
 var scopeRoutes = map[string]func(method, path string) bool{
-	"image:read": func(method, path string) bool {
+	scopeImageRead: func(method, path string) bool {
 		if !readOnly(method) {
 			return false
 		}
@@ -26,28 +36,113 @@ var scopeRoutes = map[string]func(method, path string) bool{
 		return strings.HasPrefix(path, "/image/") || strings.HasPrefix(path, "/pxe/") ||
 			(registryPath(path) && !sourcePath(path))
 	},
-	"source:pull": func(method, path string) bool {
+	scopeSourcePull: func(method, path string) bool {
 		return readOnly(method) && (registryPing(path) || sourcePath(path))
 	},
-	"schematic:create": func(method, path string) bool {
+	scopeSchematicCreate: func(method, path string) bool {
 		return method == http.MethodPost && path == "/schematics"
 	},
-	"schematic:read": func(method, path string) bool {
+	scopeSchematicRead: func(method, path string) bool {
 		return readOnly(method) && strings.HasPrefix(path, "/schematics/")
 	},
-	"report:read": func(method, path string) bool {
+	scopeReportRead: func(method, path string) bool {
 		return readOnly(method) && (strings.HasPrefix(path, "/spdx/") ||
 			strings.HasPrefix(path, "/vex/") || strings.HasPrefix(path, "/scans/"))
 	},
-	"token:issue": func(method, path string) bool {
+	scopeTokenIssue: func(method, path string) bool {
 		return method == http.MethodPost && path == "/tokens"
 	},
-	"token:read": func(method, path string) bool {
+	scopeTokenRead: func(method, path string) bool {
 		return method == http.MethodGet && path == "/tokens"
 	},
-	"token:revoke": func(method, path string) bool {
+	scopeTokenRevoke: func(method, path string) bool {
 		return method == http.MethodPost && tokenRevokePath(path)
 	},
+}
+
+type actorProfile struct {
+	id             string
+	scopes         []Scope
+	issuableScopes []Scope
+}
+
+var actorProfiles = []actorProfile{
+	{
+		id:     "talos",
+		scopes: []Scope{scopeImageRead},
+	},
+	{
+		id: "automation",
+		scopes: []Scope{
+			scopeImageRead,
+			scopeReportRead,
+			scopeSchematicCreate,
+			scopeSchematicRead,
+			scopeTokenIssue,
+		},
+		issuableScopes: []Scope{
+			scopeImageRead,
+			scopeReportRead,
+			scopeSchematicCreate,
+			scopeSchematicRead,
+			scopeTokenIssue,
+		},
+	},
+	{
+		id: "operator",
+		scopes: []Scope{
+			scopeImageRead,
+			scopeReportRead,
+			scopeSchematicCreate,
+			scopeSchematicRead,
+			scopeSourcePull,
+		},
+	},
+	{
+		id: "admin",
+		scopes: []Scope{
+			scopeImageRead,
+			scopeReportRead,
+			scopeSchematicCreate,
+			scopeSchematicRead,
+			scopeSourcePull,
+			scopeTokenIssue,
+			scopeTokenRead,
+			scopeTokenRevoke,
+		},
+		issuableScopes: []Scope{
+			scopeImageRead,
+			scopeReportRead,
+			scopeSchematicCreate,
+			scopeSchematicRead,
+			scopeSourcePull,
+			scopeTokenIssue,
+			scopeTokenRead,
+			scopeTokenRevoke,
+		},
+	},
+}
+
+// Actors returns the actor profiles exposed by the web UI in presentation order.
+func Actors() []string {
+	actors := make([]string, 0, len(actorProfiles))
+	for _, profile := range actorProfiles {
+		actors = append(actors, profile.id)
+	}
+
+	return actors
+}
+
+// ScopesForActor returns the fixed executable and issuable scope profiles exposed for actor.
+// The returned slices are owned by the caller.
+func ScopesForActor(actor string) ([]Scope, []Scope, bool) {
+	for _, profile := range actorProfiles {
+		if profile.id == actor {
+			return slices.Clone(profile.scopes), slices.Clone(profile.issuableScopes), true
+		}
+	}
+
+	return nil, nil, false
 }
 
 func registryPath(path string) bool {
@@ -141,9 +236,9 @@ func Storable(scopes []Scope) bool {
 // URLSafe reports whether a token carrying scopes may travel in a query string. Token-management
 // capabilities never may: query strings are copied into proxy and CDN access logs.
 func URLSafe(scopes []Scope) bool {
-	return !slices.Contains(scopes, "token:issue") &&
-		!slices.Contains(scopes, "token:read") &&
-		!slices.Contains(scopes, "token:revoke")
+	return !slices.Contains(scopes, scopeTokenIssue) &&
+		!slices.Contains(scopes, scopeTokenRead) &&
+		!slices.Contains(scopes, scopeTokenRevoke)
 }
 
 type claimsKey struct{}

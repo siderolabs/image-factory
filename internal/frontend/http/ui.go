@@ -27,6 +27,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/platforms"
 	"go.yaml.in/yaml/v4"
 
+	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/version"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
@@ -208,6 +209,7 @@ func (f *Frontend) handleTokensUI(_ context.Context, w http.ResponseWriter, r *h
 		Localizer     *i18n.Localizer
 		Bundle        *i18n.Bundle
 		Lang          string
+		Actors        []string
 		Enterprise    bool
 		LogoutEnabled bool
 	}{
@@ -215,6 +217,7 @@ func (f *Frontend) handleTokensUI(_ context.Context, w http.ResponseWriter, r *h
 		Localizer:     f.getLocalizer(r),
 		Bundle:        getLocalizerBundle(),
 		Lang:          getCurrentLang(r),
+		Actors:        apitoken.Actors(),
 		Enterprise:    enterprise.Enabled(),
 		LogoutEnabled: f.logoutEnabled(),
 	})

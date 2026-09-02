@@ -176,8 +176,10 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 		assert.Equal(t, http.StatusOK,
 			getWithToken(ctx, t, baseURL+"/image/"+schematicID+"/v1.9.0/kernel-amd64", token))
 
+		assert.Equal(t, http.StatusOK,
+			getWithToken(ctx, t, baseURL+"/pxe/"+schematicID+"/v1.9.0/metal-amd64", token))
+
 		for _, path := range []string{
-			"/pxe/" + schematicID + "/v1.9.0/metal-amd64",
 			"/schematics/" + schematicID,
 			"/tokens",
 		} {

@@ -932,21 +932,6 @@ Required.
 
 ---
 
-### `authentication.auth0.machineScope`
-
-- **Type:** `string`
-- **Env:** `AUTHENTICATION_AUTH0_MACHINESCOPE`
-
-MachineScope names a scope that marks a token as a machine credential, e.g. `factory:machine`.
-
-Tokens carrying it receive exactly `image:read`: generated downloads, PXE assets, and generated installer OCI pulls.
-Everything else is rejected with 403, including schematic definitions and proxied source images.
-Intended for the long-lived tokens provisioned onto Talos nodes, which need to pull installers but should not be able to inspect or create schematics.
-
-Optional; when empty every valid token has full access.
-
----
-
 ### `authentication.auth0.clientID`
 
 - **Type:** `string`
@@ -1157,15 +1142,13 @@ Default is the validity duration granted when the caller requests no explicit TT
 
 ---
 
-### `authentication.tokens.verificationCacheRefreshInterval`
+### `authentication.tokens.registryClientRefreshInterval`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_VERIFICATIONCACHEREFRESHINTERVAL`
+- **Env:** `AUTHENTICATION_TOKENS_REGISTRYCLIENTREFRESHINTERVAL`
 
-VerificationCacheRefreshInterval controls how often the backing registry clients are rebuilt
+RefreshInterval controls how often the backing registry clients are rebuilt
 so refreshed credentials are picked up.
-
-The legacy name is retained for configuration compatibility.
 
 ---
 
@@ -1538,7 +1521,6 @@ authentication:
         clientID: ""
         clientSecret: ""
         domain: ""
-        machineScope: ""
         sessionKey: ""
     enabled: false
     htpasswdPath: ""
@@ -1546,6 +1528,7 @@ authentication:
     tokens:
         keyPaths: []
         maxPerOrg: 10
+        registryClientRefreshInterval: 5m0s
         storage:
             insecure: false
             namespace: siderolabs/image-factory
@@ -1564,7 +1547,6 @@ authentication:
                 default: 8760h0m0s
                 max: 8760h0m0s
                 min: 1h0m0s
-        verificationCacheRefreshInterval: 5m0s
 build:
     brokenTalosVersions: []
     maxConcurrency: 6
@@ -1699,13 +1681,13 @@ IF_AUTHENTICATION_AUTH0_AUDIENCE=
 IF_AUTHENTICATION_AUTH0_CLIENTID=
 IF_AUTHENTICATION_AUTH0_CLIENTSECRET=
 IF_AUTHENTICATION_AUTH0_DOMAIN=
-IF_AUTHENTICATION_AUTH0_MACHINESCOPE=
 IF_AUTHENTICATION_AUTH0_SESSIONKEY=
 IF_AUTHENTICATION_ENABLED=false
 IF_AUTHENTICATION_HTPASSWDPATH=
 IF_AUTHENTICATION_PROVIDER=htpasswd
 IF_AUTHENTICATION_TOKENS_KEYPATHS=[]
 IF_AUTHENTICATION_TOKENS_MAXPERORG=10
+IF_AUTHENTICATION_TOKENS_REGISTRYCLIENTREFRESHINTERVAL=5m0s
 IF_AUTHENTICATION_TOKENS_STORAGE_INSECURE=false
 IF_AUTHENTICATION_TOKENS_STORAGE_NAMESPACE=siderolabs/image-factory
 IF_AUTHENTICATION_TOKENS_STORAGE_REGISTRY=ghcr.io
@@ -1719,7 +1701,6 @@ IF_AUTHENTICATION_TOKENS_TTL_EPHEMERAL_MIN=30s
 IF_AUTHENTICATION_TOKENS_TTL_STORED_DEFAULT=8760h0m0s
 IF_AUTHENTICATION_TOKENS_TTL_STORED_MAX=8760h0m0s
 IF_AUTHENTICATION_TOKENS_TTL_STORED_MIN=1h0m0s
-IF_AUTHENTICATION_TOKENS_VERIFICATIONCACHEREFRESHINTERVAL=5m0s
 IF_BUILD_BROKENTALOSVERSIONS=[]
 IF_BUILD_MAXCONCURRENCY=6
 IF_BUILD_MINTALOSVERSION=1.2.0

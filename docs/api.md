@@ -16,14 +16,13 @@ A client that does not ask for `text/html` gets the `401` described here.
 | Field | Values |
 | --- | --- |
 | **Auth** | `public` takes no credential, `required` takes an [`Authorization` header](authentication.md#the-authorization-header) for the configured provider, and a missing or invalid credential is `401`. |
-| **Scopes** | Which [API token](authentication.md#api-tokens) capabilities may call the endpoint, or `none` when only a full credential can; an Auth0 machine credential receives exactly `image:read`. |
+| **Scopes** | Which [API token](authentication.md#api-tokens) capabilities may call the endpoint, or `none` when only a full provider credential can. |
 | **Ownership** | Whether the schematic's `owner` must match the caller identity, where a mismatch is `403`; an unauthenticated caller gets `401` whether or not the schematic exists, so existence is not leaked. |
 
 The factory recognizes eight atomic, resource-first scopes: `image:read`, `source:pull`, `schematic:create`, `schematic:read`, `report:read`, `token:issue`, `token:read` and `token:revoke`.
 A single code-defined map controls what each reaches; see [Scopes](authentication.md#scopes).
-A credential either carries scopes, and is then limited to the endpoints its scopes allow, or it does not and has full access.
-An Auth0 token carries scopes only when `machineScope` is configured and the token has it;
-the htpasswd provider has no scopes at all.
+A self-issued credential carries scopes and is limited to the endpoints those scopes allow.
+Auth0 and htpasswd provider credentials have no Image Factory scopes and receive full provider access.
 
 ## Common HTTP behavior
 
@@ -38,7 +37,7 @@ The common error statuses are:
 | `400 Bad Request` | An input explicitly classified as an invalid path, architecture, report format, image profile or schematic is invalid. |
 | `401 Unauthorized` | Authentication is enabled and the credential is missing or invalid. |
 | `402 Payment Required` | The requested Enterprise-only asset feature is not enabled. |
-| `403 Forbidden` | The credential is valid but its machine scope or schematic ownership denies access. |
+| `403 Forbidden` | The credential is valid but its API-token scopes or schematic ownership deny access. |
 | `404 Not Found` | The schematic, Talos artifact or API/OCI route does not exist. |
 | `500 Internal Server Error` | The request failed unexpectedly. |
 | `503 Service Unavailable` | A required proxy or Enterprise service is temporarily unavailable. |
@@ -161,6 +160,11 @@ A token is issued to the calling identity unless a CLI bootstrap credential name
 {"name": "rack-3", "scopes": ["image:read"], "ttl": "8760h", "stored": true}
 ```
 
+The browser UI sends an `actor` instead of `scopes`.
+The server expands `talos`, `automation`, `operator` or `admin` to its fixed [actor profile](authentication.md#browser-actor-profiles), including that profile's delegation ceiling.
+`actor` cannot be combined with `scopes` or `issuable_scopes`; an unknown actor is `400`.
+Automation can issue Talos credentials and replacement Automation credentials; Admin can issue every actor profile.
+
 ```json
 {
   "id": "0d1c...",
@@ -231,7 +235,8 @@ Every verification reads the token's deterministic registry tag, so a successful
 
 Access: `public`.
 
-Returns the JSON Web Key Set containing the ECDSA P-256 public key that every API token is signed with, so that a proxy can verify one without holding the private key.
+Returns the JSON Web Key Set containing every configured ECDSA P-256 verification key in configuration order, so that a proxy can verify tokens issued during a key rotation without holding a private key.
+The first configured key is the active signer; later keys are verification-only.
 The response has `Content-Type: application/json`.
 
 ## HTTP Frontend API

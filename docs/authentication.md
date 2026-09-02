@@ -54,43 +54,7 @@ Tokens without the claim are rejected, since there would be no principal to attr
 Tokens are accepted either as `Authorization: Bearer <token>` or in the password field of a Basic credential; see [The `Authorization` header](#the-authorization-header).
 
 Interactive login is opt-in; see [Browser login](#browser-login).
-Until it is configured, a browser hitting an authenticated route gets a `401` with a Basic challenge, not a redirect to Auth0, so a person presents a token the same way a machine does.
-
-### Obtaining a token
-
-`org_id` is only present when the token is issued for a specific organization, which requires Auth0 Organizations on the tenant and the client authorized for that organization.
-For a client-credentials grant that means passing `organization` alongside `audience`:
-
-```shell
-curl -s -X POST https://<tenant>.auth0.com/oauth/token \
-  -d grant_type=client_credentials \
-  -d client_id=<id> -d client_secret=<secret> \
-  -d audience=<authentication.auth0.audience> \
-  -d organization=org_xxx
-```
-
-A token issued without `organization` carries no `org_id` and is rejected, even though it is otherwise valid.
-A client serving several organizations requests one token per organization.
-
-### Machine credentials
-
-Talos nodes need a long-lived credential to pull installers, but a credential sitting on a node is more exposed than one held by a person.
-Setting `authentication.auth0.machineScope` names a scope that marks a token as such a credential.
-
-A token carrying it gets exactly the [`image:read` capability](#scopes): generated image downloads, PXE assets and generated installer OCI pulls.
-Everything else is rejected with `403`, including schematic definitions and proxied source images.
-This uses the same code-defined route entry as a self-issued `image:read` token, so the two cannot drift apart.
-
-Both the `scope` and `permissions` claims are consulted, since Auth0 uses the former for plain client-credentials grants and the latter when RBAC is enabled on the API.
-Tokens without the scope are unaffected, and leaving the setting empty gives every valid token full access.
-
-The factory does not refresh these tokens: whatever is provisioned onto the node is used until it expires, and the node then needs a new one from somewhere.
-Because validation is offline (see [Revocation](#revocation)), the token's Auth0 lifetime is the entire exposure window for a credential lifted off a node, so choose it deliberately rather than taking the tenant default.
-
-A [stored self-issued `image:read` token](#api-tokens) is the alternative: the factory signs and tracks it, so it can be listed and revoked, which an Auth0 token cannot.
-
-A machine-scoped token also cannot mint an [API token](#api-tokens), since `POST /tokens` is not an artifact fetch.
-A deployment that both provisions nodes and hands out download links needs two clients: one carrying the machine scope, one without it.
+Until it is configured, a browser hitting an authenticated route gets a `401` with a Basic challenge, not a redirect to Auth0, so a person must present a token in the authorization header.
 
 ### Browser login
 
@@ -184,8 +148,7 @@ The factory recognizes exactly these values:
 | `token:read` | `GET /tokens` |
 | `token:revoke` | `POST /tokens/:id/revoke` |
 
-The route map is code-defined and is the single source of truth for self-issued credentials and Auth0 machine credentials.
-A machine credential receives `image:read`: it may retrieve generated products, including PXE and generated installer images, but it cannot pull proxied source images or inspect schematic definitions.
+The route map is code-defined and is the single source of truth for self-issued credentials.
 
 Scopes do not imply one another.
 `schematic:create` does not grant `schematic:read`, and `token:issue` does not grant listing or revocation.
@@ -194,6 +157,24 @@ Ownership remains a separate mandatory check, so permission to read a schematic-
 
 A token's lifetime and supported transports follow whether it is stored, not which scopes it carries.
 See [Stored and ephemeral tokens](#stored-and-ephemeral-tokens).
+
+### Browser actor profiles
+
+The browser UI does not expose individual scope or delegation controls.
+It offers fixed actor profiles whose scope lists are code-owned alongside the scope catalog:
+
+| Actor | Executable scopes | Issuable scopes |
+| --- | --- | --- |
+| Talos | `image:read` | none |
+| Automation (Omni / Terraform) | `image:read`, `report:read`, `schematic:create`, `schematic:read`, `token:issue` | the same Automation scopes |
+| Operator | the non-token Automation scopes plus `source:pull` | none |
+| Admin | `image:read`, `report:read`, `schematic:create`, `schematic:read`, `source:pull`, `token:issue`, `token:read`, `token:revoke` | the same Admin scopes |
+
+Automation can issue bounded credentials for work it controls, such as a Talos or PXE pull token, and can mint a replacement Automation credential before its current credential expires.
+Admin can issue every actor profile.
+These are ordinary independently valid credentials rather than OAuth refresh tokens: issuing a replacement does not revoke its predecessor, and each stored token remains independently revocable until it expires.
+No browser actor carries `any_subject`, so Automation and Admin remain confined to their own authenticated identity.
+The HTTP API continues to accept explicit scopes for clients that need finer control.
 
 ### Stored and ephemeral tokens
 
@@ -287,8 +268,8 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" https://factory.example.com/to
   -d '{"scopes":["image:read"],"stored":false,"ttl":"1h"}'
 ```
 
-The `/ui/tokens` page mints stored tokens only: name the token, select its executable permissions, optionally select a separate delegation ceiling, set a lifetime, and copy the result.
-Delegation controls are shown only when `token:issue` is selected.
+The `/ui/tokens` page mints stored tokens only: name the token, select one of the fixed actor profiles, set a lifetime, and copy the result.
+The server expands the selected actor to its executable scopes and delegation ceiling; the page does not accept custom scopes.
 The lifetime field takes the same Go duration as `ttl`; leaving it empty uses the server default.
 The listing shows how long each token has left, with the exact expiry on hover.
 An ephemeral token has no name and never appears in that list, so there would be nothing for the page to show afterwards; the API is where those are minted.
@@ -393,21 +374,3 @@ Rotate keys in two deployments so every replica can verify both keys before any 
 Prepending a new key in a single rolling deployment is unsafe: updated replicas can mint tokens that replicas still running the previous configuration cannot verify.
 
 Verification allows 30s of clock leeway.
-
-### Upgrading from separate download and node tokens
-
-Before this, the factory issued two token kinds with separate audiences, separate keys and separate configuration, and later one scoped token whose scopes decided everything about it.
-They are now one token that says what it is, which changes this much for an existing deployment:
-
-- **Tokens issued by an earlier version stop working.** They carry either the old audience or no `stored` claim, so the factory does not accept them.
-Re-issue them from `/ui/tokens`; the machine config patch the page produces is unchanged.
-- **The `/node-tokens` and `/download-token` routes are gone.** Use `POST /tokens` with `"scopes": ["image:read"]`; set `stored:false` for a short-lived URL credential.
-  The unreleased intermediate scope names `download`, `pull`, `schematic`, `token` and `admin` are also gone.
-  Reissue credentials with the atomic resource-first catalog above; there are no compatibility aliases.
-- **The configuration moved.** `authentication.downloadTokenKeyPath`, `authentication.downloadTokenTTL` and `enterprise.nodeTokens` are gone, replaced by `authentication.tokens`.
-The old keys are rejected at startup rather than ignored, so a stale config fails loudly instead of quietly generating a throwaway signing key.
-- **One active key signs every scope.** Put the selected private key first in `authentication.tokens.keyPaths`; retain the other legacy key later in the list only while its tokens must continue to verify.
-- **Token lifetimes now follow storage rather than scope.** Configure `authentication.tokens.ttl.stored`, `.ephemeral` and `.bootstrap`; see [Stored and ephemeral tokens](#stored-and-ephemeral-tokens).
-- **`POST /tokens` takes `stored`**, and its response reports `stored` where it used to report `revocable`.
-
-The token index also moved, to `authentication.tokens.storage` (`ghcr.io/siderolabs/image-factory/tokens` by default).

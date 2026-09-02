@@ -686,11 +686,9 @@ type TokenOptions struct {
 	// TTL bounds token lifetimes by whether they are stored, plus the CLI-only bootstrap policy.
 	TTL TokenTTLOptions `koanf:"ttl"`
 
-	// VerificationCacheRefreshInterval controls how often the backing registry clients are rebuilt
+	// RefreshInterval controls how often the backing registry clients are rebuilt
 	// so refreshed credentials are picked up.
-	//
-	// The legacy name is retained for configuration compatibility.
-	VerificationCacheRefreshInterval time.Duration `koanf:"verificationCacheRefreshInterval"`
+	RefreshInterval time.Duration `koanf:"registryClientRefreshInterval"`
 
 	// MaxPerOrg caps how many stored tokens an org may have active at once.
 	MaxPerOrg int `koanf:"maxPerOrg"`
@@ -736,12 +734,12 @@ func (o TokenOptions) EnterpriseOptions(remoteOptions []remote.Option) enterpris
 			Max:     o.TTL.Bootstrap.Max,
 		},
 
-		StorageTTL:                       o.StorageTTL(),
-		StorageRepository:                o.Storage.String(),
-		StorageInsecure:                  o.Storage.Insecure,
-		RemoteOptions:                    remoteOptions,
-		VerificationCacheRefreshInterval: o.VerificationCacheRefreshInterval,
-		MaxPerOrg:                        o.MaxPerOrg,
+		StorageTTL:        o.StorageTTL(),
+		StorageRepository: o.Storage.String(),
+		StorageInsecure:   o.Storage.Insecure,
+		RemoteOptions:     remoteOptions,
+		RefreshInterval:   o.RefreshInterval,
+		MaxPerOrg:         o.MaxPerOrg,
 	}
 }
 
@@ -779,8 +777,8 @@ func (o TokenOptions) validate() error {
 	switch {
 	case o.MaxPerOrg <= 0:
 		return fmt.Errorf("authentication.tokens.maxPerOrg must be positive, got %d", o.MaxPerOrg)
-	case o.VerificationCacheRefreshInterval <= 0:
-		return fmt.Errorf("authentication.tokens.verificationCacheRefreshInterval must be positive, got %s", o.VerificationCacheRefreshInterval)
+	case o.RefreshInterval <= 0:
+		return fmt.Errorf("authentication.tokens.refreshInterval must be positive, got %s", o.RefreshInterval)
 	default:
 		return nil
 	}
@@ -797,15 +795,6 @@ type Auth0Options struct {
 	//
 	// Required.
 	Audience string `koanf:"audience"`
-
-	// MachineScope names a scope that marks a token as a machine credential, e.g. `factory:machine`.
-	//
-	// Tokens carrying it receive exactly `image:read`: generated downloads, PXE assets, and generated installer OCI pulls.
-	// Everything else is rejected with 403, including schematic definitions and proxied source images.
-	// Intended for the long-lived tokens provisioned onto Talos nodes, which need to pull installers but should not be able to inspect or create schematics.
-	//
-	// Optional; when empty every valid token has full access.
-	MachineScope string `koanf:"machineScope"`
 
 	// ClientID is the Auth0 application Client ID used for the browser login flow.
 	//
@@ -1008,8 +997,8 @@ var DefaultOptions = Options{
 					Min:     time.Hour,
 				},
 			},
-			VerificationCacheRefreshInterval: 5 * time.Minute,
-			MaxPerOrg:                        10,
+			RefreshInterval: 5 * time.Minute,
+			MaxPerOrg:       10,
 		},
 	},
 
