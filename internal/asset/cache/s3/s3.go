@@ -187,8 +187,7 @@ func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset
 		ContentDisposition: fmt.Sprintf(`attachment; filename="%s"`, filename),
 	})
 	if err != nil {
-		var minioErr minio.ErrorResponse
-		if errors.As(err, &minioErr) {
+		if minioErr, ok := errors.AsType[minio.ErrorResponse](err); ok {
 			c.logger.Debug(
 				"PUT failed", zap.String("object.key", key),
 				zap.Int("minio.error.statusCode", minioErr.StatusCode),

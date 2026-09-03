@@ -96,7 +96,7 @@ func NewGSASigner(ctx context.Context, opts GSASignerOptions) (*GSASigner, error
 
 	creds, err := idtoken.NewCredentials(&idtoken.Options{
 		Audience:        "sigstore",
-		CredentialsFile: opts.KeyFile,
+		CredentialsFile: opts.KeyFile, //nolint:staticcheck // refactor later: use explicit loading, support fallback to environment variables
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GSA credentials: %w", err)

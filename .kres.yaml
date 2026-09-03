@@ -22,8 +22,9 @@ spec:
     extraVariables:
       - name: PKGS_PREFIX
         defaultValue: ghcr.io/siderolabs
+        # keep in sync with Talos PKGS in the Makefile matching siderolabs/talos version in go.mod
       - name: PKGS
-        defaultValue: v1.14.0-10-g13c7afc
+        defaultValue: v1.14.0-15-g2f03590
   docker:
     extraArgs:
       - PKGS_PREFIX

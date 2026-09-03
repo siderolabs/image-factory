@@ -89,6 +89,12 @@ func Hash(p profile.Profile) (string, error) {
 		hasher.Write([]byte("overlay extra kernel args fix #376"))
 	}
 
+	// 11. Overlays were incorrectly dropping EFI boot assets.
+	// - https://github.com/siderolabs/talos/pull/14235
+	if p.Overlay != nil {
+		hasher.Write([]byte("overlay efi boot assets fix #14235"))
+	}
+
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
