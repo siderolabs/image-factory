@@ -264,7 +264,7 @@ func (f *Frontend) proxyRegistryRequest(ctx context.Context, location *url.URL, 
 	f.reqLogger(ctx).Info("proxying registry request", zap.Stringer("location", location))
 
 	proxy := &httputil.ReverseProxy{
-		Director: func(out *http.Request) {
+		Director: func(out *http.Request) { //nolint:staticcheck // refactor me later to use Rewrite
 			out.URL.Scheme = location.Scheme
 			out.URL.Host = location.Host
 			out.URL.Path = location.Path
