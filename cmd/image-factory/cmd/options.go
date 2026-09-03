@@ -679,7 +679,8 @@ type TokenOptions struct {
 	// If empty, a fresh key is generated at startup, which only works for single-replica deployments.
 	KeyPaths []string `koanf:"keyPaths"`
 
-	// Storage is the OCI repository used to persist the per-org token index (the list of active stored tokens; presence in the index is what makes such a token valid).
+	// Storage is the base OCI repository under which stored token records are persisted; presence of a record is what makes such a token valid.
+	// Each organization gets its own repository beneath it, holding one tag per token, so a listing costs one organization's tokens rather than every token in the deployment.
 	// A token minted with "stored": false is not recorded, so it cannot be listed or revoked and does not count against MaxPerOrg.
 	Storage OCIRepositoryOptions `koanf:"storage"`
 

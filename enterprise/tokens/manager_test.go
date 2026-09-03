@@ -8,9 +8,15 @@
 package tokens_test
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -269,4 +275,62 @@ func TestManagerVerifyLogsRejectionReason(t *testing.T) {
 	require.Equal(t, "stored API token is revoked, expired or unknown", entries[0].Message)
 	require.Equal(t, "org_a", entries[0].ContextMap()["sub"])
 	require.Equal(t, token.ID, entries[0].ContextMap()["jti"])
+}
+
+// TestManagerVerifyDeduplicatesConcurrentLookups pins the singleflight in Verify. One client
+// request often fans out into many at once (a docker pull asks for a manifest and every blob
+// together), and each would otherwise repeat the same registry round trips.
+func TestManagerVerifyDeduplicatesConcurrentLookups(t *testing.T) {
+	t.Parallel()
+
+	const concurrency = 20
+
+	var reads atomic.Int64
+
+	upstream := registry.New()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/manifests/") && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
+			reads.Add(1)
+
+			// Hold the read open long enough that every caller below is waiting on it, so a
+			// missing singleflight shows up as a count rather than as flakiness.
+			time.Sleep(200 * time.Millisecond)
+		}
+
+		upstream.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+
+	issuer := newTestIssuer(t)
+	storage := newTestStorageAt(t, strings.TrimPrefix(srv.URL, "http://"), time.Minute)
+	mgr := tokens.NewManager(zaptest.NewLogger(t), issuer, storage)
+	ctx := t.Context()
+
+	_, token, err := mgr.Create(ctx, "org_a", "my-node", imageScopes, apitoken.Delegation{}, true, 0)
+	require.NoError(t, err)
+
+	reads.Store(0)
+
+	var (
+		start sync.WaitGroup
+		done  sync.WaitGroup
+	)
+
+	start.Add(1)
+
+	for range concurrency {
+		done.Go(func() {
+			start.Wait()
+
+			_, ok := mgr.Verify(ctx, token)
+			require.True(t, ok)
+		})
+	}
+
+	start.Done()
+	done.Wait()
+
+	require.Positive(t, reads.Load())
+	require.Less(t, reads.Load(), int64(concurrency),
+		"each concurrent Verify read the registry separately; the singleflight is not collapsing them")
 }

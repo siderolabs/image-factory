@@ -351,10 +351,10 @@ func requestIDFrom(r *http.Request) string {
 	return uuid.NewString()
 }
 
-// downloadTokenKey keys the verified ephemeral API token on the request context.
+// downloadTokenKey keys the verified URL-safe API token on the request context.
 type downloadTokenKey struct{}
 
-// downloadTokenFromContext returns the ephemeral API token that authenticated the request.
+// downloadTokenFromContext returns the URL-safe API token that authenticated the request.
 // It is only ever set after Verify succeeded, so a caller may forward it as-is.
 func downloadTokenFromContext(ctx context.Context) (string, bool) {
 	token, ok := ctx.Value(downloadTokenKey{}).(string)
@@ -376,7 +376,7 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 		// API token: the JWT subject becomes the authenticated identity, so ownership is then
-		// enforced normally by schematicFactory.Get(). An ephemeral token is also put on the
+		// enforced normally by schematicFactory.Get(). A URL-safe token is also put on the
 		// context, for handlePXE to forward into the asset URLs it emits.
 		if f.options.TokenVerifier != nil {
 			if tokenStr, fromQuery := extractAPIToken(r); tokenStr != "" {
@@ -392,13 +392,12 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 							zap.String("jti", claims.ID),
 							zap.Strings("scopes", claims.Scopes),
 						)
-					case fromQuery && (claims.Stored || !apitoken.URLSafe(claims.Scopes)):
+					case fromQuery && !apitoken.URLSafe(claims.Scopes):
 						ctxlog.Logger(ctx, f.logger).Warn(
 							"API token may not travel in a query string",
 							zap.String("sub", claims.Subject),
 							zap.String("jti", claims.ID),
 							zap.Strings("scopes", claims.Scopes),
-							zap.Bool("stored", claims.Stored),
 						)
 					default:
 						*username = claims.Subject
@@ -406,7 +405,7 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 
 						ctx = apitoken.ContextWithClaims(ctx, claims)
 
-						if !claims.Stored && apitoken.URLSafe(claims.Scopes) {
+						if apitoken.URLSafe(claims.Scopes) {
 							ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)
 						}
 
@@ -437,9 +436,13 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 }
 
 // extractAPIToken pulls an API token off the request, reporting whether it came from the
-// query string, which the caller pairs with the token's stored claim and apitoken.URLSafe. An
-// ephemeral token is short-lived enough to survive an access log; a stored one is not, and neither
-// is a minting credential of any lifetime.
+// query string, which the caller pairs with apitoken.URLSafe.
+//
+// A token that arrives in a query string has already been written to whatever access logs sit in
+// front of the factory, and refusing it un-leaks nothing; the operator took that risk knowingly,
+// and a stored token is the better credential to have taken it with, being both revocable and
+// expiring. A minting credential is the exception URLSafe encodes: leaking one yields more
+// credentials rather than just itself, and no PXE flow needs one.
 func extractAPIToken(r *http.Request) (token string, fromQuery bool) {
 	if r.Method == http.MethodGet || r.Method == http.MethodHead {
 		if token = r.URL.Query().Get("token"); token != "" {

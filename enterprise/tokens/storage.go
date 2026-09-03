@@ -60,10 +60,15 @@ type storedRecord struct {
 
 // Storage is a registry-backed set of stored tokens.
 //
-// Each token lives under its own deterministic tag in a dedicated repository. This avoids
-// lost updates between factory replicas: independent creates never write the same mutable tag,
-// while revocation replaces only that token's tag with a tombstone. Verification reads that
-// exact tag, avoiding a repository-wide listing and observing writes from every replica.
+// Each org gets its own repository under the configured base, and each of its tokens is one tag
+// in it named for the token's jti. This avoids lost updates between factory replicas:
+// independent creates never write the same mutable tag, while revocation replaces only that
+// token's tag with a tombstone. Verification reads that exact tag, so it costs one registry read
+// and observes writes from every replica, and a listing is bounded by one org's token count
+// rather than by every token in the deployment.
+//
+// The org ID is hashed into the repository path rather than used directly: an htpasswd username
+// may contain characters an OCI path component may not.
 type Storage struct {
 	pusher     remotewrap.Pusher
 	puller     remotewrap.Puller
@@ -114,7 +119,7 @@ func (s *Storage) Create(ctx context.Context, orgID string, record Record) error
 
 // Revoke replaces id's record with a tombstone. Returns ErrNotFound if id isn't active.
 func (s *Storage) Revoke(ctx context.Context, orgID, id string) error {
-	stored, err := s.readRecord(ctx, tokenTag(s.repository, orgID, id))
+	stored, err := s.readRecord(ctx, s.orgRepository(orgID).Tag(id))
 	if err != nil {
 		if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
 			return ErrNotFound
@@ -135,9 +140,9 @@ func (s *Storage) Revoke(ctx context.Context, orgID, id string) error {
 }
 
 // Valid reports whether jti is currently a live (non-revoked and unexpired) token for orgID.
-// The deterministic tag makes this one registry read rather than an all-org repository listing.
+// The deterministic tag makes this one registry read rather than a repository listing.
 func (s *Storage) Valid(ctx context.Context, orgID, jti string) (bool, error) {
-	stored, err := s.readRecord(ctx, tokenTag(s.repository, orgID, jti))
+	stored, err := s.readRecord(ctx, s.orgRepository(orgID).Tag(jti))
 	if err != nil {
 		if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
 			return false, nil
@@ -154,8 +159,9 @@ func (s *Storage) Valid(ctx context.Context, orgID, jti string) (bool, error) {
 
 func (s *Storage) readRecords(ctx context.Context, orgID string) ([]Record, error) {
 	options := append(slices.Clone(s.remoteOpts), remote.WithContext(ctx))
+	repository := s.orgRepository(orgID)
 
-	tags, err := remote.List(s.repository, options...)
+	tags, err := remote.List(repository, options...)
 	if err != nil {
 		if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
 			return nil, nil
@@ -164,21 +170,16 @@ func (s *Storage) readRecords(ctx context.Context, orgID string) ([]Record, erro
 		return nil, fmt.Errorf("tokens: failed to list records for org %q: %w", orgID, err)
 	}
 
-	prefix := orgTagPrefix(orgID)
-	tokens := make([]Record, 0)
+	tokens := make([]Record, 0, len(tags))
 
 	for _, tag := range tags {
-		if len(tag) <= len(prefix) || tag[:len(prefix)] != prefix {
-			continue
-		}
-
-		stored, readErr := s.readRecord(ctx, s.repository.Tag(tag))
+		stored, readErr := s.readRecord(ctx, repository.Tag(tag))
 		if readErr != nil {
 			return nil, fmt.Errorf("tokens: failed to read record tag %q for org %q: %w", tag, orgID, readErr)
 		}
 
-		// Verify the embedded org ID as well as the hashed tag prefix so even a theoretical
-		// prefix collision cannot expose another organization's record.
+		// Verify the embedded org ID as well as the hashed repository path so even a
+		// theoretical hash collision cannot expose another organization's record.
 		if stored.OrgID != orgID || stored.Revoked || !stored.Record.ExpiresAt.After(time.Now()) {
 			continue
 		}
@@ -254,25 +255,27 @@ func (s *Storage) pushRecord(ctx context.Context, orgID string, record Record, r
 		return fmt.Errorf("tokens: failed to append token %q layer for org %q: %w", record.ID, orgID, err)
 	}
 
-	if err := s.pusher.Push(ctx, tokenTag(s.repository, orgID, record.ID), img); err != nil {
+	if err := s.pusher.Push(ctx, s.orgRepository(orgID).Tag(record.ID), img); err != nil {
 		return fmt.Errorf("tokens: failed to push token %q for org %q: %w", record.ID, orgID, err)
 	}
 
 	return nil
 }
 
-func tokenTag(repository name.Repository, orgID, tokenID string) name.Tag {
-	tokenHash := sha256.Sum256([]byte(tokenID))
-
-	return repository.Tag(orgTagPrefix(orgID) + hex.EncodeToString(tokenHash[:]))
+// orgRepository returns the repository holding orgID's token records, one tag per token.
+//
+// Registry.Repo carries the base repository's registry across, so a repository parsed as
+// insecure stays insecure.
+func (s *Storage) orgRepository(orgID string) name.Repository {
+	return s.repository.Repo(s.repository.RepositoryStr(), orgPathComponent(orgID))
 }
 
-func orgTagPrefix(orgID string) string {
+func orgPathComponent(orgID string) string {
 	orgHash := sha256.Sum256([]byte(orgID))
 
-	// Half a SHA-256 digest keeps the prefix compact while retaining 128 bits of collision
+	// Half a SHA-256 digest keeps the path compact while retaining 128 bits of collision
 	// resistance; the embedded org ID is also checked when records are read.
-	return hex.EncodeToString(orgHash[:len(orgHash)/2]) + "-"
+	return hex.EncodeToString(orgHash[:len(orgHash)/2])
 }
 
 // layerWrapper adapts raw JSON content to the v1.Layer interface expected by the OCI push path.

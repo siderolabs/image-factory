@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
@@ -22,6 +23,7 @@ type Manager struct {
 	logger  *zap.Logger
 	issuer  *apitoken.Issuer
 	storage *Storage
+	lookups singleflight.Group
 }
 
 // NewManager creates a Manager from a token issuer and its backing storage.
@@ -93,7 +95,7 @@ func (m *Manager) Verify(ctx context.Context, tokenStr string) (apitoken.Claims,
 		return claims, true
 	}
 
-	valid, err := m.storage.Valid(ctx, claims.Subject, claims.ID)
+	valid, err := m.valid(ctx, claims.Subject, claims.ID)
 	if err != nil {
 		logger.Warn(
 			"failed to look up stored API token",
@@ -116,4 +118,34 @@ func (m *Manager) Verify(ctx context.Context, tokenStr string) (apitoken.Claims,
 	}
 
 	return claims, true
+}
+
+// valid is storage.Valid with concurrent lookups of the same token collapsed into one registry
+// read. A single client request often fans out into many (a docker pull asks for a manifest and
+// every blob at once), and each of those would otherwise repeat the same two round trips.
+//
+// Nothing is cached between lookups: a revocation still takes effect on the next request on
+// every replica, which is the property Storage's per-token tags exist to provide.
+func (m *Manager) valid(ctx context.Context, orgID, jti string) (bool, error) {
+	// The shared read outlives whichever caller happened to start it, so a client that
+	// disconnects mid-flight cannot fail the lookup for everyone waiting on it. Each caller
+	// still abandons its own wait below, and the registry transport bounds the read either way.
+	shared := context.WithoutCancel(ctx)
+
+	resultCh := m.lookups.DoChan(orgID+"\x00"+jti, func() (any, error) {
+		return m.storage.Valid(shared, orgID, jti) //nolint:contextcheck // deliberately detached, see above
+	})
+
+	select {
+	case <-ctx.Done():
+		return false, ctx.Err()
+	case result := <-resultCh:
+		if result.Err != nil {
+			return false, result.Err
+		}
+
+		valid, _ := result.Val.(bool) //nolint:errcheck // storage.Valid always returns a bool
+
+		return valid, nil
+	}
 }

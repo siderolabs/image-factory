@@ -10,6 +10,7 @@ package tokens_test
 import (
 	"fmt"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -217,4 +218,48 @@ func TestStorageValidReadsExactTokenAcrossReplicas(t *testing.T) {
 	valid, err = reader.Valid(ctx, "org_a", "jti-1")
 	require.NoError(t, err)
 	require.False(t, valid)
+}
+
+// TestStorageListScansOnlyOneOrgRepository pins the layout the listing cost depends on: each
+// org's records live in their own repository, one tag per token named for its jti. A listing
+// therefore reads one org's tokens rather than every token in the deployment.
+func TestStorageListScansOnlyOneOrgRepository(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(registry.New())
+	t.Cleanup(srv.Close)
+
+	host := strings.TrimPrefix(srv.URL, "http://")
+	s := newTestStorageAt(t, host, time.Minute)
+	ctx := t.Context()
+
+	require.NoError(t, s.Create(ctx, "org_a", activeRecord("jti-1", "node-1")))
+	require.NoError(t, s.Create(ctx, "org_a", activeRecord("jti-2", "node-2")))
+	require.NoError(t, s.Create(ctx, "org_b", activeRecord("jti-3", "node-3")))
+
+	// Two repositories, one per org, and neither holds the other's tags.
+	registryRef, err := name.NewRegistry(host, name.Insecure)
+	require.NoError(t, err)
+
+	repositories, err := remote.Catalog(ctx, registryRef)
+	require.NoError(t, err)
+	require.Len(t, repositories, 2)
+
+	tagSets := make([][]string, 0, len(repositories))
+
+	for _, repository := range repositories {
+		require.True(t, strings.HasPrefix(repository, "tokens/"), "org repository %q is not under the base", repository)
+
+		repo, err := name.NewRepository(host+"/"+repository, name.Insecure)
+		require.NoError(t, err)
+
+		tags, err := remote.List(repo)
+		require.NoError(t, err)
+
+		slices.Sort(tags)
+		tagSets = append(tagSets, tags)
+	}
+
+	// The tag is the jti itself, so a lookup needs no listing and no hashing of the token ID.
+	require.ElementsMatch(t, [][]string{{"jti-1", "jti-2"}, {"jti-3"}}, tagSets)
 }

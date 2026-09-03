@@ -181,20 +181,21 @@ The HTTP API continues to accept explicit scopes for clients that need finer con
 Every token says, in the JWT itself, whether the factory keeps a record of it.
 That is the `stored` claim, set once when the token is minted and never re-derived afterwards.
 
-A **stored** token is written to the per-org index.
-Presence in that index is what keeps it valid, which is what makes it revocable, and it is what `GET /tokens` lists.
+A **stored** token has a record written for it in its organization's repository.
+Presence of that record is what keeps it valid, which is what makes it revocable, and it is what `GET /tokens` lists.
 It needs a `name`, because the name is what an operator picks it out of that list by, and it counts against `authentication.tokens.maxPerOrg`.
 
 An **ephemeral** token is a signed string and nothing else.
 Nothing records it, so it cannot be listed or revoked; expiry is the only way it leaves circulation.
-It needs no name, costs no registry write, and it is the only kind read from a [`?token=` query parameter](#the-token-query-parameter).
+It needs no name and costs no registry write, on either the mint or the verify path.
 
 Because the only way to withdraw an ephemeral token is to wait, stored and ephemeral tokens have separate lifetime policies.
 `authentication.tokens.ttl.stored` defaults to one year with a one-year maximum; `authentication.tokens.ttl.ephemeral` defaults to five minutes with an eight-hour maximum.
 The caller still chooses storage explicitly, but cannot request a lifetime outside the selected policy.
 
 On the verification path the claim decides the work: an ephemeral token is accepted on its signature and expiry alone, and a stored one is looked up directly by its deterministic registry tag.
-That makes a create or revoke visible to every replica immediately without listing every organization's tokens.
+That makes a create or revoke visible to every replica immediately, without a listing and without a cache to go stale.
+Lookups of the same token that are in flight at the same moment are collapsed into a single registry read, so a `docker pull` fanning out across a manifest and its blobs pays for one.
 
 ### Delegation and the bootstrap credential
 
@@ -297,7 +298,7 @@ curl -s -X POST -H "Authorization: Bearer $BOOTSTRAP_TOKEN" https://factory.exam
   -d '{"name":"rack-3","scopes":["image:read"],"subject":"org_abc123"}'
 ```
 
-The minted token belongs to `org_abc123` in every sense that matters: it authenticates as that identity, ownership checks resolve against it, the record lands in that organization's index, it counts against that organization's `maxPerOrg`, and the response reports it as `org_id`.
+The minted token belongs to `org_abc123` in every sense that matters: it authenticates as that identity, ownership checks resolve against it, the record lands in that organization's repository, it counts against that organization's `maxPerOrg`, and the response reports it as `org_id`.
 
 Anything other than the bootstrap credential is refused with `403` and `only a bootstrap credential may mint for another identity`.
 That includes a full htpasswd or Auth0 credential, which is otherwise unrestricted in what it may mint.
@@ -305,7 +306,7 @@ The asymmetry is deliberate: a provider credential carries authority over its ow
 Naming your own identity is not a cross-tenant mint, so it is allowed and does nothing.
 
 `subject` must be a single-line value of at most 256 bytes.
-It ends up in the JWT, in the token index and in every audit record the minted token produces, so whitespace and control characters are refused rather than escaped.
+It ends up in the JWT, in the token record and in every audit record the minted token produces, so whitespace and control characters are refused rather than escaped.
 
 One asymmetry to plan around: minting is cross-tenant, listing and revocation are not.
 `GET /tokens` and `POST /tokens/:id/revoke` still act on the caller's own identity, so a token bootstrapped into another organization is revoked by a credential belonging to that organization, not by the bootstrap credential that created it.
@@ -316,16 +317,17 @@ The query string is for callers that cannot set a header: a browser, an applianc
 
 - Its value is an API token, and nothing else.
   An Auth0 JWT or an htpasswd password is not one and does not work here.
-- Only an [ephemeral](#stored-and-ephemeral-tokens) token is read from the query string.
-  A stored one is rejected there and must use the header: query strings are recorded by proxy and CDN access logs, which is survivable for the hours an ephemeral token can live and not for the year a stored one can.
+- Either a [stored or an ephemeral](#stored-and-ephemeral-tokens) token is read from the query string.
+  Query strings are recorded by proxy and CDN access logs, so a URL carrying one is a leaked credential; but a token that has arrived in a URL was already written to those logs before the factory saw it, and refusing it there would not un-leak it.
+  Of the two, a stored token is the better one to have taken that risk with, being revocable rather than only expiring.
 - A token carrying any token-management capability (`token:issue`, `token:read` or `token:revoke`) is refused there whatever its lifetime.
-  Such credentials do not belong in access logs.
-  Other ephemeral scopes may travel this way; in practice `image:read` is the capability used for download and PXE URLs.
+  Leaking one of those yields the means to mint further credentials rather than only itself, and no download or PXE flow needs it.
+  In practice `image:read` is the capability used for download and PXE URLs.
 - It is read only on `GET` and `HEAD`, so it never authenticates a write.
 - On `/pxe/` the same token is forwarded into the kernel, initramfs and UKI URLs of the generated script, so an iPXE boot needs no credential of its own.
   This happens whichever transport the token arrived on, since the URL is the only one iPXE has.
   Nothing is minted there: the script expires with the token it was fetched with, and re-fetching the script with an expiring token cannot extend that lifetime.
-  A boot fetches its assets seconds after the script, so the ephemeral-token default of `5m` covers it; request a longer lifetime for a script that is kept and reused, up to `authentication.tokens.ttl.ephemeral.max`.
+  A boot fetches its assets seconds after the script, so the ephemeral-token default of `5m` covers it; for a script that is kept and reused, request a longer ephemeral lifetime up to `authentication.tokens.ttl.ephemeral.max`, or use a stored token so the script can be withdrawn by revoking it.
 - It is checked before the header.
   A valid token authenticates the request on its own; a missing, expired or malformed one falls back to the header, so a request carrying only a bad token gets the ordinary `401` rather than a distinct error.
 
@@ -333,17 +335,18 @@ Treat such a URL as the credential it is.
 
 ### Listing and revocation
 
-Stored tokens are recorded in a per-org index kept in the OCI repository at `authentication.tokens.storage`.
-Presence in that index is what keeps such a token valid, so `POST /tokens/:id/revoke` takes it out of circulation by removing the record.
+Stored tokens are recorded under `authentication.tokens.storage`, which is a base OCI repository rather than a single index: each organization gets its own repository beneath it, holding one tag per token named for that token's `jti`.
+A listing therefore reads one organization's tokens, bounded by `authentication.tokens.maxPerOrg`, rather than every token in the deployment.
+Presence of a record is what keeps such a token valid, so `POST /tokens/:id/revoke` takes it out of circulation by replacing the record with a tombstone.
 
 Revocation is immediate after the backing registry accepts the tombstone.
-Each replica verifies a stored token by reading its deterministic tag, so it does not wait for an organization-wide listing cache to refresh.
+Each replica verifies a stored token by reading its deterministic tag, so it does not wait for a listing cache to refresh, and nothing is cached between requests for one to go stale.
 
 `authentication.tokens.maxPerOrg` (`10` by default) caps how many unexpired recorded tokens an organization may hold at once; a create beyond it is `409`.
 Expired records are omitted from the list and no longer count against the cap.
 
 Ephemeral tokens do not appear in a listing, cannot be revoked and do not count against the cap.
-Indexing them would mean a registry write per download link, so they use the deliberately short `authentication.tokens.ttl.ephemeral` policy.
+Recording them would mean a registry write per download link, so they use the deliberately short `authentication.tokens.ttl.ephemeral` policy.
 
 ### Signing key
 

@@ -187,7 +187,10 @@ func testAPITokens(ctx context.Context, t *testing.T, baseURL string) {
 				"a pull token must not reach %s", path)
 		}
 
-		assert.Equal(t, http.StatusUnauthorized,
+		// A stored token travels in a query string like an ephemeral one: what reaches a URL is
+		// already in the access logs in front of the factory, and a revocable credential is the
+		// better one to have taken that risk with.
+		assert.Equal(t, http.StatusOK,
 			getWithToken(ctx, t, baseURL+"/image/"+schematicID+"/v1.9.0/kernel-amd64?token="+token, ""))
 	})
 
