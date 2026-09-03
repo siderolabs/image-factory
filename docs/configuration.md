@@ -1143,10 +1143,10 @@ Default is the validity duration granted when the caller requests no explicit TT
 
 ---
 
-### `authentication.tokens.registryClientRefreshInterval`
+### `authentication.tokens.refreshInterval`
 
 - **Type:** `time.Duration`
-- **Env:** `AUTHENTICATION_TOKENS_REGISTRYCLIENTREFRESHINTERVAL`
+- **Env:** `AUTHENTICATION_TOKENS_REFRESHINTERVAL`
 
 RefreshInterval controls how often the backing registry clients are rebuilt
 so refreshed credentials are picked up.
@@ -1529,7 +1529,7 @@ authentication:
     tokens:
         keyPaths: []
         maxPerOrg: 10
-        registryClientRefreshInterval: 5m0s
+        refreshInterval: 5m0s
         storage:
             insecure: false
             namespace: siderolabs/image-factory
@@ -1688,7 +1688,7 @@ IF_AUTHENTICATION_HTPASSWDPATH=
 IF_AUTHENTICATION_PROVIDER=htpasswd
 IF_AUTHENTICATION_TOKENS_KEYPATHS=[]
 IF_AUTHENTICATION_TOKENS_MAXPERORG=10
-IF_AUTHENTICATION_TOKENS_REGISTRYCLIENTREFRESHINTERVAL=5m0s
+IF_AUTHENTICATION_TOKENS_REFRESHINTERVAL=5m0s
 IF_AUTHENTICATION_TOKENS_STORAGE_INSECURE=false
 IF_AUTHENTICATION_TOKENS_STORAGE_NAMESPACE=siderolabs/image-factory
 IF_AUTHENTICATION_TOKENS_STORAGE_REGISTRY=ghcr.io

@@ -689,7 +689,7 @@ type TokenOptions struct {
 
 	// RefreshInterval controls how often the backing registry clients are rebuilt
 	// so refreshed credentials are picked up.
-	RefreshInterval time.Duration `koanf:"registryClientRefreshInterval"`
+	RefreshInterval time.Duration `koanf:"refreshInterval"`
 
 	// MaxPerOrg caps how many stored tokens an org may have active at once.
 	MaxPerOrg int `koanf:"maxPerOrg"`
