@@ -5,21 +5,10 @@ project_name = "image-factory"
 github_repo = "siderolabs/image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v1.5.1"
+previous = "v1.6.0"
 pre_release = false
 
 [notes]
-
-    [notes.unified_installer_signing]
-        title = "Unified Installer Signing"
-        description = """\
-Installer images for Talos 1.14.0 and newer are now always signed when SecureBoot assets are configured.
-
-Unified installers embed a UKI regardless of the SecureBoot flag, so `installer` and `installer-secureboot` now resolve to the same profile
-and share cached assets instead of being built and stored twice.
-
-Talos versions before 1.14.0 are unaffected: signing an installer there also turns on `lockdown=confidentiality`, so the two variants stay distinct.
-"""
 
 [make_deps]
 
