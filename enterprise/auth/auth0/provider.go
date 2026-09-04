@@ -295,13 +295,16 @@ func (p *Provider) Middleware(next Handler) Handler {
 	}
 }
 
-// setChallenge advertises Basic ahead of Bearer, as separate header values so a parser
-// cannot read "Bearer" as a parameter of the Basic challenge.
-// Order matters: OCI clients take the first scheme they recognize, and only Basic carries
-// a usable token here.
+// setChallenge advertises Basic only, matching the htpasswd provider.
+//
+// A Bearer challenge must not be advertised even though Bearer credentials are accepted:
+// docker's registry client (distribution/registry/client/auth) applies its token handler
+// before its basic handler, and that handler treats the challenge realm as the URL of an
+// OAuth token endpoint to fetch from. The factory has no such endpoint, so the fetch fails
+// and the whole request is aborted client-side — the caller's credentials are never sent,
+// and `docker login`/`docker pull` fail with no retry over Basic.
 func setChallenge(w http.ResponseWriter) {
 	w.Header().Add("WWW-Authenticate", `Basic realm="Image Factory Enterprise", charset="UTF-8"`)
-	w.Header().Add("WWW-Authenticate", `Bearer realm="Image Factory Enterprise"`)
 }
 
 // deny sends browsers to /login, preserving the URL they were trying to reach, and

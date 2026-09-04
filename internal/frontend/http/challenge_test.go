@@ -24,7 +24,7 @@ import (
 // TestUnauthorizedChallengeHeader pins the WWW-Authenticate behavior on a 401.
 // The wrapper only supplies the Basic challenge as a fallback, so htpasswd (which sets
 // nothing) keeps the challenge OCI registry clients require, while a provider that set
-// its own keeps them — including their order, which is what those clients select on.
+// its own keeps them, verbatim and in order.
 func TestUnauthorizedChallengeHeader(t *testing.T) {
 	t.Parallel()
 

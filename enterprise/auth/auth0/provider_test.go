@@ -356,8 +356,9 @@ func TestAuth0ProviderIgnoresOAuthScopes(t *testing.T) {
 	}
 }
 
-// TestAuth0ProviderChallengeOrder pins Basic ahead of Bearer on a 401, since OCI clients
-// authenticate with the first scheme they recognize and only Basic is usable here.
+// TestAuth0ProviderChallengeOrder pins Basic as the only challenge on a 401: docker's
+// registry client runs its token handler first and would try to fetch a token from a
+// Bearer challenge's realm, aborting before it ever sends the caller's credentials.
 func TestAuth0ProviderChallengeOrder(t *testing.T) {
 	t.Parallel()
 
@@ -385,7 +386,6 @@ func TestAuth0ProviderChallengeOrder(t *testing.T) {
 
 			require.Equal(t, []string{
 				`Basic realm="Image Factory Enterprise", charset="UTF-8"`,
-				`Bearer realm="Image Factory Enterprise"`,
 			}, w.Header().Values("WWW-Authenticate"))
 		})
 	}

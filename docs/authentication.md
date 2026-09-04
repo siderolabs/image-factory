@@ -30,9 +30,8 @@ Details that decide whether a request authenticates:
 - URL userinfo is the same header by another name: HTTP clients encode `https://<user>:<password>@factory.example.com/...` into `Authorization: Basic`.
   That is how `GET /pxe/...` is authenticated, since iPXE cannot set request headers.
 - A missing or invalid credential is `401`.
-  With `htpasswd`, the response carries one `WWW-Authenticate: Basic` challenge.
-  With `auth0`, it carries separate Basic and Bearer challenges, in that order.
-  The Auth0 order is deliberate: OCI clients take the first scheme they recognize, and only the Basic form carries a usable token for those clients.
+  The response carries one `WWW-Authenticate: Basic` challenge, under both `htpasswd` and `auth0`.
+  No Bearer challenge is advertised, even under `auth0` where Bearer credentials are accepted: docker's registry client reads a Bearer challenge's realm as an OAuth token endpoint to fetch a token from, and the factory has no such endpoint, so advertising one makes `docker login` fail before it sends any credentials.
   With [browser login](#browser-login) configured, a page navigation is sent to `/login` with a `303` instead, and an XHR gets the `401` with no challenge on it.
 
 There are two alternatives to this header: the [`?token=` query parameter](#the-token-query-parameter), accepted on image downloads and PXE scripts only, and the session cookie [browser login](#browser-login) issues.
