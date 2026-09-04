@@ -18,5 +18,8 @@ func TestIntegrationDirect(t *testing.T) {
 	options.Cache.OCI = cacheRepository.OCIRepositoryOptions
 	options.Metrics.Namespace = ""
 
+	t.Run("Audit policy", testAuditPolicy(options))
+	t.Run("Audit sink failure", testAuditSinkFailure(options))
+
 	commonTest(t, options)
 }

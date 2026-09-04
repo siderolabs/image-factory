@@ -115,9 +115,9 @@ func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
 		status int
 	}{
 		{name: "login", method: http.MethodGet, path: "/login", status: http.StatusFound},
-		{name: "logout GET", method: http.MethodGet, path: "/logout", status: http.StatusFound},
-		{name: "logout POST", method: http.MethodPost, path: "/logout", status: http.StatusFound},
-		{name: "invalid callback", method: http.MethodGet, path: "/callback", status: http.StatusForbidden},
+		{name: "logout GET", method: http.MethodGet, path: "/logout", status: http.StatusOK},
+		{name: "logout POST", method: http.MethodPost, path: "/logout", status: http.StatusSeeOther},
+		{name: "callback without state", method: http.MethodGet, path: "/callback", status: http.StatusFound},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -132,6 +132,77 @@ func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
 			assert.Equal(t, test.status, resp.StatusCode)
 		})
 	}
+
+	t.Run("unauthenticated request classes", func(t *testing.T) {
+		for _, test := range []struct {
+			headers          map[string]string
+			name             string
+			method           string
+			path             string
+			body             string
+			location         string
+			hxRedirect       string
+			status           int
+			expectsChallenge bool
+		}{
+			{
+				name:             "machine request",
+				method:           http.MethodGet,
+				path:             "/",
+				status:           http.StatusUnauthorized,
+				expectsChallenge: true,
+			},
+			{
+				name:     "browser navigation",
+				method:   http.MethodGet,
+				path:     "/",
+				status:   http.StatusSeeOther,
+				location: "/login",
+				headers: map[string]string{
+					"Accept":         "text/html,application/xhtml+xml",
+					"Sec-Fetch-Mode": "navigate",
+				},
+			},
+			{
+				name:       "htmx request",
+				method:     http.MethodGet,
+				path:       "/ui/version-doc?version=v1.11.0",
+				status:     http.StatusUnauthorized,
+				hxRedirect: "/login",
+				headers: map[string]string{
+					"Hx-Current-Url": "http://image-factory.test/",
+					"Hx-Request":     "true",
+				},
+			},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				t.Parallel()
+
+				req, err := http.NewRequestWithContext(ctx, test.method, baseURL+test.path, bytes.NewBufferString(test.body))
+				require.NoError(t, err)
+
+				for key, value := range test.headers {
+					req.Header.Set(key, value)
+				}
+
+				resp, err := client.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close() //nolint:errcheck
+
+				assert.Equal(t, test.status, resp.StatusCode)
+				assert.Equal(t, test.location, resp.Header.Get("Location"))
+				assert.Equal(t, test.hxRedirect, resp.Header.Get("Hx-Redirect"))
+				assert.NotEmpty(t, resp.Header.Get("Server"))
+				assert.NotEmpty(t, resp.Header.Get("X-Request-ID"))
+
+				if test.expectsChallenge {
+					assert.Equal(t, []string{`Basic realm="Image Factory Enterprise", charset="UTF-8"`}, resp.Header.Values("WWW-Authenticate"))
+				} else {
+					assert.Empty(t, resp.Header.Values("WWW-Authenticate"))
+				}
+			})
+		}
+	})
 }
 
 func TestIntegrationAuth0(t *testing.T) {

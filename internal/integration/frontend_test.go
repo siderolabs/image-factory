@@ -24,6 +24,8 @@ func testFrontend(ctx context.Context, baseURL string) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Parallel()
 
+		t.Run("Pipeline", testFrontendPipeline(ctx, baseURL))
+
 		t.Run("Server Header", func(t *testing.T) {
 			t.Parallel()
 
@@ -64,6 +66,9 @@ func testFrontend(ctx context.Context, baseURL string) func(t *testing.T) {
 			}{
 				{name: "OpenAPI", method: http.MethodGet, path: "/openapi.yaml", status: http.StatusOK, contentType: "application/yaml", bodyContains: "openapi: 3.1.0"},
 				{name: "nested static asset", method: http.MethodGet, path: "/css/output.css", status: http.StatusOK, contentType: "text/css"},
+				{name: "JavaScript asset", method: http.MethodGet, path: "/js/clipboard.js", status: http.StatusOK},
+				{name: "favicon asset", method: http.MethodGet, path: "/favicons/favicon.ico", status: http.StatusOK},
+				{name: "Apple touch icon", method: http.MethodGet, path: "/favicons/apple-touch-icon.png", status: http.StatusOK},
 				{name: "missing static asset", method: http.MethodGet, path: "/js/missing.js", status: http.StatusNotFound},
 				{name: "unknown route", method: http.MethodGet, path: "/future-route", status: http.StatusNotFound},
 				{name: "unknown OCI route", method: http.MethodGet, path: "/v2/example/unknown", status: http.StatusNotFound},
