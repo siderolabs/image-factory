@@ -51,15 +51,20 @@ func Enabled() bool {
 //
 // The cache eviction goroutine is started under eg and stopped when ctx is canceled.
 func NewVEXFrontend(ctx context.Context, eg *errgroup.Group, logger *zap.Logger, config VEXOptions) (FrontendPlugin, VEXSource, error) {
+	if config.KernelVersionSource == nil {
+		return nil, nil, errors.New("kernel version source is required")
+	}
+
 	b, err := vexbuilder.NewBuilder(logger, vexbuilder.Options{
-		Registry:         config.Data,
-		Insecure:         config.DataInsecure,
-		MetricsNamespace: config.MetricsNamespace,
-		RefreshInterval:  config.RefreshInterval,
-		RemoteOptions:    config.RemoteOptions,
-		VerifyOptions:    config.VerifyOptions,
-		CacheTTL:         config.CacheTTL,
-		Capacity:         config.CacheCapacity,
+		KernelVersionSource: config.KernelVersionSource,
+		Registry:            config.Data,
+		Insecure:            config.DataInsecure,
+		MetricsNamespace:    config.MetricsNamespace,
+		RefreshInterval:     config.RefreshInterval,
+		RemoteOptions:       config.RemoteOptions,
+		VerifyOptions:       config.VerifyOptions,
+		CacheTTL:            config.CacheTTL,
+		Capacity:            config.CacheCapacity,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("error creating VEX builder: %w", err)

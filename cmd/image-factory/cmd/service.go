@@ -300,14 +300,15 @@ func buildEnterprisePlugins(
 	}
 
 	vexFrontend, vexSource, err := enterprise.NewVEXFrontend(ctx, eg, logger, enterprise.VEXOptions{
-		Data:             opts.Enterprise.VEX.Data.String(),
-		DataInsecure:     opts.Enterprise.VEX.Data.Insecure,
-		MetricsNamespace: opts.Metrics.Namespace,
-		CacheTTL:         opts.Enterprise.VEX.Cache.TTL,
-		CacheCapacity:    opts.Enterprise.VEX.Cache.Capacity,
-		RefreshInterval:  opts.Artifacts.RefreshInterval,
-		RemoteOptions:    remoteOptions(),
-		VerifyOptions:    imageVerifyOptions,
+		KernelVersionSource: spdxSource,
+		Data:                opts.Enterprise.VEX.Data.String(),
+		DataInsecure:        opts.Enterprise.VEX.Data.Insecure,
+		MetricsNamespace:    opts.Metrics.Namespace,
+		CacheTTL:            opts.Enterprise.VEX.Cache.TTL,
+		CacheCapacity:       opts.Enterprise.VEX.Cache.Capacity,
+		RefreshInterval:     opts.Artifacts.RefreshInterval,
+		RemoteOptions:       remoteOptions(),
+		VerifyOptions:       imageVerifyOptions,
 	})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to initialize VEX frontend: %w", err)

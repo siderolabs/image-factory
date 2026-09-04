@@ -29,6 +29,7 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/siderolabs/gen/xerrors"
+	"github.com/siderolabs/go-vex/pkg/kernelversion"
 	govexscanner "github.com/siderolabs/go-vex/pkg/scanner"
 	"go.uber.org/zap"
 
@@ -62,9 +63,9 @@ const ScanTimeout = 15 * time.Minute
 // DB refresh.
 const dbRefreshRetryInterval = 5 * time.Minute
 
-// VEXSource produces a VEX JSON document for a given Talos version tag.
+// VEXSource produces VEX JSON documents for Talos targets.
 type VEXSource interface {
-	Build(ctx context.Context, versionTag string) ([]byte, error)
+	BuildForKernel(ctx context.Context, versionTag, kernelVersion string) ([]byte, error)
 }
 
 // SPDXSource produces a merged SPDX JSON document for a schematic+version+arch.
@@ -493,14 +494,16 @@ func (b *Builder) scanAndCache(reqID, username, schematicID, versionTag, arch, k
 		return cachedScan{}, fmt.Errorf("error building Talos SBOM: %w", err)
 	}
 
+	defer r.Close() //nolint:errcheck
+
 	sbomBytes, err := io.ReadAll(r)
 	if err != nil {
 		return cachedScan{}, fmt.Errorf("error reading SBOM bytes: %w", err)
 	}
 
-	vexBytes, err := b.vexSource.Build(ctx, versionTag)
+	vexBytes, err := b.buildVEX(ctx, versionTag, sbomBytes)
 	if err != nil {
-		return cachedScan{}, fmt.Errorf("error fetching VEX document: %w", err)
+		return cachedScan{}, err
 	}
 
 	workDir, err := os.MkdirTemp("", "image-factory-scan-*")
@@ -534,6 +537,24 @@ func (b *Builder) scanAndCache(reqID, username, schematicID, versionTag, arch, k
 	b.c.TTL.Set(key, entry, b.cacheTTL)
 
 	return entry, nil
+}
+
+func (b *Builder) buildVEX(ctx context.Context, versionTag string, sbomBytes []byte) ([]byte, error) {
+	kernelVersion, err := kernelversion.FromSPDXJSON(sbomBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error reading kernel version from Talos SBOM: %w", err)
+	}
+
+	if kernelVersion == "" {
+		return nil, errors.New("kernel package is missing from Talos SBOM")
+	}
+
+	vexBytes, err := b.vexSource.BuildForKernel(ctx, versionTag, kernelVersion)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching VEX document: %w", err)
+	}
+
+	return vexBytes, nil
 }
 
 // scanSBOM matches the SBOM against the loaded vulnerability DB, holding the DB

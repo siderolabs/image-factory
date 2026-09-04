@@ -61,16 +61,22 @@ type SPDXOptions struct {
 	CacheInsecure           bool
 }
 
+// KernelVersionSource resolves the kernel version shipped by a Talos version.
+type KernelVersionSource interface {
+	KernelVersion(ctx context.Context, versionTag string) (string, error)
+}
+
 // VEXOptions holds configuration options for the VEX frontend.
 type VEXOptions struct {
-	Data             string
-	MetricsNamespace string
-	RemoteOptions    []remote.Option
-	VerifyOptions    verify.VerifyOptions
-	RefreshInterval  time.Duration
-	CacheTTL         time.Duration
-	CacheCapacity    uint64
-	DataInsecure     bool
+	KernelVersionSource KernelVersionSource
+	Data                string
+	MetricsNamespace    string
+	RemoteOptions       []remote.Option
+	VerifyOptions       verify.VerifyOptions
+	RefreshInterval     time.Duration
+	CacheTTL            time.Duration
+	CacheCapacity       uint64
+	DataInsecure        bool
 }
 
 // VEXSource produces a VEX JSON document for a given Talos version tag.
@@ -79,6 +85,7 @@ type VEXOptions struct {
 // to suppress vulnerabilities classified as "fixed"/"not_affected" upstream.
 type VEXSource interface {
 	Build(ctx context.Context, versionTag string) ([]byte, error)
+	BuildForKernel(ctx context.Context, versionTag, kernelVersion string) ([]byte, error)
 }
 
 // SPDXSource produces a merged SPDX JSON document for the requested schematic,
@@ -88,6 +95,7 @@ type VEXSource interface {
 // so the SBOM extraction and access control live in one place.
 type SPDXSource interface {
 	Build(ctx context.Context, schematicID, versionTag string, arch artifacts.Arch) (io.ReadCloser, error)
+	KernelVersion(ctx context.Context, versionTag string) (string, error)
 
 	// BuildBytes returns the canonical SPDX 2.3 JSON document used as an
 	// Installer image attestation predicate.

@@ -22,6 +22,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/siderolabs/gen/value"
 	"github.com/siderolabs/gen/xerrors"
+	"github.com/siderolabs/go-vex/pkg/kernelversion"
 	"github.com/u-root/u-root/pkg/cpio"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
@@ -95,6 +96,45 @@ func (b *Builder) PayloadHash(ctx context.Context, schematicID, versionTag strin
 	}
 
 	return Hash(sc.Customization.SystemExtensions.OfficialExtensions, versionTag, string(arch)), nil
+}
+
+// KernelVersion returns the kernel package version from the canonical Talos SPDX.
+// The Talos kernel version is architecture-independent, so one architecture is
+// sufficient for a version-scoped VEX document.
+func (b *Builder) KernelVersion(ctx context.Context, versionTag string) (string, error) {
+	if !strings.HasPrefix(versionTag, "v") {
+		versionTag = "v" + versionTag
+	}
+
+	bundle := &Bundle{}
+	if err := b.extractTalosSPDX(ctx, bundle, versionTag, artifacts.ArchAmd64); err != nil {
+		return "", fmt.Errorf("failed to extract canonical Talos SPDX: %w", err)
+	}
+
+	return kernelVersionFromFiles(bundle.Files, artifacts.ArchAmd64)
+}
+
+func kernelVersionFromFiles(files []File, arch artifacts.Arch) (string, error) {
+	filename := fmt.Sprintf("talos-%s.spdx.json", arch)
+
+	for _, file := range files {
+		if file.Filename != filename {
+			continue
+		}
+
+		version, err := kernelversion.FromSPDXJSON(file.Content)
+		if err != nil {
+			return "", fmt.Errorf("failed to read kernel version from %q: %w", filename, err)
+		}
+
+		if version == "" {
+			return "", fmt.Errorf("kernel package is missing from %q", filename)
+		}
+
+		return version, nil
+	}
+
+	return "", fmt.Errorf("talos SPDX file %q is missing", filename)
 }
 
 // Build returns an SPDX bundle, building and caching if necessary.

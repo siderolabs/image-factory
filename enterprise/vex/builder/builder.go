@@ -12,6 +12,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -36,29 +37,36 @@ const FetchTimeout = 5 * time.Minute
 // DefaultDataTag is the OCI tag pulled when no override is configured.
 const DefaultDataTag = "latest"
 
+// KernelVersionSource resolves the kernel version shipped by a Talos version.
+type KernelVersionSource interface {
+	KernelVersion(ctx context.Context, versionTag string) (string, error)
+}
+
 // Builder produces VEX documents for a Talos version, with TTL caching and singleflight.
 type Builder struct {
-	puller        remotewrap.Puller
-	logger        *zap.Logger
-	c             *cache.Cache[string, []byte]
-	registry      string
-	dataTag       string
-	verifyOptions verify.VerifyOptions
-	cacheTTL      time.Duration
-	insecure      bool
+	puller              remotewrap.Puller
+	kernelVersionSource KernelVersionSource
+	logger              *zap.Logger
+	c                   *cache.Cache[string, []byte]
+	registry            string
+	dataTag             string
+	verifyOptions       verify.VerifyOptions
+	cacheTTL            time.Duration
+	insecure            bool
 }
 
 // Options configures Builder.
 type Options struct {
-	Registry         string
-	DataTag          string
-	MetricsNamespace string
-	RemoteOptions    []remote.Option
-	VerifyOptions    verify.VerifyOptions
-	RefreshInterval  time.Duration
-	CacheTTL         time.Duration
-	Capacity         uint64
-	Insecure         bool
+	KernelVersionSource KernelVersionSource
+	Registry            string
+	DataTag             string
+	MetricsNamespace    string
+	RemoteOptions       []remote.Option
+	VerifyOptions       verify.VerifyOptions
+	RefreshInterval     time.Duration
+	CacheTTL            time.Duration
+	Capacity            uint64
+	Insecure            bool
 }
 
 // NewBuilder constructs a Builder.
@@ -74,12 +82,13 @@ func NewBuilder(logger *zap.Logger, opts Options) (*Builder, error) {
 	}
 
 	return &Builder{
-		puller:        puller,
-		registry:      opts.Registry,
-		dataTag:       dataTag,
-		insecure:      opts.Insecure,
-		verifyOptions: opts.VerifyOptions,
-		cacheTTL:      opts.CacheTTL,
+		puller:              puller,
+		kernelVersionSource: opts.KernelVersionSource,
+		registry:            opts.Registry,
+		dataTag:             dataTag,
+		insecure:            opts.Insecure,
+		verifyOptions:       opts.VerifyOptions,
+		cacheTTL:            opts.CacheTTL,
 		c: cache.New[string, []byte](cache.Options{
 			MetricsNamespace: opts.MetricsNamespace,
 			MetricsName:      "image_factory_vex_cache_size",
@@ -100,21 +109,35 @@ func (b *Builder) Stop() {
 	b.c.Stop()
 }
 
-// Build returns a serialized VEX JSON document for the given Talos version tag.
-//
-// Cached per versionTag with TTL. Concurrent calls for the same tag share one OCI fetch
-// via singleflight. The fetch runs under a detached context so request cancellations
-// don't poison the shared work.
+// Build returns a VEX document evaluated against the kernel shipped by the Talos version.
 func (b *Builder) Build(ctx context.Context, versionTag string) ([]byte, error) {
-	if item := b.c.TTL.Get(versionTag); item != nil && !item.IsExpired() {
+	return b.build(ctx, versionTag, "")
+}
+
+// BuildForKernel returns a VEX document evaluated for the target kernel version.
+func (b *Builder) BuildForKernel(ctx context.Context, versionTag, kernelVersion string) ([]byte, error) {
+	if kernelVersion == "" {
+		return nil, errors.New("kernel version is required")
+	}
+
+	return b.build(ctx, versionTag, kernelVersion)
+}
+
+// build caches documents by both Talos and kernel version. Concurrent calls for
+// the same target share one OCI fetch via singleflight. The fetch runs under a
+// detached context so request cancellations don't poison the shared work.
+func (b *Builder) build(ctx context.Context, versionTag, kernelVersion string) ([]byte, error) {
+	key := versionTag + "\x00" + kernelVersion
+
+	if item := b.c.TTL.Get(key); item != nil && !item.IsExpired() {
 		return item.Value(), nil
 	}
 
 	// carry the request ID into the detached build so its logs keep the request_id.
 	reqID := ctxlog.RequestID(ctx)
 
-	resultCh := b.c.SF.DoChan(versionTag, func() (any, error) { //nolint:contextcheck
-		return b.buildAndCache(reqID, versionTag)
+	resultCh := b.c.SF.DoChan(key, func() (any, error) { //nolint:contextcheck
+		return b.buildAndCache(reqID, versionTag, kernelVersion, key)
 	})
 
 	select {
@@ -138,9 +161,22 @@ func (b *Builder) Build(ctx context.Context, versionTag string) ([]byte, error) 
 //
 // reqID is the request ID, carried into the detached context so the build logs
 // keep the request_id.
-func (b *Builder) buildAndCache(reqID, versionTag string) ([]byte, error) {
+func (b *Builder) buildAndCache(reqID, versionTag, kernelVersion, key string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctxlog.WithRequestID(context.Background(), reqID), FetchTimeout)
 	defer cancel()
+
+	var err error
+
+	if kernelVersion == "" {
+		if b.kernelVersionSource == nil {
+			return nil, errors.New("kernel version source is required")
+		}
+
+		kernelVersion, err = b.kernelVersionSource.KernelVersion(ctx, versionTag)
+		if err != nil {
+			return nil, fmt.Errorf("error resolving kernel version for %s: %w", versionTag, err)
+		}
+	}
 
 	expData, err := b.fetchExploitabilityData(ctx)
 	if err != nil {
@@ -149,7 +185,7 @@ func (b *Builder) buildAndCache(reqID, versionTag string) ([]byte, error) {
 
 	now := time.Now()
 
-	doc, err := vexgen.Populate(expData, versionTag, &now, "image-factory")
+	doc, err := vexgen.Populate(expData, versionTag, &now, "image-factory", vexgen.WithKernelVersion(kernelVersion))
 	if err != nil {
 		return nil, fmt.Errorf("error generating VEX document: %w", err)
 	}
@@ -160,7 +196,7 @@ func (b *Builder) buildAndCache(reqID, versionTag string) ([]byte, error) {
 	}
 
 	data := buf.Bytes()
-	b.c.TTL.Set(versionTag, data, b.cacheTTL)
+	b.c.TTL.Set(key, data, b.cacheTTL)
 
 	return data, nil
 }
