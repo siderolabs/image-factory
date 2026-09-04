@@ -348,7 +348,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           REGISTRY: registry.dev.siderolabs.io
-          RUN_TESTS_ENTERPRISE: TestIntegrationDirect
+          RUN_TESTS_ENTERPRISE: TestIntegration(Direct|Auth0.*)
           TAG_SUFFIX: -enterprise
           TEST_FLAGS: -test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic
             -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache

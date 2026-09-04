@@ -103,7 +103,7 @@ REGISTRY_MIRROR_ADDR ?= $(if $(filter true,$(CI)),$(shell python3 -c "import soc
 RUN_TESTS_S3 ?= TestIntegrationS3
 RUN_TESTS_CDN ?= TestIntegrationCDN
 RUN_TESTS_PROXY ?= TestIntegrationDirect
-RUN_TESTS_ENTERPRISE ?= TestIntegrationDirect
+RUN_TESTS_ENTERPRISE ?= TestIntegration(Direct|Auth0.*)
 EXTRA_EXTENSIONS_REGISTRY ?= 127.0.0.1:5100
 GOOS ?= $(shell uname -s | tr "[:upper:]" "[:lower:]")
 TALOS_VERSION ?= 1.13.7
@@ -326,7 +326,7 @@ integration-enterprise: integration.enterprise.test cosign
 	docker rm -f local-if-proxy || true
 	$(if $(or $(findstring -test.image-registry,$(TEST_FLAGS)),$(REGISTRY_MIRROR_ADDR)),true,docker run -d -p 5000:5000 --name=local-if-proxy -e REGISTRY_PROXY_REMOTEURL=https://$(CORE_REGISTRY) ghcr.io/distribution/distribution:edge)
 	@$(MAKE) push-extra-extensions
-	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.cosign-path=/out/cosign $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run $(RUN_TESTS_ENTERPRISE)
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.cosign-path=/out/cosign $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run '$(RUN_TESTS_ENTERPRISE)'
 	docker rm -f local-if
 	docker rm -f local-if-proxy || true
 

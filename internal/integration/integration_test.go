@@ -37,6 +37,14 @@ import (
 func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, string) {
 	t.Helper()
 
+	ctx, listenAddr, pxeAddr, _ := setupFactoryWithMetrics(t, options)
+
+	return ctx, listenAddr, pxeAddr
+}
+
+func setupFactoryWithMetrics(t *testing.T, options cmd.Options) (context.Context, string, string, string) {
+	t.Helper()
+
 	ctx, cancel := context.WithCancel(t.Context())
 
 	logger := zaptest.NewLogger(t)
@@ -87,7 +95,7 @@ func setupFactory(t *testing.T, options cmd.Options) (context.Context, string, s
 		return err == nil
 	}, 10*time.Second, 10*time.Millisecond)
 
-	return ctx, defaultAddr, pxeAddr
+	return ctx, defaultAddr, pxeAddr, options.Metrics.Addr
 }
 
 func setupCacheSigningKey(t *testing.T, options *cmd.Options) {
