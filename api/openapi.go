@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -213,25 +214,119 @@ func NewRouter(ctx context.Context) (routers.Router, error) {
 	return contract.Router, nil
 }
 
-// ValidateRuntimeRoute verifies that a runtime router pattern maps exactly to an
-// operation declared by the canonical OpenAPI contract. The OCI dispatcher is
-// the sole intentional catch-all and is checked against every operation it serves.
+// ValidateRuntimeRoute verifies that a runtime router pattern maps to an operation
+// declared by the canonical OpenAPI contract. It remains as a compatibility shim
+// while runtime registrations migrate to operation-ID-aware descriptors.
 func (contract *Contract) ValidateRuntimeRoute(method, runtimePath string) error {
 	if runtimePath == "/v2/*path" {
-		return contract.validateRegistryDispatcher(method)
+		operationIDs, err := contract.runtimeDispatcherOperationIDs(method, runtimePath)
+		if err != nil {
+			return err
+		}
+
+		return contract.ValidateRuntimeDispatcher(method, runtimePath, operationIDs)
 	}
 
+	_, err := contract.runtimeOperation(method, runtimePath)
+
+	return err
+}
+
+// ValidateRuntimeOperation verifies that a runtime router pattern maps to the
+// named operation in the canonical OpenAPI contract.
+func (contract *Contract) ValidateRuntimeOperation(method, runtimePath, operationID string) error {
+	if runtimePath == "/v2/*path" {
+		return fmt.Errorf(
+			"runtime route %s %s must use dispatcher validation instead of declaring only OpenAPI operation %q",
+			method,
+			runtimePath,
+			operationID,
+		)
+	}
+
+	operation, err := contract.runtimeOperation(method, runtimePath)
+	if err != nil {
+		return err
+	}
+
+	if operation.OperationID != operationID {
+		return fmt.Errorf(
+			"runtime route %s %s declares operation %q, not %q",
+			method,
+			runtimePath,
+			operation.OperationID,
+			operationID,
+		)
+	}
+
+	return nil
+}
+
+// ValidateRuntimeDispatcher verifies that a broad runtime dispatcher declares
+// exactly the finite set of canonical OpenAPI operations it can serve.
+func (contract *Contract) ValidateRuntimeDispatcher(method, runtimePath string, operationIDs []string) error {
+	expected, err := contract.runtimeDispatcherOperationIDs(method, runtimePath)
+	if err != nil {
+		return err
+	}
+
+	declared := make(map[string]struct{}, len(operationIDs))
+	for _, operationID := range operationIDs {
+		if _, duplicate := declared[operationID]; duplicate {
+			return fmt.Errorf(
+				"runtime route %s %s declares OpenAPI operation %q more than once",
+				method,
+				runtimePath,
+				operationID,
+			)
+		}
+
+		declared[operationID] = struct{}{}
+	}
+
+	for _, operationID := range expected {
+		if _, ok := declared[operationID]; !ok {
+			return fmt.Errorf(
+				"runtime route %s %s is missing OpenAPI operation %q",
+				method,
+				runtimePath,
+				operationID,
+			)
+		}
+	}
+
+	for _, operationID := range operationIDs {
+		if !slices.Contains(expected, operationID) {
+			return fmt.Errorf(
+				"runtime route %s %s declares unexpected OpenAPI operation %q",
+				method,
+				runtimePath,
+				operationID,
+			)
+		}
+	}
+
+	return nil
+}
+
+func (contract *Contract) runtimeOperation(method, runtimePath string) (*openapi3.Operation, error) {
 	contractPath := runtimeContractPath(runtimePath)
 
 	pathItem := contract.Document.Paths.Map()[contractPath]
-	if pathItem != nil && pathItem.GetOperation(method) != nil {
-		return nil
+	if pathItem != nil {
+		if operation := pathItem.GetOperation(method); operation != nil {
+			return operation, nil
+		}
 	}
 
-	return fmt.Errorf("runtime route %s %s is not declared in OpenAPI", method, runtimePath)
+	return nil, fmt.Errorf("runtime route %s %s is not declared in OpenAPI", method, runtimePath)
 }
 
-func (contract *Contract) validateRegistryDispatcher(method string) error {
+func (contract *Contract) runtimeDispatcherOperationIDs(method, runtimePath string) ([]string, error) {
+	if runtimePath != "/v2/*path" {
+		return nil, fmt.Errorf("runtime route %s %s is not a declared OpenAPI dispatcher", method, runtimePath)
+	}
+
 	var contractPaths []string
 
 	switch method {
@@ -244,17 +339,37 @@ func (contract *Contract) validateRegistryDispatcher(method string) error {
 			"/v2/{name+}/referrers/{digest}",
 		}
 	default:
-		return fmt.Errorf("runtime route %s /v2/*path is not declared in OpenAPI", method)
+		return nil, fmt.Errorf("runtime route %s %s is not declared in OpenAPI", method, runtimePath)
 	}
 
+	operationIDs := make([]string, 0, len(contractPaths))
 	for _, contractPath := range contractPaths {
 		pathItem := contract.Document.Paths.Map()[contractPath]
-		if pathItem == nil || pathItem.GetOperation(method) == nil {
-			return fmt.Errorf("runtime route %s /v2/*path requires OpenAPI operation %s %s", method, method, contractPath)
+		if pathItem == nil {
+			return nil, fmt.Errorf(
+				"runtime route %s %s requires OpenAPI operation %s %s",
+				method,
+				runtimePath,
+				method,
+				contractPath,
+			)
 		}
+
+		operation := pathItem.GetOperation(method)
+		if operation == nil || operation.OperationID == "" {
+			return nil, fmt.Errorf(
+				"runtime route %s %s requires OpenAPI operation %s %s",
+				method,
+				runtimePath,
+				method,
+				contractPath,
+			)
+		}
+
+		operationIDs = append(operationIDs, operation.OperationID)
 	}
 
-	return nil
+	return operationIDs, nil
 }
 
 func runtimeContractPath(runtimePath string) string {

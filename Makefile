@@ -273,61 +273,61 @@ unit-tests-race:  ## Performs unit tests with race detection enabled.
 .PHONY: integration-direct
 integration-direct: integration.test
 	@$(MAKE) image-image-factory PUSH=true
-	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
 	docker rm -f local-if-proxy || true
 	$(if $(or $(findstring -test.image-registry,$(TEST_FLAGS)),$(REGISTRY_MIRROR_ADDR)),true,docker run -d -p 5000:5000 --name=local-if-proxy -e REGISTRY_PROXY_REMOTEURL=https://$(CORE_REGISTRY) ghcr.io/distribution/distribution:edge)
-	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-direct.txt -test.run '$(RUN_TESTS_DIRECT)'
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) -test.v $(TEST_FLAGS) $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-direct.txt -test.run '$(RUN_TESTS_DIRECT)'
 	docker rm -f local-if
 	docker rm -f local-if-proxy || true
 
 .PHONY: integration-s3
 integration-s3: integration.test
 	@$(MAKE) image-image-factory PUSH=true
-	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
 	docker rm -f local-if-proxy || true
 	$(if $(or $(findstring -test.image-registry,$(TEST_FLAGS)),$(REGISTRY_MIRROR_ADDR)),true,docker run -d -p 5000:5000 --name=local-if-proxy -e REGISTRY_PROXY_REMOTEURL=https://$(CORE_REGISTRY) ghcr.io/distribution/distribution:edge)
-	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-s3.txt -test.run '$(RUN_TESTS_S3)'
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) -test.v $(TEST_FLAGS) $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-s3.txt -test.run '$(RUN_TESTS_S3)'
 	docker rm -f local-if
 	docker rm -f local-if-proxy || true
 
 .PHONY: integration-cdn
 integration-cdn: integration.test
 	@$(MAKE) image-image-factory PUSH=true
-	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
 	docker rm -f local-if-proxy || true
 	$(if $(or $(findstring -test.image-registry,$(TEST_FLAGS)),$(REGISTRY_MIRROR_ADDR)),true,docker run -d -p 5000:5000 --name=local-if-proxy -e REGISTRY_PROXY_REMOTEURL=https://$(CORE_REGISTRY) ghcr.io/distribution/distribution:edge)
-	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run '$(RUN_TESTS_CDN)'
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) -test.v $(TEST_FLAGS) $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-cdn.txt -test.run '$(RUN_TESTS_CDN)'
 	docker rm -f local-if
 	docker rm -f local-if-proxy || true
 
 .PHONY: integration-proxy-installer
 integration-proxy-installer: integration.test
 	@$(MAKE) image-image-factory PUSH=true
-	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
 	docker rm -f local-if-proxy || true
 	$(if $(or $(findstring -test.image-registry,$(TEST_FLAGS)),$(REGISTRY_MIRROR_ADDR)),true,docker run -d -p 5000:5000 --name=local-if-proxy -e REGISTRY_PROXY_REMOTEURL=https://$(CORE_REGISTRY) ghcr.io/distribution/distribution:edge)
-	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-direct.txt -test.run '$(RUN_TESTS_PROXY)'
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) -test.v $(TEST_FLAGS) $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-direct.txt -test.run '$(RUN_TESTS_PROXY)'
 	docker rm -f local-if
 	docker rm -f local-if-proxy || true
 
 .PHONY: integration-enterprise
 integration-enterprise: integration.enterprise.test cosign
 	@$(MAKE) image-image-factory PUSH=true
-	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(TAG)
+	docker pull $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG)
 	docker rm -f local-if || true
 	docker run -d -p 5100:5000 --name=local-if registry:3
 	docker rm -f local-if-proxy || true
 	$(if $(or $(findstring -test.image-registry,$(TEST_FLAGS)),$(REGISTRY_MIRROR_ADDR)),true,docker run -d -p 5000:5000 --name=local-if-proxy -e REGISTRY_PROXY_REMOTEURL=https://$(CORE_REGISTRY) ghcr.io/distribution/distribution:edge)
 	@$(MAKE) push-extra-extensions
-	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(TAG) -test.v $(TEST_FLAGS) -test.cosign-path=/out/cosign $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run '$(RUN_TESTS_ENTERPRISE)'
+	docker run --rm --net=host --cap-drop=all --cap-add=DAC_OVERRIDE --userns=host -v /var/run:/var/run -v $(PWD)/$(ARTIFACTS)/:/out/ -v $(PWD)/$(ARTIFACTS)/integration.enterprise.test:/bin/integration.test:ro --entrypoint /bin/integration.test $(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) -test.v $(TEST_FLAGS) -test.cosign-path=/out/cosign $(if $(findstring -test.image-registry,$(TEST_FLAGS)),,-test.image-registry=$(or $(REGISTRY_MIRROR_ADDR),127.0.0.1:5000)) -test.coverprofile=/out/coverage-integration-enterprise.txt -test.run '$(RUN_TESTS_ENTERPRISE)'
 	docker rm -f local-if
 	docker rm -f local-if-proxy || true
 

@@ -527,36 +527,155 @@ func TestNewRouter(t *testing.T) {
 	testRoute("registry trailing slash", http.MethodHead, "/v2/", "headRegistrySlash", map[string]string{})
 }
 
-func TestContractValidatesRuntimeRoutes(t *testing.T) {
+func TestContractValidatesRuntimeOperations(t *testing.T) {
 	t.Parallel()
 
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
 	for _, test := range []struct {
-		method string
-		path   string
+		method      string
+		path        string
+		operationID string
 	}{
-		{method: http.MethodGet, path: "/image/:schematic/:version/:path"},
-		{method: http.MethodGet, path: "/v2/*path"},
-		{method: http.MethodHead, path: "/v2/*path"},
-		{method: http.MethodGet, path: "/css/*filepath"},
-		{method: http.MethodPost, path: "/ui/wizard"},
-		{method: http.MethodGet, path: "/callback"},
+		{method: http.MethodGet, path: "/image/:schematic/:version/:path", operationID: "getImage"},
+		{method: http.MethodGet, path: "/css/*filepath", operationID: "getCSSAsset"},
+		{method: http.MethodPost, path: "/ui/wizard", operationID: "postUIWizard"},
+		{method: http.MethodGet, path: "/callback", operationID: "completeBrowserLogin"},
 	} {
-		require.NoError(t, contract.ValidateRuntimeRoute(test.method, test.path), "%s %s", test.method, test.path)
+		require.NoError(
+			t,
+			contract.ValidateRuntimeOperation(test.method, test.path, test.operationID),
+			"%s %s %s",
+			test.method,
+			test.path,
+			test.operationID,
+		)
 	}
 
-	require.ErrorContains(t, contract.ValidateRuntimeRoute(http.MethodGet, "/future-route"), "is not declared in OpenAPI")
-	require.ErrorContains(t, contract.ValidateRuntimeRoute(http.MethodGet, "/spdx/*path"), "is not declared in OpenAPI")
-	require.ErrorContains(t, contract.ValidateRuntimeRoute(http.MethodGet, "/image/:id/:version/:path"), "is not declared in OpenAPI")
-	require.ErrorContains(t, contract.ValidateRuntimeRoute(http.MethodDelete, "/image/:schematic/:version/:path"), "is not declared in OpenAPI")
-	require.ErrorContains(t, contract.ValidateRuntimeRoute(http.MethodDelete, "/v2/*path"), "is not declared in OpenAPI")
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeOperation(http.MethodGet, "/future-route", "futureOperation"),
+		"is not declared in OpenAPI",
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeOperation(http.MethodGet, "/spdx/*path", "getSPDX"),
+		"is not declared in OpenAPI",
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeOperation(http.MethodGet, "/image/:id/:version/:path", "getImage"),
+		"is not declared in OpenAPI",
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeOperation(http.MethodDelete, "/image/:schematic/:version/:path", "getImage"),
+		"is not declared in OpenAPI",
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeOperation(http.MethodGet, "/image/:schematic/:version/:path", "headImage"),
+		`declares operation "getImage", not "headImage"`,
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeOperation(http.MethodGet, "/v2/*path", "getRegistryManifest"),
+		"must use dispatcher validation",
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeOperation(http.MethodGet, "/v2/*path", "futureRegistryOperation"),
+		"must use dispatcher validation",
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeOperation(http.MethodDelete, "/v2/*path", "getRegistryManifest"),
+		"must use dispatcher validation",
+	)
+}
+
+func TestContractValidatesCompleteRuntimeDispatcherInventory(t *testing.T) {
+	t.Parallel()
+
+	contract, err := api.NewContract(t.Context())
+	require.NoError(t, err)
+
+	operationIDs := []string{
+		"checkRegistrySlash",
+		"getRegistryManifest",
+		"getRegistryBlob",
+		"listRegistryTags",
+		"getRegistryReferrers",
+	}
+	headOperationIDs := []string{
+		"headRegistrySlash",
+		"headRegistryManifest",
+		"headRegistryBlob",
+		"headRegistryTags",
+		"headRegistryReferrers",
+	}
+
+	require.NoError(t, contract.ValidateRuntimeDispatcher(http.MethodGet, "/v2/*path", operationIDs))
+	require.NoError(t, contract.ValidateRuntimeDispatcher(http.MethodHead, "/v2/*path", headOperationIDs))
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeDispatcher(http.MethodHead, "/v2/*path", headOperationIDs[:len(headOperationIDs)-1]),
+		`missing OpenAPI operation "headRegistryReferrers"`,
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeDispatcher(
+			http.MethodHead,
+			"/v2/*path",
+			append(headOperationIDs, "futureHeadRegistryOperation"),
+		),
+		`unexpected OpenAPI operation "futureHeadRegistryOperation"`,
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeDispatcher(
+			http.MethodHead,
+			"/v2/*path",
+			append(headOperationIDs, headOperationIDs[0]),
+		),
+		`declares OpenAPI operation "headRegistrySlash" more than once`,
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeDispatcher(http.MethodGet, "/v2/*path", operationIDs[:len(operationIDs)-1]),
+		`missing OpenAPI operation "getRegistryReferrers"`,
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeDispatcher(
+			http.MethodGet,
+			"/v2/*path",
+			append(operationIDs, "futureRegistryOperation"),
+		),
+		`unexpected OpenAPI operation "futureRegistryOperation"`,
+	)
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeDispatcher(
+			http.MethodGet,
+			"/v2/*path",
+			append(operationIDs, operationIDs[0]),
+		),
+		`declares OpenAPI operation "checkRegistrySlash" more than once`,
+	)
+
+	contract.Document.Paths.Find("/v2/{name+}/tags/list").Get = nil
+	require.ErrorContains(
+		t,
+		contract.ValidateRuntimeDispatcher(http.MethodGet, "/v2/*path", operationIDs),
+		"requires OpenAPI operation GET /v2/{name+}/tags/list",
+	)
 
 	contract.Document.Paths.Find("/v2/{name+}/tags/list").Head = nil
 	require.ErrorContains(
 		t,
-		contract.ValidateRuntimeRoute(http.MethodHead, "/v2/*path"),
+		contract.ValidateRuntimeDispatcher(http.MethodHead, "/v2/*path", headOperationIDs),
 		"requires OpenAPI operation HEAD /v2/{name+}/tags/list",
 	)
 }
