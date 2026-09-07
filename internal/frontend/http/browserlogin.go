@@ -7,30 +7,36 @@ package http
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
-
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
-// registerBrowserLogin adds /login, /logout and the callback route when the auth provider
-// serves them.
-func (f *Frontend) registerBrowserLogin(registerPublicRoute func(string, func(string, httprouter.Handle), string, Handler)) {
-	blp, ok := f.options.AuthProvider.(enterprise.BrowserLoginProvider)
-	if !ok || !blp.BrowserLoginEnabled() {
-		return
+func (f *Frontend) browserLoginRoutes() []transport.Route {
+	provider, ok := f.options.AuthProvider.(enterprise.BrowserLoginProvider)
+	if !ok || !provider.BrowserLoginEnabled() {
+		return nil
 	}
 
-	registerPublicRoute(http.MethodGet, f.router.GET, "/login", blp.LoginHandler())
-	registerPublicRoute(http.MethodGet, f.router.GET, "/logout", blp.LogoutHandler())
-	registerPublicRoute(http.MethodPost, f.router.POST, "/logout", blp.LogoutHandler())
-	registerPublicRoute(http.MethodGet, f.router.GET, blp.CallbackPath(), blp.CallbackHandler())
+	return []transport.Route{
+		{Method: http.MethodGet, Path: "/login", OperationID: "startBrowserLogin", Access: transport.AccessPublic, Protocol: transport.ProtocolBrowserAuth, Handler: provider.LoginHandler()},
+		{Method: http.MethodGet, Path: "/logout", OperationID: "getBrowserLogout", Access: transport.AccessPublic, Protocol: transport.ProtocolBrowserAuth, Handler: provider.LogoutHandler()},
+		{Method: http.MethodPost, Path: "/logout", OperationID: "postBrowserLogout", Access: transport.AccessPublic, Protocol: transport.ProtocolBrowserAuth, Handler: provider.LogoutHandler()},
+		{
+			Method:      http.MethodGet,
+			Path:        provider.CallbackPath(),
+			OperationID: "completeBrowserLogin",
+			Access:      transport.AccessPublic,
+			Protocol:    transport.ProtocolBrowserAuth,
+			Handler:     provider.CallbackHandler(),
+		},
+	}
 }
 
 // logoutEnabled reports whether pages should show a logout link, which requires the auth
 // provider to serve the interactive browser login flow — htpasswd's Basic-auth challenge
 // has no route to hit that would clear the browser's cached credentials.
 func (f *Frontend) logoutEnabled() bool {
-	blp, ok := f.options.AuthProvider.(enterprise.BrowserLoginProvider)
+	provider, ok := f.options.AuthProvider.(enterprise.BrowserLoginProvider)
 
-	return ok && blp.BrowserLoginEnabled()
+	return ok && provider.BrowserLoginEnabled()
 }

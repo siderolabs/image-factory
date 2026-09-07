@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/julienschmidt/httprouter"
 
 	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/artifacts"
@@ -22,20 +21,25 @@ import (
 	"github.com/siderolabs/image-factory/internal/image/verify"
 	"github.com/siderolabs/image-factory/internal/installer"
 	"github.com/siderolabs/image-factory/internal/schematic"
+	enterprisefrontend "github.com/siderolabs/image-factory/pkg/enterprise/frontend"
 )
 
-// FrontendPlugin is the interface that Enterprise code must implement to extend the frontend.
-type FrontendPlugin interface {
-	Methods() []string
-	Path() string
-	Handle(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error
-}
+// RouteAccessPolicy declares whether an Enterprise HTTP route requires authentication.
+type RouteAccessPolicy = enterprisefrontend.RouteAccessPolicy
 
-// PublicRoute is implemented by FrontendPlugin instances whose routes should
-// be registered without authentication. Plugins that do not implement this
-// interface are registered as auth-protected routes.
-type PublicRoute interface {
-	PublicRoute()
+const (
+	// RouteAccessPublic exposes a route without authentication.
+	RouteAccessPublic = enterprisefrontend.RouteAccessPublic
+	// RouteAccessAuthenticated requires the configured authentication provider.
+	RouteAccessAuthenticated = enterprisefrontend.RouteAccessAuthenticated
+)
+
+// Route is the neutral Enterprise HTTP route descriptor translated by the HTTP composition root.
+type Route = enterprisefrontend.Route
+
+// FrontendPlugin is implemented by Enterprise components that contribute HTTP routes.
+type FrontendPlugin interface {
+	Routes() []enterprisefrontend.Route
 }
 
 // ReadinessChecker is implemented by FrontendPlugin instances whose readiness
@@ -179,7 +183,7 @@ type TokenOptions struct {
 }
 
 // Handler is the type of HTTP handlers used by the enterprise frontend.
-type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
+type Handler = enterprisefrontend.Handler
 
 // AuthProvider defines an authentication provider.
 type AuthProvider interface {

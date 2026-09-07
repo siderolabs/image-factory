@@ -33,6 +33,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/installer"
 	"github.com/siderolabs/image-factory/internal/profile"
@@ -54,10 +55,10 @@ func InstallerEvidenceSupported(version semver.Version) bool {
 }
 
 // InvalidImageTag is an error tag for invalid image names.
-type InvalidImageTag struct{}
+type InvalidImageTag = transport.InvalidImageTag
 
 // ProxyUnavailableTag is an error tag for when the backing registry cannot be proxied to.
-type ProxyUnavailableTag struct{}
+type ProxyUnavailableTag = transport.ProxyUnavailableTag
 
 // handleHealth handles registry health and auth.
 func (f *Frontend) handleHealth(_ context.Context, _ http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {

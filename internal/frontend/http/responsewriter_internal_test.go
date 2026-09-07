@@ -55,12 +55,12 @@ func TestWrapResponseWriterRecordsStatus(t *testing.T) {
 
 			test.write(wrapResponseWriter(rec, &state))
 
-			require.Equal(t, test.want, state.status, "the status the log and audit record read")
+			require.Equal(t, test.want, state.Status(), "the status the log and audit record read")
 			require.Equal(t, test.want, rec.Code, "and what the client actually received")
 		})
 	}
 
-	// Only state.status is checked: httptest.ResponseRecorder latches the first WriteHeader
+	// Only state.Status() is checked: httptest.ResponseRecorder latches the first WriteHeader
 	// either way, where a real response sends the 1xx and reads on.
 	t.Run("informational then final", func(t *testing.T) {
 		t.Parallel()
@@ -70,10 +70,10 @@ func TestWrapResponseWriterRecordsStatus(t *testing.T) {
 		sw := wrapResponseWriter(httptest.NewRecorder(), &state)
 
 		sw.WriteHeader(http.StatusEarlyHints)
-		require.Zero(t, state.status, "the real response is still to come")
+		require.Zero(t, state.Status(), "the real response is still to come")
 
 		sw.WriteHeader(http.StatusNotFound)
-		require.Equal(t, http.StatusNotFound, state.status)
+		require.Equal(t, http.StatusNotFound, state.Status())
 	})
 }
 
@@ -131,7 +131,7 @@ func TestWrapResponseWriterPinsCacheControl(t *testing.T) {
 				sw.Header().Add("Cache-Control", value)
 			}
 
-			state.pinCacheControl(sw)
+			state.PinCacheControl(sw)
 
 			if test.handler != "" {
 				sw.Header().Set("Cache-Control", test.handler)
@@ -208,7 +208,7 @@ func TestWrapResponseWriterForwardsReadFrom(t *testing.T) {
 	require.EqualValues(t, len("payload"), n)
 
 	require.True(t, rec.called, "the streaming fast path has to reach the underlying writer")
-	require.Equal(t, http.StatusOK, state.status, "streaming a body still implies a 200")
+	require.Equal(t, http.StatusOK, state.Status(), "streaming a body still implies a 200")
 }
 
 func TestWrapResponseWriterKeepsInterfaceSet(t *testing.T) {

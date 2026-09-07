@@ -24,7 +24,7 @@ type AccessPolicy uint8
 
 const (
 	// AccessPublic permits anonymous requests.
-	AccessPublic AccessPolicy = iota
+	AccessPublic AccessPolicy = iota + 1
 	// AccessAuthenticated requires the configured authentication provider.
 	AccessAuthenticated
 	// AccessImageDownload accepts credentials allowed to retrieve image artifacts.
@@ -81,7 +81,7 @@ func (route Route) Validate() error {
 		return fmt.Errorf("route handler is required")
 	}
 
-	if route.Access > AccessImageDownload {
+	if route.Access < AccessPublic || route.Access > AccessImageDownload {
 		return fmt.Errorf("route %s %s has unsupported access policy %d", route.Method, route.Path, route.Access)
 	}
 

@@ -99,6 +99,7 @@ func TestRouteValidate(t *testing.T) {
 		{
 			name: "missing operation ID",
 			route: &transport.Route{
+				Access:  transport.AccessPublic,
 				Method:  http.MethodGet,
 				Path:    "/versions",
 				Handler: handler,
@@ -128,6 +129,7 @@ func TestRouteValidate(t *testing.T) {
 		{
 			name: "invalid protocol",
 			route: &transport.Route{
+				Access:      transport.AccessPublic,
 				Method:      http.MethodGet,
 				Path:        "/versions",
 				OperationID: "listVersions",
@@ -151,6 +153,7 @@ func TestRouteValidate(t *testing.T) {
 		{
 			name: "dispatcher operations on ordinary API route",
 			route: &transport.Route{
+				Access:                 transport.AccessPublic,
 				Method:                 http.MethodGet,
 				Path:                   "/versions",
 				DispatchedOperationIDs: []string{"listVersions"},

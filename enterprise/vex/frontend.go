@@ -21,6 +21,7 @@ import (
 
 	"github.com/siderolabs/image-factory/enterprise/vex/builder"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
+	enterprisefrontend "github.com/siderolabs/image-factory/pkg/enterprise/frontend"
 )
 
 const vexJSONMediaType = "application/json"
@@ -39,14 +40,24 @@ func NewFrontend(b *builder.Builder) *Frontend {
 	return &Frontend{builder: b}
 }
 
-// Path implements enterprise.FrontendExtension.
-func (f *Frontend) Path() string {
-	return routePath
-}
-
-// Methods implements enterprise.FrontendExtension.
-func (f *Frontend) Methods() []string {
-	return []string{http.MethodGet, http.MethodHead}
+// Routes implements enterprise.FrontendPlugin.
+func (f *Frontend) Routes() []enterprisefrontend.Route {
+	return []enterprisefrontend.Route{
+		{
+			Method:      http.MethodGet,
+			Path:        routePath,
+			OperationID: "getVEX",
+			Access:      enterprisefrontend.RouteAccessAuthenticated,
+			Handler:     f.Handle,
+		},
+		{
+			Method:      http.MethodHead,
+			Path:        routePath,
+			OperationID: "headVEX",
+			Access:      enterprisefrontend.RouteAccessAuthenticated,
+			Handler:     f.Handle,
+		},
+	}
 }
 
 // Handle implements enterprise.FrontendExtension.

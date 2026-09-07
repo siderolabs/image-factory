@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"net/url"
 	"strings"
@@ -22,11 +21,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/rs/cors"
-	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/gen/xerrors"
-	metrics "github.com/slok/go-http-metrics/metrics/prometheus"
-	"github.com/slok/go-http-metrics/middleware"
-	httproutermiddleware "github.com/slok/go-http-metrics/middleware/httprouter"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sync/singleflight"
@@ -37,21 +32,18 @@ import (
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/audit"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/internal/image/signer"
-	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic"
-	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/internal/version"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
-	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
-	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
 // Frontend is the HTTP frontend.
 type Frontend struct {
-	router            *httprouter.Router
+	handler           http.Handler
 	contract          *api.Contract
 	schematicFactory  *schematic.Factory
 	assetBuilder      *asset.Builder
@@ -97,10 +89,10 @@ type ImageProxyOptions struct {
 }
 
 // Handler is a custom handler type that includes the context and httprouter params, and returns an error.
-type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
+type Handler = transport.Handler
 
 // InvalidRequestTag marks requests rejected by the OpenAPI contract.
-type InvalidRequestTag struct{}
+type InvalidRequestTag = transport.InvalidRequestTag
 
 // NewFrontend creates a new HTTP frontend.
 func NewFrontend(
@@ -116,7 +108,6 @@ func NewFrontend(
 	opts Options,
 ) (*Frontend, error) {
 	frontend := &Frontend{
-		router:            httprouter.New(),
 		schematicFactory:  schematicFactory,
 		assetBuilder:      assetBuilder,
 		artifactsManager:  artifactsManager,
@@ -163,146 +154,14 @@ func NewFrontend(
 		return nil, fmt.Errorf("failed to create Installer evidence publisher: %w", err)
 	}
 
-	// monitoring middleware
-	mdlw := middleware.New(middleware.Config{
-		Recorder: metrics.NewRecorder(metrics.Config{
-			Prefix: opts.MetricsNamespace,
-		}),
-	})
+	router := httprouter.New()
+	frontend.handler = router
 
-	var registrationErr error
-
-	registerRoute := func(method string, registrator func(string, httprouter.Handle), path string, handler Handler) {
-		handle := httproutermiddleware.Handler(path, frontend.wrapper(handler), mdlw)
-		if routeErr := registerRuntimeRoute(frontend.contract, method, registrator, path, handle); routeErr != nil {
-			registrationErr = errors.Join(registrationErr, routeErr)
-		}
-	}
-
-	registerPublicRoute := func(method string, registrator func(string, httprouter.Handle), path string, handler Handler) {
-		handle := httproutermiddleware.Handler(path, frontend.wrapperPublic(handler), mdlw)
-		if routeErr := registerRuntimeRoute(frontend.contract, method, registrator, path, handle); routeErr != nil {
-			registrationErr = errors.Join(registrationErr, routeErr)
-		}
-	}
-
-	registerStaticRoute := func(path string, filesystem http.FileSystem) {
-		if routeErr := registerRuntimeRoute(frontend.contract, http.MethodGet, frontend.router.GET, path, serveFiles(filesystem)); routeErr != nil {
-			registrationErr = errors.Join(registrationErr, routeErr)
-		}
-	}
-
-	// enterprise
-	for _, enterpriseRoute := range enterprisePlugins {
-		_, isPublic := enterpriseRoute.(enterprise.PublicRoute)
-
-		for _, method := range enterpriseRoute.Methods() {
-			var registrator func(string, httprouter.Handle)
-
-			switch method {
-			case http.MethodGet:
-				registrator = frontend.router.GET
-			case http.MethodHead:
-				registrator = frontend.router.HEAD
-			case http.MethodPost:
-				registrator = frontend.router.POST
-			default:
-				panic(fmt.Sprintf("unsupported method %s for enterprise route %s", method, enterpriseRoute.Path()))
-			}
-
-			if isPublic {
-				registerPublicRoute(method, registrator, enterpriseRoute.Path(), enterpriseRoute.Handle)
-			} else {
-				registerRoute(method, registrator, enterpriseRoute.Path(), enterpriseRoute.Handle)
-			}
-		}
-	}
-
-	// /healthz and /readyz are always public (Kubernetes probes, monitoring)
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/healthz", frontend.handleHealth)
-	registerPublicRoute(http.MethodHead, frontend.router.HEAD, "/healthz", frontend.handleHealth)
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/readyz", frontend.handleReady)
-	registerPublicRoute(http.MethodHead, frontend.router.HEAD, "/readyz", frontend.handleReady)
-
-	// images - require auth (API tokens bypass auth via JWT verification)
-	registerRoute(http.MethodGet, frontend.router.GET, "/image/:schematic/:version/:path", frontend.handleImage)
-	registerRoute(http.MethodHead, frontend.router.HEAD, "/image/:schematic/:version/:path", frontend.handleImage)
-
-	// PXE - require auth
-	registerRoute(http.MethodGet, frontend.router.GET, "/pxe/:schematic/:version/:path", frontend.handlePXE)
-
-	// registry - /v2 requires auth (OCI spec: 401 challenge when auth enabled)
-	registerRoute(http.MethodGet, frontend.router.GET, "/v2", frontend.handleHealth)
-	registerRoute(http.MethodHead, frontend.router.HEAD, "/v2", frontend.handleHealth)
-	registerRoute(http.MethodGet, frontend.router.GET, "/v2/*path", frontend.handleV2)
-	registerRoute(http.MethodHead, frontend.router.HEAD, "/v2/*path", frontend.handleV2)
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/oci/cosign/signing-key.pub", frontend.handleCosignSigningKeyPub)
-
-	// schematic - both POST and GET require auth
-	registerRoute(http.MethodPost, frontend.router.POST, "/schematics", frontend.handleSchematicCreate)
-	registerRoute(http.MethodGet, frontend.router.GET, "/schematics/:schematic", frontend.handleSchematicGet)
-
-	// meta - public
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/versions", frontend.handleVersions)
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/version/:version/extensions/official", frontend.handleOfficialExtensions)
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/version/:version/overlays/official", frontend.handleOfficialOverlays)
-
-	// secureboot - public
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/secureboot/signing-cert.pem", frontend.handleSecureBootSigningCert)
-
-	// talosctl - public
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/talosctl/:version", frontend.handleTalosctlList)
-	registerPublicRoute(http.MethodHead, frontend.router.HEAD, "/talosctl/:version/:path", frontend.handleTalosctl)
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/talosctl/:version/:path", frontend.handleTalosctl)
-
-	// machine-readable API documentation - public
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/llms.txt", frontend.handleLLMsTxt)
-	registerPublicRoute(http.MethodGet, frontend.router.GET, "/openapi.yaml", frontend.handleOpenAPI)
-
-	// UI - require auth (consistent with all other schematic-creating endpoints)
-	registerRoute(http.MethodGet, frontend.router.GET, "/", frontend.handleUI)
-	registerRoute(http.MethodHead, frontend.router.HEAD, "/", frontend.handleUI)
-	registerRoute(http.MethodPost, frontend.router.POST, "/ui/wizard", frontend.handleUIWizard)
-	registerRoute(http.MethodGet, frontend.router.GET, "/ui/version-doc", frontend.handleUIVersionDoc)
-	registerRoute(http.MethodPost, frontend.router.POST, "/ui/extensions-list", frontend.handleUIExtensionsList)
-	registerRoute(http.MethodGet, frontend.router.GET, "/ui/tokens", frontend.handleTokensUI)
-
-	registerStaticRoute("/css/*filepath", http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
-	registerStaticRoute("/favicons/*filepath", http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
-	registerStaticRoute("/js/*filepath", http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
-
-	frontend.registerBrowserLogin(registerPublicRoute)
-
-	if registrationErr != nil {
-		return nil, fmt.Errorf("register HTTP routes: %w", registrationErr)
+	if err = frontend.registerRoutes(router, enterprisePlugins); err != nil {
+		return nil, fmt.Errorf("register HTTP routes: %w", err)
 	}
 
 	return frontend, nil
-}
-
-func registerRuntimeRoute(
-	contract *api.Contract,
-	method string,
-	registrator func(string, httprouter.Handle),
-	path string,
-	handle httprouter.Handle,
-) error {
-	if err := contract.ValidateRuntimeRoute(method, path); err != nil {
-		return err
-	}
-
-	registrator(path, handle)
-
-	return nil
-}
-
-func serveFiles(filesystem http.FileSystem) httprouter.Handle {
-	server := http.FileServer(filesystem)
-
-	return func(writer http.ResponseWriter, request *http.Request, params httprouter.Params) {
-		request.URL.Path = params.ByName("filepath")
-		server.ServeHTTP(writer, request)
-	}
 }
 
 // Handler returns the HTTP handler.
@@ -316,18 +175,18 @@ func (f *Frontend) Handler() http.Handler {
 		},
 		AllowedHeaders: []string{"Cache-Control"},
 		ExposedHeaders: []string{"Content-Disposition", "Content-Length", "Content-Type"},
-	}).Handler(f.router)
+	}).Handler(f.handler)
 }
 
 func (f *Frontend) wrapper(h Handler) httprouter.Handle {
-	return f.wrapHandler(h, true)
-}
-
-func (f *Frontend) wrapperPublic(h Handler) httprouter.Handle {
-	return f.wrapHandler(h, false)
+	return f.wrapHandlerProtocol(h, true, transport.ProtocolAPI)
 }
 
 func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
+	return f.wrapHandlerProtocol(h, requireAuth, transport.ProtocolAPI)
+}
+
+func (f *Frontend) wrapHandlerProtocol(h Handler, requireAuth bool, protocol transport.Protocol) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		requestID := requestIDFrom(r)
 		ctx := ctxlog.WithRequestID(r.Context(), requestID)
@@ -342,39 +201,27 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 
 		var username string
 
-		handler := f.withAuth(f.withContractValidation(h), requireAuth, &username, &state)
+		handler := f.withContractValidation(f.withAuth(h, requireAuth, &username, &state))
 
 		start := time.Now()
 		err := handler(ctx, sw, r, p)
 		duration := time.Since(start)
 
-		level, status := MatchError(err, func(message string, code int) {
-			if state.status != 0 {
-				// The handler already responded; this error is only here to be logged.
-				return
-			}
+		classification := transport.ClassifyError(err)
+		if state.Status() == 0 {
+			transport.RenderError(sw, r, protocol, classification)
+		}
 
-			if code == http.StatusUnauthorized {
-				// Fallback only: a provider that picked its own challenges keeps them, and one
-				// redirecting htmx wants none — a challenge pops the browser's Basic dialog.
-				if sw.Header().Get("WWW-Authenticate") == "" && sw.Header().Get("Hx-Redirect") == "" {
-					sw.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise", charset="UTF-8"`)
-				}
-			}
-
-			http.Error(sw, message, code)
-		})
-
-		// A handler that answered for itself returns nil, which would log as a 200.
-		if state.status != 0 {
-			status = state.status
+		status := classification.Status
+		if state.Status() != 0 {
+			status = state.Status()
 		} else {
 			// Nothing was committed, so net/http sends an implicit 200 that reaches no hook.
-			state.applyCacheControlPin(sw)
+			state.ApplyCacheControlPin(sw)
 		}
 
 		logger.Log(
-			level, "request",
+			classification.Level, "request",
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),
 			zap.Int("status", status),
@@ -496,7 +343,7 @@ func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state
 			*username, _ = authProvider.UsernameFromContext(ctx)
 
 			// The provider has decided by now, so pin the Cache-Control it chose.
-			state.pinCacheControl(w)
+			state.PinCacheControl(w)
 
 			return h(ctx, w, r, p)
 		})(ctx, w, r, p)
@@ -569,77 +416,14 @@ func errString(err error) string {
 	return ""
 }
 
-// MatchError matches the error and returns the appropriate HTTP status code and log level.
-// It also calls the callback with the message and code to write the response.
-//
-// enterrors.RespondedTag is the exception: no callback, and the status is a placeholder that
-// callers replace with the one on the response writer.
+// MatchError is a compatibility adapter around transport.ClassifyError.
 func MatchError(err error, callback func(message string, code int)) (zapcore.Level, int) {
-	status := http.StatusOK
-	level := zap.InfoLevel
-
-	switch {
-	case err == nil:
-		// happy case
-	case xerrors.TagIs[enterrors.RespondedTag](err):
-		level = zap.WarnLevel
-	case xerrors.TagIs[enterrors.NotEnabledTag](err):
-		level = zap.WarnLevel
-		status = http.StatusPaymentRequired
-
-		callback(err.Error(), http.StatusPaymentRequired)
-	case xerrors.TagIs[enterrors.NotReadyTag](err):
-		level = zap.WarnLevel
-		status = http.StatusServiceUnavailable
-
-		callback("service temporarily unavailable", http.StatusServiceUnavailable)
-	case xerrors.TagIs[ProxyUnavailableTag](err):
-		level = zap.WarnLevel
-		status = http.StatusServiceUnavailable
-
-		callback(err.Error(), http.StatusServiceUnavailable)
-	case xerrors.TagIs[storage.ErrNotFoundTag](err),
-		xerrors.TagIs[artifacts.ErrNotFoundTag](err),
-		xerrors.TagIs[RouteNotFoundTag](err):
-		level = zap.WarnLevel
-		status = http.StatusNotFound
-
-		callback(err.Error(), http.StatusNotFound)
-	case xerrors.TagIs[MethodNotAllowedTag](err):
-		level = zap.WarnLevel
-		status = http.StatusMethodNotAllowed
-
-		callback(err.Error(), http.StatusMethodNotAllowed)
-	case xerrors.TagIs[profile.InvalidErrorTag](err),
-		xerrors.TagIs[schematicpkg.InvalidErrorTag](err),
-		xerrors.TagIs[enterrors.InvalidErrorTag](err),
-		xerrors.TagIs[InvalidImageTag](err),
-		xerrors.TagIs[InvalidRequestTag](err):
-		level = zap.WarnLevel
-		status = http.StatusBadRequest
-
-		callback(err.Error(), http.StatusBadRequest)
-	case xerrors.TagIs[schematicpkg.RequiresAuthenticationTag](err):
-		level = zap.WarnLevel
-		status = http.StatusUnauthorized
-
-		callback("authentication required to access this schematic", http.StatusUnauthorized)
-	case xerrors.TagIs[schematicpkg.ForbiddenTag](err):
-		level = zap.WarnLevel
-		status = http.StatusForbidden
-
-		callback("access denied", http.StatusForbidden)
-	case errors.Is(err, context.Canceled):
-		status = 499
-		// client closed connection
-	default:
-		status = http.StatusInternalServerError
-		level = zap.ErrorLevel
-
-		callback("internal server error", http.StatusInternalServerError)
+	classification := transport.ClassifyError(err)
+	if classification.Render {
+		callback(classification.Message, classification.Status)
 	}
 
-	return level, status
+	return classification.Level, classification.Status
 }
 
 // Use several ways to detect language.

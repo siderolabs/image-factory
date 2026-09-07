@@ -260,13 +260,14 @@ func (m *Manager) GetBrokenTalosVersions() []semver.Version {
 }
 
 // GetTalosVersions returns a list of Talos versions available.
+// The caller may reorder the returned slice without changing the cached list.
 func (m *Manager) GetTalosVersions(ctx context.Context) ([]semver.Version, error) {
 	m.talosVersionsMu.Lock()
 	versions, timestamp := m.talosVersions, m.talosVersionsTimestamp
 	m.talosVersionsMu.Unlock()
 
 	if time.Since(timestamp) < m.options.TalosVersionRecheckInterval {
-		return versions, nil
+		return slices.Clone(versions), nil
 	}
 
 	resultCh := m.sf.DoChan("talos-versions", m.fetchTalosVersions)
@@ -284,7 +285,7 @@ func (m *Manager) GetTalosVersions(ctx context.Context) ([]semver.Version, error
 	versions = m.talosVersions
 	m.talosVersionsMu.Unlock()
 
-	return versions, nil
+	return slices.Clone(versions), nil
 }
 
 // GetOfficialExtensions returns a list of Talos extensions per Talos version available.
