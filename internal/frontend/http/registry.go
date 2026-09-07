@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/uuid"
-	"github.com/julienschmidt/httprouter"
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/go-retry/retry"
 	"go.uber.org/zap"
@@ -59,12 +58,6 @@ type InvalidImageTag = transport.InvalidImageTag
 
 // ProxyUnavailableTag is an error tag for when the backing registry cannot be proxied to.
 type ProxyUnavailableTag = transport.ProxyUnavailableTag
-
-// handleHealth handles registry health and auth.
-func (f *Frontend) handleHealth(_ context.Context, _ http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
-	// always healthy, yay!
-	return nil
-}
 
 type requestedImage struct {
 	imageName  string
@@ -655,16 +648,6 @@ func verifyPublished(ctx context.Context, object string, verify retry.RetryableF
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-
-	return err
-}
-
-// handleCosignSigningKeyPub returns cosign public key in PEM format.
-func (f *Frontend) handleCosignSigningKeyPub(_ context.Context, w http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
-	w.Header().Set("Content-Type", "application/x-pem-file")
-	w.WriteHeader(http.StatusOK)
-
-	_, err := w.Write(f.imageSigner.GetPublicKeyPEM())
 
 	return err
 }

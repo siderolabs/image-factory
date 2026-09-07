@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"strings"
@@ -20,7 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
-	"github.com/rs/cors"
+	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -32,6 +33,9 @@ import (
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/audit"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
+	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
+	"github.com/siderolabs/image-factory/internal/frontend/http/operational"
+	staticfiles "github.com/siderolabs/image-factory/internal/frontend/http/static"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
@@ -43,7 +47,7 @@ import (
 
 // Frontend is the HTTP frontend.
 type Frontend struct {
-	handler           http.Handler
+	server            *Server
 	contract          *api.Contract
 	schematicFactory  *schematic.Factory
 	assetBuilder      *asset.Builder
@@ -56,7 +60,11 @@ type Frontend struct {
 	pusher            remotewrap.Pusher
 	imageSigner       signer.Signer
 	evidencePublisher enterprise.InstallerEvidencePublisher
-	readinessCheckers []enterprise.ReadinessChecker
+	metadata          *metadata.Handler
+	operational       *operational.Handler
+	staticCSS         *staticfiles.Handler
+	staticFavicons    *staticfiles.Handler
+	staticJavaScript  *staticfiles.Handler
 	sf                singleflight.Group
 	options           Options
 }
@@ -118,11 +126,15 @@ func NewFrontend(
 		options:           opts,
 	}
 
-	for _, p := range enterprisePlugins {
-		if rc, ok := p.(enterprise.ReadinessChecker); ok {
-			frontend.readinessCheckers = append(frontend.readinessCheckers, rc)
+	var readinessCheckers []operational.ReadinessChecker
+
+	for _, plugin := range enterprisePlugins {
+		if checker, ok := plugin.(enterprise.ReadinessChecker); ok {
+			readinessCheckers = append(readinessCheckers, checker)
 		}
 	}
+
+	frontend.initializeEndpointOwners(readinessCheckers)
 
 	var err error
 
@@ -142,6 +154,7 @@ func NewFrontend(
 	}
 
 	frontend.imageSigner = opts.CacheImageSigner
+	frontend.metadata = metadata.New(artifactsManager, secureBootService, frontend.imageSigner, getLLMsTxt())
 
 	frontend.evidencePublisher, err = enterprise.NewInstallerEvidencePublisher(
 		frontend.logger,
@@ -154,28 +167,23 @@ func NewFrontend(
 		return nil, fmt.Errorf("failed to create Installer evidence publisher: %w", err)
 	}
 
-	router := httprouter.New()
-	frontend.handler = router
-
-	if err = frontend.registerRoutes(router, enterprisePlugins); err != nil {
+	if err = frontend.registerRoutes(httprouter.New(), enterprisePlugins); err != nil {
 		return nil, fmt.Errorf("register HTTP routes: %w", err)
 	}
 
 	return frontend, nil
 }
 
+func (f *Frontend) initializeEndpointOwners(readinessCheckers []operational.ReadinessChecker) {
+	f.operational = operational.New(readinessCheckers...)
+	f.staticCSS = staticfiles.New(http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
+	f.staticFavicons = staticfiles.New(http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
+	f.staticJavaScript = staticfiles.New(http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
+}
+
 // Handler returns the HTTP handler.
 func (f *Frontend) Handler() http.Handler {
-	return cors.New(cors.Options{
-		AllowedOrigins: f.options.AllowedOrigins,
-		AllowedMethods: []string{
-			http.MethodHead,
-			http.MethodGet,
-			http.MethodOptions,
-		},
-		AllowedHeaders: []string{"Cache-Control"},
-		ExposedHeaders: []string{"Content-Disposition", "Content-Length", "Content-Type"},
-	}).Handler(f.handler)
+	return f.server.Handler()
 }
 
 func (f *Frontend) wrapper(h Handler) httprouter.Handle {
@@ -441,21 +449,4 @@ func (f *Frontend) getLocalizer(r *http.Request) *i18n.Localizer {
 	}
 
 	return i18n.NewLocalizer(getLocalizerBundle(), lang, "en")
-}
-
-// handleReady reports readiness once all enterprise plugins implementing
-// ReadinessChecker report ready. Used by orchestration probes to gate traffic
-// (e.g. async Grype DB warm-up).
-func (f *Frontend) handleReady(_ context.Context, w http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
-	for _, rc := range f.readinessCheckers {
-		if err := rc.Ready(); err != nil {
-			http.Error(w, "not ready", http.StatusServiceUnavailable)
-
-			return nil //nolint:nilerr
-		}
-	}
-
-	w.WriteHeader(http.StatusOK)
-
-	return nil
 }
