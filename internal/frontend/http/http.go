@@ -32,6 +32,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/audit"
 	"github.com/siderolabs/image-factory/internal/authn"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
+	applicationapi "github.com/siderolabs/image-factory/internal/frontend/http/api"
 	"github.com/siderolabs/image-factory/internal/frontend/http/authentication"
 	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
 	"github.com/siderolabs/image-factory/internal/frontend/http/operational"
@@ -49,6 +50,10 @@ import (
 type Frontend struct {
 	server            *Server
 	contract          *api.Contract
+	schematicAPI      *applicationapi.SchematicHandler
+	imageAPI          *applicationapi.ImageHandler
+	pxeAPI            *applicationapi.PXEHandler
+	talosctlAPI       *applicationapi.TalosctlHandler
 	schematicFactory  *schematic.Factory
 	assetBuilder      *asset.Builder
 	artifactsManager  *artifacts.Manager
@@ -125,6 +130,36 @@ func NewFrontend(
 		logger:            logger.With(zap.String("frontend", "http")),
 		options:           opts,
 	}
+	schematicService := schematic.NewService(schematicFactory, opts.AuthProvider != nil, enterprise.Enabled())
+	frontend.schematicAPI = applicationapi.NewSchematicHandler(schematicService)
+	imageService := asset.NewImageService(
+		schematicService,
+		assetBuilder,
+		asset.NewImageProfileEnhancer(artifactsManager, secureBootService),
+		asset.ImageServiceOptions{
+			ChecksumGenerator:  checksummer,
+			SignatureGenerator: signatureWriter,
+			Logger:             frontend.logger,
+		},
+	)
+	frontend.imageAPI = applicationapi.NewImageHandler(
+		imageService,
+		applicationapi.ImageHandlerOptions{
+			ExternalPXEURL: opts.ExternalPXEURL,
+			Logger:         frontend.logger,
+		},
+	)
+	frontend.pxeAPI = applicationapi.NewPXEHandler(
+		imageService,
+		applicationapi.PXEHandlerOptions{
+			ExternalPXEURL: opts.ExternalPXEURL,
+			AuthEnabled:    opts.AuthProvider != nil,
+		},
+	)
+	frontend.talosctlAPI = applicationapi.NewTalosctlHandler(
+		artifacts.NewTalosctlService(artifactsManager),
+		opts.ExternalURL,
+	)
 
 	var readinessCheckers []operational.ReadinessChecker
 
@@ -293,12 +328,6 @@ func requestIDFrom(r *http.Request) string {
 	}
 
 	return uuid.NewString()
-}
-
-// downloadTokenFromContext returns the URL-safe API token that authenticated the request.
-// It is only ever set after Verify succeeded, so a caller may forward it as-is.
-func downloadTokenFromContext(ctx context.Context) (string, bool) {
-	return authentication.ImageDownloadTokenFromContext(ctx)
 }
 
 // withAuth selects authentication from the route's declarative access policy.

@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/siderolabs/image-factory/internal/authn"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	"github.com/siderolabs/image-factory/pkg/schematic"
@@ -165,40 +166,35 @@ func (s *Factory) get(ctx context.Context, id string) (*schematic.Schematic, err
 	return schematic, nil
 }
 
-// Get retrieves the stored schematic and enforces ownership.
+// GetRaw retrieves a stored schematic without applying authorization policy.
+func (s *Factory) GetRaw(ctx context.Context, id string) (*schematic.Schematic, error) {
+	configuration, err := s.get(ctx, id)
+	if err != nil && xerrors.TagIs[storage.ErrNotFoundTag](err) {
+		return nil, xerrors.NewTagged[schematic.NotFoundTag](err)
+	}
+
+	return configuration, err
+}
+
+// Get retrieves the stored schematic through the application ownership policy.
 //
-// If auth is non-nil and the caller is unauthenticated, RequiresAuthenticationTag is returned
-// even when the schematic is not found, to avoid leaking schematic existence to anonymous callers.
+// Application callers should prefer Service.Get. This compatibility facade adapts
+// legacy authentication-provider contexts into a typed principal before delegating to Service.
 func (s *Factory) Get(ctx context.Context, id string, auth OwnershipChecker) (*schematic.Schematic, error) {
-	sc, err := s.get(ctx, id)
-	if err != nil {
-		if auth != nil {
-			if _, ok := auth.UsernameFromContext(ctx); !ok {
-				return nil, xerrors.NewTagged[schematic.RequiresAuthenticationTag](err)
+	if auth != nil {
+		if _, ok := authn.PrincipalFromContext(ctx); !ok {
+			if username, found := auth.UsernameFromContext(ctx); found {
+				principal, err := authn.NewPrincipal(username, authn.CredentialProvider)
+				if err != nil {
+					return nil, err
+				}
+
+				ctx = authn.ContextWithPrincipal(ctx, principal)
 			}
 		}
-
-		return nil, err
 	}
 
-	if sc.Owner == "" && auth == nil {
-		return sc, nil
-	}
-
-	if auth == nil {
-		return nil, xerrors.NewTagged[schematic.RequiresAuthenticationTag](errors.New("authentication required"))
-	}
-
-	username, ok := auth.UsernameFromContext(ctx)
-	if !ok {
-		return nil, xerrors.NewTagged[schematic.RequiresAuthenticationTag](errors.New("authentication required"))
-	}
-
-	if username != sc.Owner {
-		return nil, xerrors.NewTagged[schematic.ForbiddenTag](errors.New("access denied"))
-	}
-
-	return sc, nil
+	return NewService(s, auth != nil, false).Get(ctx, id)
 }
 
 // Describe implements prom.Collector interface.

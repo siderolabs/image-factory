@@ -36,6 +36,10 @@ func TestClassifyErrorPreservesHTTPContract(t *testing.T) {
 			message: "route not found", status: http.StatusNotFound, level: zapcore.WarnLevel, render: true,
 		},
 		{
+			name: "schematic not found", err: xerrors.NewTagged[schematicpkg.NotFoundTag](errors.New("schematic not found")),
+			message: "schematic not found", status: http.StatusNotFound, level: zapcore.WarnLevel, render: true,
+		},
+		{
 			name: "unknown method", err: xerrors.NewTagged[transport.MethodNotAllowedTag](errors.New("method not allowed")),
 			message: "method not allowed", status: http.StatusMethodNotAllowed, level: zapcore.WarnLevel, render: true,
 		},

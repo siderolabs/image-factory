@@ -53,6 +53,7 @@ func ClassifyError(err error) ErrorClassification {
 		classification = rendered(err.Error(), http.StatusServiceUnavailable)
 	case xerrors.TagIs[storage.ErrNotFoundTag](err),
 		xerrors.TagIs[artifacts.ErrNotFoundTag](err),
+		xerrors.TagIs[schematicpkg.NotFoundTag](err),
 		xerrors.TagIs[RouteNotFoundTag](err):
 		classification = rendered(err.Error(), http.StatusNotFound)
 	case xerrors.TagIs[MethodNotAllowedTag](err):

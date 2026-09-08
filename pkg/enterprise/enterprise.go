@@ -140,12 +140,14 @@ type ScannerOptions struct {
 // suffix is the file-extension that triggered checksum mode (e.g. ".sha512",
 // ".sha256", ".md5") and determines both the algorithm and the output filename.
 type Checksummer interface {
+	asset.ChecksumGenerator
 	WriteChecksum(ctx context.Context, w http.ResponseWriter, r *http.Request, reader io.ReadCloser, size int64, filename, suffix string) error
 }
 
 // SignatureWriter signs an asset and writes its detached Sigstore bundle to the HTTP response.
 // The implementation is enterprise-only and supports any configured blob signer.
 type SignatureWriter interface {
+	asset.SignatureGenerator
 	WriteSignature(ctx context.Context, w http.ResponseWriter, r *http.Request, asset assetcache.BootAsset, assetKey, filename string) error
 }
 

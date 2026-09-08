@@ -87,9 +87,30 @@ func (f *Frontend) routes() []transport.Route {
 		{Method: http.MethodGet, Path: "/readyz", OperationID: "getReadiness", Access: transport.AccessPublic, Protocol: transport.ProtocolOperational, Handler: f.operational.Ready},
 		{Method: http.MethodHead, Path: "/readyz", OperationID: "headReadiness", Access: transport.AccessPublic, Protocol: transport.ProtocolOperational, Handler: f.operational.Ready},
 
-		{Method: http.MethodGet, Path: "/image/:schematic/:version/:path", OperationID: "getImage", Access: transport.AccessImageDownload, Protocol: transport.ProtocolAPI, Handler: f.handleImage},
-		{Method: http.MethodHead, Path: "/image/:schematic/:version/:path", OperationID: "headImage", Access: transport.AccessImageDownload, Protocol: transport.ProtocolAPI, Handler: f.handleImage},
-		{Method: http.MethodGet, Path: "/pxe/:schematic/:version/:path", OperationID: "getPXEScript", Access: transport.AccessImageDownload, Protocol: transport.ProtocolAPI, Handler: f.handlePXE},
+		{
+			Method:      http.MethodGet,
+			Path:        "/image/:schematic/:version/:path",
+			OperationID: "getImage",
+			Access:      transport.AccessImageDownload,
+			Protocol:    transport.ProtocolAPI,
+			Handler:     f.imageAPI.Serve,
+		},
+		{
+			Method:      http.MethodHead,
+			Path:        "/image/:schematic/:version/:path",
+			OperationID: "headImage",
+			Access:      transport.AccessImageDownload,
+			Protocol:    transport.ProtocolAPI,
+			Handler:     f.imageAPI.Serve,
+		},
+		{
+			Method:      http.MethodGet,
+			Path:        "/pxe/:schematic/:version/:path",
+			OperationID: "getPXEScript",
+			Access:      transport.AccessImageDownload,
+			Protocol:    transport.ProtocolAPI,
+			Handler:     f.pxeAPI.Serve,
+		},
 
 		{Method: http.MethodGet, Path: "/v2", OperationID: "checkRegistry", Access: transport.AccessImageDownload, Protocol: transport.ProtocolOCI, Handler: f.operational.Health},
 		{Method: http.MethodHead, Path: "/v2", OperationID: "headRegistry", Access: transport.AccessImageDownload, Protocol: transport.ProtocolOCI, Handler: f.operational.Health},
@@ -130,8 +151,8 @@ func (f *Frontend) routes() []transport.Route {
 			Handler:     f.metadata.CosignSigningKey,
 		},
 
-		{Method: http.MethodPost, Path: "/schematics", OperationID: "createSchematic", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolAPI, Handler: f.handleSchematicCreate},
-		{Method: http.MethodGet, Path: "/schematics/:schematic", OperationID: "getSchematic", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolAPI, Handler: f.handleSchematicGet},
+		{Method: http.MethodPost, Path: "/schematics", OperationID: "createSchematic", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolAPI, Handler: f.schematicAPI.Create},
+		{Method: http.MethodGet, Path: "/schematics/:schematic", OperationID: "getSchematic", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolAPI, Handler: f.schematicAPI.Get},
 
 		{Method: http.MethodGet, Path: "/versions", OperationID: "listVersions", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.metadata.Versions},
 		{
@@ -158,9 +179,9 @@ func (f *Frontend) routes() []transport.Route {
 			Protocol:    transport.ProtocolAPI,
 			Handler:     f.metadata.SecureBootSigningCertificate,
 		},
-		{Method: http.MethodGet, Path: "/talosctl/:version", OperationID: "listTalosctlDownloads", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.handleTalosctlList},
-		{Method: http.MethodHead, Path: "/talosctl/:version/:path", OperationID: "headTalosctl", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.handleTalosctl},
-		{Method: http.MethodGet, Path: "/talosctl/:version/:path", OperationID: "getTalosctl", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.handleTalosctl},
+		{Method: http.MethodGet, Path: "/talosctl/:version", OperationID: "listTalosctlDownloads", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.talosctlAPI.List},
+		{Method: http.MethodHead, Path: "/talosctl/:version/:path", OperationID: "headTalosctl", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.talosctlAPI.Download},
+		{Method: http.MethodGet, Path: "/talosctl/:version/:path", OperationID: "getTalosctl", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.talosctlAPI.Download},
 		{Method: http.MethodGet, Path: "/llms.txt", OperationID: "getLLMsText", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.metadata.LLMsText},
 		{Method: http.MethodGet, Path: "/openapi.yaml", OperationID: "getOpenAPI", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.handleOpenAPI},
 

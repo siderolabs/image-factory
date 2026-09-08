@@ -17,6 +17,8 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+
+	"github.com/siderolabs/image-factory/internal/asset"
 )
 
 // Checksummer computes checksums from boot assets and writes
@@ -33,9 +35,30 @@ func NewChecksummer() *Checksummer {
 //
 // Supported suffixes: ".sha512", ".sha256".
 // The response body is formatted as: "<hexhash>  <filename>\n".
-func (c *Checksummer) WriteChecksum(_ context.Context, w http.ResponseWriter, r *http.Request, reader io.ReadCloser, _ int64, filename, suffix string) error {
+func (c *Checksummer) WriteChecksum(ctx context.Context, w http.ResponseWriter, r *http.Request, reader io.ReadCloser, _ int64, filename, suffix string) error {
 	defer reader.Close() //nolint:errcheck
 
+	generated, err := c.GenerateChecksum(ctx, reader, filename, suffix)
+	if err != nil {
+		return err
+	}
+
+	w.Header().Set("Content-Type", generated.ContentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, generated.Filename))
+	w.Header().Set("Content-Length", strconv.Itoa(len(generated.Content)))
+	w.WriteHeader(http.StatusOK)
+
+	if r.Method == http.MethodHead {
+		return nil
+	}
+
+	_, err = w.Write(generated.Content)
+
+	return err
+}
+
+// GenerateChecksum computes a transport-neutral checksum sidecar.
+func (*Checksummer) GenerateChecksum(_ context.Context, reader io.Reader, filename, suffix string) (asset.GeneratedArtifact, error) {
 	var hasher hash.Hash
 
 	switch suffix {
@@ -44,25 +67,16 @@ func (c *Checksummer) WriteChecksum(_ context.Context, w http.ResponseWriter, r 
 	case ".sha256":
 		hasher = sha256.New()
 	default:
-		return fmt.Errorf("unsupported checksum suffix: %s", suffix)
+		return asset.GeneratedArtifact{}, fmt.Errorf("unsupported checksum suffix: %s", suffix)
 	}
 
 	if _, err := io.Copy(hasher, reader); err != nil {
-		return fmt.Errorf("failed to hash asset: %w", err)
+		return asset.GeneratedArtifact{}, fmt.Errorf("failed to hash asset: %w", err)
 	}
 
-	checksumLine := fmt.Sprintf("%x  %s\n", hasher.Sum(nil), filename)
-
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s%s"`, filename, suffix))
-	w.Header().Set("Content-Length", strconv.Itoa(len(checksumLine)))
-	w.WriteHeader(http.StatusOK)
-
-	if r.Method == http.MethodHead {
-		return nil
-	}
-
-	_, err := io.WriteString(w, checksumLine)
-
-	return err
+	return asset.GeneratedArtifact{
+		Content:     []byte(fmt.Sprintf("%x  %s\n", hasher.Sum(nil), filename)),
+		ContentType: "text/plain; charset=utf-8",
+		Filename:    filename + suffix,
+	}, nil
 }

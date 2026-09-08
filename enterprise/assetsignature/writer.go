@@ -25,6 +25,7 @@ import (
 	"golang.org/x/sync/singleflight"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	appasset "github.com/siderolabs/image-factory/internal/asset"
 	assetcache "github.com/siderolabs/image-factory/internal/asset/cache"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/image/signer"
@@ -58,6 +59,32 @@ func (w *Writer) WriteSignature(
 	assetKey string,
 	filename string,
 ) error {
+	generated, err := w.GenerateSignature(ctx, asset, assetKey, filename)
+	if err != nil {
+		return err
+	}
+
+	response.Header().Set("Content-Type", generated.ContentType)
+	response.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, generated.Filename))
+	response.Header().Set("Content-Length", strconv.Itoa(len(generated.Content)))
+	response.WriteHeader(http.StatusOK)
+
+	if request.Method == http.MethodHead {
+		return nil
+	}
+
+	_, err = response.Write(generated.Content)
+
+	return err
+}
+
+// GenerateSignature returns a transport-neutral cached or freshly signed Sigstore bundle.
+func (w *Writer) GenerateSignature(
+	ctx context.Context,
+	asset appasset.BootAsset,
+	assetKey string,
+	filename string,
+) (appasset.GeneratedArtifact, error) {
 	cacheKey := Hash(assetKey, w.signer.BlobSigningIdentity())
 
 	bundleJSON, err := w.getCachedBundle(ctx, cacheKey)
@@ -66,21 +93,14 @@ func (w *Writer) WriteSignature(
 	}
 
 	if err != nil {
-		return err
+		return appasset.GeneratedArtifact{}, err
 	}
 
-	response.Header().Set("Content-Type", bundleMediaType)
-	response.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s%s"`, filename, bundleFileSuffix))
-	response.Header().Set("Content-Length", strconv.Itoa(len(bundleJSON)))
-	response.WriteHeader(http.StatusOK)
-
-	if request.Method == http.MethodHead {
-		return nil
-	}
-
-	_, err = response.Write(bundleJSON)
-
-	return err
+	return appasset.GeneratedArtifact{
+		Content:     bundleJSON,
+		ContentType: bundleMediaType,
+		Filename:    filename + bundleFileSuffix,
+	}, nil
 }
 
 func (w *Writer) signAndCache(ctx context.Context, cacheKey, filename string, asset assetcache.BootAsset) ([]byte, error) {
