@@ -21,7 +21,8 @@ func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin)
 	}
 
 	routes = append(routes, f.routes()...)
-	routes = append(routes, f.browserLoginRoutes()...)
+	routes = append(routes, f.browserAuth.Routes()...)
+	routes = append(routes, f.ui.Routes()...)
 
 	server, err := newServer(f.contract, routes, f.buildApplicationHandler, ServerOptions{
 		AllowedOrigins:   f.options.AllowedOrigins,
@@ -184,27 +185,6 @@ func (f *Frontend) routes() []transport.Route {
 		{Method: http.MethodGet, Path: "/talosctl/:version/:path", OperationID: "getTalosctl", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.talosctlAPI.Download},
 		{Method: http.MethodGet, Path: "/llms.txt", OperationID: "getLLMsText", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.metadata.LLMsText},
 		{Method: http.MethodGet, Path: "/openapi.yaml", OperationID: "getOpenAPI", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.handleOpenAPI},
-
-		{Method: http.MethodGet, Path: "/", OperationID: "getUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleUI},
-		{Method: http.MethodHead, Path: "/", OperationID: "headUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleUI},
-		{Method: http.MethodPost, Path: "/ui/wizard", OperationID: "postUIWizard", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleUIWizard},
-		{
-			Method:      http.MethodGet,
-			Path:        "/ui/version-doc",
-			OperationID: "getUIVersionDocumentation",
-			Access:      transport.AccessAuthenticated,
-			Protocol:    transport.ProtocolHTML,
-			Handler:     f.handleUIVersionDoc,
-		},
-		{
-			Method:      http.MethodPost,
-			Path:        "/ui/extensions-list",
-			OperationID: "postUIExtensionsList",
-			Access:      transport.AccessAuthenticated,
-			Protocol:    transport.ProtocolHTML,
-			Handler:     f.handleUIExtensionsList,
-		},
-		{Method: http.MethodGet, Path: "/ui/tokens", OperationID: "getUITokens", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleTokensUI},
 
 		{
 			Method:      http.MethodGet,

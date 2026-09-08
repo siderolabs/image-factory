@@ -19,7 +19,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/siderolabs/gen/ensure"
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
@@ -34,10 +33,12 @@ import (
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	applicationapi "github.com/siderolabs/image-factory/internal/frontend/http/api"
 	"github.com/siderolabs/image-factory/internal/frontend/http/authentication"
+	"github.com/siderolabs/image-factory/internal/frontend/http/browserauth"
 	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
 	"github.com/siderolabs/image-factory/internal/frontend/http/operational"
 	staticfiles "github.com/siderolabs/image-factory/internal/frontend/http/static"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
+	"github.com/siderolabs/image-factory/internal/frontend/http/ui"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic"
@@ -54,6 +55,7 @@ type Frontend struct {
 	imageAPI          *applicationapi.ImageHandler
 	pxeAPI            *applicationapi.PXEHandler
 	talosctlAPI       *applicationapi.TalosctlHandler
+	browserAuth       *browserauth.Handler
 	schematicFactory  *schematic.Factory
 	assetBuilder      *asset.Builder
 	artifactsManager  *artifacts.Manager
@@ -70,6 +72,7 @@ type Frontend struct {
 	staticCSS         *staticfiles.Handler
 	staticFavicons    *staticfiles.Handler
 	staticJavaScript  *staticfiles.Handler
+	ui                *ui.Handler
 	sf                singleflight.Group
 	options           Options
 }
@@ -160,6 +163,14 @@ func NewFrontend(
 		artifacts.NewTalosctlService(artifactsManager),
 		opts.ExternalURL,
 	)
+	frontend.browserAuth = browserauth.New(opts.AuthProvider)
+	frontend.ui = ui.New(schematicService, artifactsManager, ui.Options{
+		ExternalURL:    opts.ExternalURL,
+		ExternalPXEURL: opts.ExternalPXEURL,
+		AuthProvider:   opts.AuthProvider,
+		TokensEnabled:  opts.TokenVerifier != nil,
+		LogoutEnabled:  frontend.browserAuth.LogoutEnabled(),
+	})
 
 	var readinessCheckers []operational.ReadinessChecker
 
@@ -376,21 +387,4 @@ func MatchError(err error, callback func(message string, code int)) (zapcore.Lev
 	}
 
 	return classification.Level, classification.Status
-}
-
-// Use several ways to detect language.
-func (f *Frontend) getLocalizer(r *http.Request) *i18n.Localizer {
-	lang := r.URL.Query().Get("lang")
-
-	if lang == "" {
-		if cookie, err := r.Cookie("lang"); err == nil {
-			lang = cookie.Value
-		}
-	}
-
-	if lang == "" {
-		lang = r.Header.Get("Accept-Language")
-	}
-
-	return i18n.NewLocalizer(getLocalizerBundle(), lang, "en")
 }

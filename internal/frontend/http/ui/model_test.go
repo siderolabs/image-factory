@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package http_test
+package ui_test
 
 import (
 	nethttp "net/http"
@@ -12,11 +12,10 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/platforms"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
 	"go.yaml.in/yaml/v4"
 
 	"github.com/siderolabs/image-factory/internal/apitoken"
-	"github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/frontend/http/ui"
 )
 
 const testEmbdeddedMachineConfiguration = "apiVersion: v1alpha1/nkind: HostnameConfig/nhostname: my-custom-hostname/nauto: off"
@@ -24,8 +23,8 @@ const testEmbdeddedMachineConfiguration = "apiVersion: v1alpha1/nkind: HostnameC
 func TestSetValuesFromSchematic(t *testing.T) {
 	ctx := t.Context()
 
-	input := http.WizardParams{
-		Target:  http.TargetSBC,
+	input := ui.WizardParams{
+		Target:  ui.TargetSBC,
 		Version: "1.12.0",
 		BoardMeta: platforms.SBC{
 			OverlayName:  "rpi_5",
@@ -46,10 +45,10 @@ func TestSetValuesFromSchematic(t *testing.T) {
 	s, err := input.ToSchematic(ctx, nil)
 	require.NoError(t, err)
 
-	var got http.WizardParams
-	http.SetURLValuesFromSchematic(&got, &s)
+	var got ui.WizardParams
+	ui.SetURLValuesFromSchematic(&got, &s)
 
-	assert.Equal(t, http.TargetSBC, got.Target)
+	assert.Equal(t, ui.TargetSBC, got.Target)
 	assert.Equal(t, input.BoardMeta.OverlayName, got.BoardMeta.OverlayName)
 	assert.Equal(t, input.BoardMeta.OverlayImage, got.BoardMeta.OverlayImage)
 	assert.Equal(t, input.Cmdline, got.Cmdline)
@@ -78,7 +77,7 @@ func TestSetValuesFromSchematic(t *testing.T) {
 }
 
 func TestURLValuesOmitsEmbeddedConfig(t *testing.T) {
-	values := http.WizardParams{
+	values := ui.WizardParams{
 		Cmdline:        "console=tty0",
 		EmbeddedConfig: testEmbdeddedMachineConfiguration,
 		Version:        "v1.13.2",
@@ -95,9 +94,17 @@ func renderTokensUI(t *testing.T) string {
 	w := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), nethttp.MethodGet, "/ui/tokens", nil)
 
-	require.NoError(t, http.NewTestFrontend(zaptest.NewLogger(t)).HandleTokensUI()(t.Context(), w, req, nil))
+	for _, route := range ui.New(nil, nil, ui.Options{}).Routes() {
+		if route.Method == nethttp.MethodGet && route.Path == "/ui/tokens" {
+			require.NoError(t, route.Handler(t.Context(), w, req, nil))
 
-	return w.Body.String()
+			return w.Body.String()
+		}
+	}
+
+	t.Fatal("token management route is missing")
+
+	return ""
 }
 
 // The create dialog names the scopes each actor translates to, so the choice doesn't have to be

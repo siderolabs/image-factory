@@ -2,7 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package http
+// Package ui implements the browser UI HTTP adapter.
+package ui
 
 import (
 	"bytes"
@@ -29,10 +30,84 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/internal/version"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
+
+// Options configures the browser UI adapter.
+type Options struct {
+	ExternalURL    *url.URL
+	ExternalPXEURL *url.URL
+	AuthProvider   enterprise.AuthProvider
+
+	TokensEnabled bool
+	LogoutEnabled bool
+}
+
+// SchematicService owns schematic validation, ownership, and persistence.
+type SchematicService interface {
+	Create(context.Context, *schematic.Schematic) (string, error)
+	Get(context.Context, string) (*schematic.Schematic, error)
+}
+
+// ArtifactSource supplies release metadata used by the browser UI.
+type ArtifactSource interface {
+	GetTalosVersions(context.Context) ([]semver.Version, error)
+	GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error)
+	GetTalosctlTuples(context.Context, string) ([]artifacts.TalosctlTuple, error)
+}
+
+// Handler owns browser UI routes and rendering behavior.
+type Handler struct {
+	schematicService SchematicService
+	artifactsSource  ArtifactSource
+	authProvider     enterprise.AuthProvider
+	externalURL      *url.URL
+	externalPXEURL   *url.URL
+	tokensEnabled    bool
+	logoutEnabled    bool
+}
+
+// New constructs the browser UI adapter.
+func New(schematicService SchematicService, artifactsSource ArtifactSource, opts Options) *Handler {
+	return &Handler{
+		schematicService: schematicService,
+		artifactsSource:  artifactsSource,
+		authProvider:     opts.AuthProvider,
+		externalURL:      opts.ExternalURL,
+		externalPXEURL:   opts.ExternalPXEURL,
+		tokensEnabled:    opts.TokensEnabled,
+		logoutEnabled:    opts.LogoutEnabled,
+	}
+}
+
+// Routes returns the authenticated browser UI routes.
+func (f *Handler) Routes() []transport.Route {
+	return []transport.Route{
+		{Method: http.MethodGet, Path: "/", OperationID: "getUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleUI},
+		{Method: http.MethodHead, Path: "/", OperationID: "headUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleUI},
+		{Method: http.MethodPost, Path: "/ui/wizard", OperationID: "postUIWizard", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleUIWizard},
+		{
+			Method:      http.MethodGet,
+			Path:        "/ui/version-doc",
+			OperationID: "getUIVersionDocumentation",
+			Access:      transport.AccessAuthenticated,
+			Protocol:    transport.ProtocolHTML,
+			Handler:     f.handleUIVersionDoc,
+		},
+		{
+			Method:      http.MethodPost,
+			Path:        "/ui/extensions-list",
+			OperationID: "postUIExtensionsList",
+			Access:      transport.AccessAuthenticated,
+			Protocol:    transport.ProtocolHTML,
+			Handler:     f.handleUIExtensionsList,
+		},
+		{Method: http.MethodGet, Path: "/ui/tokens", OperationID: "getUITokens", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleTokensUI},
+	}
+}
 
 // placeholderURL wraps a *url.URL with an optional raw credential prefix for display.
 // When authInfo is non-empty (e.g. "user:<password>@"), String() injects it after "scheme://"
@@ -138,7 +213,7 @@ const (
 )
 
 // handleUI handles '/'.
-func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+func (f *Handler) handleUI(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	if r.Method == http.MethodHead {
 		return nil
 	}
@@ -197,8 +272,8 @@ func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.
 		Bundle:        getLocalizerBundle(),
 		Lang:          getCurrentLang(r),
 		Enterprise:    enterprise.Enabled(),
-		TokensEnabled: f.options.TokenVerifier != nil,
-		LogoutEnabled: f.logoutEnabled(),
+		TokensEnabled: f.tokensEnabled,
+		LogoutEnabled: f.logoutEnabled,
 	})
 }
 
@@ -232,7 +307,7 @@ func tokenActors() []tokenActor {
 }
 
 // handleTokensUI handles '/ui/tokens'.
-func (f *Frontend) handleTokensUI(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+func (f *Handler) handleTokensUI(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	return getTemplates().ExecuteTemplate(w, "tokens.html", struct {
 		Version       string
 		Localizer     *i18n.Localizer
@@ -248,7 +323,7 @@ func (f *Frontend) handleTokensUI(_ context.Context, w http.ResponseWriter, r *h
 		Lang:          getCurrentLang(r),
 		Actors:        tokenActors(),
 		Enterprise:    enterprise.Enabled(),
-		LogoutEnabled: f.logoutEnabled(),
+		LogoutEnabled: f.logoutEnabled,
 	})
 }
 
@@ -571,7 +646,7 @@ func (p WizardParams) URLValues() url.Values {
 }
 
 // wizardVersions handles the 'pick Talos version' step.
-func (f *Frontend) wizardVersions(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
+func (f *Handler) wizardVersions(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
 	versions, err := f.getTalosVersions(ctx, params.SelectedVersion, params.Target)
 	if err != nil {
 		return "", nil, nil, err
@@ -590,7 +665,7 @@ func (f *Frontend) wizardVersions(ctx context.Context, params WizardParams) (str
 }
 
 // wizardClouds handles the 'pick cloud platform' step.
-func (f *Frontend) wizardClouds(_ context.Context, params WizardParams) (string, any, url.Values, error) {
+func (f *Handler) wizardClouds(_ context.Context, params WizardParams) (string, any, url.Values, error) {
 	if params.SelectedPlatform == "" {
 		params.SelectedPlatform = "aws"
 	}
@@ -620,7 +695,7 @@ func (f *Frontend) wizardClouds(_ context.Context, params WizardParams) (string,
 }
 
 // wizardSBCs handles the 'pick SBC' step.
-func (f *Frontend) wizardSBCs(_ context.Context, params WizardParams) (string, any, url.Values, error) {
+func (f *Handler) wizardSBCs(_ context.Context, params WizardParams) (string, any, url.Values, error) {
 	if params.SelectedBoard == "" {
 		params.SelectedBoard = "rpi_generic"
 	}
@@ -650,7 +725,7 @@ func (f *Frontend) wizardSBCs(_ context.Context, params WizardParams) (string, a
 }
 
 // wizardArch handles the 'pick architecture' step.
-func (f *Frontend) wizardArch(_ context.Context, params WizardParams) (string, any, url.Values, error) {
+func (f *Handler) wizardArch(_ context.Context, params WizardParams) (string, any, url.Values, error) {
 	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
 
 	if params.SelectedArch == "" {
@@ -670,7 +745,7 @@ func (f *Frontend) wizardArch(_ context.Context, params WizardParams) (string, a
 }
 
 // wizardExtensions handles the 'pick extensions' step.
-func (f *Frontend) wizardExtensions(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
+func (f *Handler) wizardExtensions(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
 	extensions, err := f.getOfficialExtensions(ctx, params.Version)
 	if err != nil {
 		return "", nil, nil, err
@@ -689,7 +764,7 @@ func (f *Frontend) wizardExtensions(ctx context.Context, params WizardParams) (s
 }
 
 // wizardCmdline handles the 'pick cmdline & overlay options' step.
-func (f *Frontend) wizardCmdline(_ context.Context, params WizardParams) (string, any, url.Values, error) {
+func (f *Handler) wizardCmdline(_ context.Context, params WizardParams) (string, any, url.Values, error) {
 	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
 
 	if params.SelectedBootloader == "" {
@@ -715,18 +790,10 @@ func (f *Frontend) wizardCmdline(_ context.Context, params WizardParams) (string
 }
 
 // wizardFinal handles the 'final' step.
-func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
+func (f *Handler) wizardFinal(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
 	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
 
-	var owner *string
-
-	if f.options.AuthProvider != nil {
-		if username, ok := f.options.AuthProvider.UsernameFromContext(ctx); ok {
-			owner = &username
-		}
-	}
-
-	requestedSchematic, err := params.ToSchematic(ctx, owner)
+	requestedSchematic, err := params.ToSchematic(ctx, nil)
 	if err != nil {
 		return "", nil, nil, err
 	}
@@ -740,7 +807,7 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 		return "", nil, nil, err
 	}
 
-	schematicID, err := f.schematicFactory.Put(ctx, &requestedSchematic)
+	schematicID, err := f.schematicService.Create(ctx, &requestedSchematic)
 	if err != nil {
 		return "", nil, nil, err
 	}
@@ -752,26 +819,26 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 
 	version := "v" + params.Version
 
-	installerImage := fmt.Sprintf("%s/installer/%s:%s", f.options.ExternalURL.Host, schematicID, version)
-	secureBootInstallerImage := fmt.Sprintf("%s/installer-secureboot/%s:%s", f.options.ExternalURL.Host, schematicID, version)
+	installerImage := fmt.Sprintf("%s/installer/%s:%s", f.externalURL.Host, schematicID, version)
+	secureBootInstallerImage := fmt.Sprintf("%s/installer-secureboot/%s:%s", f.externalURL.Host, schematicID, version)
 
 	if quirks.New(version).SupportsUnifiedInstaller() {
-		installerImage = fmt.Sprintf("%s/%s-installer/%s:%s", f.options.ExternalURL.Host, params.Platform, schematicID, version)
-		secureBootInstallerImage = fmt.Sprintf("%s/%s-installer-secureboot/%s:%s", f.options.ExternalURL.Host, params.Platform, schematicID, version)
+		installerImage = fmt.Sprintf("%s/%s-installer/%s:%s", f.externalURL.Host, params.Platform, schematicID, version)
+		secureBootInstallerImage = fmt.Sprintf("%s/%s-installer-secureboot/%s:%s", f.externalURL.Host, params.Platform, schematicID, version)
 	}
 
-	talosctlTuples, err := f.artifactsManager.GetTalosctlTuples(ctx, params.Version)
+	talosctlTuples, err := f.artifactsSource.GetTalosctlTuples(ctx, params.Version)
 	if err != nil {
 		return "", nil, nil, err
 	}
 
 	// Build PXE base URL with credential placeholder when auth is active,
 	// so the displayed URL shows the user they need to embed credentials for iPXE.
-	pxeBaseURL := newPlaceholderURL(f.options.ExternalPXEURL.JoinPath("pxe", schematicID, version), "")
-	if f.options.AuthProvider != nil {
-		if username, ok := f.options.AuthProvider.UsernameFromContext(ctx); ok {
+	pxeBaseURL := newPlaceholderURL(f.externalPXEURL.JoinPath("pxe", schematicID, version), "")
+	if f.authProvider != nil {
+		if username, ok := f.authProvider.UsernameFromContext(ctx); ok {
 			pxeBaseURL = newPlaceholderURL(
-				f.options.ExternalPXEURL.JoinPath("pxe", schematicID, version),
+				f.externalPXEURL.JoinPath("pxe", schematicID, version),
 				username+":<password>@",
 			)
 		}
@@ -811,9 +878,9 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 			Schematic: schematicID,
 			Marshaled: string(marshaled),
 
-			ImageBaseURL:    f.options.ExternalURL.JoinPath("image", schematicID, version),
+			ImageBaseURL:    f.externalURL.JoinPath("image", schematicID, version),
 			PXEBaseURL:      pxeBaseURL,
-			TalosctlBaseURL: f.options.ExternalURL.JoinPath("talosctl", version),
+			TalosctlBaseURL: f.externalURL.JoinPath("talosctl", version),
 
 			InstallerImage:           installerImage,
 			SecureBootInstallerImage: secureBootInstallerImage,
@@ -827,21 +894,21 @@ func (f *Frontend) wizardFinal(ctx context.Context, params WizardParams) (string
 			VEXAvailable:                  talosVersion.GTE(semver.MustParse("1.13.0")),
 
 			Enterprise:      enterprise.Enabled(),
-			SPDXBaseURL:     f.options.ExternalURL.JoinPath("spdx", schematicID, version, params.Arch),
-			VEXBaseURL:      f.options.ExternalURL.JoinPath("vex", version, "vex.json"),
-			ScanBaseURL:     f.options.ExternalURL.JoinPath("scans", schematicID, version, params.Arch),
-			ChecksumBaseURL: f.options.ExternalURL.JoinPath("image", schematicID, version),
+			SPDXBaseURL:     f.externalURL.JoinPath("spdx", schematicID, version, params.Arch),
+			VEXBaseURL:      f.externalURL.JoinPath("vex", version, "vex.json"),
+			ScanBaseURL:     f.externalURL.JoinPath("scans", schematicID, version, params.Arch),
+			ChecksumBaseURL: f.externalURL.JoinPath("image", schematicID, version),
 		},
 		urlValues,
 		nil
 }
 
-func (f *Frontend) wizard(ctx context.Context, r *http.Request, localizer *i18n.Localizer) (string, any, url.Values, error) {
+func (f *Handler) wizard(ctx context.Context, r *http.Request, localizer *i18n.Localizer) (string, any, url.Values, error) {
 	params := WizardParamsFromRequest(r)
 
 	schematicID := r.FormValue("schematic-id")
 	if schematicID != "" {
-		schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)
+		schematic, err := f.schematicService.Get(ctx, schematicID)
 		if err != nil {
 			return "", nil, nil, fmt.Errorf("error retrieving schematic: %w", err)
 		}
@@ -876,7 +943,7 @@ func (f *Frontend) wizard(ctx context.Context, r *http.Request, localizer *i18n.
 }
 
 // handleUIWizard handles '/ui/wizard'.
-func (f *Frontend) handleUIWizard(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+func (f *Handler) handleUIWizard(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	templateName, data, query, err := f.wizard(ctx, r, f.getLocalizer(r))
 	if err != nil {
 		return err
@@ -892,7 +959,7 @@ func (f *Frontend) handleUIWizard(ctx context.Context, w http.ResponseWriter, r 
 }
 
 // handleUIExtensionsList handles '/ui/extensions-list'.
-func (f *Frontend) handleUIExtensionsList(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+func (f *Handler) handleUIExtensionsList(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	version := r.FormValue("version")
 	filter := r.FormValue("search")
 	extensions := r.Form["extensions"]
@@ -929,8 +996,8 @@ func (f *Frontend) handleUIExtensionsList(ctx context.Context, w http.ResponseWr
 	})
 }
 
-func (f *Frontend) getTalosVersions(ctx context.Context, selectedVersion string, target string) (any, error) {
-	versions, err := f.artifactsManager.GetTalosVersions(ctx)
+func (f *Handler) getTalosVersions(ctx context.Context, selectedVersion string, target string) (any, error) {
+	versions, err := f.artifactsSource.GetTalosVersions(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1008,7 +1075,7 @@ func (f *Frontend) getTalosVersions(ctx context.Context, selectedVersion string,
 }
 
 // handleUIVersionDoc handles '/ui/version-doc'.
-func (f *Frontend) handleUIVersionDoc(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+func (f *Handler) handleUIVersionDoc(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	version := r.FormValue("version")
 
 	return getTemplates().ExecuteTemplate(w, "version-doc.html", struct {
@@ -1020,8 +1087,8 @@ func (f *Frontend) handleUIVersionDoc(_ context.Context, w http.ResponseWriter, 
 	})
 }
 
-func (f *Frontend) getOfficialExtensions(ctx context.Context, version string) ([]artifacts.ExtensionRef, error) {
-	extensions, err := f.artifactsManager.GetOfficialExtensions(ctx, version)
+func (f *Handler) getOfficialExtensions(ctx context.Context, version string) ([]artifacts.ExtensionRef, error) {
+	extensions, err := f.artifactsSource.GetOfficialExtensions(ctx, version)
 	if err != nil {
 		return nil, err
 	}
