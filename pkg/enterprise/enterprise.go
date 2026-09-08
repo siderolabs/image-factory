@@ -192,17 +192,18 @@ type AuthProvider interface {
 
 	// Middleware returns an HTTP middleware that enforces authentication on the provided handler.
 	//
-	// A provider that authenticates a caller and then refuses the request must leave the
-	// principal on the request context, since the wrapped handler never runs and the audit
-	// record would otherwise attribute the denial to nobody.
+	// Successful built-in providers store an authn.Principal on both the handler context and the
+	// request context. The route selector adapts compatibility providers through
+	// UsernameFromContext, so external implementations do not need access to internal/authn.
+	// A provider that authenticates a caller and then refuses the request must leave its username
+	// discoverable from the request context so audit attribution can be bridged after the denial.
 	Middleware(Handler) Handler
 
-	// UsernameFromContext retrieves the authenticated username stored by the middleware.
+	// UsernameFromContext is a compatibility projection for ownership checks that only need
+	// the typed principal's subject.
 	UsernameFromContext(ctx context.Context) (string, bool)
 
-	// ContextWithUsername returns a context carrying the given username as if
-	// the middleware had set it. Used by the API token path to inject the
-	// JWT subject so that downstream ownership checks work normally.
+	// ContextWithUsername preserves the public compatibility API for detached work.
 	ContextWithUsername(ctx context.Context, username string) context.Context
 }
 

@@ -24,14 +24,14 @@ var testMetricsNamespace atomic.Uint64
 // NewTestFrontend builds a minimal Frontend wired only with a logger, for tests
 // in the external test package that need to exercise the request wrapper.
 func NewTestFrontend(logger *zap.Logger) *Frontend {
-	return &Frontend{logger: logger, metadata: metadata.New(nil, nil, nil, getLLMsTxt())}
+	return &Frontend{logger: logger, metadata: metadata.New(nil, nil, nil, getLLMsTxt)}
 }
 
 // NewTestFrontendWithAuth builds a minimal Frontend with an authentication provider.
 func NewTestFrontendWithAuth(logger *zap.Logger, provider enterprise.AuthProvider) *Frontend {
 	return &Frontend{
 		logger:   logger,
-		metadata: metadata.New(nil, nil, nil, getLLMsTxt()),
+		metadata: metadata.New(nil, nil, nil, getLLMsTxt),
 		options:  Options{AuthProvider: provider},
 	}
 }
@@ -47,25 +47,24 @@ func (f *Frontend) BrowserLoginRoutes() []transport.Route {
 }
 
 // EnterpriseRoutes exposes Enterprise plugin descriptors for external contract tests.
-func (f *Frontend) EnterpriseRoutes(plugins []enterprise.FrontendPlugin) []transport.Route {
+func (f *Frontend) EnterpriseRoutes(plugins []enterprise.FrontendPlugin) ([]transport.Route, error) {
 	return f.enterpriseRoutes(plugins)
 }
 
 // RegisterTestRoutes registers the Community catalog through the production registrar.
-func RegisterTestRoutes(ctx context.Context, logger *zap.Logger, router *httprouter.Router) error {
-	return RegisterTestRoutesWithAuth(ctx, logger, router, nil)
+func RegisterTestRoutes(ctx context.Context, logger *zap.Logger) (http.Handler, error) {
+	return RegisterTestRoutesWithAuth(ctx, logger, nil)
 }
 
 // RegisterTestRoutesWithAuth registers the Community catalog through the production pipeline with authentication.
 func RegisterTestRoutesWithAuth(
 	ctx context.Context,
 	logger *zap.Logger,
-	router *httprouter.Router,
 	provider enterprise.AuthProvider,
-) error {
+) (http.Handler, error) {
 	contract, err := api.NewContract(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	frontend := &Frontend{
@@ -77,9 +76,13 @@ func RegisterTestRoutesWithAuth(
 		},
 	}
 	frontend.initializeEndpointOwners(nil)
-	frontend.metadata = metadata.New(nil, nil, nil, getLLMsTxt())
+	frontend.metadata = metadata.New(nil, nil, nil, getLLMsTxt)
 
-	return frontend.registerRoutes(router, nil)
+	if err = frontend.registerRoutes(nil); err != nil {
+		return nil, err
+	}
+
+	return frontend.Handler(), nil
 }
 
 // WrapHandler exposes the unexported request wrapper for external tests.

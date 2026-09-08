@@ -10,19 +10,29 @@ import (
 	"html/template"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-const basePath = "internal/frontend/http/"
-
 var (
+	basePath    = debugBasePath()
 	cssFS       = os.DirFS(basePath)
 	jsFS        = os.DirFS(basePath)
 	faviconsFS  = os.DirFS(basePath)
 	templatesFS = os.DirFS(basePath)
 	localesFS   = os.DirFS(basePath).(fs.ReadDirFS)
 )
+
+func debugBasePath() string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("failed to locate HTTP frontend debug sources")
+	}
+
+	return filepath.Dir(filename) + string(filepath.Separator)
+}
 
 func getLLMsTxt() []byte {
 	content, err := os.ReadFile(basePath + "templates/llms.txt")

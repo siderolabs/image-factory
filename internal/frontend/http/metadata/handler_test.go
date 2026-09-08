@@ -84,7 +84,9 @@ func TestHandlerOfficialMetadata(t *testing.T) {
 func TestHandlerDocumentsAndSigningMaterial(t *testing.T) {
 	t.Parallel()
 
-	handler := metadata.New(nil, certificateSource{value: []byte("certificate")}, publicKeySource{value: []byte("public key")}, []byte("LLM instructions"))
+	handler := metadata.New(nil, certificateSource{value: []byte("certificate")}, publicKeySource{value: []byte("public key")}, func() []byte {
+		return []byte("LLM instructions")
+	})
 
 	tests := []struct {
 		name        string
@@ -107,6 +109,20 @@ func TestHandlerDocumentsAndSigningMaterial(t *testing.T) {
 			require.Equal(t, test.body, response.Body.String())
 		})
 	}
+}
+
+func TestHandlerReloadsLLMsTextForEveryRequest(t *testing.T) {
+	t.Parallel()
+
+	text := "first"
+	handler := metadata.New(nil, nil, nil, func() []byte { return []byte(text) })
+
+	response := invoke(t, handler.LLMsText, "/llms.txt")
+	require.Equal(t, "first", response.Body.String())
+
+	text = "second"
+	response = invoke(t, handler.LLMsText, "/llms.txt")
+	require.Equal(t, "second", response.Body.String())
 }
 
 type artifactSource struct {

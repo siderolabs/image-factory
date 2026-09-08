@@ -14,11 +14,16 @@ import (
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
-func (f *Frontend) registerRoutes(router *httprouter.Router, enterprisePlugins []enterprise.FrontendPlugin) error {
-	routes := append(f.enterpriseRoutes(enterprisePlugins), f.routes()...)
+func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin) error {
+	routes, err := f.enterpriseRoutes(enterprisePlugins)
+	if err != nil {
+		return err
+	}
+
+	routes = append(routes, f.routes()...)
 	routes = append(routes, f.browserLoginRoutes()...)
 
-	server, err := newServer(router, f.contract, routes, f.buildApplicationHandler, ServerOptions{
+	server, err := newServer(f.contract, routes, f.buildApplicationHandler, ServerOptions{
 		AllowedOrigins:   f.options.AllowedOrigins,
 		MetricsNamespace: f.options.MetricsNamespace,
 	})
@@ -33,42 +38,45 @@ func (f *Frontend) registerRoutes(router *httprouter.Router, enterprisePlugins [
 
 func (f *Frontend) buildApplicationHandler(route transport.Route) (httprouter.Handle, error) {
 	switch route.Access {
-	case transport.AccessPublic:
-		return f.wrapHandlerProtocol(route.Handler, false, route.Protocol), nil
-	case transport.AccessAuthenticated, transport.AccessImageDownload:
-		return f.wrapHandlerProtocol(route.Handler, true, route.Protocol), nil
+	case transport.AccessPublic, transport.AccessAuthenticated, transport.AccessImageDownload:
+		return f.wrapHandlerProtocolAccess(route.Handler, route.Access, route.Protocol), nil
 	default:
 		return nil, fmt.Errorf("route %s %s has unsupported access policy %d", route.Method, route.Path, route.Access)
 	}
 }
 
-func (f *Frontend) enterpriseRoutes(plugins []enterprise.FrontendPlugin) []transport.Route {
+func (f *Frontend) enterpriseRoutes(plugins []enterprise.FrontendPlugin) ([]transport.Route, error) {
 	var routes []transport.Route
 
 	for _, plugin := range plugins {
 		for _, route := range plugin.Routes() {
+			access, err := enterpriseAccessPolicy(route.Access)
+			if err != nil {
+				return nil, fmt.Errorf("enterprise route %s %s: %w", route.Method, route.Path, err)
+			}
+
 			routes = append(routes, transport.Route{
 				Method:      route.Method,
 				Path:        route.Path,
 				OperationID: route.OperationID,
-				Access:      enterpriseAccessPolicy(route.Access),
+				Access:      access,
 				Protocol:    transport.ProtocolAPI,
 				Handler:     route.Handler,
 			})
 		}
 	}
 
-	return routes
+	return routes, nil
 }
 
-func enterpriseAccessPolicy(policy enterprise.RouteAccessPolicy) transport.AccessPolicy {
+func enterpriseAccessPolicy(policy enterprise.RouteAccessPolicy) (transport.AccessPolicy, error) {
 	switch policy {
 	case enterprise.RouteAccessPublic:
-		return transport.AccessPublic
+		return transport.AccessPublic, nil
 	case enterprise.RouteAccessAuthenticated:
-		return transport.AccessAuthenticated
+		return transport.AccessAuthenticated, nil
 	default:
-		return 0
+		return 0, fmt.Errorf("unsupported access policy %d", policy)
 	}
 }
 

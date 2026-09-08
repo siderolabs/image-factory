@@ -8,6 +8,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
@@ -74,4 +75,29 @@ func TestServerRequiresApplicationBuilder(t *testing.T) {
 	server, err := httpfrontend.NewServer(contract, nil, nil, httpfrontend.ServerOptions{})
 	require.EqualError(t, err, "application handler builder is required")
 	require.Nil(t, server)
+}
+
+func TestServerRejectsNilBuiltHandler(t *testing.T) {
+	t.Parallel()
+
+	contract, err := factoryapi.NewContract(t.Context())
+	require.NoError(t, err)
+
+	server, err := httpfrontend.NewServer(contract, []transport.Route{{
+		Method: http.MethodGet, Path: "/healthz", OperationID: "getHealth",
+		Access: transport.AccessPublic, Protocol: transport.ProtocolOperational,
+		Handler: func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error { return nil },
+	}}, func(transport.Route) (httprouter.Handle, error) {
+		return nil, nil //nolint:nilnil // Exercise the invalid builder result rejected by NewServer.
+	}, httpfrontend.ServerOptions{MetricsNamespace: "server_nil_handler_test"})
+	require.ErrorContains(t, err, "handler is required")
+	require.Nil(t, server)
+}
+
+func TestServerRetainsOnlyFinalHandler(t *testing.T) {
+	t.Parallel()
+
+	typeOfServer := reflect.TypeFor[httpfrontend.Server]()
+	require.Equal(t, 1, typeOfServer.NumField())
+	require.Equal(t, "handler", typeOfServer.Field(0).Name)
 }

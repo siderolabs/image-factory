@@ -23,8 +23,8 @@ import (
 func TestFrontendRegistersCatalogThroughTransport(t *testing.T) {
 	t.Parallel()
 
-	router := httprouter.New()
-	require.NoError(t, httpfrontend.RegisterTestRoutes(t.Context(), zap.NewNop(), router))
+	router, err := httpfrontend.RegisterTestRoutes(t.Context(), zap.NewNop())
+	require.NoError(t, err)
 
 	response := httptest.NewRecorder()
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", nil)
@@ -102,6 +102,39 @@ func TestBrowserLoginRouteCatalogMatchesContract(t *testing.T) {
 	}
 }
 
+func TestEnterpriseRouteCatalogRejectsInvalidAccessPolicy(t *testing.T) {
+	t.Parallel()
+
+	frontend := httpfrontend.NewTestFrontend(zap.NewNop())
+
+	for _, access := range []enterprise.RouteAccessPolicy{0, 255} {
+		_, err := frontend.EnterpriseRoutes([]enterprise.FrontendPlugin{invalidAccessPlugin{access: access}})
+		require.ErrorContains(t, err, "unsupported access policy")
+	}
+}
+
+func requireOpenAPIOperationOwnership(t *testing.T, contract *api.Contract, routes []transport.Route) {
+	t.Helper()
+
+	owned := make(map[string]struct{}, len(routes))
+	for _, route := range routes {
+		if route.OperationID != "" {
+			owned[route.OperationID] = struct{}{}
+		}
+
+		for _, operationID := range route.DispatchedOperationIDs {
+			owned[operationID] = struct{}{}
+		}
+	}
+
+	for path, pathItem := range contract.Document.Paths.Map() {
+		for method, operation := range pathItem.Operations() {
+			require.NotEmpty(t, operation.OperationID, "%s %s has no operation ID", method, path)
+			require.Contains(t, owned, operation.OperationID, "%s %s operation %q has no runtime owner", method, path, operation.OperationID)
+		}
+	}
+}
+
 func requireRouteInventory(t *testing.T, contract *api.Contract, routes []transport.Route, want []string) {
 	t.Helper()
 
@@ -137,6 +170,14 @@ func requireGETRoute(t *testing.T, routes []transport.Route, path string, access
 }
 
 type browserLoginProvider struct{}
+
+type invalidAccessPlugin struct {
+	access enterprise.RouteAccessPolicy
+}
+
+func (plugin invalidAccessPlugin) Routes() []enterprise.Route {
+	return []enterprise.Route{{Access: plugin.access}}
+}
 
 func (browserLoginProvider) Run(ctx context.Context) error {
 	<-ctx.Done()

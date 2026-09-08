@@ -41,12 +41,15 @@ type CosignPublicKeySource interface {
 	GetPublicKeyPEM() []byte
 }
 
+// LLMsTextSource loads the machine-readable API guide for each request.
+type LLMsTextSource func() []byte
+
 // Handler owns public metadata endpoints.
 type Handler struct {
 	artifacts             ArtifactSource
 	secureBootCertificate SecureBootCertificateSource
 	cosignPublicKey       CosignPublicKeySource
-	llmsText              []byte
+	llmsText              LLMsTextSource
 }
 
 // New creates a metadata endpoint handler.
@@ -54,7 +57,7 @@ func New(
 	artifactSource ArtifactSource,
 	secureBootCertificate SecureBootCertificateSource,
 	cosignPublicKey CosignPublicKeySource,
-	llmsText []byte,
+	llmsText LLMsTextSource,
 ) *Handler {
 	return &Handler{
 		artifacts:             artifactSource,
@@ -153,7 +156,13 @@ func (handler *Handler) CosignSigningKey(_ context.Context, writer http.Response
 // LLMsText serves the machine-readable API guide.
 func (handler *Handler) LLMsText(_ context.Context, writer http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
 	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_, err := writer.Write(handler.llmsText)
+
+	var content []byte
+	if handler.llmsText != nil {
+		content = handler.llmsText()
+	}
+
+	_, err := writer.Write(content)
 
 	return err
 }

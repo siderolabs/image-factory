@@ -12,7 +12,6 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/getkin/kin-openapi/routers"
@@ -28,11 +27,12 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-factory/api"
-	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/audit"
+	"github.com/siderolabs/image-factory/internal/authn"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
+	"github.com/siderolabs/image-factory/internal/frontend/http/authentication"
 	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
 	"github.com/siderolabs/image-factory/internal/frontend/http/operational"
 	staticfiles "github.com/siderolabs/image-factory/internal/frontend/http/static"
@@ -154,7 +154,7 @@ func NewFrontend(
 	}
 
 	frontend.imageSigner = opts.CacheImageSigner
-	frontend.metadata = metadata.New(artifactsManager, secureBootService, frontend.imageSigner, getLLMsTxt())
+	frontend.metadata = metadata.New(artifactsManager, secureBootService, frontend.imageSigner, getLLMsTxt)
 
 	frontend.evidencePublisher, err = enterprise.NewInstallerEvidencePublisher(
 		frontend.logger,
@@ -167,7 +167,7 @@ func NewFrontend(
 		return nil, fmt.Errorf("failed to create Installer evidence publisher: %w", err)
 	}
 
-	if err = frontend.registerRoutes(httprouter.New(), enterprisePlugins); err != nil {
+	if err = frontend.registerRoutes(enterprisePlugins); err != nil {
 		return nil, fmt.Errorf("register HTTP routes: %w", err)
 	}
 
@@ -195,6 +195,15 @@ func (f *Frontend) wrapHandler(h Handler, requireAuth bool) httprouter.Handle {
 }
 
 func (f *Frontend) wrapHandlerProtocol(h Handler, requireAuth bool, protocol transport.Protocol) httprouter.Handle {
+	access := transport.AccessPublic
+	if requireAuth {
+		access = transport.AccessAuthenticated
+	}
+
+	return f.wrapHandlerProtocolAccess(h, access, protocol)
+}
+
+func (f *Frontend) wrapHandlerProtocolAccess(h Handler, access transport.AccessPolicy, protocol transport.Protocol) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		requestID := requestIDFrom(r)
 		ctx := ctxlog.WithRequestID(r.Context(), requestID)
@@ -207,9 +216,7 @@ func (f *Frontend) wrapHandlerProtocol(h Handler, requireAuth bool, protocol tra
 		sw.Header().Set("Server", version.ServerString())
 		sw.Header().Set(RequestIDHeader, requestID)
 
-		var username string
-
-		handler := f.withContractValidation(f.withAuth(h, requireAuth, &username, &state))
+		handler := f.withContractValidation(f.withAuth(h, access, &state))
 
 		start := time.Now()
 		err := handler(ctx, sw, r, p)
@@ -237,7 +244,12 @@ func (f *Frontend) wrapHandlerProtocol(h Handler, requireAuth bool, protocol tra
 			zap.Error(err),
 		)
 
-		if requireAuth {
+		if access != transport.AccessPublic {
+			username := ""
+			if principal, ok := authn.PrincipalFromContext(r.Context()); ok { //nolint:contextcheck // Authentication middleware publishes its derived context to the request.
+				username = principal.Username()
+			}
+
 			f.audit(ctx, logger, audit.Record{
 				Time:      start,
 				RequestID: requestID,
@@ -283,124 +295,27 @@ func requestIDFrom(r *http.Request) string {
 	return uuid.NewString()
 }
 
-// downloadTokenKey keys the verified URL-safe API token on the request context.
-type downloadTokenKey struct{}
-
 // downloadTokenFromContext returns the URL-safe API token that authenticated the request.
 // It is only ever set after Verify succeeded, so a caller may forward it as-is.
 func downloadTokenFromContext(ctx context.Context) (string, bool) {
-	token, ok := ctx.Value(downloadTokenKey{}).(string)
-
-	return token, ok
+	return authentication.ImageDownloadTokenFromContext(ctx)
 }
 
-// withAuth wraps h with the auth middleware when authentication is required.
-//
-// The middleware stores the username on a context it derives internally, which
-// never reaches wrapHandler's context; a thin capture layer reads it from inside
-// the middleware call stack and writes it to username.
-func (f *Frontend) withAuth(h Handler, requireAuth bool, username *string, state *responseState) Handler {
-	if !requireAuth || f.options.AuthProvider == nil {
+// withAuth selects authentication from the route's declarative access policy.
+func (f *Frontend) withAuth(h Handler, access transport.AccessPolicy, state *responseState) Handler {
+	if access == transport.AccessPublic || f.options.AuthProvider == nil {
 		return h
 	}
 
-	authProvider := f.options.AuthProvider
+	selector := authentication.New(f.logger, f.options.AuthProvider, f.options.TokenVerifier)
+	authenticated := selector.Middleware(access, h)
 
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-		// API token: the JWT subject becomes the authenticated identity, so ownership is then
-		// enforced normally by schematicFactory.Get(). A URL-safe token is also put on the
-		// context, for handlePXE to forward into the asset URLs it emits.
-		if f.options.TokenVerifier != nil {
-			if tokenStr, fromQuery := extractAPIToken(r); tokenStr != "" {
-				// Verify logs its own rejection reasons; the two checks below are this layer's,
-				// and are logged here so an authorization failure is never mistaken for the
-				// credential failure the fallback provider goes on to report.
-				if claims, ok := f.options.TokenVerifier.Verify(ctx, tokenStr); ok {
-					switch {
-					case !apitoken.Allows(claims.Scopes, r.Method, r.URL.Path):
-						ctxlog.Logger(ctx, f.logger).Warn(
-							"API token scopes do not cover this request",
-							zap.String("sub", claims.Subject),
-							zap.String("jti", claims.ID),
-							zap.Strings("scopes", claims.Scopes),
-						)
-					case fromQuery && !apitoken.URLSafe(claims.Scopes):
-						ctxlog.Logger(ctx, f.logger).Warn(
-							"API token may not travel in a query string",
-							zap.String("sub", claims.Subject),
-							zap.String("jti", claims.ID),
-							zap.Strings("scopes", claims.Scopes),
-						)
-					default:
-						*username = claims.Subject
-						ctx = authProvider.ContextWithUsername(ctx, claims.Subject)
+		w.Header().Set("Cache-Control", "no-store")
+		state.PinCacheControl(w)
 
-						ctx = apitoken.ContextWithClaims(ctx, claims)
-
-						if apitoken.URLSafe(claims.Scopes) {
-							ctx = context.WithValue(ctx, downloadTokenKey{}, tokenStr)
-						}
-
-						return h(ctx, w, r, p)
-					}
-				}
-			}
-		}
-
-		err := authProvider.Middleware(func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
-			*username, _ = authProvider.UsernameFromContext(ctx)
-
-			// The provider has decided by now, so pin the Cache-Control it chose.
-			state.PinCacheControl(w)
-
-			return h(ctx, w, r, p)
-		})(ctx, w, r, p)
-
-		// A provider can authenticate the caller and then refuse the request, in which case
-		// the layer above never ran. The provider leaves the principal on the request so the
-		// denial is still attributable.
-		if *username == "" {
-			*username, _ = authProvider.UsernameFromContext(r.Context()) //nolint:contextcheck // the provider derived this context from ctx
-		}
-
-		return err
+		return authenticated(ctx, w, r, p)
 	}
-}
-
-// extractAPIToken pulls an API token off the request, reporting whether it came from the
-// query string, which the caller pairs with apitoken.URLSafe.
-//
-// A token that arrives in a query string has already been written to whatever access logs sit in
-// front of the factory, and refusing it un-leaks nothing; the operator took that risk knowingly,
-// and a stored token is the better credential to have taken it with, being both revocable and
-// expiring. A minting credential is the exception URLSafe encodes: leaking one yields more
-// credentials rather than just itself, and no PXE flow needs one.
-func extractAPIToken(r *http.Request) (token string, fromQuery bool) {
-	if r.Method == http.MethodGet || r.Method == http.MethodHead {
-		if token = r.URL.Query().Get("token"); token != "" {
-			return token, true
-		}
-	}
-
-	return extractBearerOrBasicToken(r), false
-}
-
-// extractBearerOrBasicToken pulls a bearer credential from the Authorization header, checking
-// both the Bearer scheme and HTTP Basic auth, since OCI/registry clients commonly send a token
-// as the Basic password rather than a Bearer header.
-func extractBearerOrBasicToken(r *http.Request) string {
-	scheme, value, _ := strings.Cut(r.Header.Get("Authorization"), " ")
-
-	// RFC 9110 makes the scheme case-insensitive; some clients send "bearer".
-	if strings.EqualFold(scheme, "Bearer") {
-		return value
-	}
-
-	if _, password, ok := r.BasicAuth(); ok {
-		return password
-	}
-
-	return ""
 }
 
 // audit records one entry for an authenticated request; a sink failure is logged

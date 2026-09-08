@@ -22,10 +22,10 @@ import (
 )
 
 func TestRegisteredRoutesUseProductionMiddlewareOrdering(t *testing.T) {
-	router := httprouter.New()
 	provider := &rejectingAuthProvider{}
 
-	require.NoError(t, httpfrontend.RegisterTestRoutesWithAuth(t.Context(), zap.NewNop(), router, provider))
+	router, err := httpfrontend.RegisterTestRoutesWithAuth(t.Context(), zap.NewNop(), provider)
+	require.NoError(t, err)
 
 	t.Run("public route skips authentication", func(t *testing.T) {
 		response := serveGET(t, router, "/healthz")

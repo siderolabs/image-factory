@@ -26,9 +26,7 @@ type ServerOptions struct {
 
 // Server owns HTTP router assembly and the final handler chain.
 type Server struct {
-	router    *httprouter.Router
-	registrar *transport.Registrar
-	handler   http.Handler
+	handler http.Handler
 }
 
 // NewServer constructs a contract-backed HTTP server.
@@ -38,11 +36,10 @@ func NewServer(
 	applicationBuilder transport.HandlerBuilder,
 	options ServerOptions,
 ) (*Server, error) {
-	return newServer(httprouter.New(), contract, routes, applicationBuilder, options)
+	return newServer(contract, routes, applicationBuilder, options)
 }
 
 func newServer(
-	router *httprouter.Router,
 	contract *api.Contract,
 	routes []transport.Route,
 	applicationBuilder transport.HandlerBuilder,
@@ -62,6 +59,10 @@ func newServer(
 			return nil, err
 		}
 
+		if handle == nil {
+			return nil, fmt.Errorf("application handler is required")
+		}
+
 		return httproutermiddleware.Handler(route.Path, handle, monitoring), nil
 	}
 
@@ -78,7 +79,7 @@ func newServer(
 		return nil, err
 	}
 
-	registrar, err := transport.NewRegistrar(contract, router, pipeline)
+	registrar, err := transport.NewRegistrar(contract, pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func newServer(
 		return nil, err
 	}
 
-	server := &Server{router: router, registrar: registrar}
+	server := &Server{}
 	server.handler = cors.New(cors.Options{
 		AllowedOrigins: options.AllowedOrigins,
 		AllowedMethods: []string{
@@ -97,7 +98,7 @@ func newServer(
 		},
 		AllowedHeaders: []string{"Cache-Control"},
 		ExposedHeaders: []string{"Content-Disposition", "Content-Length", "Content-Type"},
-	}).Handler(router)
+	}).Handler(registrar.Handler())
 
 	return server, nil
 }

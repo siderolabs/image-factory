@@ -18,6 +18,7 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/tokens"
 	"github.com/siderolabs/image-factory/enterprise/vex"
 	httpfrontend "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
@@ -42,8 +43,14 @@ func TestEnterpriseRouteCatalogMatchesContract(t *testing.T) {
 		require.NotEmpty(t, plugin.Routes())
 	}
 
-	frontend := httpfrontend.NewTestFrontend(zap.NewNop())
-	routes := frontend.EnterpriseRoutes(plugins)
+	frontend := httpfrontend.NewTestFrontendWithAuth(zap.NewNop(), browserLoginProvider{})
+	routes, err := frontend.EnterpriseRoutes(plugins)
+	require.NoError(t, err)
+
+	allRoutes := append([]transport.Route{}, routes...)
+	allRoutes = append(allRoutes, frontend.Routes()...)
+	allRoutes = append(allRoutes, frontend.BrowserLoginRoutes()...)
+	requireOpenAPIOperationOwnership(t, contract, allRoutes)
 
 	requireRouteInventory(t, contract, routes, []string{
 		"GET /scans/:schematic/:version/:arch/:report",

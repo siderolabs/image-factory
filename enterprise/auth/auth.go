@@ -179,7 +179,8 @@ func (provider *Provider) Middleware(handler Handler) Handler {
 
 		logger.Debug("authenticated", zap.String("username", username))
 
-		ctx = context.WithValue(ctx, authContextKey{}, username)
+		ctx = WithAuthUsername(ctx, username)
+		*r = *r.WithContext(ctx)
 
 		return handler(ctx, w, r, p)
 	}

@@ -24,7 +24,6 @@ func TestRegistrarValidatesAllRoutesBeforeMutation(t *testing.T) {
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
-	router := httprouter.New()
 	buildCalls := 0
 	pipeline, err := transport.NewPipeline(
 		func(route transport.Route) (httprouter.Handle, error) {
@@ -45,8 +44,10 @@ func TestRegistrarValidatesAllRoutesBeforeMutation(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	registrar, err := transport.NewRegistrar(contract, router, pipeline)
+	registrar, err := transport.NewRegistrar(contract, pipeline)
 	require.NoError(t, err)
+
+	router := registrar.Handler()
 
 	handler := func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error {
 		return nil
@@ -85,12 +86,13 @@ func TestRegistrarRejectsDuplicateRoutesBeforeMutation(t *testing.T) {
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
-	router := httprouter.New()
 	pipeline, err := transport.NewPipeline(directBuilder, directBuilder, directBuilder)
 	require.NoError(t, err)
 
-	registrar, err := transport.NewRegistrar(contract, router, pipeline)
+	registrar, err := transport.NewRegistrar(contract, pipeline)
 	require.NoError(t, err)
+
+	router := registrar.Handler()
 
 	route := transport.Route{
 		Method:      http.MethodGet,
@@ -112,18 +114,48 @@ func TestRegistrarRejectsDuplicateRoutesBeforeMutation(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, response.Code)
 }
 
+func TestRegistrarOwnsStableRouter(t *testing.T) {
+	t.Parallel()
+
+	contract, err := api.NewContract(t.Context())
+	require.NoError(t, err)
+
+	pipeline, err := transport.NewPipeline(directBuilder, directBuilder, directBuilder)
+	require.NoError(t, err)
+
+	registrar, err := transport.NewRegistrar(contract, pipeline)
+	require.NoError(t, err)
+
+	router := registrar.Handler()
+	require.NotNil(t, router)
+
+	route := transport.Route{
+		Method: http.MethodGet, Path: "/versions", OperationID: "listVersions",
+		Access: transport.AccessPublic, Protocol: transport.ProtocolAPI,
+		Handler: func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error { return nil },
+	}
+
+	require.NoError(t, registrar.Register([]transport.Route{route}))
+	require.Same(t, router, registrar.Handler())
+
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/versions", nil))
+	require.Equal(t, http.StatusOK, response.Code)
+}
+
 func TestRegistrarRegistersValidatedRoutes(t *testing.T) {
 	t.Parallel()
 
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
-	router := httprouter.New()
 	pipeline, err := transport.NewPipeline(directBuilder, directBuilder, directBuilder)
 	require.NoError(t, err)
 
-	registrar, err := transport.NewRegistrar(contract, router, pipeline)
+	registrar, err := transport.NewRegistrar(contract, pipeline)
 	require.NoError(t, err)
+
+	router := registrar.Handler()
 
 	called := false
 	err = registrar.Register([]transport.Route{
@@ -155,11 +187,10 @@ func TestRegistrarRejectsRouteRegisteredByEarlierBatch(t *testing.T) {
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
-	router := httprouter.New()
 	pipeline, err := transport.NewPipeline(directBuilder, directBuilder, directBuilder)
 	require.NoError(t, err)
 
-	registrar, err := transport.NewRegistrar(contract, router, pipeline)
+	registrar, err := transport.NewRegistrar(contract, pipeline)
 	require.NoError(t, err)
 
 	route := transport.Route{
@@ -183,7 +214,6 @@ func TestRegistrarBuildsEveryPipelineBeforeRouterMutation(t *testing.T) {
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
-	router := httprouter.New()
 	build := func(route transport.Route) (httprouter.Handle, error) {
 		if route.Path == "/openapi.yaml" {
 			return nil, errors.New("pipeline unavailable")
@@ -194,8 +224,10 @@ func TestRegistrarBuildsEveryPipelineBeforeRouterMutation(t *testing.T) {
 	pipeline, err := transport.NewPipeline(build, build, build)
 	require.NoError(t, err)
 
-	registrar, err := transport.NewRegistrar(contract, router, pipeline)
+	registrar, err := transport.NewRegistrar(contract, pipeline)
 	require.NoError(t, err)
+
+	router := registrar.Handler()
 
 	handler := func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error {
 		return nil
