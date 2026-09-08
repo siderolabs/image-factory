@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package http_test
+package oci_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	registryhttp "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/frontend/http/oci"
 )
 
 func TestRouteV2(t *testing.T) {
@@ -20,23 +20,23 @@ func TestRouteV2(t *testing.T) {
 	for _, test := range []struct {
 		name     string
 		path     string
-		expected registryhttp.V2Route
+		expected oci.V2Route
 	}{
 		{
 			name:     "ping without trailing slash",
 			path:     "",
-			expected: registryhttp.V2Route{Target: registryhttp.V2TargetPing},
+			expected: oci.V2Route{Target: oci.V2TargetPing},
 		},
 		{
 			name:     "ping with trailing slash",
 			path:     "/",
-			expected: registryhttp.V2Route{Target: registryhttp.V2TargetPing},
+			expected: oci.V2Route{Target: oci.V2TargetPing},
 		},
 		{
 			name: "schematic manifest",
 			path: "/metal-installer/cf9b7aab9ed7c365d5384509b4d31c02fafe2e067dccf67d357a641aa1e50cf7/manifests/v1.7.0",
-			expected: registryhttp.V2Route{
-				Target:    registryhttp.V2TargetManifest,
+			expected: oci.V2Route{
+				Target:    oci.V2TargetManifest,
 				Image:     "metal-installer",
 				Schematic: "cf9b7aab9ed7c365d5384509b4d31c02fafe2e067dccf67d357a641aa1e50cf7",
 				Resource:  "manifests",
@@ -46,8 +46,8 @@ func TestRouteV2(t *testing.T) {
 		{
 			name: "schematic blob",
 			path: "/installer/abc123/blobs/sha256:deadbeef",
-			expected: registryhttp.V2Route{
-				Target:    registryhttp.V2TargetBlob,
+			expected: oci.V2Route{
+				Target:    oci.V2TargetBlob,
 				Image:     "installer",
 				Schematic: "abc123",
 				Resource:  "blobs",
@@ -57,8 +57,8 @@ func TestRouteV2(t *testing.T) {
 		{
 			name: "schematic referrers",
 			path: "/installer/abc123/referrers/sha256:deadbeef",
-			expected: registryhttp.V2Route{
-				Target:    registryhttp.V2TargetReferrers,
+			expected: oci.V2Route{
+				Target:    oci.V2TargetReferrers,
 				Image:     "installer",
 				Schematic: "abc123",
 				Resource:  "referrers",
@@ -68,8 +68,8 @@ func TestRouteV2(t *testing.T) {
 		{
 			name: "proxy manifest",
 			path: "/siderolabs/talosctl/manifests/v1",
-			expected: registryhttp.V2Route{
-				Target:    registryhttp.V2TargetProxy,
+			expected: oci.V2Route{
+				Target:    oci.V2TargetProxy,
 				Image:     "talosctl",
 				Resource:  "manifests",
 				Reference: "v1",
@@ -78,8 +78,8 @@ func TestRouteV2(t *testing.T) {
 		{
 			name: "proxy multi-segment manifest",
 			path: "/siderolabs/talosctl/v.13.5/manifests/latest",
-			expected: registryhttp.V2Route{
-				Target:    registryhttp.V2TargetProxy,
+			expected: oci.V2Route{
+				Target:    oci.V2TargetProxy,
 				Image:     "talosctl/v.13.5",
 				Resource:  "manifests",
 				Reference: "latest",
@@ -88,8 +88,8 @@ func TestRouteV2(t *testing.T) {
 		{
 			name: "proxy blob",
 			path: "/siderolabs/talosctl/blobs/sha256:deadbeef",
-			expected: registryhttp.V2Route{
-				Target:    registryhttp.V2TargetProxy,
+			expected: oci.V2Route{
+				Target:    oci.V2TargetProxy,
 				Image:     "talosctl",
 				Resource:  "blobs",
 				Reference: "sha256:deadbeef",
@@ -98,8 +98,8 @@ func TestRouteV2(t *testing.T) {
 		{
 			name: "proxy tags list",
 			path: "/siderolabs/talosctl/tags/list",
-			expected: registryhttp.V2Route{
-				Target:    registryhttp.V2TargetProxy,
+			expected: oci.V2Route{
+				Target:    oci.V2TargetProxy,
 				Image:     "talosctl",
 				Resource:  "tags",
 				Reference: "list",
@@ -108,8 +108,8 @@ func TestRouteV2(t *testing.T) {
 		{
 			name: "proxy referrers",
 			path: "/siderolabs/installer/referrers/sha256:deadbeef",
-			expected: registryhttp.V2Route{
-				Target:    registryhttp.V2TargetProxy,
+			expected: oci.V2Route{
+				Target:    oci.V2TargetProxy,
 				Image:     "installer",
 				Resource:  "referrers",
 				Reference: "sha256:deadbeef",
@@ -119,7 +119,7 @@ func TestRouteV2(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			route, err := registryhttp.RouteV2(test.path)
+			route, err := oci.RouteV2(test.path)
 			require.NoError(t, err)
 			assert.Equal(t, test.expected, route)
 		})
@@ -144,9 +144,9 @@ func TestRouteV2NotFound(t *testing.T) {
 		t.Run(path, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := registryhttp.RouteV2(path)
+			_, err := oci.RouteV2(path)
 			require.Error(t, err)
-			assert.True(t, xerrors.TagIs[registryhttp.RouteNotFoundTag](err), "expected registryhttp.RouteNotFoundTag for %q", path)
+			assert.True(t, xerrors.TagIs[oci.RouteNotFoundTag](err), "expected oci.RouteNotFoundTag for %q", path)
 		})
 	}
 }

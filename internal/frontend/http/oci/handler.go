@@ -2,7 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package http
+// Package oci implements OCI Distribution route parsing and dispatch.
+package oci
 
 import (
 	"context"
@@ -136,27 +137,87 @@ func RouteV2(path string) (V2Route, error) {
 	}, nil
 }
 
-// handleV2 is the catch-all entry point for /v2/ registry requests.
-// Either serves an image via image factory or proxies the request to the backing image repository.
-func (f *Frontend) handleV2(ctx context.Context, w http.ResponseWriter, req *http.Request, p httprouter.Params) error {
+// ServeFunc dispatches a parsed non-ping OCI request to registry application behavior.
+type ServeFunc func(context.Context, http.ResponseWriter, *http.Request, V2Route) error
+
+// Handler owns OCI Distribution routes and path dispatch.
+type Handler struct {
+	serve ServeFunc
+}
+
+// New creates an OCI Distribution adapter.
+func New(serve ServeFunc) *Handler {
+	return &Handler{serve: serve}
+}
+
+// Routes returns the OCI Distribution routes owned by the adapter.
+func (handler *Handler) Routes() []transport.Route {
+	return []transport.Route{
+		{
+			Method:      http.MethodGet,
+			Path:        "/v2",
+			OperationID: "checkRegistry",
+			Access:      transport.AccessImageDownload,
+			Protocol:    transport.ProtocolOCI,
+			Handler:     handler.ping,
+		},
+		{
+			Method:      http.MethodHead,
+			Path:        "/v2",
+			OperationID: "headRegistry",
+			Access:      transport.AccessImageDownload,
+			Protocol:    transport.ProtocolOCI,
+			Handler:     handler.ping,
+		},
+		{
+			Method:   http.MethodGet,
+			Path:     "/v2/*path",
+			Access:   transport.AccessImageDownload,
+			Protocol: transport.ProtocolOCI,
+			Handler:  handler.servePath,
+			DispatchedOperationIDs: []string{
+				"checkRegistrySlash",
+				"getRegistryManifest",
+				"getRegistryBlob",
+				"listRegistryTags",
+				"getRegistryReferrers",
+			},
+		},
+		{
+			Method:   http.MethodHead,
+			Path:     "/v2/*path",
+			Access:   transport.AccessImageDownload,
+			Protocol: transport.ProtocolOCI,
+			Handler:  handler.servePath,
+			DispatchedOperationIDs: []string{
+				"headRegistrySlash",
+				"headRegistryManifest",
+				"headRegistryBlob",
+				"headRegistryTags",
+				"headRegistryReferrers",
+			},
+		},
+	}
+}
+
+func (*Handler) ping(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error {
+	return nil
+}
+
+// servePath is the catch-all entry point for /v2/ registry requests.
+func (handler *Handler) servePath(ctx context.Context, w http.ResponseWriter, req *http.Request, p httprouter.Params) error {
 	route, err := RouteV2(p.ByName("path"))
 	if err != nil {
 		return err
 	}
 
-	switch route.Target {
-	case V2TargetPing:
-		// always healthy :)
+	if route.Target == V2TargetPing {
 		return nil
-	case V2TargetManifest:
-		return f.handleManifest(ctx, w, req, route)
-	case V2TargetBlob:
-		return f.handleBlob(ctx, w, req, route)
-	case V2TargetReferrers:
-		return f.handleReferrers(ctx, w, req, route)
-	case V2TargetProxy:
-		return f.handleImageProxy(ctx, w, req, route)
-	default:
+	}
+
+	if handler.serve == nil {
 		return xerrors.NewTaggedf[RouteNotFoundTag]("unknown registry route")
 	}
+
+	return handler.serve(ctx, w, req, route)
 }

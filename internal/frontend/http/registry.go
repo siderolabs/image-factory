@@ -32,6 +32,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
+	"github.com/siderolabs/image-factory/internal/frontend/http/oci"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/installer"
@@ -99,10 +100,28 @@ func (img requestedImage) Name() string {
 	return img.imageName
 }
 
+// serveOCI dispatches parsed OCI requests to existing registry application behavior.
+func (f *Frontend) serveOCI(ctx context.Context, w http.ResponseWriter, req *http.Request, route oci.V2Route) error {
+	switch route.Target {
+	case oci.V2TargetPing:
+		return nil
+	case oci.V2TargetManifest:
+		return f.handleManifest(ctx, w, req, route)
+	case oci.V2TargetBlob:
+		return f.handleBlob(ctx, w, req, route)
+	case oci.V2TargetReferrers:
+		return f.handleReferrers(ctx, w, req, route)
+	case oci.V2TargetProxy:
+		return f.handleImageProxy(ctx, w, req, route)
+	default:
+		return xerrors.NewTaggedf[transport.RouteNotFoundTag]("unknown registry route")
+	}
+}
+
 // handleBlob handles image blob download.
 //
 // We always redirect to the external registry, as we assume the image has already been pushed.
-func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, req *http.Request, route V2Route) error {
+func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, req *http.Request, route oci.V2Route) error {
 	schematicID := route.Schematic
 
 	// verify that schematic exists
@@ -122,7 +141,7 @@ func (f *Frontend) handleBlob(ctx context.Context, w http.ResponseWriter, req *h
 }
 
 // handleReferrers serves OCI referrer discovery for generated Installer subjects.
-func (f *Frontend) handleReferrers(ctx context.Context, w http.ResponseWriter, req *http.Request, route V2Route) error {
+func (f *Frontend) handleReferrers(ctx context.Context, w http.ResponseWriter, req *http.Request, route oci.V2Route) error {
 	schematicID := route.Schematic
 
 	if _, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider); err != nil {
@@ -208,7 +227,7 @@ func ResolveInstallerReferrers(
 }
 
 // handleImageProxy proxies image requests to the backing registry.
-func (f *Frontend) handleImageProxy(ctx context.Context, w http.ResponseWriter, req *http.Request, route V2Route) error {
+func (f *Frontend) handleImageProxy(ctx context.Context, w http.ResponseWriter, req *http.Request, route oci.V2Route) error {
 	if f.options.ImageProxy.BackingRegistry.Scheme() != "http" {
 		return xerrors.NewTaggedf[ProxyUnavailableTag]("proxying to an authorized/secure backing registry is not possible")
 	}
@@ -292,7 +311,7 @@ func craftRedirectURL(repo name.Repository, imageName string, schematicID string
 // handleManifest handles image manifest download.
 //
 // If the manifest is for the tag, we check if the image already exists, and either redirect, or build, push and redirect.
-func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, req *http.Request, route V2Route) error {
+func (f *Frontend) handleManifest(ctx context.Context, w http.ResponseWriter, req *http.Request, route oci.V2Route) error {
 	schematicID := route.Schematic
 
 	schematic, err := f.schematicFactory.Get(ctx, schematicID, f.options.AuthProvider)

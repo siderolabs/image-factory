@@ -16,6 +16,7 @@ import (
 	"github.com/siderolabs/image-factory/api"
 	"github.com/siderolabs/image-factory/internal/frontend/http/browserauth"
 	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
+	ociadapter "github.com/siderolabs/image-factory/internal/frontend/http/oci"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	uiadapter "github.com/siderolabs/image-factory/internal/frontend/http/ui"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
@@ -30,6 +31,7 @@ func NewTestFrontend(logger *zap.Logger) *Frontend {
 		logger:      logger,
 		browserAuth: browserauth.New(nil),
 		metadata:    metadata.New(nil, nil, nil, getLLMsTxt),
+		oci:         ociadapter.New(nil),
 		ui:          uiadapter.New(nil, nil, uiadapter.Options{}),
 	}
 }
@@ -42,6 +44,7 @@ func NewTestFrontendWithAuth(logger *zap.Logger, provider enterprise.AuthProvide
 		logger:      logger,
 		browserAuth: browserAuth,
 		metadata:    metadata.New(nil, nil, nil, getLLMsTxt),
+		oci:         ociadapter.New(nil),
 		ui:          uiadapter.New(nil, nil, uiadapter.Options{AuthProvider: provider, LogoutEnabled: browserAuth.LogoutEnabled()}),
 		options:     Options{AuthProvider: provider},
 	}
@@ -49,7 +52,9 @@ func NewTestFrontendWithAuth(logger *zap.Logger, provider enterprise.AuthProvide
 
 // Routes exposes the Community route catalog for external contract tests.
 func (f *Frontend) Routes() []transport.Route {
-	return append(f.routes(), f.ui.Routes()...)
+	routes := append(f.routes(), f.oci.Routes()...)
+
+	return append(routes, f.ui.Routes()...)
 }
 
 // BrowserLoginRoutes exposes the optional browser-auth route catalog for external contract tests.

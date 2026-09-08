@@ -35,6 +35,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/frontend/http/authentication"
 	"github.com/siderolabs/image-factory/internal/frontend/http/browserauth"
 	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
+	"github.com/siderolabs/image-factory/internal/frontend/http/oci"
 	"github.com/siderolabs/image-factory/internal/frontend/http/operational"
 	staticfiles "github.com/siderolabs/image-factory/internal/frontend/http/static"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
@@ -68,6 +69,7 @@ type Frontend struct {
 	imageSigner       signer.Signer
 	evidencePublisher enterprise.InstallerEvidencePublisher
 	metadata          *metadata.Handler
+	oci               *oci.Handler
 	operational       *operational.Handler
 	staticCSS         *staticfiles.Handler
 	staticFavicons    *staticfiles.Handler
@@ -109,6 +111,12 @@ type Handler = transport.Handler
 
 // InvalidRequestTag marks requests rejected by the OpenAPI contract.
 type InvalidRequestTag = transport.InvalidRequestTag
+
+// RouteNotFoundTag marks frontend paths that match no known route.
+type RouteNotFoundTag = transport.RouteNotFoundTag
+
+// MethodNotAllowedTag marks requests whose path exists but method is not declared.
+type MethodNotAllowedTag = transport.MethodNotAllowedTag
 
 // NewFrontend creates a new HTTP frontend.
 func NewFrontend(
@@ -171,6 +179,7 @@ func NewFrontend(
 		TokensEnabled:  opts.TokenVerifier != nil,
 		LogoutEnabled:  frontend.browserAuth.LogoutEnabled(),
 	})
+	frontend.oci = oci.New(frontend.serveOCI)
 
 	var readinessCheckers []operational.ReadinessChecker
 

@@ -21,6 +21,7 @@ func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin)
 	}
 
 	routes = append(routes, f.routes()...)
+	routes = append(routes, f.oci.Routes()...)
 	routes = append(routes, f.browserAuth.Routes()...)
 	routes = append(routes, f.ui.Routes()...)
 
@@ -113,36 +114,6 @@ func (f *Frontend) routes() []transport.Route {
 			Handler:     f.pxeAPI.Serve,
 		},
 
-		{Method: http.MethodGet, Path: "/v2", OperationID: "checkRegistry", Access: transport.AccessImageDownload, Protocol: transport.ProtocolOCI, Handler: f.operational.Health},
-		{Method: http.MethodHead, Path: "/v2", OperationID: "headRegistry", Access: transport.AccessImageDownload, Protocol: transport.ProtocolOCI, Handler: f.operational.Health},
-		{
-			Method:   http.MethodGet,
-			Path:     "/v2/*path",
-			Access:   transport.AccessImageDownload,
-			Protocol: transport.ProtocolOCI,
-			Handler:  f.handleV2,
-			DispatchedOperationIDs: []string{
-				"checkRegistrySlash",
-				"getRegistryManifest",
-				"getRegistryBlob",
-				"listRegistryTags",
-				"getRegistryReferrers",
-			},
-		},
-		{
-			Method:   http.MethodHead,
-			Path:     "/v2/*path",
-			Access:   transport.AccessImageDownload,
-			Protocol: transport.ProtocolOCI,
-			Handler:  f.handleV2,
-			DispatchedOperationIDs: []string{
-				"headRegistrySlash",
-				"headRegistryManifest",
-				"headRegistryBlob",
-				"headRegistryTags",
-				"headRegistryReferrers",
-			},
-		},
 		{
 			Method:      http.MethodGet,
 			Path:        "/oci/cosign/signing-key.pub",
