@@ -1,0 +1,107 @@
+# Builds the image-factory container image and the Helm chart, and pushes both
+# to the OCI registry configured through the repository variables below.
+#
+# Required repository configuration:
+#
+#   vars.REGISTRY           registry host, e.g. registry.example.com
+#   vars.USERNAME           namespace within the registry, e.g. stec
+#   secrets.REGISTRY_USERNAME
+#   secrets.REGISTRY_PASSWORD
+
+name: build
+
+on:
+  push:
+    branches:
+      - patches
+    tags:
+      - v*
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ${{ vars.REGISTRY }}
+  USERNAME: ${{ vars.USERNAME }}
+
+jobs:
+  check:
+    name: test and lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          # the build derives its version from `git describe`
+          fetch-depth: 0
+      - name: set up buildx
+        uses: docker/setup-buildx-action@v3
+      - name: unit tests
+        run: make unit-tests
+      - name: lint
+        run: make lint
+
+  image:
+    name: push image
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: check registry configuration
+        run: |
+          if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ]; then
+            echo "::error::repository variables REGISTRY and USERNAME must be set"
+            exit 1
+          fi
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: set up buildx
+        uses: docker/setup-buildx-action@v3
+      - name: login to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: build and push
+        run: make image-image-factory PUSH=true PLATFORM=linux/amd64,linux/arm64
+      - name: push latest
+        if: github.ref == 'refs/heads/patches'
+        run: make image-image-factory PUSH=true PLATFORM=linux/amd64,linux/arm64 IMAGE_TAG=latest
+
+  helm:
+    name: push chart
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: check registry configuration
+        run: |
+          if [ -z "${REGISTRY}" ] || [ -z "${USERNAME}" ]; then
+            echo "::error::repository variables REGISTRY and USERNAME must be set"
+            exit 1
+          fi
+      - name: checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: set up helm
+        uses: azure/setup-helm@v4
+      # rewrites the chart version, appVersion and the image repository in
+      # values.yaml so the published chart deploys the image built above.
+      # this dirties the working tree, so it must run after anything that
+      # relies on `git describe` for the version.
+      - name: point chart at this registry
+        run: make chart-version
+      - name: login to registry
+        run: helm registry login -u "${HELM_USERNAME}" -p "${HELM_PASSWORD}" "${REGISTRY}"
+        env:
+          HELM_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          HELM_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: package and push
+        run: make helm-push
