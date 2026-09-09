@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package http
+package http_test
 
 import (
 	"context"
@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
+	httpfrontend "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
@@ -49,11 +51,11 @@ func TestWrapResponseWriterRecordsStatus(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			var state responseState
+			var state transport.ResponseState
 
 			rec := httptest.NewRecorder()
 
-			test.write(wrapResponseWriter(rec, &state))
+			test.write(transport.ObserveResponse(rec, &state))
 
 			require.Equal(t, test.want, state.Status(), "the status the log and audit record read")
 			require.Equal(t, test.want, rec.Code, "and what the client actually received")
@@ -65,9 +67,9 @@ func TestWrapResponseWriterRecordsStatus(t *testing.T) {
 	t.Run("informational then final", func(t *testing.T) {
 		t.Parallel()
 
-		var state responseState
+		var state transport.ResponseState
 
-		sw := wrapResponseWriter(httptest.NewRecorder(), &state)
+		sw := transport.ObserveResponse(httptest.NewRecorder(), &state)
 
 		sw.WriteHeader(http.StatusEarlyHints)
 		require.Zero(t, state.Status(), "the real response is still to come")
@@ -122,10 +124,10 @@ func TestWrapResponseWriterPinsCacheControl(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			var state responseState
+			var state transport.ResponseState
 
 			rec := httptest.NewRecorder()
-			sw := wrapResponseWriter(rec, &state)
+			sw := transport.ObserveResponse(rec, &state)
 
 			for _, value := range test.pinned {
 				sw.Header().Add("Cache-Control", value)
@@ -154,18 +156,13 @@ func TestWrapResponseWriterPinsCacheControl(t *testing.T) {
 func TestWrapHandlerPinsCacheControlWhenHandlerNeverWrites(t *testing.T) {
 	t.Parallel()
 
-	f := &Frontend{
-		logger: zaptest.NewLogger(t),
-		options: Options{
-			AuthProvider: pinningAuthProvider{},
-		},
-	}
+	middleware := httpfrontend.NewRequestMiddleware(zaptest.NewLogger(t), nil, pinningAuthProvider{}, nil, nil)
 
-	handler := f.wrapHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
+	handler := middleware.Wrap(func(_ context.Context, w http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
 		w.Header().Set("Cache-Control", "public, max-age=31536000")
 
 		return nil
-	}, true)
+	}, transport.AccessAuthenticated, transport.ProtocolAPI)
 
 	rec := httptest.NewRecorder()
 	handler(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil), nil)
@@ -195,10 +192,10 @@ func (pinningAuthProvider) ContextWithUsername(ctx context.Context, _ string) co
 func TestWrapResponseWriterForwardsReadFrom(t *testing.T) {
 	t.Parallel()
 
-	var state responseState
+	var state transport.ResponseState
 
 	rec := &readerFromRecorder{ResponseRecorder: httptest.NewRecorder()}
-	sw := wrapResponseWriter(rec, &state)
+	sw := transport.ObserveResponse(rec, &state)
 
 	rf, ok := sw.(io.ReaderFrom)
 	require.True(t, ok, "the wrapper has to keep the underlying writer's ReadFrom")
@@ -214,11 +211,11 @@ func TestWrapResponseWriterForwardsReadFrom(t *testing.T) {
 func TestWrapResponseWriterKeepsInterfaceSet(t *testing.T) {
 	t.Parallel()
 
-	var state responseState
+	var state transport.ResponseState
 
 	// httptest.ResponseRecorder flushes, but neither takes a reader nor hijacks.
 	rec := httptest.NewRecorder()
-	sw := wrapResponseWriter(rec, &state)
+	sw := transport.ObserveResponse(rec, &state)
 
 	_, isReaderFrom := sw.(io.ReaderFrom)
 	require.False(t, isReaderFrom)

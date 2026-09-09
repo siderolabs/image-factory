@@ -23,8 +23,8 @@ import (
 func TestHandlerOwnedOCIResponseIsNotReplacedByGenericError(t *testing.T) {
 	t.Parallel()
 
-	frontend := httpfrontend.NewTestFrontend(zaptest.NewLogger(t))
-	handler := frontend.WrapHandlerForProtocol(
+	frontend := httpfrontend.NewRequestMiddleware(zaptest.NewLogger(t), nil, nil, nil, nil)
+	handler := frontend.Wrap(
 		func(_ context.Context, writer http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
 			writer.Header().Set("Docker-Distribution-Api-Version", "registry/2.0")
 			writer.Header().Set("Content-Type", "application/json")
@@ -36,7 +36,7 @@ func TestHandlerOwnedOCIResponseIsNotReplacedByGenericError(t *testing.T) {
 
 			return errors.New("log this without rendering it")
 		},
-		transport.ProtocolOCI,
+		transport.AccessAuthenticated, transport.ProtocolOCI,
 	)
 
 	recorder := httptest.NewRecorder()
@@ -50,12 +50,12 @@ func TestHandlerOwnedOCIResponseIsNotReplacedByGenericError(t *testing.T) {
 func TestHEADErrorResponseHasNoBody(t *testing.T) {
 	t.Parallel()
 
-	frontend := httpfrontend.NewTestFrontend(zaptest.NewLogger(t))
-	handler := frontend.WrapHandlerForProtocol(
+	frontend := httpfrontend.NewRequestMiddleware(zaptest.NewLogger(t), nil, nil, nil, nil)
+	handler := frontend.Wrap(
 		func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error {
 			return xerrors.NewTagged[transport.InvalidRequestTag](errors.New("invalid request"))
 		},
-		transport.ProtocolAPI,
+		transport.AccessAuthenticated, transport.ProtocolAPI,
 	)
 
 	recorder := httptest.NewRecorder()

@@ -8,14 +8,18 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
+	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/api"
 	httpfrontend "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/frontend/http/browserauth"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
@@ -68,7 +72,7 @@ func TestCommunityRouteCatalogMatchesContract(t *testing.T) {
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
-	frontend := httpfrontend.NewTestFrontend(zap.NewNop())
+	frontend := newCatalogFrontend(t, nil)
 	routes := frontend.Routes()
 
 	want := []string{
@@ -99,8 +103,7 @@ func TestBrowserLoginRouteCatalogMatchesContract(t *testing.T) {
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
-	frontend := httpfrontend.NewTestFrontendWithAuth(zap.NewNop(), browserLoginProvider{})
-	routes := frontend.BrowserLoginRoutes()
+	routes := browserauth.New(browserLoginProvider{}).Routes()
 
 	requireRouteInventory(t, contract, routes, []string{
 		"GET /login",
@@ -118,7 +121,7 @@ func TestBrowserLoginRouteCatalogMatchesContract(t *testing.T) {
 func TestEnterpriseRouteCatalogRejectsInvalidAccessPolicy(t *testing.T) {
 	t.Parallel()
 
-	frontend := httpfrontend.NewTestFrontend(zap.NewNop())
+	frontend := newCatalogFrontend(t, nil)
 
 	for _, access := range []enterprise.RouteAccessPolicy{0, 255} {
 		_, err := frontend.EnterpriseRoutes([]enterprise.FrontendPlugin{invalidAccessPlugin{access: access}})
@@ -126,24 +129,36 @@ func TestEnterpriseRouteCatalogRejectsInvalidAccessPolicy(t *testing.T) {
 	}
 }
 
+// newCatalogFrontend exercises production composition without starting upstream
+// services. Catalog tests inspect descriptors only; publication must not run.
+func newCatalogFrontend(t *testing.T, provider enterprise.AuthProvider, plugins ...enterprise.FrontendPlugin) *httpfrontend.Frontend {
+	t.Helper()
+
+	repository, err := name.NewRepository("registry.example.com/catalog")
+	require.NoError(t, err)
+
+	externalURL := &url.URL{Scheme: "https", Host: "factory.example.com"}
+	frontend, err := httpfrontend.NewFrontend(t.Context(), zap.NewNop(), nil, nil, nil, nil, nil, nil, plugins, httpfrontend.Options{
+		ExternalURL: externalURL, ExternalPXEURL: externalURL,
+		InstallerInternalRepository: repository, InstallerExternalRepository: repository,
+		RegistryRefreshInterval: time.Minute, AuthProvider: provider,
+		CacheImageSigner: compositionSigner{}, InstallerSBOMSource: compositionSBOM{},
+		MetricsNamespace: "catalog_" + t.Name(),
+	})
+	require.NoError(t, err)
+
+	return frontend
+}
+
 func requireOpenAPIOperationOwnership(t *testing.T, contract *api.Contract, routes []transport.Route) {
 	t.Helper()
 
-	owned := make(map[string]struct{}, len(routes))
-	for _, route := range routes {
-		if route.OperationID != "" {
-			owned[route.OperationID] = struct{}{}
-		}
-
-		for _, operationID := range route.DispatchedOperationIDs {
-			owned[operationID] = struct{}{}
-		}
-	}
+	owned := operationOwners(routes)
 
 	for path, pathItem := range contract.Document.Paths.Map() {
 		for method, operation := range pathItem.Operations() {
 			require.NotEmpty(t, operation.OperationID, "%s %s has no operation ID", method, path)
-			require.Contains(t, owned, operation.OperationID, "%s %s operation %q has no runtime owner", method, path, operation.OperationID)
+			require.Len(t, owned[operation.OperationID], 1, "%s %s operation %q must have exactly one runtime owner: %v", method, path, operation.OperationID, owned[operation.OperationID])
 		}
 	}
 }
@@ -153,6 +168,11 @@ func requireRouteInventory(t *testing.T, contract *api.Contract, routes []transp
 
 	got := make([]string, 0, len(routes))
 	seen := make(map[string]struct{}, len(routes))
+
+	owned := operationOwners(routes)
+	for operationID, owners := range owned {
+		require.Len(t, owners, 1, "operation %q has duplicate runtime owners: %v", operationID, owners)
+	}
 
 	for _, route := range routes {
 		require.NoError(t, route.ValidateContract(contract), "%s %s", route.Method, route.Path)

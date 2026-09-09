@@ -6,9 +6,7 @@ package artifacts
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,7 +18,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"go.uber.org/zap"
@@ -151,7 +148,7 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 
 		extraExtensions, err := m.fetchExtensionList(m.options.ExtraExtensionManifestImage, tag, m.extraExtensionsRegistry)
 		if err != nil {
-			if regtransport.IsStatusCodeError(err, http.StatusNotFound) {
+			if regtransport.IsNotFound(err) {
 				logger.Sugar().Warnf("extra extensions not published for talos version %s", tag)
 
 				return officialExtensions, nil
@@ -446,8 +443,7 @@ func (m *Manager) GetTalosctlImage(ctx context.Context, versionString string) (s
 			return "", ctx.Err()
 		case result := <-resultCh:
 			if result.Err != nil {
-				var terr *transport.Error
-				if errors.As(result.Err, &terr) && terr.StatusCode == http.StatusNotFound {
+				if regtransport.IsNotFound(result.Err) {
 					return "", xerrors.NewTaggedf[ErrNotFoundTag]("version %s is not available", version)
 				}
 

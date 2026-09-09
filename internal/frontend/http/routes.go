@@ -8,13 +8,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
-
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
-func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin) error {
+func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin, middleware *RequestMiddleware, options ServerOptions) error {
 	routes, err := f.enterpriseRoutes(enterprisePlugins)
 	if err != nil {
 		return err
@@ -25,10 +23,7 @@ func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin)
 	routes = append(routes, f.browserAuth.Routes()...)
 	routes = append(routes, f.ui.Routes()...)
 
-	server, err := newServer(f.contract, routes, f.buildApplicationHandler, ServerOptions{
-		AllowedOrigins:   f.options.AllowedOrigins,
-		MetricsNamespace: f.options.MetricsNamespace,
-	})
+	server, err := newServer(f.contract, routes, middleware.Build, options)
 	if err != nil {
 		return err
 	}
@@ -36,15 +31,6 @@ func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin)
 	f.server = server
 
 	return nil
-}
-
-func (f *Frontend) buildApplicationHandler(route transport.Route) (httprouter.Handle, error) {
-	switch route.Access {
-	case transport.AccessPublic, transport.AccessAuthenticated, transport.AccessImageDownload:
-		return f.wrapHandlerProtocolAccess(route.Handler, route.Access, route.Protocol), nil
-	default:
-		return nil, fmt.Errorf("route %s %s has unsupported access policy %d", route.Method, route.Path, route.Access)
-	}
 }
 
 func (f *Frontend) enterpriseRoutes(plugins []enterprise.FrontendPlugin) ([]transport.Route, error) {

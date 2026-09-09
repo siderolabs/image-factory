@@ -13,14 +13,12 @@ import (
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/api"
 	httpfrontend "github.com/siderolabs/image-factory/internal/frontend/http"
 	"github.com/siderolabs/image-factory/internal/frontend/http/oci"
-	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/internal/registry"
 )
 
@@ -30,11 +28,9 @@ func TestAssembledRegistryReferrersHEAD(t *testing.T) {
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
-	frontend := httpfrontend.NewTestFrontend(zap.NewNop())
+	middleware := httpfrontend.NewRequestMiddleware(zap.NewNop(), nil, nil, nil, nil)
 	handler := oci.NewRegistryHandler(headReferrersService{}, zap.NewNop())
-	server, err := httpfrontend.NewServer(contract, handler.Routes(), func(route transport.Route) (httprouter.Handle, error) {
-		return frontend.WrapHandlerForProtocol(route.Handler, route.Protocol), nil
-	}, httpfrontend.ServerOptions{MetricsNamespace: "task10_referrers_head"})
+	server, err := httpfrontend.NewServer(contract, handler.Routes(), middleware.Build, httpfrontend.ServerOptions{MetricsNamespace: "task10_referrers_head"})
 	require.NoError(t, err)
 
 	endpoint := httptest.NewServer(server.Handler())

@@ -10,6 +10,7 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -114,8 +115,29 @@ func bundleSpecification() ([]byte, error) {
 	return data, nil
 }
 
+// ContractOption configures a deployment's runtime contract.
+type ContractOption func(*contractOptions)
+
+type contractOptions struct {
+	browserCallbackPath string
+}
+
+// WithBrowserCallbackPath relocates only the browser login callback operation.
+// The path must be a literal absolute URL path, without escaping or router patterns,
+// and must not overlap another operation. The embedded specification is unchanged.
+func WithBrowserCallbackPath(callbackPath string) ContractOption {
+	return func(options *contractOptions) {
+		options.browserCallbackPath = callbackPath
+	}
+}
+
 // NewContract loads the canonical document and builds its request router.
-func NewContract(ctx context.Context) (*Contract, error) {
+func NewContract(ctx context.Context, options ...ContractOption) (*Contract, error) {
+	settings := contractOptions{browserCallbackPath: "/callback"}
+	for _, option := range options {
+		option(&settings)
+	}
+
 	document, err := Load(ctx)
 	if err != nil {
 		return nil, err
@@ -126,12 +148,54 @@ func NewContract(ctx context.Context) (*Contract, error) {
 		return nil, err
 	}
 
+	if err = configureBrowserCallback(document, routingDocument, settings.browserCallbackPath); err != nil {
+		return nil, err
+	}
+
 	router, err := gorillamux.NewRouter(routingDocument)
 	if err != nil {
 		return nil, fmt.Errorf("build OpenAPI router: %w", err)
 	}
 
 	return &Contract{Document: document, Router: router}, nil
+}
+
+func configureBrowserCallback(document, routingDocument *openapi3.T, callbackPath string) error {
+	if callbackPath == "/callback" {
+		return nil
+	}
+
+	// Literal, unescaped paths keep httprouter and the OpenAPI matcher in agreement.
+	if !strings.HasPrefix(callbackPath, "/") ||
+		strings.ContainsAny(callbackPath, "{}:*? #%\\\t\r\n") ||
+		path.Clean(callbackPath) != strings.TrimSuffix(callbackPath, "/") {
+		return fmt.Errorf("invalid browser callback path %q: expected a clean literal absolute path", callbackPath)
+	}
+
+	parsed, err := url.ParseRequestURI(callbackPath)
+	if err != nil || parsed.Path != callbackPath || parsed.RawQuery != "" || parsed.Host != "" {
+		return fmt.Errorf("invalid browser callback path %q", callbackPath)
+	}
+
+	// Match against every existing path, including templates and greedy assets.
+	// A method mismatch still means that the path belongs to another operation.
+	router, err := gorillamux.NewRouter(routingDocument)
+	if err != nil {
+		return fmt.Errorf("build callback conflict router: %w", err)
+	}
+
+	request := &http.Request{Method: http.MethodGet, URL: parsed, Header: http.Header{}}
+	if _, _, matchErr := router.FindRoute(request); !errors.Is(matchErr, routers.ErrPathNotFound) {
+		return fmt.Errorf("browser callback path %q conflicts with an existing OpenAPI path", callbackPath)
+	}
+
+	for _, target := range []*openapi3.T{document, routingDocument} {
+		callback := target.Paths.Value("/callback")
+		target.Paths.Delete("/callback")
+		target.Paths.Set(callbackPath, callback)
+	}
+
+	return nil
 }
 
 func newRoutingDocument(ctx context.Context) (*openapi3.T, error) {

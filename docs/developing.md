@@ -80,6 +80,25 @@ http:
   externalURL: https://example.com/
 ```
 
+## HTTP identity and operation ownership
+
+Authentication publishes the authoritative typed `authn.Principal` to the request context.
+Request middleware does not keep a separate authentication identity or capture a username through an authentication callback.
+After request execution, audit projects the username from that principal into `audit.Record.Username`.
+This audit-time projection is intentional: removing legacy middleware-local username capture does not mean removing authenticated identity from audit records.
+The post-authentication request context is used, not the earlier context created before authentication.
+Requests rejected before authentication do not acquire an identity; public requests retain their existing audit bypass.
+Audit sink failures are logged and do not change the response.
+
+`TestRequestMiddlewareOrderingAndTypedAudit` protects these rules alongside contract-before-auth ordering, streaming responses, and authenticated `no-store`.
+
+Operation ownership checks compare runtime descriptors with the OpenAPI document, not an expected set inferred from those descriptors.
+Community and Enterprise assemblies are checked with browser capability both disabled and enabled.
+Every enabled operation must have exactly one owner; disabled and unknown operations must have none.
+Enterprise contract annotations describe product availability: the token UI shell remains registered in Community, and browser routes are registered only when the provider exposes browser capability.
+These exceptions are explicit in the configuration tests.
+Counterexamples exercise missing dispatched owners, duplicates, unknown operations, and disabled capabilities.
+
 ## Running Integration Tests
 
 Integration tests can be run with specific targets:

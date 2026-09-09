@@ -10,14 +10,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/api"
 	"github.com/siderolabs/image-factory/enterprise/scanner"
 	"github.com/siderolabs/image-factory/enterprise/spdx"
 	"github.com/siderolabs/image-factory/enterprise/tokens"
 	"github.com/siderolabs/image-factory/enterprise/vex"
-	httpfrontend "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/frontend/http/browserauth"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
@@ -43,13 +42,13 @@ func TestEnterpriseRouteCatalogMatchesContract(t *testing.T) {
 		require.NotEmpty(t, plugin.Routes())
 	}
 
-	frontend := httpfrontend.NewTestFrontendWithAuth(zap.NewNop(), browserLoginProvider{})
+	frontend := newCatalogFrontend(t, browserLoginProvider{}, plugins...)
 	routes, err := frontend.EnterpriseRoutes(plugins)
 	require.NoError(t, err)
 
 	allRoutes := append([]transport.Route{}, routes...)
 	allRoutes = append(allRoutes, frontend.Routes()...)
-	allRoutes = append(allRoutes, frontend.BrowserLoginRoutes()...)
+	allRoutes = append(allRoutes, browserauth.New(browserLoginProvider{}).Routes()...)
 	requireOpenAPIOperationOwnership(t, contract, allRoutes)
 
 	requireRouteInventory(t, contract, routes, []string{
