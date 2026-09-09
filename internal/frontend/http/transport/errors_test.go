@@ -16,8 +16,47 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
+	"github.com/siderolabs/image-factory/internal/registry"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
+
+func TestRegistryDomainErrorsPreserveOCIResponses(t *testing.T) {
+	t.Parallel()
+
+	// Application-generated OCI errors historically use plain text, not the
+	// backing registry's JSON envelope. Preserve that distinction during extraction.
+	for _, test := range []struct {
+		err    error
+		name   string
+		status int
+	}{
+		{name: "invalid image", err: xerrors.NewTaggedf[registry.InvalidImageTag]("registry failure"), status: http.StatusBadRequest},
+		{name: "proxy unavailable", err: xerrors.NewTaggedf[registry.ProxyUnavailableTag]("registry failure"), status: http.StatusServiceUnavailable},
+		{name: "not found", err: xerrors.NewTaggedf[registry.NotFoundTag]("registry failure"), status: http.StatusNotFound},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, method := range []string{http.MethodGet, http.MethodHead} {
+				recorder := httptest.NewRecorder()
+				request := httptest.NewRequestWithContext(t.Context(), method, "/v2/installer/abc/manifests/latest", nil)
+				classification := transport.ClassifyError(test.err)
+				transport.RenderError(recorder, request, transport.ProtocolOCI, classification)
+
+				require.Equal(t, test.status, recorder.Code)
+				require.Equal(t, "text/plain; charset=utf-8", recorder.Header().Get("Content-Type"))
+				require.Equal(t, "nosniff", recorder.Header().Get("X-Content-Type-Options"))
+
+				if method == http.MethodHead {
+					require.Empty(t, recorder.Body.String())
+					require.Equal(t, "17", recorder.Header().Get("Content-Length"))
+				} else {
+					require.Equal(t, "registry failure\n", recorder.Body.String())
+				}
+			}
+		})
+	}
+}
 
 func TestClassifyErrorPreservesHTTPContract(t *testing.T) {
 	t.Parallel()

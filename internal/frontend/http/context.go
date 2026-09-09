@@ -7,8 +7,6 @@ package http
 import (
 	"context"
 
-	"go.uber.org/zap"
-
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 )
 
@@ -22,10 +20,4 @@ const RequestIDHeader = "X-Request-ID"
 // RequestIDFromContext returns the request ID carried by ctx, or "" if none.
 func RequestIDFromContext(ctx context.Context) string {
 	return ctxlog.RequestID(ctx)
-}
-
-// reqLogger returns the request-scoped logger for ctx, falling back to the
-// frontend logger when the request did not pass through the wrapper (e.g. tests).
-func (f *Frontend) reqLogger(ctx context.Context) *zap.Logger {
-	return ctxlog.Logger(ctx, f.logger)
 }

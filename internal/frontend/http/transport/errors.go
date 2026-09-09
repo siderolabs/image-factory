@@ -15,6 +15,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/profile"
+	"github.com/siderolabs/image-factory/internal/registry"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
@@ -25,8 +26,8 @@ type (
 	RouteNotFoundTag    struct{}
 	MethodNotAllowedTag struct{}
 	InvalidRequestTag   struct{}
-	InvalidImageTag     struct{}
-	ProxyUnavailableTag struct{}
+	InvalidImageTag     = registry.InvalidImageTag
+	ProxyUnavailableTag = registry.ProxyUnavailableTag
 )
 
 // ErrorClassification describes logging and response behavior for a handler error.
@@ -54,6 +55,7 @@ func ClassifyError(err error) ErrorClassification {
 	case xerrors.TagIs[storage.ErrNotFoundTag](err),
 		xerrors.TagIs[artifacts.ErrNotFoundTag](err),
 		xerrors.TagIs[schematicpkg.NotFoundTag](err),
+		xerrors.TagIs[registry.NotFoundTag](err),
 		xerrors.TagIs[RouteNotFoundTag](err):
 		classification = rendered(err.Error(), http.StatusNotFound)
 	case xerrors.TagIs[MethodNotAllowedTag](err):

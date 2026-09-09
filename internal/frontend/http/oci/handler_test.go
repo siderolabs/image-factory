@@ -61,7 +61,7 @@ func TestHandlerDispatchesParsedRegistryRoute(t *testing.T) {
 		return nil
 	})
 
-	route := requireRoute(t, handler.Routes(), http.MethodGet, "/v2/*path")
+	route := requireRoute(t, handler.Routes(), http.MethodGet)
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v2/installer/abc/manifests/v1.14.0", nil)
 	recorder := httptest.NewRecorder()
 
@@ -86,7 +86,7 @@ func TestHandlerHandlesRegistrySlashPingWithoutDispatch(t *testing.T) {
 		return nil
 	})
 
-	route := requireRoute(t, handler.Routes(), http.MethodHead, "/v2/*path")
+	route := requireRoute(t, handler.Routes(), http.MethodHead)
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "/v2/", nil)
 	recorder := httptest.NewRecorder()
 
@@ -112,8 +112,10 @@ func routeIdentities(routes []transport.Route) []routeIdentity {
 	return result
 }
 
-func requireRoute(t *testing.T, routes []transport.Route, method, path string) transport.Route {
+func requireRoute(t *testing.T, routes []transport.Route, method string) transport.Route {
 	t.Helper()
+
+	const path = "/v2/*path"
 
 	for _, route := range routes {
 		if route.Method == method && route.Path == path {

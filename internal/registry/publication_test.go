@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-package http_test
+package registry_test
 
 import (
 	"context"
@@ -21,8 +21,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/require"
 
-	registryhttp "github.com/siderolabs/image-factory/internal/frontend/http"
 	"github.com/siderolabs/image-factory/internal/installer"
+	registryhttp "github.com/siderolabs/image-factory/internal/registry"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 )
 

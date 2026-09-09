@@ -23,7 +23,6 @@ import (
 	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-factory/api"
 	"github.com/siderolabs/image-factory/internal/artifacts"
@@ -75,8 +74,8 @@ type Frontend struct {
 	staticFavicons    *staticfiles.Handler
 	staticJavaScript  *staticfiles.Handler
 	ui                *ui.Handler
-	sf                singleflight.Group
-	options           Options
+
+	options Options
 }
 
 // Options configures the HTTP frontend.
@@ -179,7 +178,6 @@ func NewFrontend(
 		TokensEnabled:  opts.TokenVerifier != nil,
 		LogoutEnabled:  frontend.browserAuth.LogoutEnabled(),
 	})
-	frontend.oci = oci.New(frontend.serveOCI)
 
 	var readinessCheckers []operational.ReadinessChecker
 
@@ -221,6 +219,8 @@ func NewFrontend(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Installer evidence publisher: %w", err)
 	}
+
+	frontend.initializeRegistry()
 
 	if err = frontend.registerRoutes(enterprisePlugins); err != nil {
 		return nil, fmt.Errorf("register HTTP routes: %w", err)

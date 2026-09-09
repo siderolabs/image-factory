@@ -87,6 +87,7 @@ func RegisterTestRoutesWithAuth(
 		logger:      logger,
 		contract:    contract,
 		browserAuth: browserauth.New(provider),
+		oci:         ociadapter.New(nil),
 		options: Options{
 			AuthProvider:     provider,
 			MetricsNamespace: fmt.Sprintf("image_factory_test_%d", testMetricsNamespace.Add(1)),
@@ -122,5 +123,5 @@ func (f *Frontend) HandleLLMsTxt() Handler {
 }
 
 func ApplyReferrersFilterHeader(header http.Header, artifactType string) {
-	applyReferrersFilterHeader(header, artifactType)
+	ociadapter.ApplyReferrersFilterHeader(header, artifactType)
 }

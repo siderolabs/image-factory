@@ -49,6 +49,19 @@ func TestFrontendRegistersCatalogThroughTransport(t *testing.T) {
 	}
 }
 
+func TestAssembledRouterDispatchesOCIWithoutCallback(t *testing.T) {
+	t.Parallel()
+
+	router, err := httpfrontend.RegisterTestRoutes(t.Context(), zap.NewNop())
+	require.NoError(t, err)
+
+	response := httptest.NewRecorder()
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v2/installer/schematic/manifests/v1.13.0", nil)
+	require.NotPanics(t, func() { router.ServeHTTP(response, request) })
+	require.Equal(t, http.StatusNotFound, response.Code)
+	require.Contains(t, response.Body.String(), "unknown registry route")
+}
+
 func TestCommunityRouteCatalogMatchesContract(t *testing.T) {
 	t.Parallel()
 
