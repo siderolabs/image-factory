@@ -101,15 +101,7 @@ RUN_TESTS_PROXY ?= TestIntegrationDirect
 RUN_TESTS_ENTERPRISE ?= TestIntegration(Direct|Auth0.*)
 EXTRA_EXTENSIONS_REGISTRY ?= 127.0.0.1:5100
 GOOS ?= $(shell uname -s | tr "[:upper:]" "[:lower:]")
-TALOS_VERSION ?= 1.13.7
-COSIGN_VERSION ?= 3.1.2
-K8S_VERSION ?= v1.36.2
-CHAINSAW_VERSION ?= v0.2.12
 CHART_VERSION ?= $(TAG)
-GO_TOOLS_RELEASE ?= v0.3.1
-TALOS_VEX_DATA_IMAGE_REF ?= $(REGISTRY_AND_USERNAME)/image-factory/test-vex-data:latest
-LOCAL_PATH_PROVISIONER_VERSION ?= v0.0.35
-LOCAL_PATH_PROVISIONER_URL ?= https://raw.githubusercontent.com/rancher/local-path-provisioner/$(LOCAL_PATH_PROVISIONER_VERSION)/deploy/local-path-storage.yaml
 
 # help menu
 
@@ -391,14 +383,6 @@ helm-plugin-install:  ## Install helm plugins
 	-helm plugin install https://github.com/helm-unittest/helm-unittest.git --verify=false --version=v1.1.2
 	-helm plugin install https://github.com/losisin/helm-values-schema-json.git --verify=false --version=v2.6.0
 
-.PHONY: kuttl-plugin-install
-kuttl-plugin-install:  ## Install kubectl kuttl plugin
-	kubectl krew install kuttl
-
-.PHONY: chart-e2e
-chart-e2e:  ## Run helm chart e2e tests
-	export KUBECONFIG=$(shell pwd)/$(ARTIFACTS)/kubeconfig && cd deploy/helm/e2e && kubectl kuttl test
-
 .PHONY: chart-unittest
 chart-unittest: $(ARTIFACTS)  ## Run helm chart unit tests
 	@helm unittest deploy/helm/image-factory --output-type junit --output-file $(ARTIFACTS)/helm-unittest-report.xml
@@ -452,99 +436,14 @@ docker-compose-up:
 docker-compose-down:
 	@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml down
 
-.PHONY: talosctl
-talosctl: $(ARTIFACTS)
-	curl -Lo $(ARTIFACTS)/talosctl https://github.com/siderolabs/talos/releases/download/v$(TALOS_VERSION)/talosctl-$(GOOS)-$(GOARCH)
-	chmod +x $(ARTIFACTS)/talosctl
-
-.PHONY: cosign
-cosign: $(ARTIFACTS)
-	curl -Lo $(ARTIFACTS)/cosign https://github.com/sigstore/cosign/releases/download/v$(COSIGN_VERSION)/cosign-$(GOOS)-$(GOARCH)
-	chmod +x $(ARTIFACTS)/cosign
-
-.PHONY: tools
-tools: talosctl cosign
-
-.PHONY: k8s-up
-k8s-up: $(ARTIFACTS)
-	$(ARTIFACTS)/talosctl cluster create docker \
-	    --name=image-factory-env \
-	    --talosconfig-destination=$(ARTIFACTS)/talosconfig \
-	    --kubernetes-version=$(K8S_VERSION) \
-	    --mtu=1450
-	$(ARTIFACTS)/talosctl kubeconfig $(ARTIFACTS)/kubeconfig \
-	    --talosconfig=$(ARTIFACTS)/talosconfig \
-	    --nodes=10.5.0.2 \
-	    --force
-
-.PHONY: k8s-down
-k8s-down:
-	$(ARTIFACTS)/talosctl cluster destroy \
-	    --name=image-factory-env
-	rm -f $(ARTIFACTS)/talosconfig $(ARTIFACTS)/kubeconfig
-
-.PHONY: chainsaw-install
-chainsaw-install: $(ARTIFACTS)
-	@curl -sSL https://github.com/kyverno/chainsaw/releases/download/$(CHAINSAW_VERSION)/chainsaw_linux_$(GOARCH).tar.gz \
-	  | tar -xz -C $(ARTIFACTS) chainsaw
-	@chmod +x $(ARTIFACTS)/chainsaw
-
-.PHONY: chart-e2e-chainsaw
-chart-e2e-chainsaw: chainsaw-install
-	export KUBECONFIG=$(shell pwd)/$(ARTIFACTS)/kubeconfig && cd deploy/helm/e2e && $(shell pwd)/$(ARTIFACTS)/chainsaw test
-
-.PHONY: chart-e2e-ci
-chart-e2e-ci: tools
-	@$(MAKE) image-image-factory PUSH=true
-	@$(MAKE) chart-version CHART_VERSION=v1.0.0-test.1 REGISTRY=$(REGISTRY) USERNAME=$(USERNAME) TAG=$(TAG)
-	@$(MAKE) k8s-up
-	@$(MAKE) chart-e2e-chainsaw
-
 .PHONY: chart-version
 chart-version:
 	CHART_VERSION="$(CHART_VERSION)" yq -i '.version = strenv(CHART_VERSION)' deploy/helm/image-factory/Chart.yaml
 	TAG="$(TAG)" yq -i '.appVersion = strenv(TAG)' deploy/helm/image-factory/Chart.yaml
 	sed -i '/# -- Repository to use for Image Factory/{n; s|repository:.*|repository: '"$(REGISTRY)/$(USERNAME)/image-factory"'|}' deploy/helm/image-factory/values.yaml
 
-.PHONY: $(ARTIFACTS)/image-signer
-$(ARTIFACTS)/image-signer: $(ARTIFACTS)
-	@curl -sSL https://github.com/siderolabs/go-tools/releases/download/$(GO_TOOLS_RELEASE)/image-signer-$(OPERATING_SYSTEM)-$(GOARCH) -o $(ARTIFACTS)/image-signer
-	@chmod +x $(ARTIFACTS)/image-signer
-
-.PHONY: sign-images
-sign-images: $(ARTIFACTS)/image-signer
-	@$(ARTIFACTS)/image-signer sign --timeout=15m \
-	  $(TALOS_VEX_DATA_IMAGE_REF)@$$(crane digest $(TALOS_VEX_DATA_IMAGE_REF))
-
-.PHONY: push-talos-vex-data
-push-talos-vex-data:
-	@tar -C $(PWD)/internal/integration/testdata/vex-data -cvf $(PWD)/$(ARTIFACTS)/test-vulnerability-data.tar .
-	@crane append -f $(PWD)/$(ARTIFACTS)/test-vulnerability-data.tar -t $(TALOS_VEX_DATA_IMAGE_REF)
-
-.PHONY: update-local-path-provisioner
-update-local-path-provisioner:
-	@curl -sSL $(LOCAL_PATH_PROVISIONER_URL) -o ./deploy/helm/e2e/_manifests/local-path-storage.yaml
-	@yq -i 'with(select(.kind == "StorageClass"); .metadata.annotations."storageclass.kubernetes.io/is-default-class" = "true")' ./deploy/helm/e2e/_manifests/local-path-storage.yaml
-	@yq -i 'with(select(.kind == "Namespace"); .metadata.labels."pod-security.kubernetes.io/enforce" = "privileged")' ./deploy/helm/e2e/_manifests/local-path-storage.yaml
-
 .PHONY: help
 help:  ## This help menu.
 	@echo "$$HELP_MENU_HEADER"
 	@grep -E '^[a-zA-Z%_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-
-.PHONY: release-notes
-release-notes: $(ARTIFACTS)
-	@ARTIFACTS=$(ARTIFACTS) ./hack/release.sh $@ $(ARTIFACTS)/RELEASE_NOTES.md $(TAG)
-
-.PHONY: renovate-local
-renovate-local:  ## runs renovate locally to check syntax and test configuration
-	@docker run --rm \
-		--user $(shell id -u):$(shell id -g) \
-		-v $(PWD):/src \
-		-w /src \
-		-e GITHUB_TOKEN \
-		-e LOG_LEVEL=debug \
-		-e RENOVATE_PLATFORM=local \
-		-e RENOVATE_DRY_RUN=full \
-	renovate/renovate
 
