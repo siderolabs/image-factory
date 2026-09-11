@@ -18,6 +18,7 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	httpfe "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -64,7 +65,7 @@ func TestUnauthorizedChallengeHeader(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			f := httpfe.NewTestFrontend(zaptest.NewLogger(t))
+			f := httpfe.NewRequestMiddleware(zaptest.NewLogger(t), nil, nil, nil, nil)
 
 			handler := func(_ context.Context, w http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
 				test.setHeader(w)
@@ -75,7 +76,7 @@ func TestUnauthorizedChallengeHeader(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v2/", nil)
 
-			f.WrapHandler(handler)(w, r, nil)
+			f.Wrap(handler, transport.AccessAuthenticated, transport.ProtocolAPI)(w, r, nil)
 
 			require.Equal(t, http.StatusUnauthorized, w.Code)
 			assert.Equal(t, test.expected, w.Header().Values("WWW-Authenticate"))

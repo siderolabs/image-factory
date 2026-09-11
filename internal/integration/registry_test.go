@@ -40,9 +40,9 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/siderolabs/image-factory/cmd/image-factory/cmd"
-	registryhttp "github.com/siderolabs/image-factory/internal/frontend/http"
 	"github.com/siderolabs/image-factory/internal/image/attestation"
 	"github.com/siderolabs/image-factory/internal/image/verify"
+	registryhttp "github.com/siderolabs/image-factory/internal/registry"
 	"github.com/siderolabs/image-factory/pkg/client"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 	"github.com/siderolabs/image-factory/pkg/schematic"

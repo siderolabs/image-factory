@@ -127,6 +127,9 @@ type RequiresAuthenticationTag struct{}
 // ForbiddenTag is a tag for access denied errors (authenticated but not the owner).
 type ForbiddenTag struct{}
 
+// NotFoundTag marks a schematic that does not exist.
+type NotFoundTag struct{}
+
 // Unmarshal the schematic from text representation.
 func Unmarshal(data []byte) (*Schematic, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@source "../templates/**/*.html";
+@source "../ui/templates/**/*.html";
 
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";

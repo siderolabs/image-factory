@@ -25,6 +25,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/schematic"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
+	enterprisefrontend "github.com/siderolabs/image-factory/pkg/enterprise/frontend"
 )
 
 // AuthProvider is a subset of enterprise.AuthProvider used for ownership checks.
@@ -59,14 +60,24 @@ func NewFrontend(schematicFactory *schematic.Factory, b *builder.Builder, auth A
 	}
 }
 
-// Path implements enterprise.FrontendPlugin.
-func (f *Frontend) Path() string {
-	return routePath
-}
-
-// Methods implements enterprise.FrontendPlugin.
-func (f *Frontend) Methods() []string {
-	return []string{http.MethodGet, http.MethodHead}
+// Routes implements enterprise.FrontendPlugin.
+func (f *Frontend) Routes() []enterprisefrontend.Route {
+	return []enterprisefrontend.Route{
+		{
+			Method:      http.MethodGet,
+			Path:        routePath,
+			OperationID: "getVulnerabilityScan",
+			Access:      enterprisefrontend.RouteAccessAuthenticated,
+			Handler:     f.Handle,
+		},
+		{
+			Method:      http.MethodHead,
+			Path:        routePath,
+			OperationID: "headVulnerabilityScan",
+			Access:      enterprisefrontend.RouteAccessAuthenticated,
+			Handler:     f.Handle,
+		},
+	}
 }
 
 // Ready implements enterprise.ReadinessChecker. Reports the readiness of the

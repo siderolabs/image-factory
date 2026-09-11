@@ -17,12 +17,13 @@ import (
 )
 
 func TestHandleLLMsTxt(t *testing.T) {
-	frontend := frontendhttp.NewTestFrontend(zap.NewNop())
+	frontend, err := frontendhttp.RegisterTestRoutes(t.Context(), zap.NewNop())
+	require.NoError(t, err)
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/llms.txt", nil)
 
-	frontend.WrapHandler(frontend.HandleLLMsTxt())(w, r, nil)
+	frontend.ServeHTTP(w, r)
 
 	resp := w.Result()
 	require.Equal(t, http.StatusOK, resp.StatusCode)

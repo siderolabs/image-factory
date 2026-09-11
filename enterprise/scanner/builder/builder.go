@@ -33,9 +33,9 @@ import (
 	govexscanner "github.com/siderolabs/go-vex/pkg/scanner"
 	"go.uber.org/zap"
 
-	"github.com/siderolabs/image-factory/enterprise/auth"
 	scanlogger "github.com/siderolabs/image-factory/enterprise/scanner/logger"
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/authn"
 	"github.com/siderolabs/image-factory/internal/cache"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	"github.com/siderolabs/image-factory/internal/schedule"
@@ -447,16 +447,16 @@ func (b *Builder) scan(ctx context.Context, schematicID, versionTag, arch string
 		return entry.document, entry.sbom, nil
 	}
 
-	// Capture the authenticated username from the request context so that the
+	// Capture the authenticated principal from the request context so that the
 	// detached singleflight context can carry it forward to downstream ownership
 	// checks (the SPDX builder re-verifies access against the schematic owner).
-	username, _ := auth.GetAuthUsername(ctx)
+	principal, _ := authn.PrincipalFromContext(ctx)
 
 	// carry the request ID into the detached scan so its logs keep the request_id.
 	reqID := ctxlog.RequestID(ctx)
 
 	resultCh := b.c.SF.DoChan(sbomHash, func() (any, error) { //nolint:contextcheck
-		return b.scanAndCache(reqID, username, schematicID, versionTag, arch, sbomHash)
+		return b.scanAndCache(reqID, principal, schematicID, versionTag, arch, sbomHash)
 	})
 
 	select {
@@ -480,10 +480,10 @@ func (b *Builder) scan(ctx context.Context, schematicID, versionTag, arch string
 //
 // reqID is the request ID, carried into the detached context so the scan logs
 // (and downstream SPDX/VEX builds) keep the request_id.
-func (b *Builder) scanAndCache(reqID, username, schematicID, versionTag, arch, key string) (cachedScan, error) {
+func (b *Builder) scanAndCache(reqID string, principal authn.Principal, schematicID, versionTag, arch, key string) (cachedScan, error) {
 	baseCtx := ctxlog.WithRequestID(context.Background(), reqID)
-	if username != "" {
-		baseCtx = auth.WithAuthUsername(baseCtx, username)
+	if principal.Authenticated() {
+		baseCtx = authn.ContextWithPrincipal(baseCtx, principal)
 	}
 
 	ctx, cancel := context.WithTimeout(baseCtx, ScanTimeout)

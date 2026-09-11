@@ -22,6 +22,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 
 	"github.com/siderolabs/image-factory/internal/apitoken"
+	enterprisefrontend "github.com/siderolabs/image-factory/pkg/enterprise/frontend"
 )
 
 // maxCreateBodyBytes bounds the /tokens POST body, which only ever needs to carry a name,
@@ -57,14 +58,24 @@ func NewListCreateFrontend(manager TokenManager, authProv AuthProvider, maxPerOr
 	}
 }
 
-// Methods implements enterprise.FrontendPlugin.
-func (f *ListCreateFrontend) Methods() []string {
-	return []string{http.MethodGet, http.MethodPost}
-}
-
-// Path implements enterprise.FrontendPlugin.
-func (f *ListCreateFrontend) Path() string {
-	return "/tokens"
+// Routes implements enterprise.FrontendPlugin.
+func (f *ListCreateFrontend) Routes() []enterprisefrontend.Route {
+	return []enterprisefrontend.Route{
+		{
+			Method:      http.MethodGet,
+			Path:        "/tokens",
+			OperationID: "listAPITokens",
+			Access:      enterprisefrontend.RouteAccessAuthenticated,
+			Handler:     f.Handle,
+		},
+		{
+			Method:      http.MethodPost,
+			Path:        "/tokens",
+			OperationID: "createAPIToken",
+			Access:      enterprisefrontend.RouteAccessAuthenticated,
+			Handler:     f.Handle,
+		},
+	}
 }
 
 // requireOrgID extracts the authenticated org ID from ctx, or writes a 401 and reports ok=false.
@@ -353,14 +364,17 @@ func NewRevokeFrontend(manager TokenManager, authProv AuthProvider) *RevokeFront
 	return &RevokeFrontend{manager: manager, authProv: authProv}
 }
 
-// Methods implements enterprise.FrontendPlugin.
-func (f *RevokeFrontend) Methods() []string {
-	return []string{http.MethodPost}
-}
-
-// Path implements enterprise.FrontendPlugin.
-func (f *RevokeFrontend) Path() string {
-	return "/tokens/:id/revoke"
+// Routes implements enterprise.FrontendPlugin.
+func (f *RevokeFrontend) Routes() []enterprisefrontend.Route {
+	return []enterprisefrontend.Route{
+		{
+			Method:      http.MethodPost,
+			Path:        "/tokens/:id/revoke",
+			OperationID: "revokeAPIToken",
+			Access:      enterprisefrontend.RouteAccessAuthenticated,
+			Handler:     f.Handle,
+		},
+	}
 }
 
 // Handle implements enterprise.FrontendPlugin.

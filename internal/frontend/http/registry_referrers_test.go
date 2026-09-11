@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	registryhttp "github.com/siderolabs/image-factory/internal/frontend/http"
+	registryhttp "github.com/siderolabs/image-factory/internal/frontend/http/oci"
 )
 
 func TestApplyReferrersFilterHeader(t *testing.T) {

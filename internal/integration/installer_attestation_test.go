@@ -35,10 +35,10 @@ import (
 
 	"github.com/siderolabs/image-factory/enterprise/installerattestation"
 	"github.com/siderolabs/image-factory/internal/artifacts"
-	registryhttp "github.com/siderolabs/image-factory/internal/frontend/http"
 	"github.com/siderolabs/image-factory/internal/image/attestation"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/installer"
+	registryhttp "github.com/siderolabs/image-factory/internal/registry"
 )
 
 func TestInstallerEvidencePublisherWithStockCosign(t *testing.T) {

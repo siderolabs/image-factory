@@ -18,6 +18,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	httpfe "github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 )
 
 // requestIDOf extracts the request_id field from a logged entry.
@@ -36,7 +37,7 @@ func requestIDOf(t *testing.T, e observer.LoggedEntry) string {
 func TestWrapHandlerRequestID(t *testing.T) {
 	core, logs := observer.New(zap.InfoLevel)
 	logger := zap.New(core)
-	f := httpfe.NewTestFrontend(logger)
+	f := httpfe.NewRequestMiddleware(logger, nil, nil, nil, nil)
 
 	var (
 		handlerRequestID  string
@@ -44,7 +45,7 @@ func TestWrapHandlerRequestID(t *testing.T) {
 	)
 
 	handler := func(ctx context.Context, _ http.ResponseWriter, _ *http.Request, _ httprouter.Params) error { //nolint:unparam
-		handlerRequestID = httpfe.RequestIDFromContext(ctx)
+		handlerRequestID = ctxlog.RequestID(ctx)
 		// a handler logging via the request-scoped logger tags its entries.
 		ctxlog.Logger(ctx, logger).Info("handler log")
 
@@ -57,7 +58,7 @@ func TestWrapHandlerRequestID(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/image/abc/v1.0.0/foo", nil)
 
-		f.WrapHandler(handler)(w, r, nil)
+		f.Wrap(handler, transport.AccessAuthenticated, transport.ProtocolAPI)(w, r, nil)
 
 		require.True(t, handlerLoggerSeen)
 
@@ -81,7 +82,7 @@ func TestWrapHandlerRequestID(t *testing.T) {
 		r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/image/abc/v1.0.0/foo", nil)
 		r.Header.Set(httpfe.RequestIDHeader, inbound)
 
-		f.WrapHandler(handler)(w, r, nil)
+		f.Wrap(handler, transport.AccessAuthenticated, transport.ProtocolAPI)(w, r, nil)
 
 		assert.Equal(t, inbound, w.Header().Get(httpfe.RequestIDHeader))
 		assert.Equal(t, inbound, handlerRequestID)

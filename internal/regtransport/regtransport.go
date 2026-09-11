@@ -7,10 +7,16 @@ package regtransport
 
 import (
 	"errors"
+	"net/http"
 	"slices"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
+
+// IsNotFound reports whether a registry operation failed because its target is absent.
+func IsNotFound(err error) bool {
+	return IsStatusCodeError(err, http.StatusNotFound)
+}
 
 // IsStatusCodeError checks is the error is a transport registry error with one of the given status codes.
 func IsStatusCodeError(err error, statusCodes ...int) bool {

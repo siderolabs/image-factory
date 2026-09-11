@@ -12,6 +12,8 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+
+	enterprisefrontend "github.com/siderolabs/image-factory/pkg/enterprise/frontend"
 )
 
 // JWKSProvider returns a pre-built JWKS document.
@@ -30,18 +32,18 @@ func NewJWKSFrontend(provider JWKSProvider) *JWKSFrontend {
 	return &JWKSFrontend{provider: provider}
 }
 
-// Methods implements enterprise.FrontendPlugin.
-func (f *JWKSFrontend) Methods() []string {
-	return []string{http.MethodGet}
+// Routes implements enterprise.FrontendPlugin.
+func (f *JWKSFrontend) Routes() []enterprisefrontend.Route {
+	return []enterprisefrontend.Route{
+		{
+			Method:      http.MethodGet,
+			Path:        "/.well-known/jwks.json",
+			OperationID: "getAPITokenJWKS",
+			Access:      enterprisefrontend.RouteAccessPublic,
+			Handler:     f.Handle,
+		},
+	}
 }
-
-// Path implements enterprise.FrontendPlugin.
-func (f *JWKSFrontend) Path() string {
-	return "/.well-known/jwks.json"
-}
-
-// PublicRoute implements enterprise.PublicRoute.
-func (f *JWKSFrontend) PublicRoute() {}
 
 // Handle implements enterprise.FrontendPlugin.
 func (f *JWKSFrontend) Handle(_ context.Context, w http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {

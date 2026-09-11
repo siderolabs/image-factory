@@ -1,0 +1,1070 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+// Package ui implements the browser UI HTTP adapter.
+package ui
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"html/template"
+	"net/http"
+	"net/url"
+	"slices"
+	"strings"
+
+	"github.com/blang/semver/v4"
+	"github.com/julienschmidt/httprouter"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"github.com/siderolabs/gen/maps"
+	"github.com/siderolabs/gen/value"
+	"github.com/siderolabs/gen/xslices"
+	"github.com/siderolabs/talos/pkg/machinery/constants"
+	"github.com/siderolabs/talos/pkg/machinery/imager/imageropts"
+	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
+	"github.com/siderolabs/talos/pkg/machinery/platforms"
+	"go.yaml.in/yaml/v4"
+
+	"github.com/siderolabs/image-factory/internal/apitoken"
+	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
+	"github.com/siderolabs/image-factory/internal/version"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
+	"github.com/siderolabs/image-factory/pkg/schematic"
+)
+
+// Options configures the browser UI adapter.
+type Options struct {
+	ExternalURL    *url.URL
+	ExternalPXEURL *url.URL
+	AuthProvider   enterprise.AuthProvider
+
+	TokensEnabled bool
+	LogoutEnabled bool
+}
+
+// SchematicService owns schematic validation, ownership, and persistence.
+type SchematicService interface {
+	Create(context.Context, *schematic.Schematic) (string, error)
+	Get(context.Context, string) (*schematic.Schematic, error)
+}
+
+// ArtifactSource supplies release metadata used by the browser UI.
+type ArtifactSource interface {
+	GetTalosVersions(context.Context) ([]semver.Version, error)
+	GetOfficialExtensions(context.Context, string) ([]artifacts.ExtensionRef, error)
+	GetTalosctlTuples(context.Context, string) ([]artifacts.TalosctlTuple, error)
+}
+
+// Handler owns browser UI routes and rendering behavior.
+type Handler struct {
+	schematicService SchematicService
+	artifactsSource  ArtifactSource
+	authProvider     enterprise.AuthProvider
+	externalURL      *url.URL
+	externalPXEURL   *url.URL
+	tokensEnabled    bool
+	logoutEnabled    bool
+}
+
+// New constructs the browser UI adapter.
+func New(schematicService SchematicService, artifactsSource ArtifactSource, opts Options) *Handler {
+	return &Handler{
+		schematicService: schematicService,
+		artifactsSource:  artifactsSource,
+		authProvider:     opts.AuthProvider,
+		externalURL:      opts.ExternalURL,
+		externalPXEURL:   opts.ExternalPXEURL,
+		tokensEnabled:    opts.TokensEnabled,
+		logoutEnabled:    opts.LogoutEnabled,
+	}
+}
+
+// Routes returns the authenticated browser UI routes.
+func (f *Handler) Routes() []transport.Route {
+	return []transport.Route{
+		{Method: http.MethodGet, Path: "/", OperationID: "getUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleUI},
+		{Method: http.MethodHead, Path: "/", OperationID: "headUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleUI},
+		{Method: http.MethodPost, Path: "/ui/wizard", OperationID: "postUIWizard", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleUIWizard},
+		{
+			Method:      http.MethodGet,
+			Path:        "/ui/version-doc",
+			OperationID: "getUIVersionDocumentation",
+			Access:      transport.AccessAuthenticated,
+			Protocol:    transport.ProtocolHTML,
+			Handler:     f.handleUIVersionDoc,
+		},
+		{
+			Method:      http.MethodPost,
+			Path:        "/ui/extensions-list",
+			OperationID: "postUIExtensionsList",
+			Access:      transport.AccessAuthenticated,
+			Protocol:    transport.ProtocolHTML,
+			Handler:     f.handleUIExtensionsList,
+		},
+		{Method: http.MethodGet, Path: "/ui/tokens", OperationID: "getUITokens", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: f.handleTokensUI},
+	}
+}
+
+// placeholderURL wraps a *url.URL with an optional raw credential prefix for display.
+// When authInfo is non-empty (e.g. "user:<password>@"), String() injects it after "scheme://"
+// so that iPXE-context URLs show credential placeholders without URL-encoding angle brackets.
+type placeholderURL struct {
+	base     *url.URL
+	authInfo string
+}
+
+func newPlaceholderURL(base *url.URL, authInfo string) *placeholderURL {
+	return &placeholderURL{base: base, authInfo: authInfo}
+}
+
+func (p *placeholderURL) JoinPath(elem ...string) *placeholderURL {
+	return &placeholderURL{base: p.base.JoinPath(elem...), authInfo: p.authInfo}
+}
+
+func (p *placeholderURL) String() string {
+	s := p.base.String()
+	if p.authInfo == "" {
+		return s
+	}
+
+	if idx := strings.Index(s, "://"); idx != -1 {
+		return s[:idx+3] + p.authInfo + s[idx+3:]
+	}
+
+	return s
+}
+
+var templateFuncs template.FuncMap
+
+func init() {
+	templateFuncs = template.FuncMap{
+		"list": func(values ...string) []string { return values },
+		"dict": func(values ...any) (map[string]any, error) {
+			if len(values)%2 != 0 {
+				return nil, errors.New("invalid dict call")
+			}
+
+			dict := make(map[string]any, len(values)/2)
+
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					return nil, errors.New("dict keys must be strings")
+				}
+
+				dict[key] = values[i+1]
+			}
+
+			return dict, nil
+		},
+		"short_version": func(version string) string {
+			v, err := semver.ParseTolerant(version)
+			if err != nil {
+				return version
+			}
+
+			return fmt.Sprintf("v%d.%d", v.Major, v.Minor)
+		},
+		"in": func(haystack []string, needle string) bool {
+			return slices.Index(haystack, needle) != -1
+		},
+		"dynamic_template": func(name string, in any) (template.HTML, error) {
+			var out bytes.Buffer
+
+			if err := getTemplates().ExecuteTemplate(&out, name, in); err != nil {
+				return "", err
+			}
+
+			return template.HTML(out.String()), nil
+		},
+		"version_less": func(a, b string) (bool, error) {
+			av, err := semver.ParseTolerant(a)
+			if err != nil {
+				return false, fmt.Errorf("error parsing version %q: %w", a, err)
+			}
+
+			bv, err := semver.ParseTolerant(b)
+			if err != nil {
+				return false, fmt.Errorf("error parsing version %q: %w", b, err)
+			}
+
+			return av.LT(bv), nil
+		},
+		"t": func(localizer *i18n.Localizer, key string) string {
+			translated, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: key})
+			if err != nil {
+				return "missing translation"
+			}
+
+			return translated
+		},
+	}
+}
+
+// Target constants.
+const (
+	TargetMetal = "metal"
+	TargetCloud = "cloud"
+	TargetSBC   = "sbc"
+)
+
+// handleUI handles '/'.
+func (f *Handler) handleUI(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+	if r.Method == http.MethodHead {
+		return nil
+	}
+
+	if r.URL.Query().Has("lang") {
+		lang := r.URL.Query().Get("lang")
+
+		if lang == "" {
+			http.Error(w, "missing lang param", http.StatusBadRequest)
+
+			return nil
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "lang",
+			Value:    lang,
+			Path:     "/",
+			MaxAge:   60 * 60 * 24 * 365,
+			HttpOnly: true,
+		})
+
+		returnURL := r.URL
+		query := returnURL.Query()
+		query.Del("lang")
+		returnURL.RawQuery = query.Encode()
+
+		w.Header().Set("Hx-Redirect", returnURL.String())
+
+		return nil
+	}
+
+	templateName, data, _, err := f.wizard(ctx, r, f.getLocalizer(r))
+	if err != nil {
+		return err
+	}
+
+	var buf bytes.Buffer
+
+	if err = getTemplates().ExecuteTemplate(&buf, templateName+".html", data); err != nil {
+		return err
+	}
+
+	return getTemplates().ExecuteTemplate(w, "index.html", struct {
+		Version       string
+		WizardHTML    template.HTML
+		Localizer     *i18n.Localizer
+		Bundle        *i18n.Bundle
+		Lang          string
+		Enterprise    bool
+		TokensEnabled bool
+		LogoutEnabled bool
+	}{
+		Version:       version.Tag,
+		WizardHTML:    template.HTML(buf.String()),
+		Localizer:     f.getLocalizer(r),
+		Bundle:        getLocalizerBundle(),
+		Lang:          getCurrentLang(r),
+		Enterprise:    enterprise.Enabled(),
+		TokensEnabled: f.tokensEnabled,
+		LogoutEnabled: f.logoutEnabled,
+	})
+}
+
+// handleTokensUI handles '/ui/tokens'.
+func (f *Handler) handleTokensUI(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+	return getTemplates().ExecuteTemplate(w, "tokens.html", struct {
+		Version       string
+		Localizer     *i18n.Localizer
+		Bundle        *i18n.Bundle
+		Lang          string
+		Actors        []string
+		Enterprise    bool
+		LogoutEnabled bool
+	}{
+		Version:       version.Tag,
+		Localizer:     f.getLocalizer(r),
+		Bundle:        getLocalizerBundle(),
+		Lang:          getCurrentLang(r),
+		Actors:        apitoken.Actors(),
+		Enterprise:    enterprise.Enabled(),
+		LogoutEnabled: f.logoutEnabled,
+	})
+}
+
+// WizardParams encapsulates the parameters of the wizard.
+//
+// Some fields might be not set if we haven't reached that step yet.
+type WizardParams struct { //nolint:govet
+	Target         string
+	Version        string
+	Arch           string
+	Platform       string
+	Board          string
+	SecureBoot     string
+	Bootloader     string
+	Extensions     []string
+	Cmdline        string
+	CmdlineSet     bool
+	EmbeddedConfig string
+	OverlayOptions string
+
+	SelectedTarget         string
+	SelectedVersion        string
+	SelectedArch           string
+	SelectedPlatform       string
+	SelectedBoard          string
+	SelectedSecureBoot     string
+	SelectedBootloader     string
+	SelectedExtensions     []string
+	SelectedCmdline        string
+	SelectedEmbeddedConfig string
+	SelectedOverlayOptions string
+
+	// Dynamically set fields.
+	PlatformMeta platforms.Platform
+	BoardMeta    platforms.SBC
+	TalosctlMeta Talosctl
+
+	// Localizer
+	Localizer *i18n.Localizer
+}
+
+// SetURLValuesFromSchematic reverses ToSchematic, populating the schematic-derived fields
+// of WizardParams from a schematic.
+//
+// Target is set to TargetSBC when the schematic carries an overlay, otherwise it is left
+// empty since the schematic alone cannot distinguish between metal and cloud targets.
+func SetURLValuesFromSchematic(params *WizardParams, s *schematic.Schematic) {
+	if len(s.Customization.ExtraKernelArgs) > 0 {
+		params.Cmdline = strings.Join(s.Customization.ExtraKernelArgs, " ")
+	}
+
+	params.CmdlineSet = true
+
+	if len(s.Customization.SystemExtensions.OfficialExtensions) > 0 {
+		params.Extensions = slices.Clone(s.Customization.SystemExtensions.OfficialExtensions)
+	} else {
+		// "-" is used when the user selects no extensions
+		params.Extensions = []string{"-"}
+	}
+
+	if s.Customization.EmbeddedMachineConfiguration != "" {
+		params.EmbeddedConfig = s.Customization.EmbeddedMachineConfiguration
+	}
+
+	if s.Overlay.Name != "" || s.Overlay.Image != "" || len(s.Overlay.Options) > 0 {
+		params.Target = TargetSBC
+		params.BoardMeta = platforms.SBC{
+			OverlayName:  s.Overlay.Name,
+			OverlayImage: s.Overlay.Image,
+		}
+
+		for _, sbc := range platforms.SBCs() {
+			if sbc.OverlayName == s.Overlay.Name && sbc.OverlayImage == s.Overlay.Image {
+				params.BoardMeta = sbc
+				params.Board = sbc.Name
+
+				break
+			}
+		}
+
+		if len(s.Overlay.Options) > 0 {
+			optsBytes, _ := yaml.Marshal(s.Overlay.Options) //nolint:errcheck // marshaling a map decoded from YAML cannot fail
+			params.OverlayOptions = strings.TrimRight(string(optsBytes), "\n")
+		}
+	}
+
+	// BootloaderKind's zero value is "none", which is also what an unset/"auto"
+	// Bootloader maps to in ToSchematic. We treat zero as unset to avoid
+	// fabricating a "none" selection on the way back.
+	if s.Customization.Bootloader != 0 {
+		params.Bootloader = s.Customization.Bootloader.String()
+	}
+}
+
+// ToSchematic creates a schematic.Schematic out of the params.
+func (params WizardParams) ToSchematic(ctx context.Context, owner *string) (schematic.Schematic, error) {
+	var extraArgs []string
+
+	if params.Cmdline != "" {
+		extraArgs = strings.Split(params.Cmdline, " ")
+	}
+
+	extensions := xslices.Filter(params.Extensions, func(ext string) bool {
+		return ext != "-"
+	})
+
+	slices.Sort(extensions)
+
+	var overlay schematic.Overlay
+
+	if params.Target == TargetSBC && quirks.New(params.Version).SupportsOverlay() {
+		overlay.Name = params.BoardMeta.OverlayName
+		overlay.Image = params.BoardMeta.OverlayImage
+
+		var overlayOptsParsed map[string]any
+
+		if err := yaml.Unmarshal([]byte(params.OverlayOptions), &overlayOptsParsed); err != nil {
+			return schematic.Schematic{}, fmt.Errorf("error parsing overlay options: %w", err)
+		}
+
+		overlay.Options = overlayOptsParsed
+	}
+
+	requestedSchematic := schematic.Schematic{
+		Overlay: overlay,
+		Customization: schematic.Customization{
+			ExtraKernelArgs: extraArgs,
+			SystemExtensions: schematic.SystemExtensions{
+				OfficialExtensions: extensions,
+			},
+		},
+	}
+
+	if owner != nil {
+		requestedSchematic.Owner = *owner
+	}
+
+	if params.Bootloader != "" && params.Bootloader != "auto" {
+		bootloader, err := imageropts.BootloaderKindString(params.Bootloader)
+		if err != nil {
+			return schematic.Schematic{}, fmt.Errorf("invalid bootloader %q: %w", params.Bootloader, err)
+		}
+
+		requestedSchematic.Customization.Bootloader = bootloader
+	}
+
+	return requestedSchematic, nil
+}
+
+// Talosctl provides methods to generate paths for talosctl binaries.
+type Talosctl struct{}
+
+// TalosctlPaths generates paths for talosctl binaries based on the provided tuples.
+func (Talosctl) TalosctlPaths(tuples []artifacts.TalosctlTuple) []string {
+	paths := make([]string, 0, len(tuples))
+
+	for _, tuple := range tuples {
+		path := fmt.Sprintf("talosctl-%s-%s%s", tuple.OS, tuple.Arch, tuple.Ext)
+		paths = append(paths, path)
+	}
+
+	slices.Sort(paths)
+
+	return paths
+}
+
+func getCurrentLang(r *http.Request) string {
+	lang := r.URL.Query().Get("lang")
+
+	if lang == "" {
+		if cookie, err := r.Cookie("lang"); err == nil {
+			lang = cookie.Value
+		}
+	}
+
+	if lang == "" {
+		lang = "en"
+	}
+
+	return lang
+}
+
+// WizardParamsFromRequest extracts the wizard parameters from the request.
+func WizardParamsFromRequest(r *http.Request) WizardParams {
+	params := WizardParams{
+		Target:         r.FormValue("target"),
+		Version:        r.FormValue("version"),
+		Arch:           r.FormValue("arch"),
+		Platform:       r.FormValue("platform"),
+		Board:          r.FormValue("board"),
+		SecureBoot:     r.FormValue("secureboot"),
+		Bootloader:     r.FormValue("bootloader"),
+		Extensions:     r.Form["extensions"],
+		Cmdline:        strings.TrimSpace(r.FormValue("cmdline")),
+		CmdlineSet:     r.FormValue("cmdline-set") != "",
+		EmbeddedConfig: r.FormValue("embedded-config"),
+		OverlayOptions: strings.TrimSpace(r.FormValue("overlay-options")),
+
+		SelectedTarget:         r.FormValue("selected-target"),
+		SelectedVersion:        r.FormValue("selected-version"),
+		SelectedArch:           r.FormValue("selected-arch"),
+		SelectedPlatform:       r.FormValue("selected-platform"),
+		SelectedBoard:          r.FormValue("selected-board"),
+		SelectedSecureBoot:     r.FormValue("selected-secureboot"),
+		SelectedBootloader:     r.FormValue("selected-bootloader"),
+		SelectedExtensions:     r.Form["selected-extensions"],
+		SelectedCmdline:        r.FormValue("selected-cmdline"),
+		SelectedEmbeddedConfig: r.FormValue("selected-embedded-config"),
+		SelectedOverlayOptions: r.FormValue("selected-overlay-options"),
+	}
+
+	switch {
+	case params.Target == TargetMetal:
+		params.Platform = constants.PlatformMetal
+		params.PlatformMeta = platforms.MetalPlatform()
+	case params.Target == TargetSBC:
+		params.Platform = constants.PlatformMetal
+
+		if params.Board != "" {
+			if idx := slices.IndexFunc(platforms.SBCs(), func(p platforms.SBC) bool {
+				return p.Name == params.Board
+			}); idx != -1 {
+				params.BoardMeta = platforms.SBCs()[idx]
+			}
+
+			if params.Arch == "" {
+				if params.SelectedArch != "" {
+					params.SelectedBoard, params.Board = params.Board, ""
+				} else {
+					params.Arch = string(artifacts.ArchArm64)
+				}
+			}
+		}
+	case params.Target == TargetCloud && params.Platform != "":
+		if idx := slices.IndexFunc(platforms.CloudPlatforms(), func(p platforms.Platform) bool {
+			return p.Name == params.Platform
+		}); idx != -1 {
+			params.PlatformMeta = platforms.CloudPlatforms()[idx]
+
+			if len(params.PlatformMeta.Architectures) == 1 && params.Arch == "" {
+				if params.SelectedArch != "" {
+					// going back, reset platform choice
+					params.SelectedPlatform, params.Platform = params.Platform, ""
+				} else {
+					params.Arch = params.PlatformMeta.Architectures[0]
+				}
+			}
+		}
+	}
+
+	return params
+}
+
+// NonSchematicURLValues returns the URL values of the wizard parameters that don't have any effect on the schematic.
+func (p WizardParams) NonSchematicURLValues() url.Values {
+	values := url.Values{}
+
+	if p.Target != "" {
+		values.Set("target", p.Target)
+	}
+
+	if p.Version != "" {
+		values.Set("version", p.Version)
+	}
+
+	if p.Arch != "" {
+		values.Set("arch", p.Arch)
+	}
+
+	if p.Platform != "" {
+		values.Set("platform", p.Platform)
+	}
+
+	if p.SecureBoot != "" {
+		values.Set("secureboot", p.SecureBoot)
+	}
+
+	if len(values) == 0 {
+		return nil
+	}
+
+	return values
+}
+
+// URLValues returns the URL values of the wizard parameters.
+func (p WizardParams) URLValues() url.Values {
+	values := p.NonSchematicURLValues()
+
+	if p.Board != "" {
+		values.Set("board", p.Board)
+	}
+
+	if p.Bootloader != "" {
+		values.Set("bootloader", p.Bootloader)
+	}
+
+	if len(p.Extensions) > 0 {
+		values["extensions"] = p.Extensions
+	}
+
+	if p.Cmdline != "" {
+		values.Set("cmdline", p.Cmdline)
+	}
+
+	if p.CmdlineSet {
+		values.Set("cmdline-set", "true")
+	}
+
+	// Skip adding the embedded config to url avalues to avoid exposing secrets through the url and browser history.
+
+	if p.OverlayOptions != "" {
+		values.Set("overlay-options", p.OverlayOptions)
+	}
+
+	if len(values) == 0 {
+		return nil
+	}
+
+	return values
+}
+
+// wizardVersions handles the 'pick Talos version' step.
+func (f *Handler) wizardVersions(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
+	versions, err := f.getTalosVersions(ctx, params.SelectedVersion, params.Target)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	return "wizard-versions",
+		struct {
+			WizardParams
+			Versions any
+		}{
+			WizardParams: params,
+			Versions:     versions,
+		},
+		params.URLValues(),
+		nil
+}
+
+// wizardClouds handles the 'pick cloud platform' step.
+func (f *Handler) wizardClouds(_ context.Context, params WizardParams) (string, any, url.Values, error) {
+	if params.SelectedPlatform == "" {
+		params.SelectedPlatform = "aws"
+	}
+
+	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
+
+	allPlatforms := platforms.CloudPlatforms()
+
+	allPlatforms = xslices.Filter(allPlatforms, func(p platforms.Platform) bool {
+		if value.IsZero(&p.MinVersion) {
+			return true
+		}
+
+		return talosVersion.GTE(p.MinVersion)
+	})
+
+	return "wizard-cloud",
+		struct {
+			WizardParams
+			Platforms []platforms.Platform
+		}{
+			WizardParams: params,
+			Platforms:    allPlatforms,
+		},
+		params.URLValues(),
+		nil
+}
+
+// wizardSBCs handles the 'pick SBC' step.
+func (f *Handler) wizardSBCs(_ context.Context, params WizardParams) (string, any, url.Values, error) {
+	if params.SelectedBoard == "" {
+		params.SelectedBoard = "rpi_generic"
+	}
+
+	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
+
+	allSBCs := platforms.SBCs()
+
+	allSBCs = xslices.Filter(allSBCs, func(p platforms.SBC) bool {
+		if value.IsZero(&p.MinVersion) {
+			return true
+		}
+
+		return talosVersion.GTE(p.MinVersion)
+	})
+
+	return "wizard-sbc",
+		struct {
+			WizardParams
+			SBCs []platforms.SBC
+		}{
+			WizardParams: params,
+			SBCs:         allSBCs,
+		},
+		params.URLValues(),
+		nil
+}
+
+// wizardArch handles the 'pick architecture' step.
+func (f *Handler) wizardArch(_ context.Context, params WizardParams) (string, any, url.Values, error) {
+	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
+
+	if params.SelectedArch == "" {
+		params.SelectedArch = "amd64"
+	}
+
+	return "wizard-arch",
+		struct {
+			WizardParams
+			SecureBootSupported bool
+		}{
+			WizardParams:        params,
+			SecureBootSupported: talosVersion.GTE(semver.MustParse("1.5.0")) && (params.Target == TargetMetal || params.PlatformMeta.SecureBootSupported),
+		},
+		params.URLValues(),
+		nil
+}
+
+// wizardExtensions handles the 'pick extensions' step.
+func (f *Handler) wizardExtensions(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
+	extensions, err := f.getOfficialExtensions(ctx, params.Version)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	return "wizard-extensions",
+		struct {
+			WizardParams
+			AvailableExtensions []artifacts.ExtensionRef
+		}{
+			WizardParams:        params,
+			AvailableExtensions: extensions,
+		},
+		params.URLValues(),
+		nil
+}
+
+// wizardCmdline handles the 'pick cmdline & overlay options' step.
+func (f *Handler) wizardCmdline(_ context.Context, params WizardParams) (string, any, url.Values, error) {
+	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
+
+	if params.SelectedBootloader == "" {
+		params.SelectedBootloader = "auto"
+	}
+
+	return "wizard-cmdline",
+		struct {
+			WizardParams
+
+			OverlayOptionsEnabled       bool
+			SupportsBootloaderSelection bool
+			EmbeddedConfigEnabled       bool
+		}{
+			WizardParams: params,
+
+			OverlayOptionsEnabled:       params.Target == TargetSBC && quirks.New(params.Version).SupportsOverlay(),
+			EmbeddedConfigEnabled:       quirks.New(params.Version).SupportsEmbeddedConfig(),
+			SupportsBootloaderSelection: talosVersion.GTE(semver.MustParse("1.12.0-alpha.2")),
+		},
+		params.URLValues(),
+		nil
+}
+
+// wizardFinal handles the 'final' step.
+func (f *Handler) wizardFinal(ctx context.Context, params WizardParams) (string, any, url.Values, error) {
+	talosVersion, _ := semver.ParseTolerant(params.Version) //nolint:errcheck
+
+	requestedSchematic, err := params.ToSchematic(ctx, nil)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	if params.EmbeddedConfig != "" {
+		requestedSchematic.Customization.EmbeddedMachineConfiguration = params.EmbeddedConfig
+	}
+
+	err = requestedSchematic.Validate(enterprise.Enabled())
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	schematicID, err := f.schematicService.Create(ctx, &requestedSchematic)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	marshaled, err := requestedSchematic.Marshal()
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	version := "v" + params.Version
+
+	installerImage := fmt.Sprintf("%s/installer/%s:%s", f.externalURL.Host, schematicID, version)
+	secureBootInstallerImage := fmt.Sprintf("%s/installer-secureboot/%s:%s", f.externalURL.Host, schematicID, version)
+
+	if quirks.New(version).SupportsUnifiedInstaller() {
+		installerImage = fmt.Sprintf("%s/%s-installer/%s:%s", f.externalURL.Host, params.Platform, schematicID, version)
+		secureBootInstallerImage = fmt.Sprintf("%s/%s-installer-secureboot/%s:%s", f.externalURL.Host, params.Platform, schematicID, version)
+	}
+
+	talosctlTuples, err := f.artifactsSource.GetTalosctlTuples(ctx, params.Version)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	// Build PXE base URL with credential placeholder when auth is active,
+	// so the displayed URL shows the user they need to embed credentials for iPXE.
+	pxeBaseURL := newPlaceholderURL(f.externalPXEURL.JoinPath("pxe", schematicID, version), "")
+	if f.authProvider != nil {
+		if username, ok := f.authProvider.UsernameFromContext(ctx); ok {
+			pxeBaseURL = newPlaceholderURL(
+				f.externalPXEURL.JoinPath("pxe", schematicID, version),
+				username+":<password>@",
+			)
+		}
+	}
+
+	urlValues := params.NonSchematicURLValues()
+	urlValues.Set("schematic-id", schematicID)
+
+	return "wizard-final",
+		struct {
+			WizardParams
+
+			Schematic string
+			Marshaled string
+
+			ImageBaseURL             *url.URL
+			PXEBaseURL               *placeholderURL
+			TalosctlBaseURL          *url.URL
+			SPDXBaseURL              *url.URL
+			VEXBaseURL               *url.URL
+			ScanBaseURL              *url.URL
+			ChecksumBaseURL          *url.URL
+			InstallerImage           string
+			SecureBootInstallerImage string
+
+			TalosctlTuples []artifacts.TalosctlTuple
+
+			TroubleshootingGuideAvailable bool
+			ProductionGuideAvailable      bool
+			TalosctlAvailable             bool
+			SBOMAvailable                 bool
+			VEXAvailable                  bool
+			Enterprise                    bool
+		}{
+			WizardParams: params,
+
+			Schematic: schematicID,
+			Marshaled: string(marshaled),
+
+			ImageBaseURL:    f.externalURL.JoinPath("image", schematicID, version),
+			PXEBaseURL:      pxeBaseURL,
+			TalosctlBaseURL: f.externalURL.JoinPath("talosctl", version),
+
+			InstallerImage:           installerImage,
+			SecureBootInstallerImage: secureBootInstallerImage,
+
+			TalosctlTuples: talosctlTuples,
+
+			TroubleshootingGuideAvailable: talosVersion.GTE(semver.MustParse("1.6.0")),
+			ProductionGuideAvailable:      talosVersion.GTE(semver.MustParse("1.5.0")),
+			TalosctlAvailable:             quirks.New(params.Version).SupportsFactoryTalosctlDownload(),
+			SBOMAvailable:                 talosVersion.GTE(semver.MustParse("1.11.0")),
+			VEXAvailable:                  talosVersion.GTE(semver.MustParse("1.13.0")),
+
+			Enterprise:      enterprise.Enabled(),
+			SPDXBaseURL:     f.externalURL.JoinPath("spdx", schematicID, version, params.Arch),
+			VEXBaseURL:      f.externalURL.JoinPath("vex", version, "vex.json"),
+			ScanBaseURL:     f.externalURL.JoinPath("scans", schematicID, version, params.Arch),
+			ChecksumBaseURL: f.externalURL.JoinPath("image", schematicID, version),
+		},
+		urlValues,
+		nil
+}
+
+func (f *Handler) wizard(ctx context.Context, r *http.Request, localizer *i18n.Localizer) (string, any, url.Values, error) {
+	params := WizardParamsFromRequest(r)
+
+	schematicID := r.FormValue("schematic-id")
+	if schematicID != "" {
+		schematic, err := f.schematicService.Get(ctx, schematicID)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("error retrieving schematic: %w", err)
+		}
+
+		SetURLValuesFromSchematic(&params, schematic)
+	}
+
+	params.Localizer = localizer
+
+	switch {
+	case params.Target == "":
+		if params.SelectedTarget == "" {
+			params.SelectedTarget = TargetMetal
+		}
+
+		return "wizard-start", params, nil, nil
+	case params.Version == "":
+		return f.wizardVersions(ctx, params)
+	case params.Target == TargetCloud && params.Platform == "":
+		return f.wizardClouds(ctx, params)
+	case params.Target == TargetSBC && params.Board == "":
+		return f.wizardSBCs(ctx, params)
+	case params.Arch == "":
+		return f.wizardArch(ctx, params)
+	case len(params.Extensions) == 0:
+		return f.wizardExtensions(ctx, params)
+	case !params.CmdlineSet:
+		return f.wizardCmdline(ctx, params)
+	default:
+		return f.wizardFinal(ctx, params)
+	}
+}
+
+// handleUIWizard handles '/ui/wizard'.
+func (f *Handler) handleUIWizard(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+	templateName, data, query, err := f.wizard(ctx, r, f.getLocalizer(r))
+	if err != nil {
+		return err
+	}
+
+	if query != nil {
+		w.Header().Set("Hx-Push-Url", "/?"+query.Encode())
+	} else {
+		w.Header().Set("Hx-Push-Url", "/")
+	}
+
+	return getTemplates().ExecuteTemplate(w, templateName+".html", data)
+}
+
+// handleUIExtensionsList handles '/ui/extensions-list'.
+func (f *Handler) handleUIExtensionsList(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+	version := r.FormValue("version")
+	filter := r.FormValue("search")
+	extensions := r.Form["extensions"]
+
+	extensionList, err := f.getOfficialExtensions(ctx, version)
+	if err != nil {
+		return err
+	}
+
+	if filter != "" {
+		extensionList = xslices.Filter(extensionList, func(ext artifacts.ExtensionRef) bool {
+			if slices.Index(extensions, ext.TaggedReference.RepositoryStr()) != -1 {
+				return true
+			}
+
+			if strings.Contains(strings.ToLower(ext.TaggedReference.String()), strings.ToLower(filter)) {
+				return true
+			}
+
+			if strings.Contains(strings.ToLower(ext.Description), strings.ToLower(filter)) {
+				return true
+			}
+
+			return false
+		})
+	}
+
+	return getTemplates().ExecuteTemplate(w, "extensions-list.html", struct {
+		SelectedExtensions  []string
+		AvailableExtensions []artifacts.ExtensionRef
+	}{
+		SelectedExtensions:  extensions,
+		AvailableExtensions: extensionList,
+	})
+}
+
+func (f *Handler) getTalosVersions(ctx context.Context, selectedVersion string, target string) (any, error) {
+	versions, err := f.artifactsSource.GetTalosVersions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	versions = slices.Clone(versions)
+	slices.Reverse(versions)
+
+	// Filter versions for SBC target to only show 1.7.0+
+	if target == TargetSBC {
+		minVersion := semver.MustParse("1.7.0")
+		versions = xslices.Filter(versions, func(v semver.Version) bool {
+			return v.GTE(minVersion)
+		})
+	}
+
+	var latestStable semver.Version
+
+	for _, v := range versions {
+		if len(v.Pre) == 0 {
+			latestStable = v
+
+			break
+		}
+	}
+
+	if selectedVersion == "" {
+		selectedVersion = latestStable.String()
+	}
+
+	type versionGroup struct {
+		Label    string
+		Versions []string
+	}
+
+	type versionList struct {
+		DefaultVersion string
+		LatestStable   string
+		Groups         []versionGroup
+	}
+
+	versionGroupLabel := func(v semver.Version) string {
+		if len(v.Pre) > 0 {
+			return fmt.Sprintf("%d.%d-pre", v.Major, v.Minor)
+		}
+
+		return fmt.Sprintf("%d.%d", v.Major, v.Minor)
+	}
+
+	groups := map[string][]semver.Version{}
+
+	for _, v := range versions {
+		label := versionGroupLabel(v)
+
+		groups[label] = append(groups[label], v)
+	}
+
+	groupLabels := maps.Keys(groups)
+	slices.SortFunc(groupLabels, func(a, b string) int {
+		va, _ := semver.ParseTolerant(a) //nolint:errcheck
+		vb, _ := semver.ParseTolerant(b) //nolint:errcheck
+
+		return -va.Compare(vb)
+	})
+
+	return versionList{
+		DefaultVersion: selectedVersion,
+		LatestStable:   latestStable.String(),
+		Groups: xslices.Map(groupLabels, func(label string) versionGroup {
+			return versionGroup{
+				Label:    label,
+				Versions: xslices.Map(groups[label], semver.Version.String),
+			}
+		}),
+	}, nil
+}
+
+// handleUIVersionDoc handles '/ui/version-doc'.
+func (f *Handler) handleUIVersionDoc(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+	version := r.FormValue("version")
+
+	return getTemplates().ExecuteTemplate(w, "version-doc.html", struct {
+		Localizer *i18n.Localizer
+		Version   string
+	}{
+		Version:   version,
+		Localizer: f.getLocalizer(r),
+	})
+}
+
+func (f *Handler) getOfficialExtensions(ctx context.Context, version string) ([]artifacts.ExtensionRef, error) {
+	extensions, err := f.artifactsSource.GetOfficialExtensions(ctx, version)
+	if err != nil {
+		return nil, err
+	}
+
+	return xslices.Filter(extensions, func(ext artifacts.ExtensionRef) bool {
+		return ext.TaggedReference.Context().RepositoryStr() != "siderolabs/metal-agent" // hide the internal metal-agent extension on the UI
+	}), nil
+}

@@ -7,22 +7,26 @@
 package http
 
 import (
-	"html/template"
-	"io/fs"
 	"os"
-
-	"github.com/nicksnyder/go-i18n/v2/i18n"
+	"path/filepath"
+	"runtime"
 )
-
-const basePath = "internal/frontend/http/"
 
 var (
-	cssFS       = os.DirFS(basePath)
-	jsFS        = os.DirFS(basePath)
-	faviconsFS  = os.DirFS(basePath)
-	templatesFS = os.DirFS(basePath)
-	localesFS   = os.DirFS(basePath).(fs.ReadDirFS)
+	basePath   = debugBasePath()
+	cssFS      = os.DirFS(basePath)
+	jsFS       = os.DirFS(basePath)
+	faviconsFS = os.DirFS(basePath)
 )
+
+func debugBasePath() string {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("failed to locate HTTP frontend debug sources")
+	}
+
+	return filepath.Dir(filename) + string(filepath.Separator)
+}
 
 func getLLMsTxt() []byte {
 	content, err := os.ReadFile(basePath + "templates/llms.txt")
@@ -31,18 +35,4 @@ func getLLMsTxt() []byte {
 	}
 
 	return content
-}
-
-func getTemplates() *template.Template {
-	// reload templates each time
-	return template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS, "templates/*.html"))
-}
-
-func getLocalizerBundle() *i18n.Bundle {
-	bundle, err := loadLocalizerBundle()
-	if err != nil {
-		panic(err)
-	}
-
-	return bundle
 }

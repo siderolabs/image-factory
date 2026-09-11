@@ -8,10 +8,6 @@ package http
 
 import (
 	"embed"
-	"html/template"
-	"sync"
-
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
 //go:embed css/output.css
@@ -23,34 +19,7 @@ var jsFS embed.FS
 //go:embed favicons/*
 var faviconsFS embed.FS
 
-//go:embed templates/*.html
-var templatesFS embed.FS
-
-//go:embed locales/*.yaml
-var localesFS embed.FS
-
 //go:embed templates/llms.txt
 var llmsTxtContent []byte
 
 func getLLMsTxt() []byte { return llmsTxtContent }
-
-var templatesOnce = sync.OnceValue(func() *template.Template {
-	return template.Must(template.New("").Funcs(templateFuncs).ParseFS(templatesFS, "templates/*.html"))
-})
-
-var localizerOnce = sync.OnceValue(func() *i18n.Bundle {
-	bundle, err := loadLocalizerBundle()
-	if err != nil {
-		panic(err)
-	}
-
-	return bundle
-})
-
-func getTemplates() *template.Template {
-	return templatesOnce()
-}
-
-func getLocalizerBundle() *i18n.Bundle {
-	return localizerOnce()
-}

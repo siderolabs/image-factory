@@ -18,14 +18,14 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
-	"github.com/siderolabs/image-factory/internal/frontend/http"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/schematic/storage"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
-func TestMatchError(t *testing.T) {
+func TestClassifyFrontendErrors(t *testing.T) {
 	tests := []struct {
 		name        string
 		err         error
@@ -187,27 +187,15 @@ func TestMatchError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var (
-				gotMsg  string
-				gotCode int
-				called  bool
-			)
+			classification := transport.ClassifyError(tt.err)
 
-			callback := func(message string, code int) {
-				called = true
-				gotMsg = message
-				gotCode = code
-			}
-
-			level, status := http.MatchError(tt.err, callback)
-
-			assert.Equal(t, tt.expectedLevel, level)
-			assert.Equal(t, tt.expectedStatus, status)
-			assert.Equal(t, tt.expectCallback, called)
+			assert.Equal(t, tt.expectedLevel, classification.Level)
+			assert.Equal(t, tt.expectedStatus, classification.Status)
+			assert.Equal(t, tt.expectCallback, classification.Render)
 
 			if tt.expectCallback {
-				assert.Equal(t, tt.callbackMsg, gotMsg)
-				assert.Equal(t, tt.callbackCode, gotCode)
+				assert.Equal(t, tt.callbackMsg, classification.Message)
+				assert.Equal(t, tt.callbackCode, classification.Status)
 			}
 		})
 	}

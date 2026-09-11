@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/julienschmidt/httprouter"
 
 	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/artifacts"
@@ -22,20 +21,25 @@ import (
 	"github.com/siderolabs/image-factory/internal/image/verify"
 	"github.com/siderolabs/image-factory/internal/installer"
 	"github.com/siderolabs/image-factory/internal/schematic"
+	enterprisefrontend "github.com/siderolabs/image-factory/pkg/enterprise/frontend"
 )
 
-// FrontendPlugin is the interface that Enterprise code must implement to extend the frontend.
-type FrontendPlugin interface {
-	Methods() []string
-	Path() string
-	Handle(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error
-}
+// RouteAccessPolicy declares whether an Enterprise HTTP route requires authentication.
+type RouteAccessPolicy = enterprisefrontend.RouteAccessPolicy
 
-// PublicRoute is implemented by FrontendPlugin instances whose routes should
-// be registered without authentication. Plugins that do not implement this
-// interface are registered as auth-protected routes.
-type PublicRoute interface {
-	PublicRoute()
+const (
+	// RouteAccessPublic exposes a route without authentication.
+	RouteAccessPublic = enterprisefrontend.RouteAccessPublic
+	// RouteAccessAuthenticated requires the configured authentication provider.
+	RouteAccessAuthenticated = enterprisefrontend.RouteAccessAuthenticated
+)
+
+// Route is the neutral Enterprise HTTP route descriptor translated by the HTTP composition root.
+type Route = enterprisefrontend.Route
+
+// FrontendPlugin is implemented by Enterprise components that contribute HTTP routes.
+type FrontendPlugin interface {
+	Routes() []enterprisefrontend.Route
 }
 
 // ReadinessChecker is implemented by FrontendPlugin instances whose readiness
@@ -136,12 +140,14 @@ type ScannerOptions struct {
 // suffix is the file-extension that triggered checksum mode (e.g. ".sha512",
 // ".sha256", ".md5") and determines both the algorithm and the output filename.
 type Checksummer interface {
+	asset.ChecksumGenerator
 	WriteChecksum(ctx context.Context, w http.ResponseWriter, r *http.Request, reader io.ReadCloser, size int64, filename, suffix string) error
 }
 
 // SignatureWriter signs an asset and writes its detached Sigstore bundle to the HTTP response.
 // The implementation is enterprise-only and supports any configured blob signer.
 type SignatureWriter interface {
+	asset.SignatureGenerator
 	WriteSignature(ctx context.Context, w http.ResponseWriter, r *http.Request, asset assetcache.BootAsset, assetKey, filename string) error
 }
 
@@ -179,7 +185,7 @@ type TokenOptions struct {
 }
 
 // Handler is the type of HTTP handlers used by the enterprise frontend.
-type Handler = func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error
+type Handler = enterprisefrontend.Handler
 
 // AuthProvider defines an authentication provider.
 type AuthProvider interface {
@@ -188,17 +194,18 @@ type AuthProvider interface {
 
 	// Middleware returns an HTTP middleware that enforces authentication on the provided handler.
 	//
-	// A provider that authenticates a caller and then refuses the request must leave the
-	// principal on the request context, since the wrapped handler never runs and the audit
-	// record would otherwise attribute the denial to nobody.
+	// Successful built-in providers store an authn.Principal on both the handler context and the
+	// request context. The route selector adapts compatibility providers through
+	// UsernameFromContext, so external implementations do not need access to internal/authn.
+	// A provider that authenticates a caller and then refuses the request must leave its username
+	// discoverable from the request context so audit attribution can be bridged after the denial.
 	Middleware(Handler) Handler
 
-	// UsernameFromContext retrieves the authenticated username stored by the middleware.
+	// UsernameFromContext is a compatibility projection for ownership checks that only need
+	// the typed principal's subject.
 	UsernameFromContext(ctx context.Context) (string, bool)
 
-	// ContextWithUsername returns a context carrying the given username as if
-	// the middleware had set it. Used by the API token path to inject the
-	// JWT subject so that downstream ownership checks work normally.
+	// ContextWithUsername preserves the public compatibility API for detached work.
 	ContextWithUsername(ctx context.Context, username string) context.Context
 }
 

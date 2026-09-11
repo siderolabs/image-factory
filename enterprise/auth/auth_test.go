@@ -18,6 +18,7 @@ import (
 	"go.uber.org/zap/zaptest"
 
 	"github.com/siderolabs/image-factory/enterprise/auth"
+	"github.com/siderolabs/image-factory/internal/authn"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -30,12 +31,21 @@ func TestAuthProvider(t *testing.T) {
 	handler := func(t *testing.T, expectUser bool, expectUsername string) auth.Handler {
 		return func(ctx context.Context, w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 			username, ok := auth.GetAuthUsername(ctx)
+			principal, principalOK := authn.PrincipalFromContext(ctx)
+			requestPrincipal, requestPrincipalOK := authn.PrincipalFromContext(r.Context()) //nolint:contextcheck // The middleware must publish its derived context to the request.
 
 			if expectUser {
 				require.True(t, ok)
 				require.Equal(t, expectUsername, username)
+				require.True(t, principalOK)
+				require.Equal(t, expectUsername, principal.Username())
+				require.Equal(t, authn.CredentialProvider, principal.Credential())
+				require.True(t, requestPrincipalOK)
+				require.Equal(t, principal, requestPrincipal)
 			} else {
 				require.False(t, ok)
+				require.False(t, principalOK)
+				require.False(t, requestPrincipalOK)
 			}
 
 			return nil

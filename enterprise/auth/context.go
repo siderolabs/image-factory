@@ -7,21 +7,33 @@
 
 package auth
 
-import "context"
+import (
+	"context"
 
-type authContextKey struct{}
+	"github.com/siderolabs/image-factory/internal/authn"
+)
 
+// GetAuthUsername returns the username from the typed authenticated principal.
+// It remains as a compatibility adapter for ownership checks that only need the subject.
 func GetAuthUsername(ctx context.Context) (string, bool) {
-	username, ok := ctx.Value(authContextKey{}).(string)
+	principal, ok := authn.PrincipalFromContext(ctx)
+	if !ok {
+		return "", false
+	}
 
-	return username, ok
+	return principal.Username(), true
 }
 
-// WithAuthUsername returns a derived context carrying the authenticated username.
+// WithAuthUsername returns a derived context carrying a provider-authenticated principal.
 //
 // Used to forward the request-bound identity across detached contexts (e.g.,
 // singleflight callbacks running with context.Background()) so that downstream
 // ownership checks continue to see the originating user.
 func WithAuthUsername(ctx context.Context, username string) context.Context {
-	return context.WithValue(ctx, authContextKey{}, username)
+	principal, err := authn.NewPrincipal(username, authn.CredentialProvider)
+	if err != nil {
+		return ctx
+	}
+
+	return authn.ContextWithPrincipal(ctx, principal)
 }
