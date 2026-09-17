@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/cors"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/moby/moby/api/types/network"
 	"github.com/ory/dockertest/v4"
@@ -138,28 +139,39 @@ const (
 	s3Secret = "y1rE4xZnqO6xvM7L0jFD3EXAMPLEnG4K2vOfLp8Iv9"
 )
 
+// seaweedfsS3Config is the identity config SeaweedFS takes its S3 credentials from: without one it
+// serves anonymously, and the tests would pass no matter what they authenticate with.
+//
+// It is written by the container entrypoint below, so it must not contain a single quote.
+const seaweedfsS3Config = `{"identities":[{"name":"test","credentials":[{"accessKey":"` + s3Access +
+	`","secretKey":"` + s3Secret + `"}],"actions":["Admin","Read","Write","List","Tagging"]}]}`
+
 func setupS3(t *testing.T, pool dockertest.Pool, bucket string) string {
 	t.Helper()
 
 	_, port := findListenAddr(t, "127.0.0.1")
 
+	// SeaweedFS serves S3 on 8333. The config is written by the entrypoint rather than bind-mounted,
+	// so the container needs nothing from the host filesystem.
+	//
 	// each call binds a freshly allocated host port, so the container can't be shared with another call
 	res := pool.RunT(
 		t,
-		"minio/minio",
+		"chrislusf/seaweedfs",
+		dockertest.WithTag("4.47"),
 		dockertest.WithoutReuse(),
-		dockertest.WithCmd([]string{"server", "/data"}),
-		dockertest.WithPortBindings(network.PortMap{
-			network.MustParsePort("9000/tcp"): []network.PortBinding{{HostPort: port}},
+		dockertest.WithEntrypoint([]string{"/bin/sh", "-c"}),
+		dockertest.WithCmd([]string{
+			"echo '" + seaweedfsS3Config + "' > /etc/seaweedfs/s3.json && " +
+				"exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json",
 		}),
-		dockertest.WithEnv([]string{
-			fmt.Sprintf("MINIO_ROOT_USER=%s", s3Access),
-			fmt.Sprintf("MINIO_ROOT_PASSWORD=%s", s3Secret),
+		dockertest.WithPortBindings(network.PortMap{
+			network.MustParsePort("8333/tcp"): []network.PortBinding{{HostPort: port}},
 		}),
 	)
 
-	endpoint := net.JoinHostPort("127.0.0.1", res.GetPort("9000/tcp"))
-	t.Logf("running MinIO on %q", endpoint)
+	endpoint := net.JoinHostPort("127.0.0.1", res.GetPort("8333/tcp"))
+	t.Logf("running SeaweedFS S3 on %q", endpoint)
 
 	s3cli, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(s3Access, s3Secret, ""),
@@ -167,8 +179,27 @@ func setupS3(t *testing.T, pool dockertest.Pool, bucket string) string {
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, pool.Retry(t.Context(), 30*time.Second, func() error {
-		return s3cli.MakeBucket(t.Context(), bucket, minio.MakeBucketOptions{ForceCreate: true})
+	// SeaweedFS brings up the S3 port before the rest of the server is usable, so wait on a request
+	// that goes all the way through instead of on the port.
+	require.NoError(t, pool.Retry(t.Context(), 60*time.Second, func() error {
+		_, err := s3cli.ListBuckets(t.Context())
+
+		return err
+	}))
+
+	require.NoError(t, s3cli.MakeBucket(t.Context(), bucket, minio.MakeBucketOptions{}))
+
+	// SeaweedFS exposes a fixed set of headers to cross-origin requests, which doesn't include
+	// Content-Disposition, so the CORS checks on the presigned URL need the bucket to say otherwise.
+	require.NoError(t, s3cli.SetBucketCors(t.Context(), bucket, &cors.Config{
+		CORSRules: []cors.Rule{
+			{
+				AllowedOrigin: []string{"*"},
+				AllowedMethod: []string{http.MethodGet, http.MethodHead},
+				AllowedHeader: []string{"*"},
+				ExposeHeader:  []string{"Content-Disposition", "Content-Length", "Content-Type"},
+			},
+		},
 	}))
 
 	return endpoint

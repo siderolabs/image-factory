@@ -6,23 +6,50 @@
 > The S3 cache **does not replace** the other required cache configuration.
 > You must still configure options like `.cache.oci.*` and `.cache.signingKeyPath`.
 
-MinIO Setup (Local S3 Emulation).
+SeaweedFS Setup (Local S3 Emulation).
+
+SeaweedFS serves S3 on port 8333, and takes its S3 credentials from a config file:
+without one it serves anonymously.
+
+Example `s3.json`:
+
+```json
+{
+  "identities": [
+    {
+      "name": "image-factory",
+      "credentials": [
+        {
+          "accessKey": "AKIA6Z4C7N3S2JD3JH9A",
+          "secretKey": "y1rE4xZnqO6xvM7L0jFD3EXAMPLEnG4K2vOfLp8Iv9"
+        }
+      ],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}
+```
 
 Example `docker-compose.yaml` snippet:
 
 ```yaml
 services:
-  minio:
-    image: minio/minio
-    container_name: minio_local
-    network_mode: host
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.47
+    container_name: seaweedfs_local
+    ports:
+      - "9000:8333"
     volumes:
-      - ${PWD}/data:/mnt/data
-    environment:
-      MINIO_ROOT_USER: AKIA6Z4C7N3S2JD3JH9A
-      MINIO_ROOT_PASSWORD: y1rE4xZnqO6xvM7L0jFD3EXAMPLEnG4K2vOfLp8Iv9
-    command: server --console-address ":9001" /mnt/data
+      - ${PWD}/data:/data
+      - ${PWD}/config/s3.json:/etc/seaweedfs/s3.json:ro
+    command: server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
     restart: unless-stopped
+```
+
+The `image-factory` bucket must exist before starting Image Factory:
+
+```shell
+docker exec -i seaweedfs_local weed shell -master=localhost:9333 <<<"s3.bucket.create -name image-factory"
 ```
 
 Environment Variables:
