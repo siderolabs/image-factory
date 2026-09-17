@@ -165,7 +165,7 @@ A token is issued to the calling identity unless a CLI bootstrap credential name
 ```
 
 The browser UI sends an `actor` instead of `scopes`.
-The server expands `talos`, `automation`, `operator` or `admin` to its fixed [actor profile](authentication.md#browser-actor-profiles), including that profile's delegation ceiling.
+The server expands `talos`, `onprem`, `automation`, `operator` or `admin` to its fixed [actor profile](authentication.md#browser-actor-profiles), including that profile's delegation ceiling.
 `actor` cannot be combined with `scopes` or `issuable_scopes`; an unknown actor is `400`.
 Automation can issue Talos credentials and replacement Automation credentials; Admin can issue every actor profile.
 

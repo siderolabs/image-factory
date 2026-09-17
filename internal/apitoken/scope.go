@@ -72,6 +72,10 @@ var actorProfiles = []actorProfile{
 		scopes: []Scope{scopeImageRead},
 	},
 	{
+		id:     "onprem",
+		scopes: []Scope{scopeSourcePull},
+	},
+	{
 		id: "automation",
 		scopes: []Scope{
 			scopeImageRead,

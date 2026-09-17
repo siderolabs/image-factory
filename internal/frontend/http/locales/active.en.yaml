@@ -436,6 +436,12 @@
 - id: tokens.create.actor_talos_help
   translation: "Download generated images and PXE scripts, and pull generated installers and other OCI artifacts."
 
+- id: tokens.create.actor_onprem
+  translation: "On Premises"
+
+- id: tokens.create.actor_onprem_help
+  translation: "Mirror source images from this instance of Image Factory to the on-premises installation."
+
 - id: tokens.create.actor_automation
   translation: "Automation (Omni / Terraform)"
 

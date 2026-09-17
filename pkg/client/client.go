@@ -53,6 +53,8 @@ type Actor string
 const (
 	// ActorTalos can fetch generated images, PXE assets, and installer OCI artifacts.
 	ActorTalos Actor = "talos"
+	// ActorOnPrem can pull source images for mirroring into an on-premises installation.
+	ActorOnPrem Actor = "onprem"
 	// ActorAutomation can operate schematics and reports and issue bounded Talos or Automation credentials.
 	ActorAutomation Actor = "automation"
 	// ActorOperator can operate schematics and reports, fetch generated products, and pull source artifacts.

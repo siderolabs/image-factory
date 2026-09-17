@@ -181,7 +181,7 @@ Registered only when Enterprise authentication is enabled. Creates a scoped API 
 
 Append a stored or ephemeral token as `?token=<token>` on any `GET` or `HEAD` operation its scopes cover. Common cases are image downloads and `GET /pxe/...`, which forwards the credential into the asset URLs of the script it returns. Token-management scopes are not accepted in query credentials.
 
-Callers may request explicit scopes, or choose the fixed server-owned `talos`, `automation`, `operator` or `admin` actor profile. A token's executable `scope` and delegation ceiling in `issuable_scopes` are separate; a token with `token:issue` may grant only subsets of its own `issuable_scopes`. Only the offline `admin-token` bootstrap credential can mint for another principal.
+Callers may request explicit scopes, or choose the fixed server-owned `talos`, `onprem`, `automation`, `operator` or `admin` actor profile. A token's executable `scope` and delegation ceiling in `issuable_scopes` are separate; a token with `token:issue` may grant only subsets of its own `issuable_scopes`. Only the offline `admin-token` bootstrap credential can mint for another principal.
 
 Stored tokens are recorded, listed and individually revocable. Ephemeral and bootstrap tokens have no per-token revocation; removing a verification key retires every credential signed by that key.
 

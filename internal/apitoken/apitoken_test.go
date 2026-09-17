@@ -560,13 +560,14 @@ func TestResourceFirstScopeCatalog(t *testing.T) {
 func TestActorScopeProfiles(t *testing.T) {
 	t.Parallel()
 
-	require.Equal(t, []string{"talos", "automation", "operator", "admin"}, apitoken.Actors())
+	require.Equal(t, []string{"talos", "onprem", "automation", "operator", "admin"}, apitoken.Actors())
 
 	for actor, expected := range map[string]struct {
 		scopes   []apitoken.Scope
 		issuable []apitoken.Scope
 	}{
-		"talos": {scopes: []apitoken.Scope{"image:read"}},
+		"talos":  {scopes: []apitoken.Scope{"image:read"}},
+		"onprem": {scopes: []apitoken.Scope{"source:pull"}},
 		"automation": {
 			scopes:   []apitoken.Scope{"image:read", "report:read", "schematic:create", "schematic:read", "token:issue"},
 			issuable: []apitoken.Scope{"image:read", "report:read", "schematic:create", "schematic:read", "token:issue"},

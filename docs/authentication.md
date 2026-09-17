@@ -172,6 +172,7 @@ It offers fixed actor profiles whose scope lists are code-owned alongside the sc
 | Actor | Executable scopes | Issuable scopes |
 | --- | --- | --- |
 | Talos | `image:read` | none |
+| On Premises | `source:pull` | none |
 | Automation (Omni / Terraform) | `image:read`, `report:read`, `schematic:create`, `schematic:read`, `token:issue` | the same Automation scopes |
 | Operator | the non-token Automation scopes plus `source:pull` | none |
 | Admin | `image:read`, `report:read`, `schematic:create`, `schematic:read`, `source:pull`, `token:issue`, `token:read`, `token:revoke` | the same Admin scopes |

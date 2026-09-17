@@ -433,6 +433,12 @@
 - id: tokens.create.actor_talos_help
   translation: "Загрузка созданных образов и PXE-скриптов, а также установщиков и других OCI-артефактов."
 
+- id: tokens.create.actor_onprem
+  translation: "Локальная установка"
+
+- id: tokens.create.actor_onprem_help
+  translation: "Зеркалирование исходных образов из этого экземпляра Image Factory в локальную установку."
+
 - id: tokens.create.actor_automation
   translation: "Автоматизация (Omni / Terraform)"
 

@@ -143,6 +143,7 @@ func TestListCreateFrontendExpandsUIActors(t *testing.T) {
 		issuable []apitoken.Scope
 	}{
 		{name: "Talos", actor: "talos", scopes: []apitoken.Scope{"image:read"}},
+		{name: "OnPrem", actor: "onprem", scopes: []apitoken.Scope{"source:pull"}},
 		{
 			name:  "Automation",
 			actor: "automation",
@@ -224,10 +225,12 @@ func TestIssuingActorProfilesStayWithinTheirDelegationCeilings(t *testing.T) {
 	}{
 		{issuer: "automation", target: "talos", wantStatus: http.StatusOK},
 		{issuer: "automation", target: "automation", wantStatus: http.StatusOK},
+		{issuer: "automation", target: "onprem", wantStatus: http.StatusForbidden},
 		{issuer: "automation", target: "operator", wantStatus: http.StatusForbidden},
 		{issuer: "automation", target: "admin", wantStatus: http.StatusForbidden},
 		{issuer: "admin", target: "talos", wantStatus: http.StatusOK},
 		{issuer: "admin", target: "automation", wantStatus: http.StatusOK},
+		{issuer: "admin", target: "onprem", wantStatus: http.StatusOK},
 		{issuer: "admin", target: "operator", wantStatus: http.StatusOK},
 		{issuer: "admin", target: "admin", wantStatus: http.StatusOK},
 	} {

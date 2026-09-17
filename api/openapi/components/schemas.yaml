@@ -368,7 +368,7 @@ APITokenCreateRequest:
     actor:
       type: string
       description: Predefined capability profile; cannot be combined with explicit scopes.
-      enum: [talos, automation, operator, admin]
+      enum: [talos, onprem, automation, operator, admin]
     scopes:
       type: array
       description: Explicit capabilities; required when actor is absent.

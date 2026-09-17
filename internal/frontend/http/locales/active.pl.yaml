@@ -436,6 +436,12 @@
 - id: tokens.create.actor_talos_help
   translation: "Pobieranie wygenerowanych obrazów i skryptów PXE oraz instalatorów i innych artefaktów OCI."
 
+- id: tokens.create.actor_onprem
+  translation: "Instalacja lokalna"
+
+- id: tokens.create.actor_onprem_help
+  translation: "Kopiowanie obrazów źródłowych z tej instancji Image Factory do instalacji lokalnej."
+
 - id: tokens.create.actor_automation
   translation: "Automatyzacja (Omni / Terraform)"
 
