@@ -418,6 +418,9 @@
 - id: tokens.empty
   translation: "Brak tokenów."
 
+- id: tokens.loading
+  translation: "Ładowanie tokenów..."
+
 - id: tokens.create.name_label
   translation: "Nazwa"
 
@@ -427,8 +430,20 @@
 - id: tokens.create.ttl_help
   translation: "Czas trwania w formacie Go, na przykład 24h lub 90m. Dni nie są jednostką, więc wpisz 720h zamiast 30d. Pozostaw puste, aby użyć wartości domyślnej serwera."
 
+- id: tokens.create.ttl_examples
+  translation: "Typowe wartości: 24h (1 dzień), 720h (30 dni), 2160h (90 dni), 8760h (1 rok)."
+
+- id: tokens.create.ttl_expires
+  translation: "Wygasa"
+
 - id: tokens.create.actor_label
   translation: "Aktor tokenu"
+
+- id: tokens.create.actor_scopes
+  translation: "Przyznaje"
+
+- id: tokens.create.actor_issuable
+  translation: "Może wydawać"
 
 - id: tokens.create.actor_talos
   translation: "Talos"
@@ -489,6 +504,9 @@
 
 - id: tokens.revoke.button
   translation: "Odwołaj"
+
+- id: tokens.revoke.pending
+  translation: "Unieważnianie..."
 
 - id: tokens.revoke.title
   translation: "Odwołaj token"

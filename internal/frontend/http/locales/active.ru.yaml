@@ -415,6 +415,9 @@
 - id: tokens.empty
   translation: "Токенов пока нет."
 
+- id: tokens.loading
+  translation: "Загрузка токенов..."
+
 - id: tokens.create.name_label
   translation: "Имя"
 
@@ -424,8 +427,20 @@
 - id: tokens.create.ttl_help
   translation: "Длительность в формате Go, например 24h или 90m. Дни не являются единицей, поэтому пишите 720h вместо 30d. Оставьте пустым, чтобы использовать значение сервера по умолчанию."
 
+- id: tokens.create.ttl_examples
+  translation: "Типичные значения: 24h (1 день), 720h (30 дней), 2160h (90 дней), 8760h (1 год)."
+
+- id: tokens.create.ttl_expires
+  translation: "Истекает"
+
 - id: tokens.create.actor_label
   translation: "Роль токена"
+
+- id: tokens.create.actor_scopes
+  translation: "Даёт права"
+
+- id: tokens.create.actor_issuable
+  translation: "Может выдавать"
 
 - id: tokens.create.actor_talos
   translation: "Talos"
@@ -486,6 +501,9 @@
 
 - id: tokens.revoke.button
   translation: "Отозвать"
+
+- id: tokens.revoke.pending
+  translation: "Отзыв..."
 
 - id: tokens.revoke.title
   translation: "Отзыв токена"

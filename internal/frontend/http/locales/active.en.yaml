@@ -418,6 +418,9 @@
 - id: tokens.empty
   translation: "No tokens yet."
 
+- id: tokens.loading
+  translation: "Loading tokens..."
+
 - id: tokens.create.name_label
   translation: "Name"
 
@@ -427,8 +430,20 @@
 - id: tokens.create.ttl_help
   translation: "A Go duration, such as 24h or 90m. Days are not a unit, so write 720h rather than 30d. Leave it empty to take the server default."
 
+- id: tokens.create.ttl_examples
+  translation: "Common values: 24h (1 day), 720h (30 days), 2160h (90 days), 8760h (1 year)."
+
+- id: tokens.create.ttl_expires
+  translation: "Expires"
+
 - id: tokens.create.actor_label
   translation: "Token actor"
+
+- id: tokens.create.actor_scopes
+  translation: "Grants"
+
+- id: tokens.create.actor_issuable
+  translation: "Can issue"
 
 - id: tokens.create.actor_talos
   translation: "Talos"
@@ -489,6 +504,9 @@
 
 - id: tokens.revoke.button
   translation: "Revoke"
+
+- id: tokens.revoke.pending
+  translation: "Revoking..."
 
 - id: tokens.revoke.title
   translation: "Revoke Token"

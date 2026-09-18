@@ -418,6 +418,9 @@
 - id: tokens.empty
   translation: "Aucun jeton pour le moment."
 
+- id: tokens.loading
+  translation: "Chargement des jetons..."
+
 - id: tokens.create.name_label
   translation: "Nom"
 
@@ -427,8 +430,20 @@
 - id: tokens.create.ttl_help
   translation: "Une durée au format Go, par exemple 24h ou 90m. Le jour n'est pas une unité, écrivez donc 720h plutôt que 30d. Laissez vide pour prendre la valeur par défaut du serveur."
 
+- id: tokens.create.ttl_examples
+  translation: "Valeurs courantes : 24h (1 jour), 720h (30 jours), 2160h (90 jours), 8760h (1 an)."
+
+- id: tokens.create.ttl_expires
+  translation: "Expire le"
+
 - id: tokens.create.actor_label
   translation: "Acteur du jeton"
+
+- id: tokens.create.actor_scopes
+  translation: "Accorde"
+
+- id: tokens.create.actor_issuable
+  translation: "Peut émettre"
 
 - id: tokens.create.actor_talos
   translation: "Talos"
@@ -489,6 +504,9 @@
 
 - id: tokens.revoke.button
   translation: "Révoquer"
+
+- id: tokens.revoke.pending
+  translation: "Révocation..."
 
 - id: tokens.revoke.title
   translation: "Révoquer le jeton"

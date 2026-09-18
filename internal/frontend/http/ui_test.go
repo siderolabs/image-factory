@@ -5,13 +5,17 @@
 package http_test
 
 import (
+	nethttp "net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/siderolabs/talos/pkg/machinery/platforms"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 	"go.yaml.in/yaml/v4"
 
+	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/frontend/http"
 )
 
@@ -82,4 +86,47 @@ func TestURLValuesOmitsEmbeddedConfig(t *testing.T) {
 
 	assert.Equal(t, "console=tty0", values.Get("cmdline"))
 	assert.NotContains(t, values, "embedded-config")
+}
+
+// renderTokensUI renders the token management page the way the route serves it.
+func renderTokensUI(t *testing.T) string {
+	t.Helper()
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(t.Context(), nethttp.MethodGet, "/ui/tokens", nil)
+
+	require.NoError(t, http.NewTestFrontend(zaptest.NewLogger(t)).HandleTokensUI()(t.Context(), w, req, nil))
+
+	return w.Body.String()
+}
+
+// The create dialog names the scopes each actor translates to, so the choice doesn't have to be
+// made from the one-line description alone and corrected once a token is already in use.
+func TestTokensUIShowsActorScopes(t *testing.T) {
+	body := renderTokensUI(t)
+
+	for _, actor := range apitoken.Actors() {
+		scopes, issuableScopes, ok := apitoken.ScopesForActor(actor)
+		require.True(t, ok)
+
+		assert.Contains(t, body, `value="`+actor+`"`)
+
+		// The script reveals one block per actor by this attribute, so the page carries all of
+		// them and shows the selected one.
+		assert.Contains(t, body, `data-actor="`+actor+`"`)
+
+		for _, scope := range append(scopes, issuableScopes...) {
+			assert.Contains(t, body, scope, "actor %q does not show scope %q", actor, scope)
+		}
+	}
+}
+
+// The page has a loading state, a lifetime cheat sheet and a place to preview the expiry date;
+// the script wires all three by ID.
+func TestTokensUIHasLifetimeAndLoadingHelp(t *testing.T) {
+	body := renderTokensUI(t)
+
+	assert.Contains(t, body, `id="tokens-loading"`)
+	assert.Contains(t, body, `id="token-ttl-expires"`)
+	assert.Contains(t, body, "8760h (1 year)")
 }
