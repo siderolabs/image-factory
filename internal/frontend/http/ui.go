@@ -202,6 +202,35 @@ func (f *Frontend) handleUI(ctx context.Context, w http.ResponseWriter, r *http.
 	})
 }
 
+// tokenActor is one choice in the create-token dialog: an actor profile, plus the scopes it
+// translates to. The dialog shows the scopes, because a profile's one-line description doesn't
+// say whether, for instance, Talos can create schematics, and the answer only shows up later in
+// the listing of a token that has already been minted.
+type tokenActor struct {
+	ID             string
+	Scopes         []apitoken.Scope
+	IssuableScopes []apitoken.Scope
+}
+
+// tokenActors returns the actor profiles in presentation order with their scopes resolved.
+func tokenActors() []tokenActor {
+	ids := apitoken.Actors()
+	actors := make([]tokenActor, 0, len(ids))
+
+	for _, id := range ids {
+		// Actors() only ever names profiles that exist, so the lookup cannot miss.
+		scopes, issuableScopes, _ := apitoken.ScopesForActor(id)
+
+		actors = append(actors, tokenActor{
+			ID:             id,
+			Scopes:         scopes,
+			IssuableScopes: issuableScopes,
+		})
+	}
+
+	return actors
+}
+
 // handleTokensUI handles '/ui/tokens'.
 func (f *Frontend) handleTokensUI(_ context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	return getTemplates().ExecuteTemplate(w, "tokens.html", struct {
@@ -209,7 +238,7 @@ func (f *Frontend) handleTokensUI(_ context.Context, w http.ResponseWriter, r *h
 		Localizer     *i18n.Localizer
 		Bundle        *i18n.Bundle
 		Lang          string
-		Actors        []string
+		Actors        []tokenActor
 		Enterprise    bool
 		LogoutEnabled bool
 	}{
@@ -217,7 +246,7 @@ func (f *Frontend) handleTokensUI(_ context.Context, w http.ResponseWriter, r *h
 		Localizer:     f.getLocalizer(r),
 		Bundle:        getLocalizerBundle(),
 		Lang:          getCurrentLang(r),
-		Actors:        apitoken.Actors(),
+		Actors:        tokenActors(),
 		Enterprise:    enterprise.Enabled(),
 		LogoutEnabled: f.logoutEnabled(),
 	})

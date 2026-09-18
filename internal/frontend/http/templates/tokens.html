@@ -51,6 +51,19 @@
 
             <div id="tokens-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
 
+            <div id="tokens-loading" class="flex items-center gap-2 mb-6 text-sm text-gray-500 dark:text-gray-400">
+                <svg aria-hidden="true" class="w-4 h-4 text-gray-300 animate-spin fill-gray-500 dark:text-gray-600 dark:fill-gray-400"
+                    viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+                        fill="currentColor" />
+                    <path
+                        d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+                        fill="currentFill" />
+                </svg>
+                {{ t .Localizer "tokens.loading" }}
+            </div>
+
             <table class="w-full text-sm mb-6 hidden" id="tokens-table">
                 <thead>
                     <tr class="text-left border-b border-gray-200 dark:border-gray-700">
@@ -67,8 +80,8 @@
         </div>
     </main>
 
-    <div id="token-create-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
-        <div class="relative w-full max-w-md rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
+    <div id="token-create-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4 overflow-y-auto">
+        <div class="relative my-8 w-full max-w-md rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
             <h2 class="text-base font-semibold mb-4 text-gray-900 dark:text-white">{{ t .Localizer "tokens.create.button" }}</h2>
             <div id="token-create-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
             <form id="tokens-create-form">
@@ -81,18 +94,45 @@
                     class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-1">{{ t .Localizer "tokens.create.ttl_label" }}</label>
                 <input type="text" id="token-ttl" name="ttl" autocomplete="off" placeholder="720h"
                     class="w-full bg-gray-50 border border-gray-300 text-sm text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                <p class="mt-1 mb-4 text-xs text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.create.ttl_help" }}</p>
+                <div class="mt-1 mb-4 text-xs text-gray-500 dark:text-gray-400">
+                    <p>{{ t .Localizer "tokens.create.ttl_help" }}</p>
+                    <p class="mt-1">{{ t .Localizer "tokens.create.ttl_examples" }}</p>
+                    <p id="token-ttl-expires" class="hidden mt-1"></p>
+                </div>
 
                 <fieldset class="mb-4">
                     <legend class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">{{ t .Localizer "tokens.create.actor_label" }}</legend>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {{ range $actor := .Actors }}
                         <label class="relative block cursor-pointer rounded-lg border border-gray-300 p-3 text-sm hover:border-blue-500 dark:border-gray-600 dark:hover:border-blue-500">
-                            <input type="radio" name="actor" value="{{ $actor }}" class="peer sr-only" {{ if eq $actor "talos" }}checked{{ end }}>
-                            <span class="block font-medium text-gray-900 peer-checked:text-blue-700 dark:text-gray-100 dark:peer-checked:text-blue-400">{{ t $.Localizer (printf "tokens.create.actor_%s" $actor) }}</span>
-                            <span class="mt-1 block text-xs text-gray-500 dark:text-gray-400">{{ t $.Localizer (printf "tokens.create.actor_%s_help" $actor) }}</span>
+                            <input type="radio" name="actor" value="{{ $actor.ID }}" class="peer sr-only" {{ if eq $actor.ID "talos" }}checked{{ end }}>
+                            <span class="block font-medium text-gray-900 peer-checked:text-blue-700 dark:text-gray-100 dark:peer-checked:text-blue-400">{{ t $.Localizer (printf "tokens.create.actor_%s" $actor.ID) }}</span>
+                            <span class="mt-1 block text-xs text-gray-500 dark:text-gray-400">{{ t $.Localizer (printf "tokens.create.actor_%s_help" $actor.ID) }}</span>
                             <span class="pointer-events-none absolute inset-0 rounded-lg border-2 border-transparent peer-checked:border-blue-600"></span>
                         </label>
+                        {{ end }}
+                    </div>
+
+                    <!--
+                        The scopes of the actor currently selected. One block below the grid rather
+                        than a line in each card: the lists are long enough that putting them in the
+                        cards either widens the dialog or makes the grid jump a row taller as the
+                        selection moves.
+                    -->
+                    <div id="token-actor-scopes" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        {{ range $actor := .Actors }}
+                        <div data-actor="{{ $actor.ID }}" class="hidden">
+                            <p>
+                                <span class="font-medium">{{ t $.Localizer "tokens.create.actor_scopes" }}:</span>
+                                <span class="font-mono break-words">{{ range $i, $scope := $actor.Scopes }}{{ if $i }} {{ end }}{{ $scope }}{{ end }}</span>
+                            </p>
+                            {{ if $actor.IssuableScopes }}
+                            <p class="mt-1">
+                                <span class="font-medium">{{ t $.Localizer "tokens.create.actor_issuable" }}:</span>
+                                <span class="font-mono break-words">{{ range $i, $scope := $actor.IssuableScopes }}{{ if $i }} {{ end }}{{ $scope }}{{ end }}</span>
+                            </p>
+                            {{ end }}
+                        </div>
                         {{ end }}
                     </div>
                 </fieldset>
@@ -172,9 +212,11 @@
         var table = document.getElementById('tokens-table');
         var rowsEl = document.getElementById('tokens-rows');
         var emptyEl = document.getElementById('tokens-empty');
+        var loadingEl = document.getElementById('tokens-loading');
         var createForm = document.getElementById('tokens-create-form');
         var nameInput = document.getElementById('token-name');
         var ttlInput = document.getElementById('token-ttl');
+        var ttlExpiresEl = document.getElementById('token-ttl-expires');
         var createModal = document.getElementById('token-create-modal');
         var createOpen = document.getElementById('token-create-open');
         var createCancel = document.getElementById('token-create-cancel');
@@ -182,6 +224,7 @@
         var createSpinner = document.getElementById('token-create-spinner');
         var createPending = false;
         var actorInputs = createForm.querySelectorAll('input[name="actor"]');
+        var actorScopeBlocks = document.getElementById('token-actor-scopes').children;
         var secretModal = document.getElementById('token-secret-modal');
         var secretClose = document.getElementById('token-secret-close');
         var secretValueEl = document.getElementById('token-secret-value');
@@ -191,7 +234,38 @@
         var revokeCancel = document.getElementById('token-revoke-cancel');
         var revokeConfirm = document.getElementById('token-revoke-confirm');
         var revokeTargetID = null;
+        // The listing is rebuilt wholesale, so the rows a revoke has to reach are tracked per
+        // render rather than looked up in the DOM.
+        var rowsByID = {};
+        // Tokens revoked from this page. The revoke lands before the listing behind it catches
+        // up, and without this the next render would put a row back that is already gone.
+        var revokedIDs = {};
         var copyIcon = '<svg class="w-3 h-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>';
+
+        // formatDateTime renders an absolute timestamp as YYYY-MM-DD HH:MM:SS +HH:MM in the reader's
+        // own time zone. The format is fixed rather than locale-dependent because the page cannot
+        // tell which one the reader expects: the browser reports its UI language, not the system's
+        // regional settings, so a reader whose browser says en-US gets US month/day order however
+        // their machine is set up. A date that can be read two ways is worse than one that reads
+        // the same everywhere.
+        //
+        // The offset is spelled out so a local time is not taken for UTC, and is read off the
+        // timestamp itself, so a date on the far side of a daylight-saving change carries the
+        // offset that was in force then rather than the one in force now.
+        function formatDateTime(date) {
+            function pad(n) {
+                return String(n).padStart(2, '0');
+            }
+
+            // getTimezoneOffset counts minutes behind UTC, the opposite sign to the one a
+            // timestamp is written with.
+            var offset = -date.getTimezoneOffset();
+            var magnitude = Math.abs(offset);
+
+            return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
+                ' ' + pad(date.getHours()) + ':' + pad(date.getMinutes()) + ':' + pad(date.getSeconds()) +
+                ' ' + (offset < 0 ? '-' : '+') + pad(Math.floor(magnitude / 60)) + ':' + pad(magnitude % 60);
+        }
 
         function showError(message) {
             errorEl.textContent = message;
@@ -201,6 +275,40 @@
         function clearError() {
             errorEl.textContent = '';
             errorEl.classList.add('hidden');
+        }
+
+        // maxErrorLength bounds what a failed response is allowed to put on the page. Our own
+        // messages are one line; anything longer came from somewhere else.
+        var maxErrorLength = 300;
+
+        // errorMessage resolves a failed response to the text to show. The server puts the useful
+        // part in the body -- "apitoken: requested TTL out of range: ..." -- and answering with the
+        // status code alone leaves the network tab as the only place to find out what went wrong.
+        // fallback covers a response that carries no message of its own.
+        function errorMessage(r, fallback) {
+            function orFallback() {
+                return fallback || ('HTTP ' + r.status);
+            }
+
+            return r.text().then(function(body) {
+                var message = (body || '').trim();
+
+                // A long or markup-shaped body is a proxy's error page rather than one of ours,
+                // and putting that on the page would be worse than the status code.
+                if (!message || message.length > maxErrorLength || message.charAt(0) === '<') {
+                    return orFallback();
+                }
+
+                return message;
+            }, orFallback);
+        }
+
+        // failed turns a response into the rejection the promise chain expects, carrying whatever
+        // the server had to say about it.
+        function failed(r, fallback) {
+            return errorMessage(r, fallback).then(function(message) {
+                throw new Error(message);
+            });
         }
 
         // copyableBlock renders text in a copy-to-clipboard box: a span (so the shared
@@ -266,18 +374,26 @@
             }
         }
 
+        // showEmpty switches between the table and the "no tokens yet" line. It is called after
+        // every change to the listing, including a revoke that empties it.
+        function showEmpty(empty) {
+            table.classList.toggle('hidden', empty);
+            emptyEl.classList.toggle('hidden', !empty);
+        }
+
         function renderRows(tokens) {
             rowsEl.innerHTML = '';
+            rowsByID = {};
+
+            tokens = tokens.filter(function(tok) { return !revokedIDs[tok.id]; });
 
             if (!tokens.length) {
-                table.classList.add('hidden');
-                emptyEl.classList.remove('hidden');
+                showEmpty(true);
 
                 return;
             }
 
-            table.classList.remove('hidden');
-            emptyEl.classList.add('hidden');
+            showEmpty(false);
 
             tokens.forEach(function(tok) {
                 var tr = document.createElement('tr');
@@ -297,8 +413,8 @@
                 tr.appendChild(scopesCell);
 
                 var createdCell = document.createElement('td');
-                createdCell.className = 'py-2 pr-3 text-gray-500 dark:text-gray-400';
-                createdCell.textContent = tok.created_at ? new Date(tok.created_at).toLocaleString() : '';
+                createdCell.className = 'py-2 pr-3 whitespace-nowrap text-gray-500 dark:text-gray-400';
+                createdCell.textContent = tok.created_at ? formatDateTime(new Date(tok.created_at)) : '';
                 tr.appendChild(createdCell);
 
                 var expiresCell = document.createElement('td');
@@ -307,7 +423,7 @@
                 if (tok.expires_at) {
                     var expiresAt = new Date(tok.expires_at);
                     expiresCell.textContent = remaining(expiresAt);
-                    expiresCell.title = expiresAt.toLocaleString();
+                    expiresCell.title = formatDateTime(expiresAt);
                 }
 
                 tr.appendChild(expiresCell);
@@ -316,27 +432,45 @@
                 actionCell.className = 'py-2 text-right';
                 var revokeBtn = document.createElement('button');
                 revokeBtn.type = 'button';
-                revokeBtn.className = 'text-red-600 hover:underline dark:text-red-400';
+                revokeBtn.className = 'text-red-600 hover:underline disabled:no-underline disabled:opacity-60 disabled:cursor-not-allowed dark:text-red-400';
                 revokeBtn.textContent = '{{ t .Localizer "tokens.revoke.button" }}';
                 revokeBtn.addEventListener('click', function() { showRevoke(tok.id); });
                 actionCell.appendChild(revokeBtn);
                 tr.appendChild(actionCell);
+
+                rowsByID[tok.id] = { row: tr, button: revokeBtn };
 
                 rowsEl.appendChild(tr);
             });
         }
 
         function loadTokens() {
+            // The listing can take seconds to come back, and an empty table in the meantime reads
+            // as "no tokens". Say it is loading instead -- but only while there is nothing to show,
+            // so a reload behind an already-rendered table doesn't take it off the screen.
+            var blank = !rowsEl.children.length;
+
+            if (blank) {
+                loadingEl.classList.remove('hidden');
+                emptyEl.classList.add('hidden');
+            }
+
+            function settled() {
+                loadingEl.classList.add('hidden');
+            }
+
             fetch('/tokens', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function(r) {
-                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    if (!r.ok) return failed(r);
 
                     return r.json();
                 })
                 .then(function(doc) {
+                    settled();
                     renderRows(doc.tokens || []);
                 })
                 .catch(function(err) {
+                    settled();
                     showError('{{ t .Localizer "tokens.error.load" }}: ' + err.message);
                 });
         }
@@ -360,19 +494,52 @@
             if (e.target === revokeModal) hideRevoke();
         });
 
+        // setRowPending marks a row as having its revoke in flight. The request takes long enough
+        // that a row left untouched reads as a click that did nothing, and invites a second one.
+        function setRowPending(entry, pending) {
+            if (!entry) return;
+
+            entry.button.disabled = pending;
+            entry.row.classList.toggle('opacity-50', pending);
+            entry.button.textContent = pending
+                ? '{{ t .Localizer "tokens.revoke.pending" }}'
+                : '{{ t .Localizer "tokens.revoke.button" }}';
+        }
+
+        // removeRow drops a revoked token from the listing straight away, rather than waiting for
+        // a reload to stop returning it.
+        function removeRow(id) {
+            var entry = rowsByID[id];
+            if (!entry) return;
+
+            entry.row.remove();
+            delete rowsByID[id];
+
+            if (!rowsEl.children.length) showEmpty(true);
+        }
+
         revokeConfirm.addEventListener('click', function() {
             var id = revokeTargetID;
             if (!id) return;
 
             hideRevoke();
+            clearError();
+
+            var entry = rowsByID[id];
+
+            setRowPending(entry, true);
 
             fetch('/tokens/' + encodeURIComponent(id) + '/revoke', { method: 'POST', credentials: 'same-origin' })
                 .then(function(r) {
-                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    if (!r.ok) return failed(r);
 
-                    loadTokens();
+                    revokedIDs[id] = true;
+
+                    removeRow(id);
                 })
                 .catch(function(err) {
+                    // The token is still there, so give the row its button back for a retry.
+                    setRowPending(entry, false);
                     showError('{{ t .Localizer "tokens.error.revoke" }}: ' + err.message);
                 });
         });
@@ -387,6 +554,70 @@
             createErrorEl.classList.add('hidden');
         }
 
+        // durationUnits maps a Go duration unit to milliseconds, which is what Date works in.
+        var durationUnits = {
+            ns: 1e-6, us: 1e-3, 'µs': 1e-3, 'μs': 1e-3, ms: 1, s: 1000, m: 60000, h: 3600000
+        };
+
+        // parseGoDuration converts the lifetime field to milliseconds so the dialog can say when
+        // the token would expire. It accepts a sequence of amount+unit pairs, the same shape the
+        // server takes, and returns null for anything else: the preview then stays hidden and the
+        // server remains the one deciding what is valid.
+        function parseGoDuration(text) {
+            var re = /(\d+(?:\.\d+)?)(ns|us|µs|μs|ms|s|m|h)/y;
+            var total = 0;
+            var at = 0;
+
+            while (at < text.length) {
+                re.lastIndex = at;
+
+                var match = re.exec(text);
+                if (!match) return null;
+
+                total += parseFloat(match[1]) * durationUnits[match[2]];
+                at = re.lastIndex;
+            }
+
+            return total > 0 ? total : null;
+        }
+
+        // updateTTLPreview shows the date the lifetime works out to, so nobody has to count hours
+        // to find out what 2160h means. An empty field takes the server default, whose length this
+        // page does not know, so there is nothing to show for it.
+        function updateTTLPreview() {
+            var ms = parseGoDuration(ttlInput.value.trim());
+
+            if (ms === null) {
+                ttlExpiresEl.classList.add('hidden');
+                ttlExpiresEl.textContent = '';
+
+                return;
+            }
+
+            ttlExpiresEl.textContent = '{{ t .Localizer "tokens.create.ttl_expires" }} ' +
+                formatDateTime(new Date(Date.now() + ms));
+            ttlExpiresEl.classList.remove('hidden');
+        }
+
+        ttlInput.addEventListener('input', updateTTLPreview);
+
+        // updateActorScopes shows the scopes of the actor currently selected, so the choice is made
+        // knowing what it grants rather than finding out from the first request the token cannot
+        // make. Only the selected actor's block is shown: all five at once is a wall of text.
+        function updateActorScopes() {
+            var selected = createForm.querySelector('input[name="actor"]:checked');
+
+            for (var i = 0; i < actorScopeBlocks.length; i++) {
+                var block = actorScopeBlocks[i];
+
+                block.classList.toggle('hidden', !selected || block.dataset.actor !== selected.value);
+            }
+        }
+
+        actorInputs.forEach(function(input) {
+            input.addEventListener('change', updateActorScopes);
+        });
+
         // resetCreateForm puts the modal back to its defaults, because it is reused for
         // every create. Talos is the narrow default actor.
         function resetCreateForm() {
@@ -396,6 +627,9 @@
             actorInputs.forEach(function(input) {
                 input.checked = input.value === 'talos';
             });
+
+            updateTTLPreview();
+            updateActorScopes();
         }
 
         function showCreate() {
@@ -494,8 +728,7 @@
                 body: JSON.stringify(body)
             })
                 .then(function(r) {
-                    if (r.status === 409) throw new Error('{{ t .Localizer "tokens.error.limit" }}');
-                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    if (!r.ok) return failed(r, r.status === 409 ? '{{ t .Localizer "tokens.error.limit" }}' : '');
 
                     return r.json();
                 })
@@ -514,6 +747,7 @@
                 });
         });
 
+        updateActorScopes();
         loadTokens();
     })();
     </script>

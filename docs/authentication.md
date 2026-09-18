@@ -167,7 +167,7 @@ Its scopes control which routes it may reach and whether it is eligible for quer
 ### Browser actor profiles
 
 The browser UI does not expose individual scope or delegation controls.
-It offers fixed actor profiles whose scope lists are code-owned alongside the scope catalog:
+It offers fixed actor profiles whose scope lists are code-owned alongside the scope catalog, and the create-token dialog shows each profile's scopes next to its description:
 
 | Actor | Executable scopes | Issuable scopes |
 | --- | --- | --- |

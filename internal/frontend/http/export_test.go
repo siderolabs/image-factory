@@ -27,6 +27,11 @@ func (f *Frontend) HandleLLMsTxt() Handler {
 	return f.handleLLMsTxt
 }
 
+// HandleTokensUI exposes the token management page handler for external tests.
+func (f *Frontend) HandleTokensUI() Handler {
+	return f.handleTokensUI
+}
+
 func ApplyReferrersFilterHeader(header http.Header, artifactType string) {
 	applyReferrersFilterHeader(header, artifactType)
 }
