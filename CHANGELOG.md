@@ -1,3 +1,122 @@
+## [image-factory 1.7.1](https://github.com/siderolabs/image-factory/releases/tag/v1.7.1) (2026-09-21)
+
+Welcome to the v1.7.1 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Andrey Smirnov
+* Noel Georgi
+* Mateusz Urbanek
+* Utku Ozdemir
+* Maja Bojarska
+* Aleksei Sviridkin
+* Brian Topping
+* Louis Deconinck
+* Raphaël DUCOM
+* leppeK
+
+### Changes
+<details><summary>6 commits</summary>
+<p>
+
+* [`fec432d`](https://github.com/siderolabs/image-factory/commit/fec432d0a129e1665ee7064bc6d7d54a4cc07ca1) feat: update dependencies
+* [`c99ce3a`](https://github.com/siderolabs/image-factory/commit/c99ce3a3f0ec5f9f707d39832c61a66dd6974aa0) feat: improve the token UI
+* [`73f93b2`](https://github.com/siderolabs/image-factory/commit/73f93b26709faef8c2db968365b5341e1eafa408) test: switch to SeaweedFS instead of minio for testing
+* [`c35986a`](https://github.com/siderolabs/image-factory/commit/c35986aa6755191ec707a874fa33d615f7ef1537) feat: add 'On Premises' role to the token UI
+* [`42d9b84`](https://github.com/siderolabs/image-factory/commit/42d9b84432f0b18a29da143dd3d92147ee8b1705) fix(scanner): wait for database replacement
+* [`feaf2f6`](https://github.com/siderolabs/image-factory/commit/feaf2f66c40f3a8b630f7b503c3560c02117e72c) fix: download 1.14.0
+</p>
+</details>
+
+### Changes from siderolabs/gen
+<details><summary>2 commits</summary>
+<p>
+
+* [`cbd9518`](https://github.com/siderolabs/gen/commit/cbd9518a7bc6d70cf85390c1f6109c8236ba2a49) chore: rekres and update deps
+* [`26ccee1`](https://github.com/siderolabs/gen/commit/26ccee180839c57d9e2e4fcdf37e4753fc0feb25) feat: provide new YAMl unmarshal validator for null values
+</p>
+</details>
+
+### Changes from siderolabs/talos
+<details><summary>35 commits</summary>
+<p>
+
+* [`2f86b9d2a`](https://github.com/siderolabs/talos/commit/2f86b9d2a29b413deddd7122a8420b8913813615) release(v1.14.1): prepare release
+* [`65f704ee1`](https://github.com/siderolabs/talos/commit/65f704ee16a95fa65cb6fe230db007be31aaf02a) chore: pass kernel version down to VEX generator
+* [`63101af5b`](https://github.com/siderolabs/talos/commit/63101af5b6f9c7272c025340fe6a34e707f388f3) fix: prevent sandboxd signal dispositions leaking into services
+* [`676276f72`](https://github.com/siderolabs/talos/commit/676276f72e9fe69dff4669502675b067a7b8feca) test: peer passively with the MetalLB speaker
+* [`2b8b46dcd`](https://github.com/siderolabs/talos/commit/2b8b46dcd791d8a0e8587c6efac656aa21d8c743) test: stop ARP flux breaking the BGP VRF test
+* [`357d6006a`](https://github.com/siderolabs/talos/commit/357d6006ac28b7addf5e1c4fd6358cd24dd9b5c1) fix: rebuild the BGP server when its VRF is recreated
+* [`db0b5a17c`](https://github.com/siderolabs/talos/commit/db0b5a17c413d369eb307dfaaf5dc666bebe4f94) fix: guard against nil config document slices
+* [`094741ff3`](https://github.com/siderolabs/talos/commit/094741ff34895ff4a7e2f74ea45978bce3ce0594) docs: clarify the kube-apiserver extra args and new config
+* [`a13b560f4`](https://github.com/siderolabs/talos/commit/a13b560f4ddcad756e081054955330aecc98135c) docs: correct the UnattendedInstallConfig name in the schema
+* [`166c4070c`](https://github.com/siderolabs/talos/commit/166c4070cea0cbcd1727e59380a03d50c4495f5b) fix: make --insecure reachable for talosctl meta subcommands
+* [`aac106867`](https://github.com/siderolabs/talos/commit/aac10686725927d24fc8fa67bb82ddad22948dfd) fix: ignore apply config dry-run for try mode
+* [`7a2c4e8cf`](https://github.com/siderolabs/talos/commit/7a2c4e8cf3d9b2d392bafab3a175a9f6ad8b0d45) fix: tighten the validation of v1alpha1 configs vs. migration
+* [`aef64fa38`](https://github.com/siderolabs/talos/commit/aef64fa389d6b1ad3baa084e6a7a3ccd85487de7) fix: reconnect the WireGuard over gRPC tunnel after a failure
+* [`d07a21ad2`](https://github.com/siderolabs/talos/commit/d07a21ad21f23e78e459442a2514332f44fc0b30) fix: drop logical links if they no longer declare as logical
+* [`9996bc871`](https://github.com/siderolabs/talos/commit/9996bc87114670a3d3f7e1ba9d3109c523e702f2) fix: create GRUB bootloader ISOs only for BIOS
+* [`0604432de`](https://github.com/siderolabs/talos/commit/0604432deb864399ee224d2c5c5f456774099bff) feat: add NixOS OVMF search path
+* [`5cb44dcab`](https://github.com/siderolabs/talos/commit/5cb44dcab35ca17a59047203eaf6134269d12fbb) fix: wait for USB settle explicitly
+* [`20dcd515a`](https://github.com/siderolabs/talos/commit/20dcd515ab48b54d963da94dde954cf9409e992a) fix: empty searchdomains dropped on merge
+* [`1e3e3fe50`](https://github.com/siderolabs/talos/commit/1e3e3fe503c983c9e97c38434fb1932a137e19d9) chore: support correctly various disk types for the system disk
+* [`7c2e0b113`](https://github.com/siderolabs/talos/commit/7c2e0b113a2313cb7b7c113533fa5f50f836a295) fix: notify about link alias changes
+* [`e9a67e163`](https://github.com/siderolabs/talos/commit/e9a67e16380e06a5f2aeb6b7c4af5819d89c1345) chore: use the host page cache for the QEMU cluster disks
+* [`0afebca70`](https://github.com/siderolabs/talos/commit/0afebca70d017f6dbc0a910ed9bc108a27ae6994) fix: use the final config version in upgrade-k8s
+* [`0ad18bb55`](https://github.com/siderolabs/talos/commit/0ad18bb555d4be85eb3c93b2b7396ec81177ae5e) feat: bring in containerd 2.3.5
+* [`04c49d8a3`](https://github.com/siderolabs/talos/commit/04c49d8a34e3a59ccf9c8fc164ede7d84eaafe52) feat: allow generating an ECDSA service account key in secrets bundles
+* [`bb2cb91fc`](https://github.com/siderolabs/talos/commit/bb2cb91fc95b3e6f477cf716b3a7c04c6bf06352) fix(security): define the permissions the 6.18 kernel expects in the classes
+* [`bf31b2811`](https://github.com/siderolabs/talos/commit/bf31b281115bd6207ba039f9f07c3795227fada3) fix: improve resilience of the action tracker against dropped conns
+* [`00a0ea03c`](https://github.com/siderolabs/talos/commit/00a0ea03cd6a90309bd25408e091461722f2ec97) fix: set TCP keealive and user timeout on apid proxied connections
+* [`6c065607e`](https://github.com/siderolabs/talos/commit/6c065607e4d05f25b871f8294cf8614f0bea1fbd) test: revert disabling PS/2 in QEMU
+* [`9841e0b47`](https://github.com/siderolabs/talos/commit/9841e0b470f6302c4564e993dba3495b03ac4fae) docs: fix containerconfig.dependson examples
+* [`a11a260e6`](https://github.com/siderolabs/talos/commit/a11a260e605175deb6e1d3d770a85cf4ad0b9492) feat: add USB LAN78XX drivers to the rootfs
+* [`9f8277434`](https://github.com/siderolabs/talos/commit/9f82774346d4dda2962d2ed4a090307fa65e8ef6) fix: harden the code around kubelet's client certificate handling
+* [`3260b1e1f`](https://github.com/siderolabs/talos/commit/3260b1e1f983eef144dfe620bbbbe55b9258a4ec) fix: resolve volume devices in shared selector helper
+* [`084152592`](https://github.com/siderolabs/talos/commit/0841525924ac2ecb48b55ef58699e7860b58a21a) fix: create LVM physical volumes on the decrypted device
+* [`7dabdeb43`](https://github.com/siderolabs/talos/commit/7dabdeb43cb7bbd76080a80513e973af2280bc86) feat: add xfrm interface module
+* [`63963f7da`](https://github.com/siderolabs/talos/commit/63963f7daa28657c8f0b39cf1967b5524d4d1641) feat: sync pkgs/tools
+</p>
+</details>
+
+### Dependency Changes
+
+* **cloud.google.com/go/auth**                           v0.22.0 -> v0.23.3
+* **github.com/anchore/grype**                           v0.116.1 -> v0.119.0
+* **github.com/anchore/syft**                            v1.50.0 -> v1.52.0
+* **github.com/coreos/go-oidc/v3**                       v3.20.0 -> v3.21.0
+* **github.com/getkin/kin-openapi**                      v0.146.0 -> v0.149.0
+* **github.com/go-jose/go-jose/v4**                      v4.1.4 -> v4.1.5
+* **github.com/google/go-containerregistry**             v0.21.9 -> v0.22.1
+* **github.com/klauspost/compress**                      v1.19.2 -> v1.20.0
+* **github.com/knadh/koanf/parsers/dotenv**              v1.1.1 -> v1.1.2
+* **github.com/knadh/koanf/parsers/json**                v1.0.0 -> v1.0.1
+* **github.com/knadh/koanf/parsers/yaml**                v1.1.0 -> v1.1.1
+* **github.com/knadh/koanf/providers/env/v2**            v2.0.0 -> v2.0.1
+* **github.com/knadh/koanf/providers/structs**           v1.0.0 -> v1.0.1
+* **github.com/knadh/koanf/v2**                          v2.3.5 -> v2.3.6
+* **github.com/minio/minio-go/v7**                       v7.2.1 -> v7.3.0
+* **github.com/moby/moby/api**                           v1.55.0 -> v1.56.0
+* **github.com/secure-systems-lab/go-securesystemslib**  v0.11.0 -> v0.11.1
+* **github.com/siderolabs/gen**                          v0.8.7 -> v0.8.8
+* **github.com/siderolabs/talos**                        09681e895fe6 -> v1.14.1
+* **github.com/siderolabs/talos/pkg/machinery**          09681e895fe6 -> v1.14.1
+* **github.com/sigstore/sigstore**                       v1.10.9 -> v1.10.10
+* **github.com/ulikunitz/xz**                            v0.5.16 -> v0.5.17
+* **golang.org/x/crypto**                                v0.56.0 -> v0.57.0
+* **golang.org/x/oauth2**                                v0.36.0 -> v0.37.0
+* **golang.org/x/sync**                                  v0.22.0 -> v0.23.0
+* **golang.org/x/sys**                                   v0.47.0 -> v0.48.0
+* **golang.org/x/text**                                  v0.41.0 -> v0.42.0
+* **golang.org/x/time**                                  v0.15.0 -> v0.16.0
+
+Previous release can be found at [v1.7.0](https://github.com/siderolabs/image-factory/releases/tag/v1.7.0)
+
 ## [image-factory 1.7.0](https://github.com/siderolabs/image-factory/releases/tag/v1.7.0) (2026-09-07)
 
 Welcome to the v1.7.0 release of image-factory!
