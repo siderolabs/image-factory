@@ -420,13 +420,11 @@ func (i *Issuer) IssueWithDelegation(
 	)
 
 	signed, err := jwt.Signed(i.signer).Claims(claims{
-		Claims: jwt.Claims{
-			ID:       jti,
-			Subject:  subject,
-			Issuer:   issuerName,
-			IssuedAt: jwt.NewNumericDate(now),
-			Expiry:   jwt.NewNumericDate(now.Add(ttl)),
-		},
+		ID:             jti,
+		Subject:        subject,
+		Issuer:         issuerName,
+		IssuedAt:       jwt.NewNumericDate(now),
+		Expiry:         jwt.NewNumericDate(now.Add(ttl)),
 		Scope:          FormatScopes(scopes),
 		IssuableScopes: FormatScopes(delegation.IssuableScopes),
 		AnySubject:     delegation.AnySubject,

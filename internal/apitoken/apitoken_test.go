@@ -786,14 +786,12 @@ func TestVerifyRejectsMissingStoredClaim(t *testing.T) {
 
 		Scope string `json:"scope"`
 	}{
-		Claims: jwt.Claims{
-			ID:       "1234",
-			Subject:  "org_abc123",
-			Issuer:   "image-factory",
-			IssuedAt: jwt.NewNumericDate(now),
-			Expiry:   jwt.NewNumericDate(now.Add(time.Hour)),
-		},
-		Scope: "image:read",
+		ID:       "1234",
+		Subject:  "org_abc123",
+		Issuer:   "image-factory",
+		IssuedAt: jwt.NewNumericDate(now),
+		Expiry:   jwt.NewNumericDate(now.Add(time.Hour)),
+		Scope:    "image:read",
 	}).Serialize()
 	require.NoError(t, err)
 
