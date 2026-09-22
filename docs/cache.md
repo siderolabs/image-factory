@@ -127,4 +127,30 @@ cache:
   
     # Path prefix to strip from S3 presigned URL, when redirecting CDN
     trimPrefix: /image-factory
+
+    # Shared secret used to sign CDN URLs with a timed-HMAC token
+    hmacSecretPath: /etc/image-factory/cdn-hmac-secret
 ```
+
+### Signing CDN URLs
+
+A CDN hostname in front of object storage does not validate the presigned signature the
+storage provider generated: the redirect target is readable by anyone who knows the object
+key, with no expiry.
+Setting `cache.cdn.hmacSecretPath` appends a timed-HMAC token to every CDN redirect:
+
+```text
+?...&verify=<unix-seconds>-<base64url(HMAC-SHA256(secret, message + unix-seconds))>
+```
+
+`message` is the whole request URI ahead of the token — the path after the host rewrite and
+prefix trim, plus the presigned query string.
+The token is always the last parameter, and uses the URL-safe base64 alphabet with no padding.
+
+Pair it with a WAF rule that blocks requests failing HMAC validation,
+using the same secret.
+
+The registry serving installer images needs the equivalent `cfhmac` storage middleware,
+otherwise `crane pull` breaks while asset downloads keep working.
+
+Leave `hmacSecretPath` unset to keep the previous behaviour.

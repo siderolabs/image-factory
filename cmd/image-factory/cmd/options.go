@@ -431,6 +431,18 @@ type CDNCacheOptions struct {
 	// TrimPrefix removes a prefix from asset paths before redirecting to the CDN.
 	TrimPrefix string `koanf:"trimPrefix"`
 
+	// HMACSecretPath is the path to a file holding the shared secret used to sign CDN URLs.
+	//
+	// When set, every CDN redirect carries a timed-HMAC token, which a WAF rule can validate at the edge.
+	// The same secret must be configured in the WAF rule and in the registry's cfhmac storage middleware.
+	//
+	// When empty, URL signing is disabled and the CDN serves any object whose key is known.
+	HMACSecretPath string `koanf:"hmacSecretPath"`
+
+	// HMACParam is the query parameter carrying the token.
+	// Defaults to "verify".
+	HMACParam string `koanf:"hmacParam"`
+
 	// Enabled enables the CDN cache.
 	Enabled bool `koanf:"enabled"`
 }

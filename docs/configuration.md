@@ -334,6 +334,30 @@ TrimPrefix removes a prefix from asset paths before redirecting to the CDN.
 
 ---
 
+### `cache.cdn.hmacSecretPath`
+
+- **Type:** `string`
+- **Env:** `CACHE_CDN_HMACSECRETPATH`
+
+HMACSecretPath is the path to a file holding the shared secret used to sign CDN URLs.
+
+When set, every CDN redirect carries a timed-HMAC token, which a WAF rule can validate at the edge.
+The same secret must be configured in the WAF rule and in the registry's cfhmac storage middleware.
+
+When empty, URL signing is disabled and the CDN serves any object whose key is known.
+
+---
+
+### `cache.cdn.hmacParam`
+
+- **Type:** `string`
+- **Env:** `CACHE_CDN_HMACPARAM`
+
+HMACParam is the query parameter carrying the token.
+Defaults to "verify".
+
+---
+
 ### `cache.cdn.enabled`
 
 - **Type:** `bool`
@@ -1561,6 +1585,8 @@ build:
 cache:
     cdn:
         enabled: false
+        hmacParam: ""
+        hmacSecretPath: ""
         host: ""
         trimPrefix: ""
     gsa:
@@ -1712,6 +1738,8 @@ IF_BUILD_BROKENTALOSVERSIONS=[]
 IF_BUILD_MAXCONCURRENCY=6
 IF_BUILD_MINTALOSVERSION=1.2.0
 IF_CACHE_CDN_ENABLED=false
+IF_CACHE_CDN_HMACPARAM=
+IF_CACHE_CDN_HMACSECRETPATH=
 IF_CACHE_CDN_HOST=
 IF_CACHE_CDN_TRIMPREFIX=
 IF_CACHE_GSA_FULCIOURL=

@@ -208,12 +208,29 @@ func setupS3(t *testing.T, pool dockertest.Pool, bucket string) string {
 //go:embed testdata/templates/nginx.sh
 var nginxConfigTemplate string
 
+//go:embed testdata/templates/nginx-hmac.sh
+var nginxHMACConfigTemplate string
+
 func setupMockCDN(t *testing.T, pool dockertest.Pool, s3, bucket string) string {
+	t.Helper()
+
+	return setupMockCDNTemplate(t, pool, nginxConfigTemplate, s3, bucket)
+}
+
+// setupMockCDNWithHMAC rejects requests without a CDN token, and strips the token before
+// forwarding so the S3 origin still sees an intact SigV4 signature.
+func setupMockCDNWithHMAC(t *testing.T, pool dockertest.Pool, s3, bucket string) string {
+	t.Helper()
+
+	return setupMockCDNTemplate(t, pool, nginxHMACConfigTemplate, s3, bucket)
+}
+
+func setupMockCDNTemplate(t *testing.T, pool dockertest.Pool, template, s3, bucket string) string {
 	t.Helper()
 
 	_, port := findListenAddr(t, "127.0.0.1")
 
-	inlineEntrypoint := fmt.Appendf([]byte{}, nginxConfigTemplate, s3, bucket)
+	inlineEntrypoint := fmt.Appendf([]byte{}, template, s3, bucket)
 
 	// the entrypoint is baked per-bucket and the host port is freshly allocated, so the container can't be shared
 	nginx := pool.RunT(

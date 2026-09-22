@@ -9,14 +9,18 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/siderolabs/image-factory/internal/asset/cache"
 )
 
 type cdnAsset struct {
 	underlying cache.RedirectableAsset
+	now        func() time.Time
 	host       string
 	trimPrefix string
+	hmacParam  string
+	hmacSecret []byte
 }
 
 // Check interface.
@@ -52,6 +56,11 @@ func (a *cdnAsset) rewriteURL(ctx context.Context, filename string) (string, err
 
 	if a.host != "" {
 		u.Host = a.host
+	}
+
+	// the token covers the path the client actually requests, so it is computed after the rewrite.
+	if len(a.hmacSecret) > 0 {
+		appendToken(u, a.hmacSecret, a.hmacParam, a.now())
 	}
 
 	return u.String(), nil

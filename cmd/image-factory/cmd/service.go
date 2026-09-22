@@ -663,6 +663,22 @@ func buildAssetBuilder(logger *zap.Logger, artifactsManager *artifacts.Manager, 
 		cdnOptions := cdn.Options{
 			Host:       opts.Cache.CDN.Host,
 			TrimPrefix: opts.Cache.CDN.TrimPrefix,
+			HMACParam:  opts.Cache.CDN.HMACParam,
+		}
+
+		if path := opts.Cache.CDN.HMACSecretPath; path != "" {
+			var raw []byte
+
+			raw, err = os.ReadFile(path)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to read CDN HMAC secret: %w", err)
+			}
+
+			cdnOptions.HMACSecret = []byte(strings.TrimSpace(string(raw)))
+
+			if len(cdnOptions.HMACSecret) == 0 {
+				return nil, nil, fmt.Errorf("CDN HMAC secret file %q is empty", path)
+			}
 		}
 
 		cache, err = cdn.New(logger, cache, cdnOptions)

@@ -8,6 +8,7 @@ package cdn
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -18,14 +19,19 @@ import (
 type Options struct {
 	Host       string
 	TrimPrefix string
+	HMACParam  string
+	HMACSecret []byte
 }
 
 // Cache wraps underlying cache to rewrite URLs for CDN, if cache supports redirection.
 type Cache struct {
 	logger     *zap.Logger
 	underlying cache.Cache
+	now        func() time.Time
 	host       string
 	trimPrefix string
+	hmacParam  string
+	hmacSecret []byte
 }
 
 // New creates a new CDN cache that tries to rewrite URLs for CDN.
@@ -38,10 +44,22 @@ func New(logger *zap.Logger, underlying cache.Cache, opts Options) (*Cache, erro
 		return nil, fmt.Errorf("CDN trim prefix must be specified")
 	}
 
+	hmacParam := opts.HMACParam
+	if hmacParam == "" {
+		hmacParam = DefaultHMACParam
+	}
+
+	if len(opts.HMACSecret) == 0 {
+		logger.Warn("CDN URL signing is disabled")
+	}
+
 	return &Cache{
 		logger:     logger.With(zap.String("component", "asset-cache-cdn")),
 		host:       opts.Host,
 		trimPrefix: opts.TrimPrefix,
+		hmacSecret: opts.HMACSecret,
+		hmacParam:  hmacParam,
+		now:        time.Now,
 		underlying: underlying,
 	}, nil
 }
@@ -60,6 +78,9 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 		return &cdnAsset{
 			host:       c.host,
 			trimPrefix: c.trimPrefix,
+			hmacSecret: c.hmacSecret,
+			hmacParam:  c.hmacParam,
+			now:        c.now,
 			underlying: asset,
 		}, nil
 	}
