@@ -1,3 +1,40 @@
+## [image-factory 1.7.2](https://github.com/siderolabs/image-factory/releases/tag/v1.7.2) (2026-09-25)
+
+Welcome to the v1.7.2 release of image-factory!
+
+
+
+Please try out the release binaries and report any issues at
+https://github.com/siderolabs/image-factory/issues.
+
+### Contributors
+
+* Mateusz Urbanek
+* Andy Longwill
+
+### Changes
+<details><summary>10 commits</summary>
+<p>
+
+* [`79b67d7`](https://github.com/siderolabs/image-factory/commit/79b67d765451270b294ca170fd3e220e308682d6) chore: add cdn hmac verification
+* [`a54d48a`](https://github.com/siderolabs/image-factory/commit/a54d48a6bfeb988ee13aff65d52d811ba17ca119) refactor(http): remove shared dependency bag
+* [`983ec95`](https://github.com/siderolabs/image-factory/commit/983ec95bd3e69d16cf82de88f349262d0250545b) refactor(http): isolate registry services
+* [`015a950`](https://github.com/siderolabs/image-factory/commit/015a9509fb6e247394b2a0e086307be6f159f1e3) refactor(http): isolate OCI routing
+* [`58b4086`](https://github.com/siderolabs/image-factory/commit/58b408659489dc11e9889a87256d6ea91f2c6c7b) refactor(http): isolate browser adapters
+* [`df928e0`](https://github.com/siderolabs/image-factory/commit/df928e0dea688d58cc73e708bef23ac8aba9be7b) refactor(http): isolate image services
+* [`7c5173e`](https://github.com/siderolabs/image-factory/commit/7c5173e95cd99e86c9aeb46804c45ff234efc567) refactor(http): unify route authentication
+* [`55a9fff`](https://github.com/siderolabs/image-factory/commit/55a9fff0433c462cbebd793ec5984242c058ae01) refactor(http): isolate endpoint owners
+* [`ae77d98`](https://github.com/siderolabs/image-factory/commit/ae77d98659416a1ae6b4371444edd3bf56aa4074) feat(http): declare route ownership
+* [`be369f1`](https://github.com/siderolabs/image-factory/commit/be369f1f21b36957fa91102c63989f23f958e25a) refactor(http): declare route metadata
+</p>
+</details>
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v1.7.1](https://github.com/siderolabs/image-factory/releases/tag/v1.7.1)
+
 ## [image-factory 1.7.1](https://github.com/siderolabs/image-factory/releases/tag/v1.7.1) (2026-09-21)
 
 Welcome to the v1.7.1 release of image-factory!
