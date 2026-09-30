@@ -111,6 +111,12 @@ func (c *Cache) Get(ctx context.Context, profileID string) (cache.BootAsset, err
 	verifyLatency := time.Since(verifyStart)
 
 	if err != nil {
+		// a verification cut short by cancellation says nothing about the signature: report
+		// the cancellation rather than a miss, so the caller doesn't rebuild a valid entry.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+		}
+
 		// signature doesn't validate, skip the cache, but keep building
 		logger.Info("cache image signature doesn't validate", zap.Error(err), zap.Stringer("ref", taggedRef),
 			zap.Duration("head_latency", headLatency), zap.Duration("verify_latency", verifyLatency))
@@ -175,16 +181,34 @@ func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset
 		return err
 	}
 
-	if err = c.pusher.Push(ctx, taggedRef, img); err != nil {
-		return fmt.Errorf("failed to push cache image: %w", err)
-	}
-
 	digest, err := img.Digest()
 	if err != nil {
 		return fmt.Errorf("failed to get cache image digest: %w", err)
 	}
 
 	digestRef := c.cacheRepository.Digest(digest.String())
+
+	// Push by digest, sign, and only then move the tag. Get resolves the tag and rejects an
+	// unsigned digest as a miss, so tagging first left a window -- the length of a keyless
+	// signing, seconds -- in which every request for the asset missed and rebuilt it, each
+	// rebuild re-opening the window for the next.
+	if err = c.pusher.Push(ctx, digestRef, img); err != nil {
+		return fmt.Errorf("failed to push cache image: %w", err)
+	}
+
+	if err = c.sign(ctx, digestRef); err != nil {
+		return err
+	}
+
+	if err = c.pusher.Push(ctx, taggedRef, img); err != nil {
+		return fmt.Errorf("failed to tag cache image: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Cache) sign(ctx context.Context, digestRef name.Digest) error {
+	logger := ctxlog.Logger(ctx, c.logger)
 
 	// A cache manifest is content-addressed, so one signature over the digest stays valid for
 	// the life of the entry, and a miss on an entry that is already in the registry (a new
@@ -198,7 +222,7 @@ func (c *Cache) Put(ctx context.Context, profileID string, asset cache.BootAsset
 	// does not satisfy the same check Get performs, so it is signed again instead of leaving
 	// an entry that never validates. Any error here means "not signed", so the failure
 	// direction is always to sign.
-	if err = c.imageSigner.VerifyImage(ctx, digestRef, c.puller); err == nil {
+	if err := c.imageSigner.VerifyImage(ctx, digestRef, c.puller); err == nil {
 		logger.Debug("cache image is already signed", zap.Stringer("ref", digestRef))
 
 		return nil
