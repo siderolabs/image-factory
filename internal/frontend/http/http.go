@@ -56,6 +56,9 @@ type Frontend struct {
 	staticFavicons   *staticfiles.Handler
 	staticJavaScript *staticfiles.Handler
 	ui               *ui.Handler
+
+	// robots is the robots.txt body; nil leaves the route unregistered.
+	robots []byte
 }
 
 // Options configures the HTTP frontend.
@@ -131,6 +134,7 @@ func NewFrontend(
 		opts.ExternalURL,
 	)
 	frontend.browserAuth = browserauth.New(opts.AuthProvider)
+	frontend.robots = robotsText(opts.AuthProvider != nil, frontend.browserAuth.LogoutEnabled())
 	frontend.ui = ui.New(schematicService, artifactsManager, ui.Options{
 		ExternalURL:    opts.ExternalURL,
 		ExternalPXEURL: opts.ExternalPXEURL,

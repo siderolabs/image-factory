@@ -69,7 +69,7 @@ func enterpriseAccessPolicy(policy enterprise.RouteAccessPolicy) (transport.Acce
 }
 
 func (f *Frontend) routes() []transport.Route {
-	return []transport.Route{
+	routes := []transport.Route{
 		{Method: http.MethodGet, Path: "/healthz", OperationID: "getHealth", Access: transport.AccessPublic, Protocol: transport.ProtocolOperational, Handler: f.operational.Health},
 		{Method: http.MethodHead, Path: "/healthz", OperationID: "headHealth", Access: transport.AccessPublic, Protocol: transport.ProtocolOperational, Handler: f.operational.Health},
 		{Method: http.MethodGet, Path: "/readyz", OperationID: "getReadiness", Access: transport.AccessPublic, Protocol: transport.ProtocolOperational, Handler: f.operational.Ready},
@@ -168,4 +168,17 @@ func (f *Frontend) routes() []transport.Route {
 			Handler:     f.staticJavaScript.Serve,
 		},
 	}
+
+	if f.robots != nil {
+		routes = append(routes, transport.Route{
+			Method:      http.MethodGet,
+			Path:        "/robots.txt",
+			OperationID: "getRobotsText",
+			Access:      transport.AccessPublic,
+			Protocol:    transport.ProtocolStatic,
+			Handler:     f.handleRobots,
+		})
+	}
+
+	return routes
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 	"github.com/siderolabs/talos/pkg/machinery/platforms"
 	"go.yaml.in/yaml/v4"
+	"golang.org/x/text/language"
 
 	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/artifacts"
@@ -201,6 +202,16 @@ func init() {
 			}
 
 			return translated
+		},
+		// lang names the language key was actually rendered in, for the html lang attribute:
+		// the request may ask for one the bundle lacks, and then English is what the page shows.
+		"lang": func(localizer *i18n.Localizer, key string) string {
+			_, tag, err := localizer.LocalizeWithTag(&i18n.LocalizeConfig{MessageID: key})
+			if err != nil {
+				return language.English.String()
+			}
+
+			return tag.String()
 		},
 	}
 }

@@ -314,6 +314,9 @@ func TestContractOperations(t *testing.T) {
 		"/openapi.yaml": {
 			http.MethodGet: "getOpenAPI",
 		},
+		"/robots.txt": {
+			http.MethodGet: "getRobotsText",
+		},
 		"/pxe/{schematic}/{version}/{path}": {
 			http.MethodGet: "getPXEScript",
 		},

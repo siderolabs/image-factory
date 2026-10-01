@@ -46,6 +46,18 @@ func (p *Provider) IssueSessionCookie(accessToken string) (*http.Cookie, error) 
 	})
 }
 
+// ExpiredSessionCookie mints a session cookie that has already aged out, as a returning
+// visitor's browser still sends it.
+func (p *Provider) ExpiredSessionCookie(accessToken string) (*http.Cookie, error) {
+	return p.issueCookie(func(w http.ResponseWriter) error {
+		// Bypasses setSessionCookie, which refuses to write an expired session.
+		return setEncryptedCookie(w, http.Cookie{Name: sessionCookieName, Path: "/"}, sessionPayload{
+			AccessToken: accessToken,
+			Expiry:      time.Now().Add(-time.Minute),
+		}, p.browser.cipher)
+	})
+}
+
 // ExpiredStateCookie mints a state cookie that has already aged out, which tests cannot
 // otherwise produce without waiting stateMaxAge.
 func (p *Provider) ExpiredStateCookie(state, returnTo string) (*http.Cookie, error) {

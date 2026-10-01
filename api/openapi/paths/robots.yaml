@@ -1,0 +1,19 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+get:
+  operationId: getRobotsText
+  summary: Get crawler directives
+  description: |
+    Registered only when authentication is enabled. With browser login, crawlers may index the
+    sign-in landing page at `/` and its assets; otherwise every path is disallowed.
+  tags: [UI]
+  security: []
+  x-image-factory-enterprise: true
+  x-image-factory-internal: true
+  responses:
+    '200':
+      $ref: "../components/responses.yaml#/TextResponse"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

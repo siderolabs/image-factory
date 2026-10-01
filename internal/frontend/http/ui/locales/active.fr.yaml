@@ -25,6 +25,12 @@
 - id: page.header.enterprise
   translation: "Talos Linux Image Factory Enterprise"
 
+- id: page.description
+  translation: "Créez des images de démarrage et des installateurs Talos Linux personnalisés. Choisissez votre plateforme, votre architecture et vos extensions système, puis téléchargez une ISO, une image disque ou un lien PXE."
+
+- id: page.description.enterprise
+  translation: "Créez des images de démarrage et des installateurs Talos Enterprise Linux signés, avec un SBOM et un VEX pour chaque image. Connectez-vous avec votre compte Talos Enterprise."
+
 - id: info.developed_by
   translation: "La Talos Linux Image Factory, développée par "
 

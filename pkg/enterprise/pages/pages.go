@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Package pages renders the small set of standalone, themed HTML pages (sign-out
-// confirmation, sign-in failure) that an enterprise auth provider needs outside of the
+// Package pages renders the small set of standalone, themed HTML pages (sign-in landing,
+// sign-out confirmation, sign-in failure) that an enterprise auth provider needs outside of the
 // main wizard.
 //
 // It deliberately does not depend on internal/frontend/http: pkg/enterprise already
@@ -41,6 +41,16 @@ var templateFuncs = template.FuncMap{
 		}
 
 		return translated
+	},
+	// lang names the language key was actually rendered in, for the html lang attribute: the
+	// request may ask for one the bundle lacks, and then English is what the page shows.
+	"lang": func(localizer *i18n.Localizer, key string) string {
+		_, tag, err := localizer.LocalizeWithTag(&i18n.LocalizeConfig{MessageID: key})
+		if err != nil {
+			return language.English.String()
+		}
+
+		return tag.String()
 	},
 }
 
@@ -114,4 +124,14 @@ func RenderLoginError(w http.ResponseWriter, r *http.Request, status int, reason
 		Localizer *i18n.Localizer
 		Reason    string
 	}{localizer(r), reason})
+}
+
+// RenderLanding renders the public sign-in landing page that unauthenticated visitors and
+// crawlers see at the root, so search results and link previews describe the factory
+// instead of the identity provider's login page. signInURL is where its button leads.
+func RenderLanding(w http.ResponseWriter, r *http.Request, status int, signInURL string) error {
+	return render(w, status, "landing.html", struct {
+		Localizer *i18n.Localizer
+		SignInURL string
+	}{localizer(r), signInURL})
 }

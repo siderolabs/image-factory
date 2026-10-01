@@ -105,6 +105,10 @@ func configurationOwnershipProblems(contract *api.Contract, routes []transport.R
 				enabled = true
 			case "startBrowserLogin", "getBrowserLogout", "postBrowserLogout", "completeBrowserLogin":
 				enabled = browserEnabled
+			case "getRobotsText":
+				// robots.txt follows authentication, and the fixtures configure a provider
+				// exactly when browser login is enabled.
+				enabled = browserEnabled
 			}
 
 			expected[id] = enabled

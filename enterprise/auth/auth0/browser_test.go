@@ -533,6 +533,109 @@ func TestMiddlewareDeniesByClient(t *testing.T) {
 	}
 }
 
+// TestMiddlewareServesLandingPage pins which anonymous requests get the public landing page
+// rather than a redirect: crawlers and link-preview bots must see the factory's own title
+// and description, while deep links and returning users still go straight to /login.
+func TestMiddlewareServesLandingPage(t *testing.T) {
+	t.Parallel()
+
+	p := setupBrowserProvider(t)
+
+	expiredSession, err := p.ExpiredSessionCookie(p.validAccessToken(t))
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		cookie   *http.Cookie
+		headers  map[string]string
+		name     string
+		target   string
+		location string
+		landing  bool
+	}{
+		{name: "browser at the root", target: "/", headers: map[string]string{"Accept": "text/html"}, landing: true},
+		{name: "crawler without text/html", target: "/", headers: map[string]string{"Accept": "*/*"}, landing: true},
+		{
+			name:     "deep link",
+			target:   "/?target=metal",
+			headers:  map[string]string{"Accept": "text/html"},
+			location: "/login?return_to=%2F%3Ftarget%3Dmetal",
+		},
+		{
+			name:     "returning user with an expired session",
+			target:   "/",
+			headers:  map[string]string{"Accept": "text/html"},
+			cookie:   expiredSession,
+			location: "/login",
+		},
+		{name: "other page", target: "/ui/tokens", headers: map[string]string{"Accept": "text/html"}, location: "/login?return_to=%2Fui%2Ftokens"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.target, nil)
+			for k, v := range tc.headers {
+				req.Header.Set(k, v)
+			}
+
+			if tc.cookie != nil {
+				req.AddCookie(tc.cookie)
+			}
+
+			rec := httptest.NewRecorder()
+
+			err := p.Middleware(denyHandler(t))(t.Context(), rec, req, nil)
+			require.True(t, xerrors.TagIs[enterrors.RespondedTag](err), "the request must still count as denied: %v", err)
+
+			if !tc.landing {
+				require.Equal(t, http.StatusSeeOther, rec.Code)
+				require.Equal(t, tc.location, rec.Header().Get("Location"))
+
+				return
+			}
+
+			require.Equal(t, http.StatusOK, rec.Code)
+			require.Empty(t, rec.Header().Get("Location"))
+			require.Contains(t, rec.Header().Values("Vary"), "Cookie")
+			require.Contains(t, rec.Header().Values("Vary"), "Accept-Language")
+
+			body := rec.Body.String()
+			require.Contains(t, body, "<title>Talos Linux Image Factory Enterprise</title>")
+			require.Contains(t, body, `<meta name="description" content="Build signed Talos Enterprise Linux boot images`)
+			require.Contains(t, body, `<meta property="og:title" content="Talos Linux Image Factory Enterprise">`)
+			require.Contains(t, body, `href="/login"`)
+			require.Contains(t, body, `<html lang="en">`)
+		})
+	}
+}
+
+// TestLandingPageDeclaresRenderedLanguage pins the html lang attribute to the language the
+// page was actually rendered in, falling back to English for one the bundle lacks.
+func TestLandingPageDeclaresRenderedLanguage(t *testing.T) {
+	t.Parallel()
+
+	p := setupBrowserProvider(t)
+
+	for acceptLanguage, want := range map[string]string{
+		"fr-FR,fr;q=0.9": `<html lang="fr">`,
+		"pl":             `<html lang="pl">`,
+		"de":             `<html lang="en">`,
+	} {
+		t.Run(acceptLanguage, func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+			req.Header.Set("Accept", "text/html")
+			req.Header.Set("Accept-Language", acceptLanguage)
+
+			rec := httptest.NewRecorder()
+
+			require.Error(t, p.Middleware(denyHandler(t))(t.Context(), rec, req, nil))
+			require.Equal(t, http.StatusOK, rec.Code)
+			require.Contains(t, rec.Body.String(), want)
+		})
+	}
+}
+
 // TestCookieAuthenticatedResponsesAreNotCacheable pins the headers that keep a shared cache
 // off a session; nothing on /image/* sets Cache-Control, so a CDN may store it heuristically.
 func TestCookieAuthenticatedResponsesAreNotCacheable(t *testing.T) {

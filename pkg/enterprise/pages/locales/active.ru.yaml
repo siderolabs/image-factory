@@ -12,3 +12,12 @@
 
 - id: auth.login_error.try_again
   translation: ", чтобы повторить попытку от имени другого пользователя."
+
+- id: auth.landing.title
+  translation: "Enterprise генератор образов Talos Linux"
+
+- id: auth.landing.description
+  translation: "Создавайте подписанные загрузочные образы и установщики Talos Enterprise Linux с SBOM и VEX для каждого образа. Войдите с помощью учётной записи Talos Enterprise."
+
+- id: auth.landing.sign_in
+  translation: "Войти"

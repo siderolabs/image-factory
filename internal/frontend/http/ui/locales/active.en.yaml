@@ -25,6 +25,12 @@
 - id: page.header.enterprise
   translation: "Talos Linux Image Factory Enterprise"
 
+- id: page.description
+  translation: "Build custom Talos Linux boot images and installers. Pick your platform, architecture, and system extensions, then download an ISO, disk image, or PXE link."
+
+- id: page.description.enterprise
+  translation: "Build signed Talos Enterprise Linux boot images and installers, with an SBOM and VEX for every image. Sign in with your Talos Enterprise account."
+
 - id: info.developed_by
   translation: "The Talos Linux Image Factory, developed by "
 

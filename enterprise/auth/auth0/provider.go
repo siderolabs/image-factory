@@ -27,6 +27,7 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/auth"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
+	"github.com/siderolabs/image-factory/pkg/enterprise/pages"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -249,6 +250,10 @@ func (p *Provider) Middleware(next Handler) Handler {
 
 		tokenStr := extractToken(r)
 
+		// Set when a session cookie came in but yielded no token (expired or unreadable): a
+		// returning user, who goes straight back to /login rather than to the landing page.
+		var sessionErr error
+
 		if tokenStr == "" && p.BrowserLoginEnabled() {
 			// The answer depends on the cookie from here on. Not needed on the bearer path:
 			// RFC 9111 already bars caching a response to an Authorization request.
@@ -256,6 +261,8 @@ func (p *Provider) Middleware(next Handler) Handler {
 
 			token, err := p.sessionToken(r)
 			if err != nil {
+				sessionErr = err
+
 				// Left in place: the next login overwrites it.
 				logger.Debug("auth0: unusable session cookie", zap.Error(err))
 			}
@@ -271,6 +278,10 @@ func (p *Provider) Middleware(next Handler) Handler {
 
 		if tokenStr == "" {
 			logger.Debug("auth0: authentication required: no token provided")
+
+			if sessionErr == nil && p.isLandingRequest(r) {
+				return p.renderLanding(w, r)
+			}
 
 			return p.deny(w, r, "no token provided")
 		}
@@ -332,6 +343,31 @@ func (p *Provider) deny(w http.ResponseWriter, r *http.Request, reason string) e
 	setChallenge(w)
 
 	return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New(reason))
+}
+
+// isLandingRequest reports whether an anonymous request gets the public landing page
+// instead of a redirect: only a plain GET of the root, whoever sends it, so crawlers and
+// link-preview bots find a page describing the factory rather than the Auth0 login page.
+// Deep links (any query) still go straight to /login.
+func (p *Provider) isLandingRequest(r *http.Request) bool {
+	return p.BrowserLoginEnabled() &&
+		r.Method == http.MethodGet &&
+		r.URL.Path == "/" &&
+		r.URL.RawQuery == "" &&
+		r.Header.Get("Hx-Request") != "true"
+}
+
+// renderLanding serves the landing page. It is still a denial as far as the pipeline is
+// concerned: the handler never runs, and the response came off the writer.
+func (p *Provider) renderLanding(w http.ResponseWriter, r *http.Request) error {
+	// The page is translated, on top of the cookie the session lookup already varies on.
+	w.Header().Add("Vary", "Accept-Language")
+
+	if err := pages.RenderLanding(w, r, http.StatusOK, loginURL("/")); err != nil {
+		return err
+	}
+
+	return xerrors.NewTagged[enterrors.RespondedTag](errors.New("served sign-in landing page"))
 }
 
 // UsernameFromContext implements enterprise.AuthProvider.

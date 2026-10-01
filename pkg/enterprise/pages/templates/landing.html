@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="{{ lang .Localizer "auth.landing.title" }}">
+<head>
+<meta charset="utf-8">
+<title>{{ t .Localizer "auth.landing.title" }}</title>
+<meta name="description" content="{{ t .Localizer "auth.landing.description" }}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ t .Localizer "auth.landing.title" }}">
+<meta property="og:description" content="{{ t .Localizer "auth.landing.description" }}">
+<link rel="shortcut icon" href=/favicons/favicon.ico>
+<link rel=icon type=image/png href=/favicons/favicon-32x32.png sizes=32x32>
+<link href="/css/output.css" rel="stylesheet">
+</head>
+<body class="dark:bg-gray-900 antialiased">
+<header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-gray-200 dark:bg-gray-900/80 dark:border-gray-800">
+<div class="container mx-auto max-w-3xl flex items-center justify-between gap-4 px-6 py-3">
+<h1 class="text-lg font-bold text-gray-900 dark:text-white">{{ t .Localizer "auth.landing.title" }}</h1>
+</div>
+</header>
+<main class="container mx-auto max-w-3xl px-6">
+<div class="prose prose-sm dark:prose-invert mt-4">
+<p>{{ t .Localizer "auth.landing.description" }}</p>
+</div>
+<div class="mt-6">
+<a href="{{ .SignInURL }}" class="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center inline-flex items-center dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus:ring-blue-800 transition-colors">{{ t .Localizer "auth.landing.sign_in" }}</a>
+</div>
+</main>
+</body>
+</html>

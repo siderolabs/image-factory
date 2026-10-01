@@ -25,6 +25,12 @@
 - id: page.header.enterprise
   translation: "Enterprise генератор образов Talos Linux"
 
+- id: page.description
+  translation: "Создавайте собственные загрузочные образы и установщики Talos Linux. Выберите платформу, архитектуру и системные расширения, затем скачайте ISO, образ диска или ссылку для PXE."
+
+- id: page.description.enterprise
+  translation: "Создавайте подписанные загрузочные образы и установщики Talos Enterprise Linux с SBOM и VEX для каждого образа. Войдите с помощью учётной записи Talos Enterprise."
+
 - id: info.developed_by
   translation: "Генератор образов Talos Linux, разработанный "
 

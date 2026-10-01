@@ -15,6 +15,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"encoding/base64"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -142,26 +143,36 @@ func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
 			body             string
 			location         string
 			hxRedirect       string
+			bodyContains     string
 			status           int
 			expectsChallenge bool
 		}{
 			{
 				name:             "machine request",
 				method:           http.MethodGet,
-				path:             "/",
+				path:             "/ui/tokens",
 				status:           http.StatusUnauthorized,
 				expectsChallenge: true,
 			},
 			{
 				name:     "browser navigation",
 				method:   http.MethodGet,
-				path:     "/",
+				path:     "/ui/tokens",
 				status:   http.StatusSeeOther,
-				location: "/login",
+				location: "/login?return_to=%2Fui%2Ftokens",
 				headers: map[string]string{
 					"Accept":         "text/html,application/xhtml+xml",
 					"Sec-Fetch-Mode": "navigate",
 				},
+			},
+			{
+				// The root is the one page crawlers and link-preview bots may see anonymously,
+				// whatever they send in Accept.
+				name:         "landing page",
+				method:       http.MethodGet,
+				path:         "/",
+				status:       http.StatusOK,
+				bodyContains: `<meta name="description"`,
 			},
 			{
 				name:       "htmx request",
@@ -199,6 +210,12 @@ func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
 					assert.Equal(t, []string{`Basic realm="Image Factory Enterprise", charset="UTF-8"`}, resp.Header.Values("WWW-Authenticate"))
 				} else {
 					assert.Empty(t, resp.Header.Values("WWW-Authenticate"))
+				}
+
+				if test.bodyContains != "" {
+					body, err := io.ReadAll(resp.Body)
+					require.NoError(t, err)
+					assert.Contains(t, string(body), test.bodyContains)
 				}
 			})
 		}

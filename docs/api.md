@@ -14,6 +14,7 @@ On a `GET` or `HEAD` operation whose **Scopes** entry permits the token, any tok
 
 With [browser login](authentication.md#browser-login) configured, every endpoint below also accepts the session cookie, and a browser navigation without a credential is redirected to `/login` rather than answered `401`.
 A client that does not ask for `text/html` gets the `401` described here.
+The one exception is a plain `GET /` (no query string) without a credential or session cookie: every client gets the public landing page with a `200`, whatever it sends in `Accept`.
 
 | Field | Values |
 | --- | --- |

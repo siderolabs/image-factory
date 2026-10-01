@@ -40,6 +40,12 @@ Details that decide whether a request authenticates:
 There are two alternatives to this header: the [`?token=` query parameter](#the-token-query-parameter), accepted for scoped API-token reads, and the session cookie [browser login](#browser-login) issues.
 The factory also issues credentials of its own, which the header carries too; see [API tokens](#api-tokens).
 
+## Crawlers
+
+With any authentication provider configured, `/robots.txt` keeps crawlers out of the factory.
+With [browser login](#browser-login) it allows only the landing page at `/` and the stylesheets and icons it uses; otherwise it disallows every path.
+Without authentication there is no `/robots.txt`, and the whole UI may be indexed.
+
 ## htpasswd
 
 Basic authentication against an `htpasswd` file.
@@ -63,6 +69,10 @@ Until it is configured, a browser hitting an authenticated route gets a `401` wi
 
 Without it, a person opening the factory in a browser gets a `401` and nothing else.
 Enabling it redirects them to the tenant's login page instead, using an OAuth2 authorization code flow with PKCE.
+
+A plain `GET /` without any credential or session cookie is the exception: it gets a public landing page with the factory's title, a description and a **Sign in** button leading to `/login`.
+That is what search engines and link-preview bots see, rather than the tenant's login page.
+Deep links (a query string, any other path) and visitors whose session cookie has expired are still redirected straight to `/login`.
 
 It is opt-in: set `clientID`, `clientSecret` and `sessionKey` together, or leave all three empty.
 A partial set is rejected at startup rather than half-enabling the flow.

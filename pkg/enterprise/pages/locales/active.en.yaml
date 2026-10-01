@@ -12,3 +12,12 @@
 
 - id: auth.login_error.try_again
   translation: " to try again as a different user."
+
+- id: auth.landing.title
+  translation: "Talos Linux Image Factory Enterprise"
+
+- id: auth.landing.description
+  translation: "Build signed Talos Enterprise Linux boot images and installers, with an SBOM and VEX for every image. Sign in with your Talos Enterprise account."
+
+- id: auth.landing.sign_in
+  translation: "Sign in"

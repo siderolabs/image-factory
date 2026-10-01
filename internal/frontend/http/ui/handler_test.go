@@ -16,6 +16,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/internal/frontend/http/ui"
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 func TestHandlerPublishesUIRoutes(t *testing.T) {
@@ -44,7 +45,7 @@ func TestHandlerHeadReturnsNoBodyWithoutCallingDependencies(t *testing.T) {
 	t.Parallel()
 
 	handler := ui.New(nil, nil, ui.Options{})
-	route := requireRoute(t, handler.Routes(), http.MethodHead, "/")
+	route := requireRootRoute(t, handler.Routes(), http.MethodHead)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "/", nil)
 
@@ -56,7 +57,7 @@ func TestHandlerLanguageSelectionSetsCookieAndHTMXRedirect(t *testing.T) {
 	t.Parallel()
 
 	handler := ui.New(nil, nil, ui.Options{})
-	route := requireRoute(t, handler.Routes(), http.MethodGet, "/")
+	route := requireRootRoute(t, handler.Routes(), http.MethodGet)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/?keep=value&lang=pl", nil)
 
@@ -76,7 +77,7 @@ func TestHandlerRendersLocalizedPageThroughArtifactPort(t *testing.T) {
 	t.Parallel()
 
 	handler := ui.New(nil, fakeArtifactSource{}, ui.Options{})
-	route := requireRoute(t, handler.Routes(), http.MethodGet, "/")
+	route := requireRootRoute(t, handler.Routes(), http.MethodGet)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	request.Header.Set("Accept-Language", "pl")
@@ -84,6 +85,33 @@ func TestHandlerRendersLocalizedPageThroughArtifactPort(t *testing.T) {
 	require.NoError(t, route.Handler(t.Context(), recorder, request, nil))
 	require.Contains(t, recorder.Body.String(), "Typ Sprzętu")
 	require.Contains(t, recorder.Body.String(), "Serwer Fizyczny")
+	require.Contains(t, recorder.Body.String(), `<html lang="pl">`)
+}
+
+func TestHandlerRendersSearchMetadata(t *testing.T) {
+	t.Parallel()
+
+	handler := ui.New(nil, fakeArtifactSource{}, ui.Options{})
+	route := requireRootRoute(t, handler.Routes(), http.MethodGet)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+
+	require.NoError(t, route.Handler(t.Context(), recorder, request, nil))
+
+	body := recorder.Body.String()
+	title := "Talos Linux Image Factory"
+	description := "Build custom Talos Linux boot images and installers. Pick your platform, architecture, and system extensions, then download an ISO, disk image, or PXE link."
+
+	if enterprise.Enabled() {
+		title = "Talos Linux Image Factory Enterprise"
+		description = "Build signed Talos Enterprise Linux boot images and installers, with an SBOM and VEX for every image. Sign in with your Talos Enterprise account."
+	}
+
+	require.Contains(t, body, `<html lang="en">`)
+	require.Contains(t, body, "<title>"+title+"</title>")
+	require.Contains(t, body, `<meta name="description" content="`+description+`">`)
+	require.Contains(t, body, `<meta property="og:title" content="`+title+`">`)
+	require.Contains(t, body, `<meta property="og:description" content="`+description+`">`)
 }
 
 type routeIdentity struct {
@@ -102,16 +130,17 @@ func routeIdentities(routes []transport.Route) []routeIdentity {
 	return result
 }
 
-func requireRoute(t *testing.T, routes []transport.Route, method, path string) transport.Route {
+// requireRootRoute finds the UI root route for method; every test here drives "/".
+func requireRootRoute(t *testing.T, routes []transport.Route, method string) transport.Route {
 	t.Helper()
 
 	for _, route := range routes {
-		if route.Method == method && route.Path == path {
+		if route.Method == method && route.Path == "/" {
 			return route
 		}
 	}
 
-	t.Fatalf("route %s %s not found", method, path)
+	t.Fatalf("route %s / not found", method)
 
 	return transport.Route{}
 }

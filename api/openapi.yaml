@@ -76,6 +76,8 @@ paths:
     $ref: "./openapi/paths/llms.yaml"
   /openapi.yaml:
     $ref: "./openapi/paths/openapi.yaml"
+  /robots.txt:
+    $ref: "./openapi/paths/robots.yaml"
   /pxe/{schematic}/{version}/{path}:
     $ref: "./openapi/paths/pxe.yaml"
   /spdx/{schematic}/{version}/{arch}:
