@@ -65,6 +65,17 @@ func VerifySignatures(ctx context.Context, digestRef name.Reference, imageVerify
 
 func verifyLegacySignature(ctx context.Context, digestRef name.Reference, ivo cosign.CheckOpts) (VerifyResult, error) {
 	ivo.NewBundleFormat = false
+	existingClaimVerifier := ivo.ClaimVerifier
+	ivo.ClaimVerifier = func(sig oci.Signature, imageDigest v1.Hash, annotations map[string]any) error {
+		if existingClaimVerifier != nil {
+			if err := existingClaimVerifier(sig, imageDigest, annotations); err != nil {
+				return err
+			}
+		}
+
+		// verify that the signed payload references the image digest being verified
+		return cosign.SimpleClaimVerifier(sig, imageDigest, annotations)
+	}
 
 	_, bundleVerified, err := cosign.VerifyImageSignatures(ctx, digestRef, &ivo)
 	if err == nil {

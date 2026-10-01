@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/registry"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	protobundle "github.com/sigstore/protobuf-specs/gen/pb-go/bundle/v1"
 	protocommon "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -137,6 +138,73 @@ func TestKeySignerAttestsAndVerifiesImage(t *testing.T) {
 	tags, err := remote.List(tag.Context(), remote.WithTransport(transport))
 	require.NoError(t, err)
 	require.Contains(t, tags, strings.ReplaceAll(imageRef.DigestStr(), ":", "-"), "test registry should exercise referrers-tag fallback")
+}
+
+func TestKeySignerRejectsSignatureForAnotherImage(t *testing.T) {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	imageSigner, err := signer.NewSigner(privateKey)
+	require.NoError(t, err)
+
+	transport, repository := startTestRegistry(t)
+	registryClient := testRegistryClient{transport: transport}
+
+	signedImage, err := random.Image(1024, 1)
+	require.NoError(t, err)
+
+	otherImage, err := random.Image(1024, 1)
+	require.NoError(t, err)
+
+	signedRef := pushTestImage(t, transport, repository, signedImage)
+	otherRef := pushTestImage(t, transport, repository, otherImage)
+
+	require.NoError(t, imageSigner.SignImage(t.Context(), signedRef, registryClient))
+	require.NoError(t, imageSigner.VerifyImage(t.Context(), signedRef, registryClient))
+
+	// copy the signature of the signed image to the signature tag of the other image
+	signedSigTag := signedRef.Context().Tag(strings.ReplaceAll(signedRef.DigestStr(), ":", "-") + ".sig")
+	otherSigTag := otherRef.Context().Tag(strings.ReplaceAll(otherRef.DigestStr(), ":", "-") + ".sig")
+
+	sigDesc, err := remote.Get(signedSigTag, remote.WithTransport(transport))
+	require.NoError(t, err)
+	require.NoError(t, remote.Put(otherSigTag, sigDesc, remote.WithTransport(transport)))
+
+	require.Error(t, imageSigner.VerifyImage(t.Context(), otherRef, registryClient))
+}
+
+func startTestRegistry(t *testing.T) (*http.Transport, string) {
+	t.Helper()
+
+	server := httptest.NewServer(registry.New())
+	t.Cleanup(server.Close)
+
+	serverTransport, ok := server.Client().Transport.(*http.Transport)
+	require.True(t, ok)
+
+	transport := serverTransport.Clone()
+	transport.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, network, server.Listener.Addr().String())
+	}
+
+	serverAddress, ok := server.Listener.Addr().(*net.TCPAddr)
+	require.True(t, ok)
+
+	return transport, "registry.local:" + strconv.Itoa(serverAddress.Port) + "/installer/test"
+}
+
+func pushTestImage(t *testing.T, transport http.RoundTripper, repository string, img v1.Image) name.Digest {
+	t.Helper()
+
+	digest, err := img.Digest()
+	require.NoError(t, err)
+
+	ref, err := name.NewDigest(repository+"@"+digest.String(), name.Insecure)
+	require.NoError(t, err)
+
+	require.NoError(t, remote.Write(ref, img, remote.WithTransport(transport)))
+
+	return ref
 }
 
 type testRegistryClient struct {

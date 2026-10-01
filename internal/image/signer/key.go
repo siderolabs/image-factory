@@ -257,6 +257,8 @@ func (s *KeySigner) VerifyImage(ctx context.Context, imageRef name.Digest, pulle
 	}
 
 	checkOpts := s.GetCheckOpts()
+	// verify that the signed payload references the image digest being verified
+	checkOpts.ClaimVerifier = cosign.SimpleClaimVerifier
 	checkOpts.RegistryClientOpts = []cosignremote.Option{
 		cosignremote.WithRemoteOptions(append(remoteOpts, gcremote.WithContext(ctx))...),
 		cosignremote.WithNameOptions(puller.NameOptions()...),
