@@ -577,6 +577,9 @@ type ArtifactsOptions struct {
 
 	// RefreshInterval specifies how often the image factory should refresh its connection to registries.
 	RefreshInterval time.Duration `koanf:"refreshInterval"`
+
+	//  Whether to skip beta/alpha versions and such when obtaining valid Talos versions
+	SkipVersionFilter bool `koanf:"skipVersionfilter"`
 }
 
 // CoreImagesOptions defines the configuration for core images used by the image factory.

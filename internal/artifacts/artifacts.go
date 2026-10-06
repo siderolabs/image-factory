@@ -54,6 +54,9 @@ type Options struct { //nolint:govet
 
 	// External identification.
 	ExternalURL string
+
+	// SkipVersionFilter skips filtering out alpha/beta/rc versions.
+	SkipVersionFilter bool
 }
 
 // ImageVerifyOptions are the options for verifying the image signature.
