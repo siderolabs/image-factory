@@ -57,6 +57,9 @@ type Options struct { //nolint:govet
 
 	// SkipVersionFilter skips filtering out alpha/beta/rc versions.
 	SkipVersionFilter bool
+
+	// Replace the image registry defined in the extension/overlay image with the one defined here
+	OverrideSourceImageRegistry string
 }
 
 // ImageVerifyOptions are the options for verifying the image signature.

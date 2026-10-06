@@ -48,7 +48,9 @@ type Manager struct { //nolint:govet
 	logger                  *zap.Logger
 	imageRegistry           registryWithNamespace
 	extraExtensionsRegistry registryWithNamespace
-	pullers                 map[Arch]remotewrap.Puller
+	overrideImageRegistry   registryWithNamespace
+
+	pullers map[Arch]remotewrap.Puller
 
 	sf singleflight.Group
 
@@ -84,6 +86,17 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 	registry, err := name.NewRegistry(options.ImageRegistry, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse image registry: %w", err)
+	}
+
+	overrideImageRegistry := registryWithNamespace{
+		namespace: options.ImageRegistryNamespace,
+	}
+
+	if len(options.OverrideSourceImageRegistry) > 0 {
+		overrideImageRegistry.registry, err = name.NewRegistry(options.OverrideSourceImageRegistry, opts...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse image registry: %w", err)
+		}
 	}
 
 	imageRegistry := registryWithNamespace{
@@ -133,6 +146,7 @@ func NewManager(logger *zap.Logger, options Options) (*Manager, error) {
 		logger:                  logger,
 		imageRegistry:           imageRegistry,
 		extraExtensionsRegistry: extraExtensionsImageRegistry,
+		overrideImageRegistry:   overrideImageRegistry,
 		pullers:                 pullers,
 	}
 
