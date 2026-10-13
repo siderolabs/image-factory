@@ -540,8 +540,8 @@ func (b *Builder) extractExtensionsSPDX(ctx context.Context, bundle *Bundle, sch
 
 		// Set the source to the extension name with arch
 		shortName := extensionName
-		if idx := strings.LastIndex(extensionName, "/"); idx >= 0 {
-			shortName = extensionName[idx+1:]
+		if _, extension, found := strings.CutLast(extensionName, "/"); found {
+			shortName = extension
 		}
 
 		for _, f := range files {
