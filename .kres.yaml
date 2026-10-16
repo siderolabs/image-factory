@@ -699,8 +699,13 @@ spec:
           - copy:
               src: internal/frontend/http
               dst: internal/frontend/http
+          - copy:
+              src: pkg/enterprise/pages/templates
+              dst: pkg/enterprise/pages/templates
           - script:
               command: node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
+          - script:
+              command: mkdir -p internal/frontend/http/css/files && cp node_modules/@fontsource-variable/inter/files/*-wght-normal.woff2 node_modules/@fontsource-variable/jetbrains-mono/files/*-wght-*.woff2 internal/frontend/http/css/files/
       - name: tailwind-copy
         description: "Copies assets"
         steps:
@@ -708,6 +713,10 @@ spec:
               from: tailwind-update
               src: /src/internal/frontend/http/css/output.css
               dst: internal/frontend/http/css/output.css
+          - copy:
+              from: tailwind-update
+              src: /src/internal/frontend/http/css/files
+              dst: internal/frontend/http/css/files
 ---
 kind: common.Repository
 spec:

@@ -80,6 +80,15 @@ http:
   externalURL: https://example.com/
 ```
 
+## Styling the UI
+
+The UI uses the [Talos design system](https://github.com/siderolabs/talos-design-system).
+Templates use its color roles (`bg-surface-card`), type roles (`type-body`) and spacing steps (`p-compact`) instead of raw palette values, so both themes come from the same classes.
+The theme choice is stored in the browser and applied by `js/theme.js` before first paint.
+
+`make tailwind` rebuilds `internal/frontend/http/css/output.css` and copies the Inter and JetBrains Mono files next to it, so the fonts are served by Image Factory and work in air-gapped installs.
+Both are committed, so rerun it after changing template classes or bumping the design system.
+
 ## HTTP identity and operation ownership
 
 Authentication publishes the authoritative typed `authn.Principal` to the request context.

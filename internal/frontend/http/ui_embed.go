@@ -10,7 +10,7 @@ import (
 	"embed"
 )
 
-//go:embed css/output.css
+//go:embed css/output.css css/files/*
 var cssFS embed.FS
 
 //go:embed js/*

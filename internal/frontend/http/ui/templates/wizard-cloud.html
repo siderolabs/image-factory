@@ -1,7 +1,7 @@
 {{ define "wizard-cloud" }}
 {{ template "hidden-inputs" . }}
 {{ template "header" (t .Localizer "cloud.title") }}
-<div class="mb-6 space-y-2">
+<div class="mb-base space-y-tight">
     {{ range .Platforms }}
     {{ template "radio-with-description" dict "name" "platform" "value" .Name "current" $.SelectedPlatform "label" .Label "description" (dynamic_template "platform-description" (dict "Platform" . "Version" $.Version "Localizer" $.Localizer)) }}
     {{ end }}

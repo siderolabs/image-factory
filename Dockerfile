@@ -142,7 +142,9 @@ COPY --from=pkg-zstd / /
 # tailwind update
 FROM tailwind-base AS tailwind-update
 COPY internal/frontend/http internal/frontend/http
+COPY pkg/enterprise/pages/templates pkg/enterprise/pages/templates
 RUN node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
+RUN mkdir -p internal/frontend/http/css/files && cp node_modules/@fontsource-variable/inter/files/*-wght-normal.woff2 node_modules/@fontsource-variable/jetbrains-mono/files/*-wght-*.woff2 internal/frontend/http/css/files/
 
 # build tools
 FROM --platform=${BUILDPLATFORM} toolchain AS tools
@@ -182,6 +184,7 @@ COPY --from=helm-docs-run /src/deploy/helm/image-factory deploy/helm/image-facto
 # Copies assets
 FROM scratch AS tailwind-copy
 COPY --from=tailwind-update /src/internal/frontend/http/css/output.css internal/frontend/http/css/output.css
+COPY --from=tailwind-update /src/internal/frontend/http/css/files internal/frontend/http/css/files
 
 # tools and sources
 FROM tools AS base
