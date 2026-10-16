@@ -2,44 +2,44 @@
 {{ template "hidden-inputs" . }}
 
 {{ if .VEXAvailable }}
-<section id="scan-summary" class="mb-6 rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 text-sm"
+<section id="scan-summary" class="type-body mb-base rounded-md border border-border-default bg-surface-inset p-compact"
         data-scan-url="{{ .ScanBaseURL }}"
         data-enterprise="{{ if .Enterprise }}true{{ else }}false{{ end }}">
-        <h2 class="text-base font-semibold mb-2">{{ t .Localizer "final.scan.title" }}</h2>
+        <h2 class="type-section-title mb-tight">{{ t .Localizer "final.scan.title" }}</h2>
         {{ if .Enterprise }}
-        <p data-scan-state="loading" class="text-slate-600 dark:text-slate-300 mb-2">{{ t .Localizer "final.scan.loading" }}</p>
-        <div data-scan-state="ready" class="hidden mb-2">
-                <p class="mb-2"><span data-scan-summary></span></p>
-                <ul class="flex flex-wrap gap-3 mb-2" data-scan-counts></ul>
+        <p data-scan-state="loading" class="text-content-default mb-tight">{{ t .Localizer "final.scan.loading" }}</p>
+        <div data-scan-state="ready" class="hidden mb-tight">
+                <p class="mb-tight"><span data-scan-summary></span></p>
+                <ul class="flex flex-wrap gap-snug mb-tight" data-scan-counts></ul>
         </div>
-        <p data-scan-state="error" class="hidden mb-2 text-red-600 dark:text-red-400"></p>
-        <p class="text-xs">
+        <p data-scan-state="error" class="status-glyph status-failed type-body hidden mb-tight text-content-default"></p>
+        <p class="type-meta ">
                 {{ t .Localizer "final.scan.download" }}
-                <a class="ml-1 underline" data-scan-link="json">JSON</a>
-                <a class="ml-1 underline" data-scan-link="sarif">SARIF</a>
-                <a class="ml-1 underline" data-scan-link="cdx">CycloneDX</a>
-                <a class="ml-1 underline" data-scan-link="table">Table</a>
+                <a class="ml-micro underline" data-scan-link="json">JSON</a>
+                <a class="ml-micro underline" data-scan-link="sarif">SARIF</a>
+                <a class="ml-micro underline" data-scan-link="cdx">CycloneDX</a>
+                <a class="ml-micro underline" data-scan-link="table">Table</a>
         </p>
         {{ else }}
         <p>{{ t .Localizer "final.scan.enterprise_feature" }}{{ template "enterprise-docs-link" .Localizer }}</p>
         {{ end }}
 </section>
 {{ if .Enterprise }}
-<div id="scan-detail-modal" data-scan-modal class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
-        <div data-scan-modal-card class="relative w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg">
-                <div class="flex-none flex items-center justify-between py-2 px-4 border-b border-slate-200 dark:border-slate-700">
-                        <h3 class="text-base font-semibold" data-scan-modal-title></h3>
-                        <button type="button" class="text-2xl leading-none bg-transparent border-0 cursor-pointer text-slate-500 hover:text-slate-900 dark:hover:text-slate-100" data-scan-modal-close aria-label="Close">&times;</button>
+<div id="scan-detail-modal" data-scan-modal class="hidden fixed inset-0 z-50 bg-surface-scrim items-center justify-center p-compact">
+        <div data-scan-modal-card class="relative w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden rounded-md border border-border-default bg-surface-card shadow-modal">
+                <div class="flex-none flex items-center justify-between py-tight px-compact border-b border-border-default">
+                        <h3 class="type-section-title" data-scan-modal-title></h3>
+                        <button type="button" class="type-control bg-transparent border-0 cursor-pointer text-content-secondary hover:text-content-emphasis" data-scan-modal-close aria-label="Close">&times;</button>
                 </div>
-                <div data-scan-modal-body class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4">
-                        <table class="w-full table-fixed text-xs border-collapse">
+                <div data-scan-modal-body class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-compact">
+                        <table class="type-body w-full table-fixed border-collapse">
                                 <thead>
-                                        <tr class="text-left border-b border-slate-200 dark:border-slate-700">
-                                                <th class="py-1 pr-3 w-40">CVE</th>
-                                                <th class="py-1 pr-3 w-[18%]">Package</th>
-                                                <th class="py-1 pr-3 w-28">Version</th>
-                                                <th class="py-1 pr-3 w-[16%]">Fix</th>
-                                                <th class="py-1">Description</th>
+                                        <tr class="text-left border-b border-border-default">
+                                                <th class="type-overline text-content-secondary py-micro pr-snug w-40">CVE</th>
+                                                <th class="type-overline text-content-secondary py-micro pr-snug w-[18%]">Package</th>
+                                                <th class="type-overline text-content-secondary py-micro pr-snug w-28">Version</th>
+                                                <th class="type-overline text-content-secondary py-micro pr-snug w-[16%]">Fix</th>
+                                                <th class="type-overline text-content-secondary py-micro">Description</th>
                                         </tr>
                                 </thead>
                                 <tbody data-scan-modal-rows></tbody>
@@ -56,14 +56,19 @@
                 root.querySelectorAll('[data-scan-link]').forEach(function(a) {
                         a.href = base + '/' + formats[a.dataset.scanLink];
                 });
-                var severityClasses = {
-                        Critical:   'bg-red-600 text-white',
-                        High:       'bg-orange-700 text-white',
-                        Medium:     'bg-orange-500 text-white',
-                        Low:        'bg-yellow-500 text-black',
-                        Negligible: 'bg-slate-200 text-slate-900',
-                        Unknown:    'bg-slate-200 text-slate-900'
+                var severityDots = {
+                        Critical:   'bg-status-danger-default',
+                        High:       'bg-status-warning-default',
+                        Medium:     'bg-status-warning-default',
+                        Low:        'bg-status-info-default',
+                        Negligible: 'bg-content-muted',
+                        Unknown:    'bg-content-muted'
                 };
+                function severityDot(sev) {
+                        var dot = document.createElement('span');
+                        dot.className = 'size-2 rounded-full ' + (severityDots[sev] || severityDots.Unknown);
+                        return dot;
+                }
                 var loading = root.querySelector('[data-scan-state="loading"]');
                 var ready = root.querySelector('[data-scan-state="ready"]');
                 var errorEl = root.querySelector('[data-scan-state="error"]');
@@ -106,8 +111,8 @@
                         }
                         return pool[0] || '';
                 }
-                var iconExternal = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="inline-block w-3 h-3 ml-1 align-text-top" aria-hidden="true"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>';
-                var iconSearch = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="inline-block w-3 h-3 mr-1 align-text-top" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/></svg>';
+                var iconExternal = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="inline-block w-3 h-3 ml-micro align-text-top" aria-hidden="true"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"/><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"/></svg>';
+                var iconSearch = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="inline-block w-3 h-3 mr-micro align-text-top" aria-hidden="true"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/></svg>';
                 function fixVersions(v) {
                         if (!v || !v.fix || !v.fix.versions) return '';
                         return v.fix.versions.join(', ');
@@ -115,7 +120,7 @@
                 function showModal(severity) {
                         var rows = matchesBySeverity[severity] || [];
                         modalTitle.textContent = severity + ' (' + rows.length + ')';
-                        modalTitle.className = 'text-base font-semibold' + (severityClasses[severity] ? ' px-2 py-0.5 rounded ' + severityClasses[severity] : '');
+                        modalTitle.className = 'type-section-title';
                         modalRows.innerHTML = '';
                         rows.sort(function(a, b) {
                                 var an = (a.artifact && a.artifact.name) || '';
@@ -127,11 +132,11 @@
                                 v.relatedVulnerabilities = m.relatedVulnerabilities || [];
                                 var a = m.artifact || {};
                                 var tr = document.createElement('tr');
-                                tr.className = 'border-b border-slate-100 dark:border-slate-800 align-top';
+                                tr.className = 'border-b border-border-subtle align-top';
                                 var cveID = preferredCveID(v);
                                 var url = bestURL(v);
                                 var cveCell = document.createElement('td');
-                                cveCell.className = 'py-1 pr-3 font-mono whitespace-nowrap underline';
+                                cveCell.className = 'py-micro pr-snug type-mono whitespace-nowrap underline';
                                 if (url) {
                                         var link = document.createElement('a');
                                         link.href = url;
@@ -147,19 +152,19 @@
                                 }
                                 tr.appendChild(cveCell);
                                 var pkgCell = document.createElement('td');
-                                pkgCell.className = 'py-1 pr-3 font-mono break-all';
+                                pkgCell.className = 'py-micro pr-snug type-mono break-all';
                                 pkgCell.textContent = a.name || '';
                                 tr.appendChild(pkgCell);
                                 var verCell = document.createElement('td');
-                                verCell.className = 'py-1 pr-3 font-mono whitespace-nowrap';
+                                verCell.className = 'py-micro pr-snug type-mono whitespace-nowrap';
                                 verCell.textContent = a.version || '';
                                 tr.appendChild(verCell);
                                 var fixCell = document.createElement('td');
-                                fixCell.className = 'py-1 pr-3 font-mono break-all';
+                                fixCell.className = 'py-micro pr-snug type-mono break-all';
                                 fixCell.textContent = fixVersions(v);
                                 tr.appendChild(fixCell);
                                 var descCell = document.createElement('td');
-                                descCell.className = 'py-1 whitespace-pre-wrap wrap-break-word';
+                                descCell.className = 'py-micro whitespace-pre-wrap wrap-break-word';
                                 descCell.textContent = v.description || '';
                                 tr.appendChild(descCell);
                                 modalRows.appendChild(tr);
@@ -202,10 +207,11 @@
                                         var li = document.createElement('li');
                                         var btn = document.createElement('button');
                                         btn.type = 'button';
-                                        btn.className = 'px-2 py-1 rounded text-xs font-semibold cursor-pointer inline-flex items-center gap-1 ' + (severityClasses[sev] || severityClasses.Unknown);
+                                        btn.className = 'px-tight py-micro rounded type-control cursor-pointer inline-flex items-center gap-micro bg-surface-card border border-border-default text-content-default hover:bg-surface-hover';
                                         btn.title = 'Click to view ' + sev + ' vulnerabilities';
                                         btn.innerHTML = '';
                                         btn.insertAdjacentHTML('afterbegin', iconSearch);
+                                        btn.prepend(severityDot(sev));
                                         btn.appendChild(document.createTextNode(sev + ': ' + counts[sev]));
                                         btn.addEventListener('click', function() { showModal(sev); });
                                         li.appendChild(btn);
@@ -225,13 +231,13 @@
 {{ end }}
 
 {{ template "header" (t .Localizer "final.title") }}
-<div class="mb-6 text-sm">
+<div class="type-body mb-base">
         {{ t .Localizer "final.image" }}{{ template "copyable-text" .Schematic}}
 </div>
 
-<div class="mb-6 text-sm font-mono bg-slate-200 dark:bg-slate-700 p-1 whitespace-pre">{{ .Marshaled }}</div>
+<div class="type-code-block mb-base bg-surface-inset p-micro whitespace-pre">{{ .Marshaled }}</div>
 
-<div class="mb-6 prose prose-sm dark:prose-invert max-w-none">
+<div class="mb-base prose prose-sm max-w-none">
         <h2>{{ t .Localizer "final.first_boot" }}</h2>
         {{ if eq .Target "metal" }}
         <p>{{ t .Localizer "final.first_boot.metal" }}</p>
@@ -553,8 +559,8 @@
 {{ end }}
 
 
-{{ define "enterprise-docs-link" }}<a href="https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory" class="underline ml-1" target="_blank" rel="noopener noreferrer">{{ t . "final.enterprise.learn_more" }}</a>{{ end }}
-{{ define "checksum-link" }}{{ if .Enterprise }}<a href="{{ printf "%s.sha256" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1">(sha256)</a><a href="{{ printf "%s.sha512" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1">(sha512)</a>{{ else }}<span class="text-xs ml-1 text-gray-400 cursor-not-allowed" title="{{ t .Localizer "final.extra.checksum_enterprise_feature" }}">(checksums)</span>{{ end }}{{ end }}
-{{ define "signature-link" }}{{ if .Enterprise }}<a href="{{ printf "%s.sigstore.json" .Path | .ChecksumBaseURL.JoinPath }}" class="text-xs ml-1" title="{{ t .Localizer "final.extra.signature_hint" }}">(sig)</a>{{ else }}<span class="text-xs ml-1 text-gray-400 cursor-not-allowed" title="{{ t .Localizer "final.extra.signature_enterprise_feature" }}">(signature)</span>{{ end }}{{ end }}
+{{ define "enterprise-docs-link" }}<a href="https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory" class="underline ml-micro" target="_blank" rel="noopener noreferrer">{{ t . "final.enterprise.learn_more" }}</a>{{ end }}
+{{ define "checksum-link" }}{{ if .Enterprise }}<a href="{{ printf "%s.sha256" .Path | .ChecksumBaseURL.JoinPath }}" class="type-control ml-micro">(sha256)</a><a href="{{ printf "%s.sha512" .Path | .ChecksumBaseURL.JoinPath }}" class="type-control ml-micro">(sha512)</a>{{ else }}<span class="type-meta ml-micro text-content-secondary cursor-not-allowed" title="{{ t .Localizer "final.extra.checksum_enterprise_feature" }}">(checksums)</span>{{ end }}{{ end }}
+{{ define "signature-link" }}{{ if .Enterprise }}<a href="{{ printf "%s.sigstore.json" .Path | .ChecksumBaseURL.JoinPath }}" class="type-control ml-micro" title="{{ t .Localizer "final.extra.signature_hint" }}">(sig)</a>{{ else }}<span class="type-meta ml-micro text-content-secondary cursor-not-allowed" title="{{ t .Localizer "final.extra.signature_enterprise_feature" }}">(signature)</span>{{ end }}{{ end }}
 
 {{ template "wizard-final" . }}

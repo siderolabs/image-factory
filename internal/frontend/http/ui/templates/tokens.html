@@ -2,57 +2,60 @@
 <html lang="{{ lang .Localizer "tokens.title" }}">
 
 <head>
+    <meta name="color-scheme" content="dark light">
 	<title>{{ t .Localizer "tokens.title" }} - {{ t .Localizer "app.name" }}</title>
     <link rel="shortcut icon" href=/favicons/favicon.ico>
     <link rel=apple-touch-icon href=/favicons/apple-touch-icon-180x180.png sizes=180x180>
     <link rel=icon type=image/png href=/favicons/favicon-16x16.png sizes=16x16>
     <link rel=icon type=image/png href=/favicons/favicon-32x32.png sizes=32x32>
     <link rel=icon type=image/png href=/favicons/android-chrome-192x192.png sizes=192x192>
+    <script src="/js/theme.js"></script>
     <link href="/css/output.css" rel="stylesheet" />
     <script src="/js/clipboard.js"></script>
 </head>
 
-<body class="dark:bg-gray-900 antialiased">
-    <header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-gray-200 dark:bg-gray-900/80 dark:border-gray-800">
-        <div class="container mx-auto max-w-3xl flex items-center justify-between gap-4 px-6 py-3">
-            <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+<body class="antialiased">
+    <header class="sticky top-0 z-10 bg-surface-chrome border-b border-border-default">
+        <div class="container mx-auto max-w-3xl flex items-center justify-between gap-compact px-base py-snug">
+            <h1 class="type-page-title text-content-emphasis">
                 {{ if .Enterprise }}{{ t .Localizer "page.header.enterprise" }}{{ else }}{{ t .Localizer "page.header" }}{{ end }}
             </h1>
-            <nav class="flex items-center gap-1 text-sm">
+            <nav class="type-control flex items-center gap-micro">
                 <a href="/"
-                    class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    class="px-snug py-tight rounded-md text-content-default hover:text-content-emphasis hover:bg-surface-hover transition-colors">
                     {{ t .Localizer "tokens.back_home" }}
                 </a>
                 {{ if .LogoutEnabled }}
-                <div class="w-px h-4 bg-gray-200 dark:bg-gray-700"></div>
+                <div class="w-px h-4 bg-border-default"></div>
                 <form method="POST" action="/logout">
                     <button type="submit"
-                        class="px-3 py-1.5 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        class="px-snug py-tight rounded-md text-content-default hover:text-content-emphasis hover:bg-surface-hover transition-colors">
                         {{ t .Localizer "nav.logout" }}
                     </button>
                 </form>
                 {{ end }}
+                {{ template "theme-menu" . }}
             </nav>
         </div>
     </header>
     <main>
-        <div class="container mx-auto max-w-3xl px-6 py-8">
-            <div class="flex items-center justify-between gap-4 mb-4">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t .Localizer "tokens.title" }}</h2>
+        <div class="container mx-auto max-w-3xl px-base py-section">
+            <div class="flex items-center justify-between gap-compact mb-compact">
+                <h2 class="type-page-title text-content-emphasis">{{ t .Localizer "tokens.title" }}</h2>
                 <button type="button" id="token-create-open"
-                    class="shrink-0 text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center inline-flex items-center gap-1.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 transition-colors">
+                    class="type-control shrink-0 bg-accent-fill text-content-on-accent hover:bg-accent-fill-hover active:bg-accent-fill-active rounded-lg px-compact py-tight text-center inline-flex items-center gap-tight transition-colors">
                     <svg class="w-3.5 h-3.5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
                         <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 1v12M1 7h12" />
                     </svg>
                     {{ t .Localizer "tokens.create.button" }}
                 </button>
             </div>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">{{ t .Localizer "tokens.description" }}</p>
+            <p class="type-body text-content-default mb-base">{{ t .Localizer "tokens.description" }}</p>
 
-            <div id="tokens-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
+            <div id="tokens-error" class="status-glyph status-failed type-body hidden mb-compact text-content-default"></div>
 
-            <div id="tokens-loading" class="flex items-center gap-2 mb-6 text-sm text-gray-500 dark:text-gray-400">
-                <svg aria-hidden="true" class="w-4 h-4 text-gray-300 animate-spin fill-gray-500 dark:text-gray-600 dark:fill-gray-400"
+            <div id="tokens-loading" class="type-body flex items-center gap-tight mb-base text-content-secondary">
+                <svg aria-hidden="true" class="w-4 h-4 text-surface-hover animate-spin fill-content-secondary"
                     viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                         d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
@@ -64,51 +67,51 @@
                 {{ t .Localizer "tokens.loading" }}
             </div>
 
-            <table class="w-full text-sm mb-6 hidden" id="tokens-table">
+            <table class="type-body w-full mb-base hidden" id="tokens-table">
                 <thead>
-                    <tr class="text-left border-b border-gray-200 dark:border-gray-700">
-                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.table.name" }}</th>
-                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.table.permissions" }}</th>
-                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.table.created" }}</th>
-                        <th class="py-2 pr-3 font-medium text-gray-500 dark:text-gray-400">{{ t .Localizer "tokens.table.expires" }}</th>
-                        <th class="py-2 font-medium text-gray-500 dark:text-gray-400"></th>
+                    <tr class="text-left border-b border-border-default">
+                        <th class="py-tight pr-snug type-overline text-content-secondary">{{ t .Localizer "tokens.table.name" }}</th>
+                        <th class="py-tight pr-snug type-overline text-content-secondary">{{ t .Localizer "tokens.table.permissions" }}</th>
+                        <th class="py-tight pr-snug type-overline text-content-secondary">{{ t .Localizer "tokens.table.created" }}</th>
+                        <th class="py-tight pr-snug type-overline text-content-secondary">{{ t .Localizer "tokens.table.expires" }}</th>
+                        <th class="py-tight type-overline text-content-secondary"></th>
                     </tr>
                 </thead>
                 <tbody id="tokens-rows"></tbody>
             </table>
-            <p id="tokens-empty" class="hidden text-sm text-gray-500 dark:text-gray-400 mb-6">{{ t .Localizer "tokens.empty" }}</p>
+            <p id="tokens-empty" class="type-body hidden text-content-secondary mb-base">{{ t .Localizer "tokens.empty" }}</p>
         </div>
     </main>
 
-    <div id="token-create-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4 overflow-y-auto">
-        <div class="relative my-8 w-full max-w-md rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
-            <h2 class="text-base font-semibold mb-4 text-gray-900 dark:text-white">{{ t .Localizer "tokens.create.button" }}</h2>
-            <div id="token-create-error" class="hidden mb-4 text-sm text-red-600 dark:text-red-400"></div>
+    <div id="token-create-modal" class="hidden fixed inset-0 z-50 bg-surface-scrim justify-center p-compact overflow-y-auto">
+        <div class="relative my-auto w-full max-w-md rounded-md border border-border-default bg-surface-card shadow-modal p-base">
+            <h2 class="type-section-title mb-compact text-content-emphasis">{{ t .Localizer "tokens.create.button" }}</h2>
+            <div id="token-create-error" class="status-glyph status-failed type-body hidden mb-compact text-content-default"></div>
             <form id="tokens-create-form">
                 <label for="token-name"
-                    class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-1">{{ t .Localizer "tokens.create.name_label" }}</label>
+                    class="type-label block text-content-secondary mb-micro">{{ t .Localizer "tokens.create.name_label" }}</label>
                 <input type="text" id="token-name" name="name" required
-                    class="w-full bg-gray-50 border border-gray-300 text-sm text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                    class="type-body w-full bg-surface-inset border border-border-default text-content-emphasis rounded-lg block p-snug mb-compact">
 
                 <label for="token-ttl"
-                    class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-1">{{ t .Localizer "tokens.create.ttl_label" }}</label>
+                    class="type-label block text-content-secondary mb-micro">{{ t .Localizer "tokens.create.ttl_label" }}</label>
                 <input type="text" id="token-ttl" name="ttl" autocomplete="off" placeholder="720h"
-                    class="w-full bg-gray-50 border border-gray-300 text-sm text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                <div class="mt-1 mb-4 text-xs text-gray-500 dark:text-gray-400">
+                    class="type-body w-full bg-surface-inset border border-border-default text-content-emphasis rounded-lg block p-snug">
+                <div class="type-meta mt-micro mb-compact text-content-secondary">
                     <p>{{ t .Localizer "tokens.create.ttl_help" }}</p>
-                    <p class="mt-1">{{ t .Localizer "tokens.create.ttl_examples" }}</p>
-                    <p id="token-ttl-expires" class="hidden mt-1"></p>
+                    <p class="mt-micro">{{ t .Localizer "tokens.create.ttl_examples" }}</p>
+                    <p id="token-ttl-expires" class="hidden mt-micro"></p>
                 </div>
 
-                <fieldset class="mb-4">
-                    <legend class="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">{{ t .Localizer "tokens.create.actor_label" }}</legend>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <fieldset class="mb-compact">
+                    <legend class="type-label block text-content-secondary mb-tight">{{ t .Localizer "tokens.create.actor_label" }}</legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-tight">
                         {{ range $actor := .Actors }}
-                        <label class="relative block cursor-pointer rounded-lg border border-gray-300 p-3 text-sm hover:border-blue-500 dark:border-gray-600 dark:hover:border-blue-500">
+                        <label class="type-label relative block cursor-pointer rounded-lg border border-border-default p-snug hover:border-border-accent">
                             <input type="radio" name="actor" value="{{ $actor.ID }}" class="peer sr-only" {{ if eq $actor.ID "talos" }}checked{{ end }}>
-                            <span class="block font-medium text-gray-900 peer-checked:text-blue-700 dark:text-gray-100 dark:peer-checked:text-blue-400">{{ t $.Localizer (printf "tokens.create.actor_%s" $actor.ID) }}</span>
-                            <span class="mt-1 block text-xs text-gray-500 dark:text-gray-400">{{ t $.Localizer (printf "tokens.create.actor_%s_help" $actor.ID) }}</span>
-                            <span class="pointer-events-none absolute inset-0 rounded-lg border-2 border-transparent peer-checked:border-blue-600"></span>
+                            <span class="block type-control text-content-emphasis">{{ t $.Localizer (printf "tokens.create.actor_%s" $actor.ID) }}</span>
+                            <span class="type-meta mt-micro block text-content-secondary">{{ t $.Localizer (printf "tokens.create.actor_%s_help" $actor.ID) }}</span>
+                            <span class="pointer-events-none absolute inset-0 rounded-lg border border-transparent peer-checked:border-border-accent peer-focus-visible:shadow-focus"></span>
                         </label>
                         {{ end }}
                     </div>
@@ -119,17 +122,17 @@
                         cards either widens the dialog or makes the grid jump a row taller as the
                         selection moves.
                     -->
-                    <div id="token-actor-scopes" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div id="token-actor-scopes" class="type-meta mt-tight text-content-secondary">
                         {{ range $actor := .Actors }}
                         <div data-actor="{{ $actor.ID }}" class="hidden">
                             <p>
-                                <span class="font-medium">{{ t $.Localizer "tokens.create.actor_scopes" }}:</span>
-                                <span class="font-mono break-words">{{ range $i, $scope := $actor.Scopes }}{{ if $i }} {{ end }}{{ $scope }}{{ end }}</span>
+                                <span class="type-label">{{ t $.Localizer "tokens.create.actor_scopes" }}:</span>
+                                <span class="type-mono break-words">{{ range $i, $scope := $actor.Scopes }}{{ if $i }} {{ end }}{{ $scope }}{{ end }}</span>
                             </p>
                             {{ if $actor.IssuableScopes }}
-                            <p class="mt-1">
-                                <span class="font-medium">{{ t $.Localizer "tokens.create.actor_issuable" }}:</span>
-                                <span class="font-mono break-words">{{ range $i, $scope := $actor.IssuableScopes }}{{ if $i }} {{ end }}{{ $scope }}{{ end }}</span>
+                            <p class="mt-micro">
+                                <span class="type-label">{{ t $.Localizer "tokens.create.actor_issuable" }}:</span>
+                                <span class="type-mono break-words">{{ range $i, $scope := $actor.IssuableScopes }}{{ if $i }} {{ end }}{{ $scope }}{{ end }}</span>
                             </p>
                             {{ end }}
                         </div>
@@ -137,15 +140,15 @@
                     </div>
                 </fieldset>
 
-                <div class="flex justify-end gap-2">
+                <div class="flex justify-end gap-tight">
                     <button type="button" id="token-create-cancel"
-                        class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
+                        class="type-control text-content-emphasis bg-surface-card border border-border-default hover:bg-surface-hover rounded-lg px-compact py-tight disabled:opacity-50 disabled:cursor-not-allowed">
                         {{ t .Localizer "tokens.create.cancel" }}
                     </button>
                     <button type="submit" id="token-create-submit"
-                        class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center inline-flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                        class="type-control bg-accent-fill text-content-on-accent hover:bg-accent-fill-hover active:bg-accent-fill-active rounded-lg px-compact py-tight text-center inline-flex items-center gap-tight disabled:opacity-50 disabled:cursor-not-allowed">
                         <span id="token-create-spinner" class="hidden">
-                            <svg aria-hidden="true" class="w-3.5 h-3.5 text-blue-300 animate-spin fill-white"
+                            <svg aria-hidden="true" class="w-3.5 h-3.5 text-surface-hover animate-spin fill-content-secondary"
                                 viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
@@ -163,42 +166,42 @@
         </div>
     </div>
 
-    <div id="token-secret-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
-        <div class="relative w-full max-w-lg rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
-            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-white">{{ t .Localizer "tokens.secret.title" }}</h2>
-            <p class="text-sm text-red-600 dark:text-red-400 mb-4">{{ t .Localizer "tokens.secret.warning" }}</p>
+    <div id="token-secret-modal" class="hidden fixed inset-0 z-50 bg-surface-scrim justify-center p-compact overflow-y-auto">
+        <div class="relative my-auto w-full max-w-lg rounded-md border border-border-default bg-surface-card shadow-modal p-base">
+            <h2 class="type-section-title mb-tight text-content-emphasis">{{ t .Localizer "tokens.secret.title" }}</h2>
+            <p class="status-glyph status-warning type-body text-content-default mb-compact">{{ t .Localizer "tokens.secret.warning" }}</p>
 
-            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ t .Localizer "tokens.secret.identity" }}</p>
-            <div id="token-secret-identity" class="mb-4"></div>
+            <p class="type-label text-content-secondary mb-micro">{{ t .Localizer "tokens.secret.identity" }}</p>
+            <div id="token-secret-identity" class="mb-compact"></div>
 
-            <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ t .Localizer "tokens.secret.token" }}</p>
-            <div id="token-secret-value" class="mb-4"></div>
+            <p class="type-label text-content-secondary mb-micro">{{ t .Localizer "tokens.secret.token" }}</p>
+            <div id="token-secret-value" class="mb-compact"></div>
 
             <div id="token-secret-patch-section" class="hidden">
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{{ t .Localizer "tokens.secret.patch" }}</p>
-                <div id="token-secret-patch" class="mb-4"></div>
+                <p class="type-label text-content-secondary mb-micro">{{ t .Localizer "tokens.secret.patch" }}</p>
+                <div id="token-secret-patch" class="mb-compact"></div>
             </div>
 
             <div class="flex justify-end">
                 <button type="button" id="token-secret-close"
-                    class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
+                    class="type-control text-content-emphasis bg-surface-card border border-border-default hover:bg-surface-hover rounded-lg px-compact py-tight">
                     {{ t .Localizer "tokens.secret.close" }}
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="token-revoke-modal" class="hidden fixed inset-0 z-50 bg-black/50 items-center justify-center p-4">
-        <div class="relative w-full max-w-md rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg p-6">
-            <h2 class="text-base font-semibold mb-2 text-gray-900 dark:text-white">{{ t .Localizer "tokens.revoke.title" }}</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ t .Localizer "tokens.revoke.confirm" }}</p>
-            <div class="flex justify-end gap-2">
+    <div id="token-revoke-modal" class="hidden fixed inset-0 z-50 bg-surface-scrim justify-center p-compact overflow-y-auto">
+        <div class="relative my-auto w-full max-w-md rounded-md border border-border-default bg-surface-card shadow-modal p-base">
+            <h2 class="type-section-title mb-tight text-content-emphasis">{{ t .Localizer "tokens.revoke.title" }}</h2>
+            <p class="type-body text-content-default mb-compact">{{ t .Localizer "tokens.revoke.confirm" }}</p>
+            <div class="flex justify-end gap-tight">
                 <button type="button" id="token-revoke-cancel"
-                    class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-4 py-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700">
+                    class="type-control text-content-emphasis bg-surface-card border border-border-default hover:bg-surface-hover rounded-lg px-compact py-tight">
                     {{ t .Localizer "tokens.create.cancel" }}
                 </button>
                 <button type="button" id="token-revoke-confirm"
-                    class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-4 py-1.5 text-center dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
+                    class="type-control bg-status-danger-fill text-status-danger-on-fill rounded-lg px-compact py-tight text-center">
                     {{ t .Localizer "tokens.revoke.button" }}
                 </button>
             </div>
@@ -317,17 +320,17 @@
             container.innerHTML = '';
 
             var div = document.createElement('div');
-            div.className = 'flex items-start gap-2 bg-slate-200 dark:bg-slate-700 p-2';
+            div.className = 'flex items-start gap-tight bg-surface-inset p-tight';
 
             var span = document.createElement('span');
-            span.className = 'font-mono text-xs whitespace-pre-wrap break-all text-gray-900 dark:text-gray-100';
+            span.className = 'type-mono whitespace-pre-wrap break-all text-content-emphasis';
             span.textContent = text;
             div.appendChild(span);
 
             var btn = document.createElement('button');
             btn.type = 'button';
             btn.title = 'Copy to clipboard';
-            btn.className = 'shrink-0 p-0.5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors';
+            btn.className = 'shrink-0 p-micro text-content-default hover:text-content-emphasis rounded border border-border-default hover:bg-surface-hover transition-colors';
             btn.setAttribute('onclick', 'copyToClipboard(this)');
             btn.innerHTML = copyIcon;
             div.appendChild(btn);
@@ -397,15 +400,15 @@
 
             tokens.forEach(function(tok) {
                 var tr = document.createElement('tr');
-                tr.className = 'border-b border-gray-100 dark:border-gray-800';
+                tr.className = 'border-b border-border-subtle';
 
                 var nameCell = document.createElement('td');
-                nameCell.className = 'py-2 pr-3 text-gray-900 dark:text-gray-100';
+                nameCell.className = 'py-tight pr-snug type-body-strong text-content-emphasis';
                 nameCell.textContent = tok.name;
                 tr.appendChild(nameCell);
 
                 var scopesCell = document.createElement('td');
-                scopesCell.className = 'py-2 pr-3 font-mono text-xs text-gray-500 dark:text-gray-400';
+                scopesCell.className = 'py-tight pr-snug type-mono';
                 scopesCell.textContent = (tok.scopes || []).join(' ');
                 if ((tok.issuable_scopes || []).length) {
                     scopesCell.textContent += ' → ' + tok.issuable_scopes.join(' ');
@@ -413,12 +416,12 @@
                 tr.appendChild(scopesCell);
 
                 var createdCell = document.createElement('td');
-                createdCell.className = 'py-2 pr-3 whitespace-nowrap text-gray-500 dark:text-gray-400';
+                createdCell.className = 'py-tight pr-snug whitespace-nowrap';
                 createdCell.textContent = tok.created_at ? formatDateTime(new Date(tok.created_at)) : '';
                 tr.appendChild(createdCell);
 
                 var expiresCell = document.createElement('td');
-                expiresCell.className = 'py-2 pr-3 text-gray-500 dark:text-gray-400';
+                expiresCell.className = 'py-tight pr-snug';
 
                 if (tok.expires_at) {
                     var expiresAt = new Date(tok.expires_at);
@@ -429,10 +432,10 @@
                 tr.appendChild(expiresCell);
 
                 var actionCell = document.createElement('td');
-                actionCell.className = 'py-2 text-right';
+                actionCell.className = 'py-tight text-right';
                 var revokeBtn = document.createElement('button');
                 revokeBtn.type = 'button';
-                revokeBtn.className = 'text-red-600 hover:underline disabled:no-underline disabled:opacity-60 disabled:cursor-not-allowed dark:text-red-400';
+                revokeBtn.className = 'type-control text-status-danger-text hover:underline disabled:no-underline disabled:opacity-50 disabled:cursor-not-allowed';
                 revokeBtn.textContent = '{{ t .Localizer "tokens.revoke.button" }}';
                 revokeBtn.addEventListener('click', function() { showRevoke(tok.id); });
                 actionCell.appendChild(revokeBtn);

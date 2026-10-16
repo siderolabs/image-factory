@@ -49,6 +49,18 @@
 - id: nav.logout
   translation: "Se déconnecter"
 
+- id: nav.theme
+  translation: "Thème"
+
+- id: nav.theme.light
+  translation: "Clair"
+
+- id: nav.theme.dark
+  translation: "Sombre"
+
+- id: nav.theme.system
+  translation: "Système"
+
 - id: interface.loading
   translation: "Chargement..."
 

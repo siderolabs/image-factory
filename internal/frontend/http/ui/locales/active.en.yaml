@@ -49,6 +49,18 @@
 - id: nav.logout
   translation: "Log out"
 
+- id: nav.theme
+  translation: "Theme"
+
+- id: nav.theme.light
+  translation: "Light"
+
+- id: nav.theme.dark
+  translation: "Dark"
+
+- id: nav.theme.system
+  translation: "System"
+
 - id: interface.loading
   translation: "Loading..."
 

@@ -49,6 +49,18 @@
 - id: nav.logout
   translation: "Выйти"
 
+- id: nav.theme
+  translation: "Тема"
+
+- id: nav.theme.light
+  translation: "Светлая"
+
+- id: nav.theme.dark
+  translation: "Тёмная"
+
+- id: nav.theme.system
+  translation: "Системная"
+
 - id: interface.loading
   translation: "Загрузка..."
 

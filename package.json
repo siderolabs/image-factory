@@ -3,6 +3,7 @@
     "@tailwindcss/cli": "^4.3.3"
   },
   "dependencies": {
+    "@siderolabs/talos-design-system": "github:siderolabs/talos-design-system#semver:^0.10.0",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.20",
     "tailwindcss": "^4.3.3"

@@ -1,7 +1,7 @@
 {{ define "wizard-sbc" }}
 {{ template "hidden-inputs" . }}
 {{ template "header" (t .Localizer "singleboard.title") }}
-<div class="mb-6 space-y-2">
+<div class="mb-base space-y-tight">
     {{ range .SBCs }}
     {{ template "radio-with-description" dict "name" "board" "value" .Name "current" $.SelectedBoard "label" .Label "description" (dynamic_template "board-description" (dict "Board" . "Version" $.Version "Localizer" $.Localizer))  }}
     {{ end }}
