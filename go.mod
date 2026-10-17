@@ -13,8 +13,8 @@ require (
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/felixge/httpsnoop v1.1.0
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/getkin/kin-openapi v0.149.0
-	github.com/go-jose/go-jose/v4 v4.1.5
+	github.com/getkin/kin-openapi v0.151.0
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/google/go-containerregistry v0.22.1
 	github.com/google/uuid v1.6.0
 	github.com/h2non/filetype v1.1.3
@@ -29,7 +29,7 @@ require (
 	github.com/knadh/koanf/providers/env/v2 v2.0.2
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/structs v1.0.1
-	github.com/knadh/koanf/v2 v2.3.8
+	github.com/knadh/koanf/v2 v2.4.0
 	github.com/minio/minio-go/v7 v7.4.1
 	github.com/moby/moby/api v1.56.1
 	github.com/nicksnyder/go-i18n/v2 v2.6.1
@@ -45,11 +45,11 @@ require (
 	github.com/siderolabs/go-pointer v1.0.1
 	github.com/siderolabs/go-retry v0.3.3
 	github.com/siderolabs/go-vex v0.1.4
-	github.com/siderolabs/talos v1.14.2
-	github.com/siderolabs/talos/pkg/machinery v1.14.2
+	github.com/siderolabs/talos v1.14.4
+	github.com/siderolabs/talos/pkg/machinery v1.14.4
 	github.com/sigstore/cosign/v3 v3.1.3
 	github.com/sigstore/protobuf-specs v0.5.2
-	github.com/sigstore/sigstore v1.11.0
+	github.com/sigstore/sigstore v1.11.1
 	github.com/sigstore/sigstore-go v1.3.0
 	github.com/slok/go-http-metrics v0.13.0
 	github.com/spdx/tools-golang v0.6.0-rc4
