@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/siderolabs/gen/xerrors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
@@ -48,6 +49,14 @@ func TestTalosctlServiceResolvesHeadWithoutOpeningBinary(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, download.Reader)
 	require.EqualValues(t, 6, download.Size)
+}
+
+func TestTalosctlServiceUnknownFile(t *testing.T) {
+	t.Parallel()
+
+	service := artifacts.NewTalosctlService(talosctlSource{directory: t.TempDir()})
+	_, err := service.Open(t.Context(), "1.9.0", "talosctl-linux-x86_64", false)
+	require.True(t, xerrors.TagIs[artifacts.ErrNotFoundTag](err), "unexpected error: %v", err)
 }
 
 type talosctlSource struct {

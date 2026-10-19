@@ -9,13 +9,17 @@ package tokens
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
+	"github.com/siderolabs/gen/xerrors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 
 	"github.com/siderolabs/image-factory/internal/apitoken"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
+	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 )
 
 // Manager mints, tracks and verifies self-issued API tokens.
@@ -76,10 +80,13 @@ func (m *Manager) Revoke(ctx context.Context, orgID, id string) error {
 // Verify reports the claims a bearer credential authenticates, or ok=false if it isn't a
 // currently valid API token. Satisfies enterprise.TokenVerifier.
 //
+// If a stored token cannot be looked up, it returns an error tagged with enterrors.NotReadyTag,
+// not ok=false. This way, the request fails with 503 instead of 401.
+//
 // Every rejection is logged, because the caller falls back to the configured auth provider and
 // would otherwise report a plain credential failure for a request that never had one. The
 // credential itself is never logged.
-func (m *Manager) Verify(ctx context.Context, tokenStr string) (apitoken.Claims, bool) {
+func (m *Manager) Verify(ctx context.Context, tokenStr string) (apitoken.Claims, bool, error) {
 	logger := ctxlog.Logger(ctx, m.logger)
 
 	claims, err := m.issuer.Verify(tokenStr)
@@ -88,15 +95,19 @@ func (m *Manager) Verify(ctx context.Context, tokenStr string) (apitoken.Claims,
 		// username/password login reaches this branch on every request.
 		logger.Debug("credential is not an API token", zap.Error(err))
 
-		return apitoken.Claims{}, false
+		return apitoken.Claims{}, false, nil
 	}
 
 	if !claims.Stored {
-		return claims, true
+		return claims, true, nil
 	}
 
 	valid, err := m.valid(ctx, claims.Subject, claims.ID)
 	if err != nil {
+		if errors.Is(err, context.Canceled) { // the client went away, the storage did not fail
+			return apitoken.Claims{}, false, err
+		}
+
 		logger.Warn(
 			"failed to look up stored API token",
 			zap.Error(err),
@@ -104,7 +115,7 @@ func (m *Manager) Verify(ctx context.Context, tokenStr string) (apitoken.Claims,
 			zap.String("jti", claims.ID),
 		)
 
-		return apitoken.Claims{}, false
+		return apitoken.Claims{}, false, xerrors.NewTagged[enterrors.NotReadyTag](fmt.Errorf("failed to look up stored API token: %w", err))
 	}
 
 	if !valid {
@@ -114,10 +125,10 @@ func (m *Manager) Verify(ctx context.Context, tokenStr string) (apitoken.Claims,
 			zap.String("jti", claims.ID),
 		)
 
-		return apitoken.Claims{}, false
+		return apitoken.Claims{}, false, nil
 	}
 
-	return claims, true
+	return claims, true, nil
 }
 
 // valid is storage.Valid with concurrent lookups of the same token collapsed into one registry

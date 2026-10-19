@@ -12,7 +12,8 @@ type NotEnabledTag struct{}
 // InvalidErrorTag tags errors related to invalid request parameters.
 type InvalidErrorTag struct{}
 
-// NotReadyTag tags errors that occur when an enterprise feature is.
+// NotReadyTag tags errors that occur when an enterprise feature is not ready yet or temporarily
+// unavailable, e.g., its storage cannot be reached.
 type NotReadyTag struct{}
 
 // RespondedTag tags an error from a handler that already wrote its own response: the status

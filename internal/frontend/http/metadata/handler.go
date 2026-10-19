@@ -7,16 +7,19 @@ package metadata
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/blang/semver/v4"
 	"github.com/julienschmidt/httprouter"
+	"github.com/siderolabs/gen/xerrors"
 	"github.com/siderolabs/gen/xslices"
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
+	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/pkg/client"
 )
 
@@ -133,6 +136,10 @@ func (handler *Handler) OfficialOverlays(ctx context.Context, writer http.Respon
 // SecureBootSigningCertificate serves the Secure Boot signing certificate.
 func (handler *Handler) SecureBootSigningCertificate(_ context.Context, writer http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
 	certificate, err := handler.secureBootCertificate.GetSecureBootSigningCert() //nolint:contextcheck
+	if errors.Is(err, secureboot.ErrDisabled) {
+		return xerrors.NewTagged[artifacts.ErrNotFoundTag](err)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -168,11 +175,9 @@ func (handler *Handler) LLMsText(_ context.Context, writer http.ResponseWriter, 
 }
 
 func parseVersion(versionTag string) (semver.Version, error) {
-	versionTag = strings.TrimPrefix(versionTag, "v")
-
-	version, err := semver.Parse(versionTag)
+	version, err := semver.Parse(strings.TrimPrefix(versionTag, "v"))
 	if err != nil {
-		return semver.Version{}, fmt.Errorf("error parsing version: %w", err)
+		return semver.Version{}, xerrors.NewTaggedf[transport.InvalidRequestTag]("invalid version %q: %w", versionTag, err)
 	}
 
 	return version, nil

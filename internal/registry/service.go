@@ -296,7 +296,8 @@ func (f *Service) Manifest(ctx context.Context, request Request) (Location, erro
 	// installer image is not built yet, build it and push it
 	version, err := semver.Parse(versionTag[1:])
 	if err != nil {
-		return Location{}, fmt.Errorf("error parsing version: %w", err)
+		// same answer as for a tag the registry does not know
+		return Location{}, xerrors.NewTaggedf[NotFoundTag]("invalid version %q: %w", versionTag, err)
 	}
 	// build installer images for each architecture, combine them into a single index and push it
 	key := fmt.Sprintf("%s-%s-%s", img.Name(), schematicID, versionTag)

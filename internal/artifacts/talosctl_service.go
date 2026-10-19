@@ -6,12 +6,16 @@ package artifacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/siderolabs/gen/xerrors"
 )
 
 // TalosctlSource retrieves talosctl release metadata and files.
@@ -70,6 +74,10 @@ func (service *TalosctlService) Open(ctx context.Context, version, filename stri
 
 	fileInfo, err := os.Stat(path)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return TalosctlDownload{}, xerrors.NewTaggedf[ErrNotFoundTag]("file %s is not available for version %s", filename, version)
+		}
+
 		return TalosctlDownload{}, err
 	}
 

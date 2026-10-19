@@ -8,6 +8,7 @@
 package tokens_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/siderolabs/gen/xerrors"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -24,6 +26,7 @@ import (
 
 	"github.com/siderolabs/image-factory/enterprise/tokens"
 	"github.com/siderolabs/image-factory/internal/apitoken"
+	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 )
 
 var imageScopes = []apitoken.Scope{"image:read"}
@@ -114,7 +117,8 @@ func TestManagerCreateEphemeralTokenIsNotRecorded(t *testing.T) {
 	require.ErrorIs(t, mgr.Revoke(ctx, "org_a", record.ID), tokens.ErrNotFound)
 
 	// Nothing to look up, so verification rests on the signature and the claim alone.
-	claims, ok := mgr.Verify(ctx, token)
+	claims, ok, err := mgr.Verify(ctx, token)
+	require.NoError(t, err)
 	require.True(t, ok)
 	require.Equal(t, "org_a", claims.Subject)
 	require.Equal(t, imageScopes, claims.Scopes)
@@ -132,7 +136,8 @@ func TestManagerCreateStoredTokenIsRecorded(t *testing.T) {
 	_, token, err := mgr.Create(ctx, "org_a", "my-node", imageScopes, apitoken.Delegation{}, true, 0)
 	require.NoError(t, err)
 
-	claims, ok := mgr.Verify(ctx, token)
+	claims, ok, err := mgr.Verify(ctx, token)
+	require.NoError(t, err)
 	require.True(t, ok)
 	require.True(t, claims.Stored)
 
@@ -196,7 +201,8 @@ func TestManagerVerifyAcceptsValidToken(t *testing.T) {
 	_, token, err := mgr.Create(ctx, "org_a", "my-node", imageScopes, apitoken.Delegation{}, true, 0)
 	require.NoError(t, err)
 
-	claims, ok := mgr.Verify(ctx, token)
+	claims, ok, err := mgr.Verify(ctx, token)
+	require.NoError(t, err)
 	require.True(t, ok)
 	require.Equal(t, "org_a", claims.Subject)
 	require.Equal(t, imageScopes, claims.Scopes)
@@ -207,8 +213,65 @@ func TestManagerVerifyRejectsGarbage(t *testing.T) {
 
 	mgr := newTestManager(t)
 
-	_, ok := mgr.Verify(t.Context(), "not-a-token")
+	_, ok, err := mgr.Verify(t.Context(), "not-a-token")
+	require.NoError(t, err)
 	require.False(t, ok)
+}
+
+func TestManagerVerifyStorageUnavailable(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(registry.New())
+	t.Cleanup(srv.Close)
+
+	mgr := tokens.NewManager(zaptest.NewLogger(t), newTestIssuer(t), newTestStorageAt(t, strings.TrimPrefix(srv.URL, "http://"), time.Minute))
+
+	_, token, err := mgr.Create(t.Context(), "org_a", "my-node", imageScopes, apitoken.Delegation{}, true, 0)
+	require.NoError(t, err)
+
+	srv.Close()
+
+	// not a rejection: the token could not be checked
+	_, ok, err := mgr.Verify(t.Context(), token)
+	require.False(t, ok)
+	require.True(t, xerrors.TagIs[enterrors.NotReadyTag](err), "unexpected error: %v", err)
+}
+
+func TestManagerVerifyCanceledRequest(t *testing.T) {
+	t.Parallel()
+
+	var stall atomic.Bool
+
+	done := make(chan struct{})
+	reg := registry.New()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if stall.Load() && strings.Contains(r.URL.Path, "/manifests/") {
+			<-done
+
+			return
+		}
+
+		reg.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	t.Cleanup(func() { close(done) })
+
+	mgr := tokens.NewManager(zaptest.NewLogger(t), newTestIssuer(t), newTestStorageAt(t, strings.TrimPrefix(srv.URL, "http://"), time.Minute))
+
+	_, token, err := mgr.Create(t.Context(), "org_a", "my-node", imageScopes, apitoken.Delegation{}, true, 0)
+	require.NoError(t, err)
+
+	stall.Store(true)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	// the client went away, the storage did not fail
+	_, ok, err := mgr.Verify(ctx, token)
+	require.False(t, ok)
+	require.ErrorIs(t, err, context.Canceled)
+	require.False(t, xerrors.TagIs[enterrors.NotReadyTag](err))
 }
 
 func TestManagerVerifyRejectsForeignKey(t *testing.T) {
@@ -219,7 +282,8 @@ func TestManagerVerifyRejectsForeignKey(t *testing.T) {
 	token, err := newTestIssuer(t).Issue("org_a", imageScopes, true, 0)
 	require.NoError(t, err)
 
-	_, ok := mgr.Verify(t.Context(), token.Signed)
+	_, ok, err := mgr.Verify(t.Context(), token.Signed)
+	require.NoError(t, err)
 	require.False(t, ok)
 }
 
@@ -237,9 +301,9 @@ func TestManagerVerifyRejectsRevokedToken(t *testing.T) {
 	require.NoError(t, mgr.Revoke(ctx, "org_a", record.ID))
 
 	require.Eventually(t, func() bool {
-		_, ok := mgr.Verify(ctx, token)
+		_, ok, err := mgr.Verify(ctx, token)
 
-		return !ok
+		return err == nil && !ok
 	}, time.Second, time.Millisecond)
 }
 
@@ -253,7 +317,8 @@ func TestManagerVerifyLogsRejectionReason(t *testing.T) {
 	ctx := t.Context()
 
 	// An ordinary htpasswd password reaches Verify too, so this must stay at debug level.
-	_, ok := mgr.Verify(ctx, "SideroTest")
+	_, ok, err := mgr.Verify(ctx, "SideroTest")
+	require.NoError(t, err)
 	require.False(t, ok)
 
 	entries := logs.TakeAll()
@@ -266,7 +331,8 @@ func TestManagerVerifyLogsRejectionReason(t *testing.T) {
 	token, err := issuer.IssueWithDelegation("org_a", imageScopes, apitoken.Delegation{}, true, 0)
 	require.NoError(t, err)
 
-	_, ok = mgr.Verify(ctx, token.Signed)
+	_, ok, err = mgr.Verify(ctx, token.Signed)
+	require.NoError(t, err)
 	require.False(t, ok)
 
 	entries = logs.TakeAll()
@@ -322,7 +388,8 @@ func TestManagerVerifyDeduplicatesConcurrentLookups(t *testing.T) {
 		done.Go(func() {
 			start.Wait()
 
-			_, ok := mgr.Verify(ctx, token)
+			_, ok, err := mgr.Verify(ctx, token)
+			require.NoError(t, err)
 			require.True(t, ok)
 		})
 	}

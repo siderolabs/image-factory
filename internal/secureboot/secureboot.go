@@ -18,9 +18,8 @@ import (
 type Service struct { //nolint:govet
 	in *profile.SecureBootAssets
 
-	signingCertPEM   []byte
-	signingCertError error
-	signingCertOnce  sync.Once
+	signingCertPEM []byte
+	signingCertMu  sync.Mutex
 }
 
 // Options configures SecureBoot.
@@ -127,29 +126,29 @@ func (s *Service) GetSecureBootAssets() (*profile.SecureBootAssets, error) {
 }
 
 // GetSecureBootSigningCert returns SecureBoot signing key PEM-encoded.
+//
+// Only a successful result is cached, so a failure is retried on the next call.
 func (s *Service) GetSecureBootSigningCert() ([]byte, error) {
-	s.signingCertOnce.Do(func() {
-		if s.in == nil {
-			// disabled
-			s.signingCertError = ErrDisabled
+	if s.in == nil {
+		return nil, ErrDisabled
+	}
 
-			return
-		}
+	s.signingCertMu.Lock()
+	defer s.signingCertMu.Unlock()
 
-		signer, err := s.in.SecureBootSigner.GetSigner(context.Background())
-		if err != nil {
-			s.signingCertError = fmt.Errorf("failed to get SecureBoot signing key: %w", err)
+	if s.signingCertPEM != nil {
+		return s.signingCertPEM, nil
+	}
 
-			return
-		}
+	signer, err := s.in.SecureBootSigner.GetSigner(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get SecureBoot signing key: %w", err)
+	}
 
-		cert := signer.Certificate()
-
-		s.signingCertPEM = pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: cert.Raw,
-		})
+	s.signingCertPEM = pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: signer.Certificate().Raw,
 	})
 
-	return s.signingCertPEM, s.signingCertError
+	return s.signingCertPEM, nil
 }

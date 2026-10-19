@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/siderolabs/gen/xerrors"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/frontend/http/authentication"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
+	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 )
 
 func TestSelectorUsesRoutePolicyInsteadOfURLShape(t *testing.T) {
@@ -141,6 +143,28 @@ func TestSelectorProjectsAPITokenIdentityIntoCompatibilityProvider(t *testing.T)
 	require.NoError(t, handler(request.Context(), httptest.NewRecorder(), request, nil))
 }
 
+func TestSelectorDoesNotFallBackWhenTokenCannotBeChecked(t *testing.T) {
+	t.Parallel()
+
+	errUnavailable := xerrors.NewTagged[enterrors.NotReadyTag](errors.New("token storage unavailable"))
+
+	provider := &fallbackProvider{}
+	selector := authentication.New(zap.NewNop(), provider, tokenVerifier{err: errUnavailable})
+	handler := selector.Middleware(transport.AccessAuthenticated, func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error {
+		t.Fatal("unchecked token must not invoke application handler")
+
+		return nil
+	})
+
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/schematics/id", nil)
+	request.Header.Set("Authorization", "Bearer the-token")
+
+	err := handler(request.Context(), httptest.NewRecorder(), request, nil)
+	require.ErrorIs(t, err, errUnavailable)
+	require.Zero(t, provider.calls)
+	require.Equal(t, http.StatusServiceUnavailable, transport.ClassifyError(err).Status)
+}
+
 func TestSelectorRecordsProviderPrincipal(t *testing.T) {
 	t.Parallel()
 
@@ -201,16 +225,21 @@ func TestSelectorBridgesDeniedLegacyProviderUsernameForAudit(t *testing.T) {
 }
 
 type tokenVerifier struct {
+	err    error
 	token  string
 	scopes []apitoken.Scope
 }
 
-func (verifier tokenVerifier) Verify(_ context.Context, token string) (apitoken.Claims, bool) {
-	if token != verifier.token {
-		return apitoken.Claims{}, false
+func (verifier tokenVerifier) Verify(_ context.Context, token string) (apitoken.Claims, bool, error) {
+	if verifier.err != nil {
+		return apitoken.Claims{}, false, verifier.err
 	}
 
-	return apitoken.Claims{Subject: "org-a", ID: "jti-1", Scopes: verifier.scopes}, true
+	if token != verifier.token {
+		return apitoken.Claims{}, false, nil
+	}
+
+	return apitoken.Claims{Subject: "org-a", ID: "jti-1", Scopes: verifier.scopes}, true, nil
 }
 
 type fallbackProvider struct {

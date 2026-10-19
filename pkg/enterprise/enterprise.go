@@ -166,9 +166,9 @@ type MintedToken = apitoken.Token
 type TokenClaims = apitoken.Claims
 
 // TokenVerifier reports the claims a bearer credential authenticates, or ok=false if it isn't a
-// currently valid, self-issued API token.
+// currently valid, self-issued API token. An error means the token could not be checked.
 type TokenVerifier interface {
-	Verify(ctx context.Context, tokenStr string) (claims TokenClaims, ok bool)
+	Verify(ctx context.Context, tokenStr string) (claims TokenClaims, ok bool, err error)
 }
 
 // TokenOptions holds configuration for self-issued API token issuance, storage, and

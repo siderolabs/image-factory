@@ -14,10 +14,13 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/julienschmidt/httprouter"
+	"github.com/siderolabs/gen/xerrors"
 	"github.com/stretchr/testify/require"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
+	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
+	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/pkg/client"
 )
 
@@ -111,6 +114,29 @@ func TestHandlerDocumentsAndSigningMaterial(t *testing.T) {
 	}
 }
 
+func TestHandlerSecureBootDisabled(t *testing.T) {
+	t.Parallel()
+
+	handler := metadata.New(nil, certificateSource{err: secureboot.ErrDisabled}, publicKeySource{}, nil)
+
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/secureboot/signing-cert.pem", nil)
+	err := handler.SecureBootSigningCertificate(request.Context(), httptest.NewRecorder(), request, nil)
+	require.True(t, xerrors.TagIs[artifacts.ErrNotFoundTag](err), "unexpected error: %v", err)
+}
+
+func TestHandlerInvalidVersion(t *testing.T) {
+	t.Parallel()
+
+	handler := metadata.New(&artifactSource{}, certificateSource{}, publicKeySource{}, nil)
+	params := httprouter.Params{{Key: "version", Value: "v01.10.0"}}
+
+	for _, endpoint := range []metadata.Endpoint{handler.OfficialExtensions, handler.OfficialOverlays} {
+		request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		err := endpoint(request.Context(), httptest.NewRecorder(), request, params)
+		require.True(t, xerrors.TagIs[transport.InvalidRequestTag](err), "unexpected error: %v", err)
+	}
+}
+
 func TestHandlerReloadsLLMsTextForEveryRequest(t *testing.T) {
 	t.Parallel()
 
@@ -151,9 +177,14 @@ func (source *artifactSource) GetOfficialOverlays(_ context.Context, version str
 	return source.overlays, nil
 }
 
-type certificateSource struct{ value []byte }
+type certificateSource struct {
+	err   error
+	value []byte
+}
 
-func (source certificateSource) GetSecureBootSigningCert() ([]byte, error) { return source.value, nil }
+func (source certificateSource) GetSecureBootSigningCert() ([]byte, error) {
+	return source.value, source.err
+}
 
 type publicKeySource struct{ value []byte }
 

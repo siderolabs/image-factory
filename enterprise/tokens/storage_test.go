@@ -9,10 +9,12 @@ package tokens_test
 
 import (
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/siderolabs/image-factory/enterprise/tokens"
+	"github.com/siderolabs/image-factory/internal/regtransport"
 )
 
 // newTestStorage stands up an in-process OCI registry and a Storage pointed at it.
@@ -50,6 +53,65 @@ func newTestStorageAt(t *testing.T, host string, refreshInterval time.Duration) 
 
 func activeRecord(id, name string) tokens.Record {
 	return tokens.Record{ID: id, Name: name, ExpiresAt: time.Now().Add(time.Hour)}
+}
+
+// newDeniedStorage returns a Storage with the token "jti-1" of "org_a". Once the returned flag is
+// set, its registry answers 403 to every manifest and tag list request.
+func newDeniedStorage(t *testing.T) (*tokens.Storage, *atomic.Bool) {
+	t.Helper()
+
+	var denied atomic.Bool
+
+	reg := registry.New()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if denied.Load() && (strings.Contains(r.URL.Path, "/manifests/") || strings.Contains(r.URL.Path, "/tags/")) {
+			http.Error(w, `{"errors":[{"code":"DENIED","message":"denied"}]}`, http.StatusForbidden)
+
+			return
+		}
+
+		reg.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+
+	s := newTestStorageAt(t, strings.TrimPrefix(srv.URL, "http://"), time.Minute)
+	require.NoError(t, s.Create(t.Context(), "org_a", activeRecord("jti-1", "node-1")))
+
+	return s, &denied
+}
+
+func TestStorageValidDeniedReadIsError(t *testing.T) {
+	t.Parallel()
+
+	s, denied := newDeniedStorage(t)
+	denied.Store(true)
+
+	// unlike a missing token, a denied read means the token could not be checked
+	_, err := s.Valid(t.Context(), "org_a", "jti-1")
+	require.True(t, regtransport.IsStatusCodeError(err, http.StatusForbidden), "unexpected error: %v", err)
+}
+
+func TestStorageListDeniedReadIsError(t *testing.T) {
+	t.Parallel()
+
+	s, denied := newDeniedStorage(t)
+	denied.Store(true)
+
+	// the org has a token, so a denied read must not look like an empty list
+	_, err := s.List(t.Context(), "org_a")
+	require.True(t, regtransport.IsStatusCodeError(err, http.StatusForbidden), "unexpected error: %v", err)
+}
+
+func TestStorageRevokeDeniedReadIsError(t *testing.T) {
+	t.Parallel()
+
+	s, denied := newDeniedStorage(t)
+	denied.Store(true)
+
+	// the token was not revoked, so it must not be reported as not found
+	err := s.Revoke(t.Context(), "org_a", "jti-1")
+	require.NotErrorIs(t, err, tokens.ErrNotFound)
+	require.True(t, regtransport.IsStatusCodeError(err, http.StatusForbidden), "unexpected error: %v", err)
 }
 
 func TestStorageCreateListRevoke(t *testing.T) {

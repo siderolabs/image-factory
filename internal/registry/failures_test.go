@@ -81,6 +81,23 @@ func TestManifestCacheFailures(t *testing.T) {
 	}
 }
 
+func TestManifestInvalidVersion(t *testing.T) {
+	t.Parallel()
+
+	repository, err := name.NewRepository("registry.example.com/cache")
+	require.NoError(t, err)
+
+	var calls []string
+
+	backend := &cacheFailureBackend{calls: &calls, headErr: &remoteerrors.Error{StatusCode: 404}}
+	service := registry.New(schematicSource{}, nil, nil, nil,
+		registry.Options{InternalRepository: repository, ExternalRepository: repository, Puller: backend, Pusher: backend})
+	request := registry.Request{Image: "installer", Schematic: strings.Repeat("a", 64), Reference: "v1.10"}
+
+	_, err = service.Manifest(t.Context(), request)
+	require.True(t, xerrors.TagIs[registry.NotFoundTag](err), "unexpected error: %v", err)
+}
+
 func TestProxyAndReferrersFailures(t *testing.T) {
 	t.Parallel()
 

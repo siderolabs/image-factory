@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"slices"
 	"time"
 
@@ -121,7 +120,7 @@ func (s *Storage) Create(ctx context.Context, orgID string, record Record) error
 func (s *Storage) Revoke(ctx context.Context, orgID, id string) error {
 	stored, err := s.readRecord(ctx, s.orgRepository(orgID).Tag(id))
 	if err != nil {
-		if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
+		if regtransport.IsNotFound(err) {
 			return ErrNotFound
 		}
 
@@ -144,7 +143,8 @@ func (s *Storage) Revoke(ctx context.Context, orgID, id string) error {
 func (s *Storage) Valid(ctx context.Context, orgID, jti string) (bool, error) {
 	stored, err := s.readRecord(ctx, s.orgRepository(orgID).Tag(jti))
 	if err != nil {
-		if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
+		// with the factory's credentials, a missing repository or tag is a 404, a 403 means the read failed
+		if regtransport.IsNotFound(err) {
 			return false, nil
 		}
 
@@ -163,7 +163,7 @@ func (s *Storage) readRecords(ctx context.Context, orgID string) ([]Record, erro
 
 	tags, err := remote.List(repository, options...)
 	if err != nil {
-		if regtransport.IsStatusCodeError(err, http.StatusNotFound, http.StatusForbidden) {
+		if regtransport.IsNotFound(err) {
 			return nil, nil
 		}
 

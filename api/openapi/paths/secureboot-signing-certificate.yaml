@@ -9,5 +9,7 @@ get:
   responses:
     '200':
       $ref: "../components/responses.yaml#/PEMResponse"
+    '404':
+      $ref: "../components/responses.yaml#/NotFound"
     '500':
       $ref: "../components/responses.yaml#/InternalServerError"

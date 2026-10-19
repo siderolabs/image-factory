@@ -32,7 +32,7 @@ type usernameContextProvider interface {
 
 // TokenVerifier verifies self-issued API tokens.
 type TokenVerifier interface {
-	Verify(context.Context, string) (apitoken.Claims, bool)
+	Verify(context.Context, string) (apitoken.Claims, bool, error)
 }
 
 // Selector chooses an authentication mechanism for each route policy.
@@ -86,7 +86,11 @@ func (selector *Selector) Middleware(access transport.AccessPolicy, next transpo
 			return fallback(ctx, w, r, params)
 		}
 
-		claims, ok := selector.verifier.Verify(ctx, token)
+		claims, ok, err := selector.verifier.Verify(ctx, token)
+		if err != nil {
+			return err
+		}
+
 		if !ok {
 			return fallback(ctx, w, r, params)
 		}
