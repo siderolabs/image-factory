@@ -438,18 +438,12 @@ docs:
 
 .PHONY: push-extra-extensions
 push-extra-extensions:
-	@echo 'waiting for $(EXTRA_EXTENSIONS_REGISTRY)...'; until crane catalog --insecure $(EXTRA_EXTENSIONS_REGISTRY) >/dev/null 2>&1; do sleep 1; done
-	crane push --insecure internal/integration/testdata/extra-extensions/extensions-catalog-image "$(EXTRA_EXTENSIONS_REGISTRY)/extension-testing/extensions:v1.13.4"
-	crane push --insecure internal/integration/testdata/extra-extensions/my-extension-image "$(EXTRA_EXTENSIONS_REGISTRY)/extension-testing/my-extension:v1.0.0"
-	crane push --insecure internal/integration/testdata/extra-extensions/extensions-catalog-signature $(EXTRA_EXTENSIONS_REGISTRY)/extension-testing/extensions:$$(crane digest --insecure $(EXTRA_EXTENSIONS_REGISTRY)/extension-testing/extensions:v1.13.4 | sed 's/:/-/').sig
-	crane push --insecure internal/integration/testdata/extra-extensions/my-extension-signature $(EXTRA_EXTENSIONS_REGISTRY)/extension-testing/my-extension:$$(crane digest --insecure $(EXTRA_EXTENSIONS_REGISTRY)/extension-testing/my-extension:v1.0.0 | sed 's/:/-/').sig
+	./hack/push-extra-extensions.sh $(EXTRA_EXTENSIONS_REGISTRY)
 
 .PHONY: docker-compose-up
 docker-compose-up:
 	@$(MAKE) tailwind
-	@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml up -d registry.local registry.ghcr.io
-	@$(MAKE) push-extra-extensions
-	@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml up --build --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io
+	@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml up --build --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io --no-attach extra-extensions
 
 .PHONY: docker-compose-down
 docker-compose-down:

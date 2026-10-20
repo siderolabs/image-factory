@@ -32,6 +32,15 @@ services:
       - REGISTRY_LOG_LEVEL=info
       - REGISTRY_STORAGE_DELETE_ENABLED=true
     restart: unless-stopped
+  extra-extensions:
+    image: gcr.io/go-containerregistry/crane/debug:v0.22.1
+    depends_on:
+      - registry.local
+    volumes:
+      - ../push-extra-extensions.sh:/src/hack/push-extra-extensions.sh:ro
+      - ../../internal/integration/testdata/extra-extensions:/src/internal/integration/testdata/extra-extensions:ro
+    entrypoint: ["/busybox/sh", "/src/hack/push-extra-extensions.sh"]
+    command: ["registry.local:5000"]
   image-factory:
     build:
       context: ../../
@@ -62,8 +71,12 @@ services:
       - --log-level=debug
       - --config=/etc/image-factory/config.yaml
     depends_on:
-      - registry.local
-      - registry.ghcr.io
+      registry.local:
+        condition: service_started
+      registry.ghcr.io:
+        condition: service_started
+      extra-extensions:
+        condition: service_completed_successfully
     userns_mode: "host"
     cap_drop:
       - ALL

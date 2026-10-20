@@ -27,7 +27,7 @@ Local development enables authentication by default and uses the htpasswd provid
 The Compose configuration mounts `hack/dev/htpasswd` at the configured `/etc/image-factory/htpasswd` path.
 
 When running `make docker-compose-up` or the integration tests, the extra extension catalog and an extra extension image and their signatures are automatically pushed to the local registry.
-You can push the extra images manually with `push-extra-extensions`, optionally setting the `EXTRA_EXTENSIONS_REGISTRY`.
+You can push the extra images manually with `push-extra-extensions` (requires [`crane`](https://github.com/google/go-containerregistry/tree/main/cmd/crane)), optionally setting the `EXTRA_EXTENSIONS_REGISTRY`.
 The extra images are located under [internal/integration/testdata/extra-extensions/](../internal/integration/testdata/extra-extensions/).
 
 ## Running Image Factory Manually
