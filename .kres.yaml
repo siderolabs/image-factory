@@ -644,11 +644,14 @@ spec:
   makefile:
     enabled: true
     phony: true
+    variables:
+      - name: DOCKER_COMPOSE_ENV
+        defaultValue: 'TOOLCHAIN="$(TOOLCHAIN)" PKGS_PREFIX="$(PKGS_PREFIX)" PKGS="$(PKGS)" SHA="$(SHA)" TAG="$(TAG)" ABBREV_TAG="$(ABBREV_TAG)" CGO_ENABLED="$(CGO_ENABLED)" GO_BUILDFLAGS="$(GO_BUILDFLAGS)" GO_GCFLAGS="$(GO_GCFLAGS)" GO_LDFLAGS="$(GO_LDFLAGS)" GOTOOLCHAIN="$(GOTOOLCHAIN)" GOEXPERIMENT="$(GOEXPERIMENT)" TESTPKGS="$(TESTPKGS)" GOIMPORTS_VERSION="$(GOIMPORTS_VERSION)" GOMOCK_VERSION="$(GOMOCK_VERSION)" DEEPCOPY_VERSION="$(DEEPCOPY_VERSION)" GOLANGCILINT_VERSION="$(GOLANGCILINT_VERSION)" GOFUMPT_VERSION="$(GOFUMPT_VERSION)" DIS_VULNCHECK_VERSION="$(DIS_VULNCHECK_VERSION)" HELMDOCS_VERSION="$(HELMDOCS_VERSION)"'
     script:
-      - "@$(MAKE) image-image-factory PUSH=true"
-      - "@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml up -d registry.local registry.ghcr.io"
+      - "@$(MAKE) tailwind"
+      - "@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml up -d registry.local registry.ghcr.io"
       - "@$(MAKE) push-extra-extensions"
-      - "@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml up --pull=always --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io"
+      - "@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml up --build --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io"
 
 ---
 kind: custom.Step
@@ -658,7 +661,7 @@ spec:
     enabled: true
     phony: true
     script:
-      - "@IMAGE_FACTORY_IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) docker compose -f hack/dev/compose.yaml down"
+      - "@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml down"
 ---
 kind: common.Build
 spec:

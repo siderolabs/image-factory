@@ -11,10 +11,10 @@ To run:
 openssl ecparam -name prime256v1 -genkey -noout -out _out/cache-signing-key.key
 
 # Build and run
-make docker-compose-up REGISTRY=127.0.0.1:5005
+make docker-compose-up
 
 # Build and run (enterprise)
-make docker-compose-up REGISTRY=127.0.0.1:5005 WITH_ENTERPRISE=true
+make docker-compose-up WITH_ENTERPRISE=true
 ```
 
 To stop:

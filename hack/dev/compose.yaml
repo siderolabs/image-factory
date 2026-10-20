@@ -33,7 +33,31 @@ services:
       - REGISTRY_STORAGE_DELETE_ENABLED=true
     restart: unless-stopped
   image-factory:
-    image: ${IMAGE_FACTORY_IMAGE?}
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+      target: image-image-factory
+      args:
+        - TOOLCHAIN=${TOOLCHAIN:?error}
+        - PKGS_PREFIX=${PKGS_PREFIX:?error}
+        - PKGS=${PKGS:?error}
+        - SHA=${SHA:?error}
+        - TAG=${TAG:?error}
+        - ABBREV_TAG=${ABBREV_TAG:?error}
+        - CGO_ENABLED=${CGO_ENABLED:?error}
+        - GO_BUILDFLAGS=${GO_BUILDFLAGS}
+        - GO_GCFLAGS=${GO_GCFLAGS}
+        - GO_LDFLAGS=${GO_LDFLAGS}
+        - GOTOOLCHAIN=${GOTOOLCHAIN}
+        - GOEXPERIMENT=${GOEXPERIMENT}
+        - TESTPKGS=${TESTPKGS:?error}
+        - GOIMPORTS_VERSION=${GOIMPORTS_VERSION:?error}
+        - GOMOCK_VERSION=${GOMOCK_VERSION:?error}
+        - DEEPCOPY_VERSION=${DEEPCOPY_VERSION:?error}
+        - GOLANGCILINT_VERSION=${GOLANGCILINT_VERSION:?error}
+        - GOFUMPT_VERSION=${GOFUMPT_VERSION:?error}
+        - DIS_VULNCHECK_VERSION=${DIS_VULNCHECK_VERSION:?error}
+        - HELMDOCS_VERSION=${HELMDOCS_VERSION:?error}
     command:
       - --log-level=debug
       - --config=/etc/image-factory/config.yaml
