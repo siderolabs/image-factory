@@ -21,7 +21,7 @@ func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin,
 	routes = append(routes, f.routes()...)
 	routes = append(routes, f.oci.Routes()...)
 	routes = append(routes, f.browserAuth.Routes()...)
-	routes = append(routes, f.ui.Routes()...)
+	routes = append(routes, f.uiRoutes()...)
 
 	server, err := newServer(f.contract, routes, middleware.Build, options)
 	if err != nil {
@@ -31,6 +31,17 @@ func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin,
 	f.server = server
 
 	return nil
+}
+
+// uiRoutes returns the browser UI routes: either the single-page UI or the server-rendered one.
+func (f *Frontend) uiRoutes() []transport.Route {
+	routes := f.spa.AssetRoutes()
+
+	if f.useSPA {
+		return append(routes, f.spa.Routes()...)
+	}
+
+	return append(routes, f.ui.Routes()...)
 }
 
 func (f *Frontend) enterpriseRoutes(plugins []enterprise.FrontendPlugin) ([]transport.Route, error) {

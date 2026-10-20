@@ -37,6 +37,10 @@ cache:
 http:
   # external URL the Image Factory is available at
   externalURL: http://builder.cat-gacrux.ts.net:8080
+  spa:
+    dev:
+      # Vite dev server (node-dev, or `npm run serve` on the host); only used when spa is enabled
+      serverURL: http://host.docker.internal:8121
 
 authentication:
   enabled: true

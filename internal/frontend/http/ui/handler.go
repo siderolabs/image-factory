@@ -195,25 +195,29 @@ func init() {
 
 			return av.LT(bv), nil
 		},
-		"t": func(localizer *i18n.Localizer, key string) string {
-			translated, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: key})
-			if err != nil {
-				return "missing translation"
-			}
-
-			return translated
-		},
-		// lang names the language key was actually rendered in, for the html lang attribute:
-		// the request may ask for one the bundle lacks, and then English is what the page shows.
-		"lang": func(localizer *i18n.Localizer, key string) string {
-			_, tag, err := localizer.LocalizeWithTag(&i18n.LocalizeConfig{MessageID: key})
-			if err != nil {
-				return language.English.String()
-			}
-
-			return tag.String()
-		},
+		"t":    localize,
+		"lang": localizedLang,
 	}
+}
+
+func localize(localizer *i18n.Localizer, key string) string {
+	translated, err := localizer.Localize(&i18n.LocalizeConfig{MessageID: key})
+	if err != nil {
+		return "missing translation"
+	}
+
+	return translated
+}
+
+// localizedLang names the language key was actually rendered in, for the html lang attribute:
+// the request may ask for one the bundle lacks, and then English is what the page shows.
+func localizedLang(localizer *i18n.Localizer, key string) string {
+	_, tag, err := localizer.LocalizeWithTag(&i18n.LocalizeConfig{MessageID: key})
+	if err != nil {
+		return language.English.String()
+	}
+
+	return tag.String()
 }
 
 // Target constants.
@@ -238,13 +242,7 @@ func (f *Handler) handleUI(ctx context.Context, w http.ResponseWriter, r *http.R
 			return nil
 		}
 
-		http.SetCookie(w, &http.Cookie{
-			Name:     "lang",
-			Value:    lang,
-			Path:     "/",
-			MaxAge:   60 * 60 * 24 * 365,
-			HttpOnly: true,
-		})
+		setLangCookie(w, lang)
 
 		returnURL := r.URL
 		query := returnURL.Query()

@@ -12,6 +12,8 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"go.yaml.in/yaml/v4"
 	"golang.org/x/text/language"
+
+	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
 // Use several ways to detect language.
@@ -29,6 +31,45 @@ func (f *Handler) getLocalizer(r *http.Request) *i18n.Localizer {
 	}
 
 	return i18n.NewLocalizer(getLocalizerBundle(), lang, "en")
+}
+
+// setLangCookie remembers the chosen UI language, which takes precedence over Accept-Language.
+func setLangCookie(w http.ResponseWriter, lang string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "lang",
+		Value:    lang,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 365,
+		HttpOnly: true,
+	})
+}
+
+// PageMeta is the localized document metadata of the browser UI.
+type PageMeta struct {
+	Lang        string
+	Title       string
+	Description string
+}
+
+// PageMeta localizes the browser UI document metadata for the request.
+// Like the server-rendered UI, it remembers a language chosen with ?lang=.
+func (f *Handler) PageMeta(w http.ResponseWriter, r *http.Request) PageMeta {
+	if lang := r.URL.Query().Get("lang"); lang != "" {
+		setLangCookie(w, lang)
+	}
+
+	localizer := f.getLocalizer(r)
+
+	titleKey, descriptionKey := "page.header", "page.description"
+	if enterprise.Enabled() {
+		titleKey, descriptionKey = "page.header.enterprise", "page.description.enterprise"
+	}
+
+	return PageMeta{
+		Lang:        localizedLang(localizer, "page.header"),
+		Title:       localize(localizer, titleKey),
+		Description: localize(localizer, descriptionKey),
+	}
 }
 
 func loadLocalizerBundle() (*i18n.Bundle, error) {

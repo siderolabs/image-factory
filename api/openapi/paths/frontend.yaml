@@ -299,3 +299,25 @@ staticJavaScript:
         $ref: "../components/responses.yaml#/NotFound"
       "500":
         $ref: "../components/responses.yaml#/InternalServerError"
+staticFrontendAsset:
+  parameters:
+  - name: filepath+
+    in: path
+    required: true
+    description: Built frontend asset path.
+    schema:
+      type: string
+      minLength: 1
+  get:
+    operationId: getFrontendAsset
+    summary: Download a built frontend asset
+    tags: [UI]
+    security: []
+    x-image-factory-internal: true
+    responses:
+      "200":
+        description: Built frontend asset; its name carries a content hash.
+      "404":
+        $ref: "../components/responses.yaml#/NotFound"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"

@@ -7,15 +7,19 @@ package http
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"sync/atomic"
 
+	"github.com/siderolabs/gen/ensure"
 	"go.uber.org/zap"
 
 	"github.com/siderolabs/image-factory/api"
+	frontenddist "github.com/siderolabs/image-factory/internal/frontend"
 	"github.com/siderolabs/image-factory/internal/frontend/http/browserauth"
 	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
 	ociadapter "github.com/siderolabs/image-factory/internal/frontend/http/oci"
+	"github.com/siderolabs/image-factory/internal/frontend/http/spa"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	uiadapter "github.com/siderolabs/image-factory/internal/frontend/http/ui"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
@@ -29,7 +33,7 @@ var testMetricsNamespace atomic.Uint64
 func (f *Frontend) Routes() []transport.Route {
 	routes := append(f.routes(), f.oci.Routes()...)
 
-	return append(routes, f.ui.Routes()...)
+	return append(routes, f.uiRoutes()...)
 }
 
 // EnterpriseRoutes exposes Enterprise plugin descriptors for external contract tests.
@@ -66,6 +70,10 @@ func RegisterTestRoutesWithAuth(
 		LogoutEnabled: frontend.browserAuth.LogoutEnabled(),
 	})
 	frontend.initializeEndpointOwners(nil)
+	frontend.spa = ensure.Value(spa.New(spa.Options{
+		Dist:     ensure.Value(fs.Sub(frontenddist.Dist, "dist")),
+		PageMeta: frontend.pageMeta,
+	}))
 	frontend.metadata = metadata.New(nil, nil, nil, getLLMsTxt)
 
 	middleware := NewRequestMiddleware(logger, contract, provider, nil, nil)

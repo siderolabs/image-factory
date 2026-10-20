@@ -118,6 +118,45 @@ The theme choice is stored in the browser and applied by `js/theme.js` before fi
 `make tailwind` rebuilds `internal/frontend/http/css/output.css` and copies the Inter and JetBrains Mono files next to it, so the fonts are served by Image Factory and work in air-gapped installs.
 Both are committed, so rerun it after changing template classes or bumping the design system.
 
+## Single-page UI (experimental)
+
+A Vue single-page UI is being built in [frontend/](../frontend/) to replace the server-rendered UI.
+It is served instead of the server-rendered UI when `http.spa.enabled` is set to `true`, and keeps the same browser paths (`/` and `/ui/tokens`), so bookmarks keep working.
+
+kres picks the frontend up from `frontend/package.json`: `make frontend` builds it, `make unit-tests-frontend` runs its tests, and `make lint-eslint` lints it.
+The Docker build embeds the result through [internal/frontend/frontend.go](../internal/frontend/frontend.go); the committed `internal/frontend/dist/index.html` is only a placeholder, so that the Go code compiles without a frontend build.
+Built files are served from `/assets/`, and `index.html` is a Go template, filled in on every request with the localized title and description.
+
+For UI development, run the Vite dev server and point Image Factory at it:
+
+```bash
+cd frontend
+npm install
+npm run serve
+```
+
+```yaml
+http:
+  spa:
+    enabled: true
+    dev:
+      serverURL: http://127.0.0.1:8121
+```
+
+`make docker-compose-up` runs the Vite dev server in the `node-dev` container and publishes it on port 8121.
+`hack/dev/config.yaml` points `http.spa.dev.serverURL` at `http://host.docker.internal:8121`, so only `http.spa.enabled: true` is needed, for example in a local config file set in `hack/dev/compose.override.yaml`.
+
+To run Vite on the host instead, disable `node-dev` so that port 8121 is free, and run `npm run serve` as above; the URL stays the same.
+On Linux, run it with `HOST=0.0.0.0 npm run serve`, as `host.docker.internal` is the Docker bridge address there rather than the host loopback.
+
+```yaml
+services:
+  node-dev:
+    profiles: [disabled]
+```
+
+Open the UI through Image Factory, not through Vite directly: Image Factory fills in `index.html` and forwards the source modules and hot reloading to Vite.
+
 ## HTTP identity and operation ownership
 
 Authentication publishes the authoritative typed `authn.Principal` to the request context.

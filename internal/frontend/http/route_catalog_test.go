@@ -87,7 +87,7 @@ func TestCommunityRouteCatalogMatchesContract(t *testing.T) {
 		"GET /talosctl/:version", "HEAD /talosctl/:version/:path", "GET /talosctl/:version/:path",
 		"GET /llms.txt", "GET /openapi.yaml",
 		"GET /", "HEAD /", "POST /ui/wizard", "GET /ui/version-doc", "POST /ui/extensions-list", "GET /ui/tokens",
-		"GET /css/*filepath", "GET /favicons/*filepath", "GET /js/*filepath",
+		"GET /css/*filepath", "GET /favicons/*filepath", "GET /js/*filepath", "GET /assets/*filepath",
 	}
 
 	requireRouteInventory(t, contract, routes, want)
@@ -95,6 +95,43 @@ func TestCommunityRouteCatalogMatchesContract(t *testing.T) {
 	requireGETRoute(t, routes, "/css/*filepath", transport.AccessPublic, transport.ProtocolStatic)
 	requireGETRoute(t, routes, "/", transport.AccessAuthenticated, transport.ProtocolHTML)
 	requireGETRoute(t, routes, "/healthz", transport.AccessPublic, transport.ProtocolOperational)
+}
+
+func TestSPARouteCatalogMatchesContract(t *testing.T) {
+	t.Parallel()
+
+	contract, err := api.NewContract(t.Context())
+	require.NoError(t, err)
+
+	options := catalogOptions(t, nil)
+	options.SPA = true
+
+	frontend, err := httpfrontend.NewFrontend(t.Context(), zap.NewNop(), nil, nil, nil, nil, nil, nil, nil, options)
+	require.NoError(t, err)
+
+	routes := frontend.Routes()
+
+	// The single-page UI keeps the browser paths and operations of the server-rendered UI it replaces,
+	// and drops the fragment endpoints that only the server-rendered UI calls.
+	want := []string{
+		"GET /healthz", "HEAD /healthz", "GET /readyz", "HEAD /readyz",
+		"GET /image/:schematic/:version/:path", "HEAD /image/:schematic/:version/:path",
+		"GET /pxe/:schematic/:version/:path",
+		"GET /v2", "HEAD /v2", "GET /v2/*path", "HEAD /v2/*path",
+		"GET /oci/cosign/signing-key.pub",
+		"POST /schematics", "GET /schematics/:schematic",
+		"GET /versions", "GET /version/:version/extensions/official", "GET /version/:version/overlays/official",
+		"GET /secureboot/signing-cert.pem",
+		"GET /talosctl/:version", "HEAD /talosctl/:version/:path", "GET /talosctl/:version/:path",
+		"GET /llms.txt", "GET /openapi.yaml",
+		"GET /", "HEAD /", "GET /ui/tokens",
+		"GET /css/*filepath", "GET /favicons/*filepath", "GET /js/*filepath", "GET /assets/*filepath",
+	}
+
+	requireRouteInventory(t, contract, routes, want)
+	requireGETRoute(t, routes, "/", transport.AccessAuthenticated, transport.ProtocolHTML)
+	requireGETRoute(t, routes, "/ui/tokens", transport.AccessAuthenticated, transport.ProtocolHTML)
+	requireGETRoute(t, routes, "/assets/*filepath", transport.AccessPublic, transport.ProtocolStatic)
 }
 
 func TestBrowserLoginRouteCatalogMatchesContract(t *testing.T) {
@@ -134,20 +171,27 @@ func TestEnterpriseRouteCatalogRejectsInvalidAccessPolicy(t *testing.T) {
 func newCatalogFrontend(t *testing.T, provider enterprise.AuthProvider, plugins ...enterprise.FrontendPlugin) *httpfrontend.Frontend {
 	t.Helper()
 
+	frontend, err := httpfrontend.NewFrontend(t.Context(), zap.NewNop(), nil, nil, nil, nil, nil, nil, plugins, catalogOptions(t, provider))
+	require.NoError(t, err)
+
+	return frontend
+}
+
+func catalogOptions(t *testing.T, provider enterprise.AuthProvider) httpfrontend.Options {
+	t.Helper()
+
 	repository, err := name.NewRepository("registry.example.com/catalog")
 	require.NoError(t, err)
 
 	externalURL := &url.URL{Scheme: "https", Host: "factory.example.com"}
-	frontend, err := httpfrontend.NewFrontend(t.Context(), zap.NewNop(), nil, nil, nil, nil, nil, nil, plugins, httpfrontend.Options{
+
+	return httpfrontend.Options{
 		ExternalURL: externalURL, ExternalPXEURL: externalURL,
 		InstallerInternalRepository: repository, InstallerExternalRepository: repository,
 		RegistryRefreshInterval: time.Minute, AuthProvider: provider,
 		CacheImageSigner: compositionSigner{}, InstallerSBOMSource: compositionSBOM{},
 		MetricsNamespace: "catalog_" + t.Name(),
-	})
-	require.NoError(t, err)
-
-	return frontend
+	}
 }
 
 func requireOpenAPIOperationOwnership(t *testing.T, contract *api.Contract, routes []transport.Route) {

@@ -10,6 +10,7 @@ volumes:
   if-registry-local-data:
   if-grype-db:
   if-audit-log:
+  if-frontend-node-modules:
 services:
   registry.local:
     image: ghcr.io/distribution/distribution:edge
@@ -41,6 +42,19 @@ services:
       - ../../internal/integration/testdata/extra-extensions:/src/internal/integration/testdata/extra-extensions:ro
     entrypoint: ["/busybox/sh", "/src/hack/push-extra-extensions.sh"]
     command: ["registry.local:5000"]
+  node-dev:
+    container_name: local-node
+    image: ${JS_TOOLCHAIN:?error}
+    volumes:
+      - ../../frontend:/app
+      - if-frontend-node-modules:/app/node_modules
+    environment:
+      - HOST=0.0.0.0
+    ports:
+      - "8121:8121"
+    working_dir: /app
+    command: sh -c 'npm i && npm run serve'
+    stop_signal: SIGKILL
   image-factory:
     build:
       context: ../../
@@ -67,6 +81,7 @@ services:
         - GOFUMPT_VERSION=${GOFUMPT_VERSION:?error}
         - DIS_VULNCHECK_VERSION=${DIS_VULNCHECK_VERSION:?error}
         - HELMDOCS_VERSION=${HELMDOCS_VERSION:?error}
+        - JS_TOOLCHAIN=${JS_TOOLCHAIN:?error}
     command:
       - --log-level=debug
       - --config=/etc/image-factory/config.yaml
@@ -78,6 +93,9 @@ services:
       extra-extensions:
         condition: service_completed_successfully
     userns_mode: "host"
+    # Already resolvable on Docker Desktop and OrbStack; needed on Linux.
+    extra_hosts:
+      - host.docker.internal:host-gateway
     cap_drop:
       - ALL
     cap_add:

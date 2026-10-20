@@ -1,0 +1,19 @@
+# Logs
+*.log
+npm-debug.log*
+
+node_modules
+dist
+*.local
+.env
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+.DS_Store
+*.sw?
+
+# Vitest browser mode failure screenshots
+.vitest

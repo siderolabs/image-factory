@@ -1,0 +1,17 @@
+<!doctype html>
+<!--
+  Placeholder so that //go:embed dist compiles without a frontend build.
+  The Docker build replaces this directory with the output of `make frontend`.
+-->
+<html lang="{{ .Lang }}">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{ .Title }}</title>
+  </head>
+  <body>
+    <p>
+      The frontend was not built into this binary. Build it with <code>make frontend</code>, or set
+      <code>http.spa.dev.serverURL</code> to a running Vite dev server.
+    </p>
+  </body>
+</html>

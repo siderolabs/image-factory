@@ -17,6 +17,7 @@ import (
 // needs to render. The longer Allow rules win over "Disallow: /".
 const robotsBrowserLogin = `User-agent: *
 Allow: /$
+Allow: /assets/
 Allow: /css/
 Allow: /favicons/
 Disallow: /

@@ -1,0 +1,67 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import { fileURLToPath } from 'node:url'
+
+import { includeIgnoreFile } from '@eslint/config-helpers'
+import { designSystem } from '@siderolabs/talos-design-system/eslint'
+import pluginVitest from '@vitest/eslint-plugin'
+import skipFormatting from '@vue/eslint-config-prettier/skip-formatting'
+import { vueTsConfigs, withVueTs } from '@vue/eslint-config-typescript'
+import simpleImportSort from 'eslint-plugin-simple-import-sort'
+import pluginVue from 'eslint-plugin-vue'
+
+export default withVueTs(
+  includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url))),
+
+  pluginVue.configs['flat/essential'],
+  pluginVue.configs['flat/strongly-recommended'],
+  pluginVue.configs['flat/recommended'],
+  vueTsConfigs.recommended,
+
+  {
+    ...pluginVitest.configs.recommended,
+    files: ['src/**/*.spec.*'],
+  },
+
+  skipFormatting,
+
+  {
+    name: 'Custom lint rules',
+    files: ['**/*.{ts,vue}'],
+    plugins: {
+      'design-system': designSystem,
+      'simple-import-sort': simpleImportSort,
+    },
+    rules: {
+      'design-system/no-raw-color': 'error',
+      'design-system/no-raw-font-size': 'error',
+      'design-system/no-off-menu-spacing': 'error',
+      'design-system/no-primitive-token': 'error',
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'vue/block-lang': ['error', { script: { lang: 'ts' } }],
+      'vue/block-order': ['error', { order: ['script', 'template', 'style'] }],
+      'vue/component-api-style': 'error',
+      'vue/component-name-in-template-casing': [
+        'error',
+        'PascalCase',
+        { registeredComponentsOnly: false },
+      ],
+      'vue/define-emits-declaration': 'error',
+      'vue/define-props-declaration': 'error',
+      'vue/multi-word-component-names': 'off',
+      'vue/no-undef-components': [
+        'error',
+        { ignorePatterns: ['RouterView', 'RouterLink', 'router-link'] },
+      ],
+      'vue/no-unused-refs': 'error',
+      'vue/no-useless-mustaches': 'error',
+      'vue/no-useless-v-bind': 'error',
+      'vue/padding-line-between-blocks': 'error',
+      'vue/prefer-separate-static-class': 'error',
+      'vue/prefer-use-template-ref': 'error',
+    },
+  },
+)

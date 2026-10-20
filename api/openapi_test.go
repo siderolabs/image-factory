@@ -381,6 +381,9 @@ func TestContractOperations(t *testing.T) {
 			http.MethodGet:  "getVEX",
 			http.MethodHead: "headVEX",
 		},
+		"/assets/{filepath+}": {
+			http.MethodGet: "getFrontendAsset",
+		},
 		"/callback": {
 			http.MethodGet: "completeBrowserLogin",
 		},

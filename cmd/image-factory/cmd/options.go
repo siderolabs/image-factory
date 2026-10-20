@@ -243,8 +243,26 @@ type HTTPOptions struct {
 	// ExternalPXEURL is the public URL for the PXE frontend, used for booting nodes via PXE.
 	ExternalPXEURL string `koanf:"externalPXEURL"`
 
+	// SPA configures the new single-page UI (experimental).
+	SPA SPAOptions `koanf:"spa"`
+
 	// AllowedOrigins configures the frontend API CORS with custom origins list.
 	AllowedOrigins []string `koanf:"allowedOrigins"`
+}
+
+// SPAOptions configures the single-page UI, which replaces the server-rendered UI.
+type SPAOptions struct { //nolint:govet // keeping order for semantic clarity
+	// Enabled serves the single-page UI instead of the server-rendered UI.
+	Enabled bool `koanf:"enabled"`
+
+	// Dev configures single-page UI development.
+	Dev SPADevOptions `koanf:"dev"`
+}
+
+// SPADevOptions configures single-page UI development.
+type SPADevOptions struct {
+	// ServerURL takes the single-page UI from a running Vite dev server (`npm run serve` in frontend/).
+	ServerURL string `koanf:"serverURL"`
 }
 
 // InstallerOptions configures storage for installer images, including internal and external OCI repositories.

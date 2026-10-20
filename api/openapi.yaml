@@ -44,6 +44,8 @@ paths:
     $ref: "./openapi/paths/frontend.yaml#/staticFavicon"
   /js/{filepath+}:
     $ref: "./openapi/paths/frontend.yaml#/staticJavaScript"
+  /assets/{filepath+}:
+    $ref: "./openapi/paths/frontend.yaml#/staticFrontendAsset"
   /login:
     $ref: "./openapi/paths/frontend.yaml#/login"
   /logout:

@@ -23,11 +23,13 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/audit"
+	frontenddist "github.com/siderolabs/image-factory/internal/frontend"
 	applicationapi "github.com/siderolabs/image-factory/internal/frontend/http/api"
 	"github.com/siderolabs/image-factory/internal/frontend/http/browserauth"
 	"github.com/siderolabs/image-factory/internal/frontend/http/metadata"
 	"github.com/siderolabs/image-factory/internal/frontend/http/oci"
 	"github.com/siderolabs/image-factory/internal/frontend/http/operational"
+	"github.com/siderolabs/image-factory/internal/frontend/http/spa"
 	staticfiles "github.com/siderolabs/image-factory/internal/frontend/http/static"
 	"github.com/siderolabs/image-factory/internal/frontend/http/ui"
 	"github.com/siderolabs/image-factory/internal/image/signer"
@@ -56,9 +58,13 @@ type Frontend struct {
 	staticFavicons   *staticfiles.Handler
 	staticJavaScript *staticfiles.Handler
 	ui               *ui.Handler
+	spa              *spa.Handler
 
 	// robots is the robots.txt body; nil leaves the route unregistered.
 	robots []byte
+
+	// useSPA serves the single-page UI instead of the server-rendered one.
+	useSPA bool
 }
 
 // Options configures the HTTP frontend.
@@ -71,6 +77,7 @@ type Options struct {
 
 	ExternalURL                      *url.URL
 	ExternalPXEURL                   *url.URL
+	SPADevServerURL                  *url.URL
 	AuditSink                        audit.Sink
 	InstallerInternalRepository      name.Repository
 	InstallerInternalNameOptions     []name.Option
@@ -80,6 +87,7 @@ type Options struct {
 	RemoteOptions                    []remote.Option
 	RegistryRefreshInterval          time.Duration
 	ProxyInstallerInternalRepository bool
+	SPA                              bool
 }
 
 type ImageProxyOptions struct {
@@ -154,6 +162,17 @@ func NewFrontend(
 	frontend.initializeEndpointOwners(readinessCheckers)
 
 	var err error
+
+	frontend.useSPA = opts.SPA
+
+	frontend.spa, err = spa.New(spa.Options{
+		Dist:         ensure.Value(fs.Sub(frontenddist.Dist, "dist")),
+		DevServerURL: opts.SPADevServerURL,
+		PageMeta:     frontend.pageMeta,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create single-page UI: %w", err)
+	}
 
 	var contractOptions []api.ContractOption
 	if provider, ok := opts.AuthProvider.(enterprise.BrowserLoginProvider); ok && provider.BrowserLoginEnabled() {
@@ -231,7 +250,12 @@ func (f *Frontend) initializeEndpointOwners(readinessCheckers []operational.Read
 	f.staticJavaScript = staticfiles.New(http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 }
 
+// pageMeta hands the single-page UI the document metadata localized by the server-rendered UI.
+func (f *Frontend) pageMeta(w http.ResponseWriter, r *http.Request) spa.PageMeta {
+	return spa.PageMeta(f.ui.PageMeta(w, r))
+}
+
 // Handler returns the HTTP handler.
 func (f *Frontend) Handler() http.Handler {
-	return f.server.Handler()
+	return f.spa.Middleware(f.server.Handler())
 }

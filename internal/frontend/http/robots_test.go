@@ -33,7 +33,7 @@ func TestRobotsText(t *testing.T) {
 		{
 			name:     "browser login",
 			provider: browserLoginProvider{},
-			want:     "User-agent: *\nAllow: /$\nAllow: /css/\nAllow: /favicons/\nDisallow: /\n",
+			want:     "User-agent: *\nAllow: /$\nAllow: /assets/\nAllow: /css/\nAllow: /favicons/\nDisallow: /\n",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

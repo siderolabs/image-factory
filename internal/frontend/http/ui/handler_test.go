@@ -114,6 +114,41 @@ func TestHandlerRendersSearchMetadata(t *testing.T) {
 	require.Contains(t, body, `<meta property="og:description" content="`+description+`">`)
 }
 
+func TestHandlerPageMeta(t *testing.T) {
+	t.Parallel()
+
+	handler := ui.New(nil, nil, ui.Options{})
+
+	title := "Talos Linux Image Factory"
+	if enterprise.Enabled() {
+		title = "Talos Linux Image Factory Enterprise"
+	}
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+
+	meta := handler.PageMeta(recorder, request)
+	require.Equal(t, "en", meta.Lang)
+	require.Equal(t, title, meta.Title)
+	require.NotEmpty(t, meta.Description)
+	require.Empty(t, recorder.Result().Cookies())
+
+	request.Header.Set("Accept-Language", "pl")
+	require.Equal(t, "pl", handler.PageMeta(httptest.NewRecorder(), request).Lang)
+
+	recorder = httptest.NewRecorder()
+	request = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/?lang=fr", nil)
+
+	meta = handler.PageMeta(recorder, request)
+	require.Equal(t, "fr", meta.Lang)
+	require.Contains(t, meta.Description, "Créez des images")
+
+	cookies := recorder.Result().Cookies()
+	require.Len(t, cookies, 1)
+	require.Equal(t, "lang", cookies[0].Name)
+	require.Equal(t, "fr", cookies[0].Value)
+}
+
 type routeIdentity struct {
 	method      string
 	path        string
