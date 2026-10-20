@@ -1,0 +1,5 @@
+services:
+  image-factory:
+    volumes:
+      # WITH_DEBUG builds read UI assets from the build-time source path instead of embedding them.
+      - ../../internal/frontend/http:/src/internal/frontend/http:ro

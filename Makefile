@@ -107,6 +107,7 @@ RUN_TESTS_PROXY ?= TestIntegrationDirect
 RUN_TESTS_ENTERPRISE ?= TestIntegration(Direct|Auth0.*)
 EXTRA_EXTENSIONS_REGISTRY ?= 127.0.0.1:5100
 DOCKER_COMPOSE_ENV ?= TOOLCHAIN="$(TOOLCHAIN)" PKGS_PREFIX="$(PKGS_PREFIX)" PKGS="$(PKGS)" SHA="$(SHA)" TAG="$(TAG)" ABBREV_TAG="$(ABBREV_TAG)" CGO_ENABLED="$(CGO_ENABLED)" GO_BUILDFLAGS="$(GO_BUILDFLAGS)" GO_GCFLAGS="$(GO_GCFLAGS)" GO_LDFLAGS="$(GO_LDFLAGS)" GOTOOLCHAIN="$(GOTOOLCHAIN)" GOEXPERIMENT="$(GOEXPERIMENT)" TESTPKGS="$(TESTPKGS)" GOIMPORTS_VERSION="$(GOIMPORTS_VERSION)" GOMOCK_VERSION="$(GOMOCK_VERSION)" DEEPCOPY_VERSION="$(DEEPCOPY_VERSION)" GOLANGCILINT_VERSION="$(GOLANGCILINT_VERSION)" GOFUMPT_VERSION="$(GOFUMPT_VERSION)" DIS_VULNCHECK_VERSION="$(DIS_VULNCHECK_VERSION)" HELMDOCS_VERSION="$(HELMDOCS_VERSION)"
+DOCKER_COMPOSE_FILES ?= -f hack/dev/compose.yaml$(if $(filter $(WITH_DEBUG),t true TRUE y yes 1), -f hack/dev/compose.debug.yaml)$(if $(wildcard hack/dev/compose.override.yaml), -f hack/dev/compose.override.yaml)
 GOOS ?= $(shell uname -s | tr "[:upper:]" "[:lower:]")
 TALOS_VERSION ?= 1.13.7
 COSIGN_VERSION ?= 3.1.2
@@ -442,14 +443,12 @@ push-extra-extensions:
 
 .PHONY: docker-compose-up
 docker-compose-up:
-	@test -f hack/dev/compose.override.yaml || printf 'services: {}\n' > hack/dev/compose.override.yaml
 	@$(MAKE) tailwind
-	@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml -f hack/dev/compose.override.yaml up --build --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io --no-attach extra-extensions
+	@$(DOCKER_COMPOSE_ENV) docker compose $(DOCKER_COMPOSE_FILES) up --build --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io --no-attach extra-extensions
 
 .PHONY: docker-compose-down
 docker-compose-down:
-	@test -f hack/dev/compose.override.yaml || printf 'services: {}\n' > hack/dev/compose.override.yaml
-	@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml -f hack/dev/compose.override.yaml down
+	@$(DOCKER_COMPOSE_ENV) docker compose $(DOCKER_COMPOSE_FILES) down
 
 .PHONY: talosctl
 talosctl: $(ARTIFACTS)

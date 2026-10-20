@@ -15,6 +15,9 @@ make docker-compose-up
 
 # Build and run (enterprise)
 make docker-compose-up WITH_ENTERPRISE=true
+
+# Build and run with debug symbols, serving UI assets from internal/frontend/http/ without rebuilding
+make docker-compose-up WITH_DEBUG=true
 ```
 
 To stop:
