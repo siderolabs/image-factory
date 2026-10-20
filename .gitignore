@@ -6,3 +6,4 @@ _out
 *.local.md
 *.override.md
 node_modules/
+hack/dev/compose.override.yaml

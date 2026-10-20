@@ -23,6 +23,32 @@ To stop:
 make docker-compose-down
 ```
 
+### Local overrides
+
+If `hack/dev/compose.override.yaml` exists, `make docker-compose-{up|down}` passes it to Compose after `hack/dev/compose.yaml`.
+This file is git-ignored.
+Use it for local changes that should not be committed, such as extra environment variables, a different config file or a different port.
+
+Configuration keys can be set with an `IF_`-prefixed environment variable (for example, `registry.debug` becomes `IF_REGISTRY_DEBUG`).
+The config file is loaded after the environment, so this only works for keys that `hack/dev/config.yaml` does not already set; to change those, replace the config file as shown below.
+
+```yaml
+services:
+  image-factory:
+    environment:
+      - IF_REGISTRY_DEBUG=true
+```
+
+To replace the whole configuration file instead:
+
+```yaml
+configs:
+  if_config:
+    file: ./config.local.yaml # relative to hack/dev/
+```
+
+See the [Compose merge rules](https://docs.docker.com/reference/compose-file/merge/) for how the two files are combined.
+
 Local development enables authentication by default and uses the htpasswd provider.
 The Compose configuration mounts `hack/dev/htpasswd` at the configured `/etc/image-factory/htpasswd` path.
 

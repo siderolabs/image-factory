@@ -442,12 +442,14 @@ push-extra-extensions:
 
 .PHONY: docker-compose-up
 docker-compose-up:
+	@test -f hack/dev/compose.override.yaml || printf 'services: {}\n' > hack/dev/compose.override.yaml
 	@$(MAKE) tailwind
-	@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml up --build --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io --no-attach extra-extensions
+	@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml -f hack/dev/compose.override.yaml up --build --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io --no-attach extra-extensions
 
 .PHONY: docker-compose-down
 docker-compose-down:
-	@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml down
+	@test -f hack/dev/compose.override.yaml || printf 'services: {}\n' > hack/dev/compose.override.yaml
+	@$(DOCKER_COMPOSE_ENV) docker compose -f hack/dev/compose.yaml -f hack/dev/compose.override.yaml down
 
 .PHONY: talosctl
 talosctl: $(ARTIFACTS)
