@@ -117,6 +117,28 @@
                         if (!v || !v.fix || !v.fix.versions) return '';
                         return v.fix.versions.join(', ');
                 }
+                // vexStatements returns the OpenVEX statements grype attached to a match
+                // (matcher "openvex-matcher"), deduplicated by their text.
+                function vexStatements(m) {
+                        var out = [];
+                        var seen = {};
+                        ((m && m.matchDetails) || []).forEach(function(d) {
+                                if (!d || d.matcher !== 'openvex-matcher') return;
+                                var st = d.found && d.found.Statement;
+                                if (!st) return;
+                                var parts = [];
+                                if (st.status) parts.push('Status: ' + st.status.replace(/_/g, ' '));
+                                if (st.justification) parts.push('Justification: ' + st.justification.replace(/_/g, ' '));
+                                if (st.impact_statement) parts.push(st.impact_statement);
+                                if (st.action_statement) parts.push(st.action_statement);
+                                if (!parts.length) return;
+                                var text = parts.join('\n');
+                                if (seen[text]) return;
+                                seen[text] = true;
+                                out.push(text);
+                        });
+                        return out;
+                }
                 function showModal(severity) {
                         var rows = matchesBySeverity[severity] || [];
                         modalTitle.textContent = severity + ' (' + rows.length + ')';
@@ -165,7 +187,22 @@
                                 tr.appendChild(fixCell);
                                 var descCell = document.createElement('td');
                                 descCell.className = 'py-micro whitespace-pre-wrap wrap-break-word';
-                                descCell.textContent = v.description || '';
+                                var notes = vexStatements(m);
+                                if (notes.length) {
+                                        var vexBlock = document.createElement('div');
+                                        vexBlock.className = 'mb-tight pb-tight border-b border-border-subtle';
+                                        var vexLabel = document.createElement('div');
+                                        vexLabel.className = 'type-overline text-content-secondary';
+                                        vexLabel.textContent = 'VEX';
+                                        vexBlock.appendChild(vexLabel);
+                                        notes.forEach(function(n) {
+                                                var p = document.createElement('p');
+                                                p.textContent = n;
+                                                vexBlock.appendChild(p);
+                                        });
+                                        descCell.appendChild(vexBlock);
+                                }
+                                descCell.appendChild(document.createTextNode(v.description || ''));
                                 tr.appendChild(descCell);
                                 modalRows.appendChild(tr);
                         });
