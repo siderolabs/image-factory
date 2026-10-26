@@ -18,6 +18,7 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/imager/quirks"
 
 	"github.com/siderolabs/image-factory/internal/artifacts"
+	"github.com/siderolabs/image-factory/internal/downloads"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
 	"github.com/siderolabs/image-factory/internal/secureboot"
 	"github.com/siderolabs/image-factory/pkg/client"
@@ -70,15 +71,24 @@ func New(
 	}
 }
 
-// Versions serves available or known-broken Talos versions.
+// Versions serves available or known-broken Talos versions, optionally only those that support a target.
 func (handler *Handler) Versions(ctx context.Context, writer http.ResponseWriter, request *http.Request, _ httprouter.Params) error {
-	if request.URL.Query().Get("broken") == "true" {
+	query := request.URL.Query()
+
+	if query.Get("broken") == "true" {
 		return writeJSON(writer, xslices.Map(handler.artifacts.GetBrokenTalosVersions(), formatVersion))
 	}
 
 	versions, err := handler.artifacts.GetTalosVersions(ctx)
 	if err != nil {
 		return err
+	}
+
+	if query.Get("target") == string(downloads.TargetSBC) {
+		versions = xslices.Filter(versions, func(version semver.Version) bool {
+			// Single-board computers need an overlay.
+			return quirks.New(version.String()).SupportsOverlay()
+		})
 	}
 
 	return writeJSON(writer, xslices.Map(versions, formatVersion))

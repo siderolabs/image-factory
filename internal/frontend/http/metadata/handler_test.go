@@ -42,6 +42,29 @@ func TestHandlerVersions(t *testing.T) {
 	require.Equal(t, []string{"v1.9.5"}, decode[[]string](t, response))
 }
 
+func TestHandlerVersionsForTarget(t *testing.T) {
+	t.Parallel()
+
+	source := &artifactSource{
+		versions: []semver.Version{semver.MustParse("1.6.7"), semver.MustParse("1.7.0"), semver.MustParse("1.11.0")},
+	}
+	handler := metadata.New(source, nil, nil, nil)
+
+	for _, test := range []struct {
+		target string
+		want   []string
+	}{
+		{target: "/versions?target=metal", want: []string{"v1.6.7", "v1.7.0", "v1.11.0"}},
+		{target: "/versions?target=cloud", want: []string{"v1.6.7", "v1.7.0", "v1.11.0"}},
+		// Single-board computers need overlay support.
+		{target: "/versions?target=sbc", want: []string{"v1.7.0", "v1.11.0"}},
+	} {
+		response := invoke(t, handler.Versions, test.target)
+		require.Equal(t, http.StatusOK, response.Code, test.target)
+		require.Equal(t, test.want, decode[[]string](t, response), test.target)
+	}
+}
+
 func TestHandlerOfficialMetadata(t *testing.T) {
 	t.Parallel()
 

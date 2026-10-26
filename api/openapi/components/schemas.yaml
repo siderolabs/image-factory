@@ -456,3 +456,209 @@ APITokenCreated:
     stored:
       type: boolean
       description: Whether the token is recorded and can be revoked.
+Platform:
+  type: object
+  description: Cloud platform that Talos can boot on.
+  required: [name, label, description, documentation, architectures, bootMethods, secureBootSupported, notOnlyDiskImage]
+  properties:
+    name:
+      type: string
+      description: Platform identifier, as used in asset names and the `platform` query parameter.
+      examples:
+        - aws
+    label:
+      type: string
+      description: Human-readable platform name.
+      examples:
+        - Amazon Web Services (AWS)
+    description:
+      type: string
+      description: Short description of the platform.
+    documentation:
+      type: string
+      description: Path of the platform's installation guide, relative to the Talos documentation of the version.
+      examples:
+        - /platform-specific-installations/cloud-platforms/aws
+    architectures:
+      type: array
+      description: CPU architectures that the platform supports.
+      items:
+        type: string
+        enum: [amd64, arm64]
+    bootMethods:
+      type: array
+      description: Ways to boot the platform, in order of preference.
+      items:
+        type: string
+        enum: [disk-image, iso, pxe]
+    secureBootSupported:
+      type: boolean
+      description: Whether the platform supports SecureBoot images.
+    notOnlyDiskImage:
+      type: boolean
+      description: Whether the platform boots from more than a disk image, so that Talos has to be installed.
+Board:
+  type: object
+  description: Single-board computer that Talos can boot on.
+  required: [name, label, documentation, overlay]
+  properties:
+    name:
+      type: string
+      description: Board identifier, as used in the `board` query parameter.
+      examples:
+        - rpi_generic
+    label:
+      type: string
+      description: Human-readable board name.
+      examples:
+        - Raspberry Pi Series
+    documentation:
+      type: string
+      description: Path of the board's installation guide, relative to the Talos documentation of the version.
+    overlay:
+      type: object
+      description: Overlay that adds the board's firmware and bootloader to the image.
+      required: [name, image]
+      properties:
+        name:
+          type: string
+          examples:
+            - rpi_generic
+        image:
+          type: string
+          examples:
+            - siderolabs/sbc-raspberrypi
+VersionFeatures:
+  type: array
+  description: Version-dependent features of Talos and of the factory, by name.
+  uniqueItems: true
+  items:
+    $ref: "./schemas.yaml#/VersionFeature"
+VersionFeature:
+  type: string
+  description: |-
+    A version-dependent feature of Talos or of the factory. New features may be added, so clients should ignore
+    names they don't know.
+
+    - `SecureBoot`: SecureBoot images can be built; the platform has to support SecureBoot as well.
+    - `BootloaderSelection`: the schematic can pick the bootloader.
+    - `EmbeddedConfig`: the schematic can embed a machine configuration.
+    - `TalosctlDownload`: the factory serves talosctl binaries for the version.
+    - `LocalTestCluster`: `talosctl cluster create` can boot a local cluster with a schematic.
+    - `SBOM`: an SBOM is published for the version's images.
+    - `VEX`: VEX data and vulnerability scans are published for the version.
+    - `ProductionGuide`: a production guide is documented for the version.
+    - `TroubleshootingGuide`: a troubleshooting guide is documented for the version.
+  enum:
+    - SecureBoot
+    - BootloaderSelection
+    - EmbeddedConfig
+    - TalosctlDownload
+    - LocalTestCluster
+    - SBOM
+    - VEX
+    - ProductionGuide
+    - TroubleshootingGuide
+SchematicAssets:
+  type: object
+  description: Downloads of a schematic for one Talos version, target and architecture.
+  required: [bootAssets, extraAssets, talosctl, installerImage]
+  properties:
+    bootAssets:
+      type: array
+      description: Assets that boot the machine, in the order the platform prefers them.
+      items:
+        $ref: "#/Asset"
+    extraAssets:
+      type: array
+      description: Individual parts of the boot assets, listed for bare metal only.
+      items:
+        $ref: "#/Asset"
+    talosctl:
+      type: array
+      description: talosctl binaries for the version, if the factory serves them.
+      items:
+        $ref: "#/TalosctlBinary"
+    installerImage:
+      type: string
+      description: Installer image reference, to install and upgrade Talos with the schematic.
+    sbom:
+      type: string
+      format: uri
+      description: SPDX SBOM URL. Enterprise only, for versions that publish one.
+    vex:
+      type: string
+      format: uri
+      description: VEX document URL. Enterprise only, for versions that publish one.
+    scan:
+      type: string
+      format: uri
+      description: Base URL of the vulnerability scan reports. Enterprise only, for versions that publish VEX.
+Asset:
+  type: object
+  description: A downloadable asset.
+  required: [kind, url, secureBoot]
+  properties:
+    kind:
+      type: string
+      description: What the asset is.
+      enum: [disk-image, iso, pxe, board-image, kernel, cmdline, initramfs, uki]
+    format:
+      type: string
+      description: Disk image format, where the platform offers several.
+      enum: [raw, qcow2]
+    secureBoot:
+      type: boolean
+      description: Whether the asset is a SecureBoot asset.
+    url:
+      type: string
+      description: >-
+        Download URL. PXE script URLs carry a `user:<password>@` placeholder when authentication is enabled,
+        as iPXE cannot send credentials otherwise.
+    checksums:
+      type: object
+      description: Checksum URLs. Enterprise only, and not for PXE scripts.
+      required: [sha256, sha512]
+      properties:
+        sha256:
+          type: string
+          format: uri
+        sha512:
+          type: string
+          format: uri
+    signature:
+      type: string
+      format: uri
+      description: Sigstore bundle URL. Enterprise only, and not for PXE scripts.
+TalosctlBinary:
+  type: object
+  description: A downloadable talosctl binary.
+  required: [name, url]
+  properties:
+    name:
+      type: string
+      examples:
+        - talosctl-linux-amd64
+    url:
+      type: string
+      format: uri
+APITokenActor:
+  type: object
+  description: An actor profile that API tokens can be issued for.
+  required: [id, scopes, issuable_scopes]
+  properties:
+    id:
+      type: string
+      description: Actor profile, as accepted by `POST /tokens`.
+      examples:
+        - talos
+    scopes:
+      type: array
+      description: Capabilities that a token for the actor is granted.
+      items:
+        $ref: "#/APITokenScope"
+    issuable_scopes:
+      type: array
+      description: Maximum capabilities that a token for the actor may grant to child tokens.
+      items:
+        $ref: "#/APITokenScope"

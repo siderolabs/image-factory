@@ -5,7 +5,9 @@
 get:
   operationId: listVersions
   summary: List Talos versions
-  description: Returns available Talos versions, or broken versions when `broken` is exactly `true`.
+  description: >-
+    Returns available Talos versions, or broken versions when `broken` is exactly `true`,
+    optionally only those that can build images for a target.
   security: []
   parameters:
   - name: broken
@@ -14,6 +16,15 @@ get:
     description: The literal string `true` selects the configured broken-version list; every other value lists available versions.
     schema:
       type: string
+  - name: target
+    in: query
+    required: false
+    description: >-
+      Only list versions that can build images for this kind of machine. Single-board computers (`sbc`) need
+      overlay support, from Talos 1.7.0; `metal` and `cloud` list every version.
+    schema:
+      type: string
+      enum: [metal, cloud, sbc]
   responses:
     '200':
       description: Talos version strings with leading `v` prefixes.
@@ -21,5 +32,7 @@ get:
         application/json:
           schema:
             $ref: "../components/schemas.yaml#/VersionList"
+    '400':
+      $ref: "../components/responses.yaml#/BadRequest"
     '500':
       $ref: "../components/responses.yaml#/InternalServerError"

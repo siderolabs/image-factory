@@ -18,7 +18,7 @@ The Image Factory builds and serves customized Talos Linux boot artifacts. Artif
 
 ## HTTP API (`https://factory.talos.dev`)
 
-**Authentication**: The official public instance (`factory.talos.dev`) does not require authentication. Enterprise deployments may enable either htpasswd Basic authentication or Auth0 access tokens. Auth0 tokens are accepted as Bearer credentials and as the password in Basic credentials for OCI clients. The Auth0 principal is the non-empty string in the custom `if_org_id` claim; the native `org_id` claim is not read. Schematic, image, PXE, generated Installer OCI, SBOM, VEX and scan routes require authentication when it is enabled. Version, extension, overlay, `talosctl`, SecureBoot certificate, signing key, JWKS, `/openapi.yaml` and `/llms.txt` routes remain public.
+**Authentication**: The official public instance (`factory.talos.dev`) does not require authentication. Enterprise deployments may enable either htpasswd Basic authentication or Auth0 access tokens. Auth0 tokens are accepted as Bearer credentials and as the password in Basic credentials for OCI clients. The Auth0 principal is the non-empty string in the custom `if_org_id` claim; the native `org_id` claim is not read. Schematic, image, PXE, generated Installer OCI, SBOM, VEX and scan routes require authentication when it is enabled. Version, extension, overlay, platform, board, feature, `talosctl`, SecureBoot certificate, signing key, JWKS, `/openapi.yaml` and `/llms.txt` routes remain public.
 
 Self-issued API tokens are accepted as Bearer credentials or Basic passwords when their scopes cover the request. A valid stored or ephemeral token with no token-management scope may also use `?token=` on a covered `GET` or `HEAD`; query URLs can leak through logs and browser history. Auth0 browser login additionally authenticates with the encrypted `if_session` cookie when configured.
 
@@ -66,6 +66,7 @@ Retrieve schematic YAML by ID. Returns 404 if not found.
 
 List available Talos Linux versions. Returns a JSON array of version strings.
 Use `GET /versions?broken=true` to list versions configured as broken instead.
+Use `?target=sbc` to only list versions that support single-board computers (Talos 1.7.0 and later); `metal` and `cloud` list every version.
 
 ```json
 ["v1.5.0","v1.5.1","v1.5.2"]
@@ -78,6 +79,18 @@ List official system extensions for a version. Returns array of `{name, ref, dig
 ### GET /version/:version/overlays/official
 
 List official overlays (e.g. SBC support) for a version. Returns array of `{name, image, ref, digest}`.
+
+### GET /api/version/:version/platforms, GET /api/version/:version/boards
+
+List the cloud platforms and single-board computers a version supports. Platforms are `{name, label, description, documentation, architectures, bootMethods, secureBootSupported, notOnlyDiskImage}`; boards are `{name, label, documentation, overlay: {name, image}}`.
+
+### GET /api/version/:version/features
+
+Names of the version-dependent features the version has: `SecureBoot`, `BootloaderSelection`, `EmbeddedConfig`, `TalosctlDownload`, `LocalTestCluster`, `SBOM`, `VEX`, `ProductionGuide`, `TroubleshootingGuide`. Clients should ignore names they don't know.
+
+### GET /api/schematics/:schematic/:version/assets
+
+List the downloads of a schematic. Query: `target` (`metal`, `cloud` or `sbc`), `platform` (for `cloud`), `board` (for `sbc`), `arch` (`amd64` or `arm64`), `secureboot` (`true` or `false`). Returns `{bootAssets, extraAssets, talosctl, installerImage}`, plus `sbom`, `vex` and `scan` URLs on Enterprise. Each asset is `{kind, format?, secureBoot, url, checksums?, signature?}`.
 
 ### GET, HEAD /image/:schematic/:version/:path
 
@@ -188,6 +201,10 @@ Stored tokens are recorded, listed and individually revocable. Ephemeral and boo
 ### POST /tokens/:id/revoke
 
 Registered only when Enterprise authentication is enabled. Revokes one of the caller's stored API tokens.
+
+### GET /api/tokens/actors
+
+Registered only when Enterprise API tokens are enabled. Lists the actor profiles that `POST /tokens` accepts as `actor`, as `[{id, scopes, issuable_scopes}]`.
 
 ### GET /.well-known/jwks.json
 

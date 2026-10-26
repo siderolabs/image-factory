@@ -123,6 +123,41 @@ func TestListCreateFrontendListHappyPath(t *testing.T) {
 	require.Equal(t, []string{"image:read"}, resp.Tokens[0].Scopes)
 }
 
+func TestListCreateFrontendActors(t *testing.T) {
+	t.Parallel()
+
+	f := tokens.NewListCreateFrontend(&fakeManager{}, fakeAuthProvider{orgID: testOrgID, ok: true}, 10)
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/tokens/actors", nil)
+	w := httptest.NewRecorder()
+	require.NoError(t, f.Actors(t.Context(), w, r, nil))
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+	// The contract promises lists, which clients read without checking for null.
+	require.NotContains(t, w.Body.String(), "null")
+
+	var actors []struct {
+		ID             string           `json:"id"`
+		Scopes         []apitoken.Scope `json:"scopes"`
+		IssuableScopes []apitoken.Scope `json:"issuable_scopes"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &actors))
+
+	ids := make([]string, 0, len(actors))
+
+	for _, actor := range actors {
+		ids = append(ids, actor.ID)
+
+		scopes, issuableScopes, ok := apitoken.ScopesForActor(actor.ID)
+		require.True(t, ok, actor.ID)
+		require.Equal(t, scopes, actor.Scopes, actor.ID)
+		require.ElementsMatch(t, issuableScopes, actor.IssuableScopes, actor.ID)
+	}
+
+	require.Equal(t, apitoken.Actors(), ids)
+}
+
 func TestListCreateFrontendListRequiresAuth(t *testing.T) {
 	t.Parallel()
 

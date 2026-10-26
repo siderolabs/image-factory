@@ -5,6 +5,7 @@
 package api_test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,11 +14,13 @@ import (
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/siderolabs/gen/xslices"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/siderolabs/image-factory/api"
 	"github.com/siderolabs/image-factory/internal/apitoken"
+	"github.com/siderolabs/image-factory/internal/talosversion"
 )
 
 func TestLoad(t *testing.T) {
@@ -112,6 +115,25 @@ func TestDocumentationSchemas(t *testing.T) {
 	require.NotNil(t, callback)
 	assert.NotNil(t, callback.Responses.Value("403"))
 	assert.Nil(t, callback.Responses.Value("400"))
+}
+
+// TestVersionFeaturesDocumented checks that the specification documents exactly the features the factory reports,
+// so a new feature can't be added without documenting it.
+func TestVersionFeaturesDocumented(t *testing.T) {
+	t.Parallel()
+
+	document, err := api.Load(t.Context())
+	require.NoError(t, err)
+
+	operation := document.Paths.Find("/api/version/{version}/features").Get
+	require.NotNil(t, operation)
+
+	schema := operation.Responses.Value("200").Value.Content.Get("application/json").Schema.Value
+	require.NotNil(t, schema.Items)
+
+	documented := xslices.Map(schema.Items.Value.Enum, func(value any) string { return fmt.Sprint(value) })
+
+	assert.ElementsMatch(t, talosversion.FeatureStrings(), documented)
 }
 
 func TestAuthenticationContract(t *testing.T) {
@@ -384,6 +406,18 @@ func TestContractOperations(t *testing.T) {
 		"/assets/{filepath+}": {
 			http.MethodGet: "getFrontendAsset",
 		},
+		"/api/schematics/{schematic}/{version}/assets": {
+			http.MethodGet: "listSchematicAssets",
+		},
+		"/api/version/{version}/platforms": {
+			http.MethodGet: "listPlatforms",
+		},
+		"/api/version/{version}/boards": {
+			http.MethodGet: "listBoards",
+		},
+		"/api/version/{version}/features": {
+			http.MethodGet: "getVersionFeatures",
+		},
 		"/callback": {
 			http.MethodGet: "completeBrowserLogin",
 		},
@@ -429,6 +463,9 @@ func TestContractOperations(t *testing.T) {
 		},
 		"/tokens/{id}/revoke": {
 			http.MethodPost: "revokeAPIToken",
+		},
+		"/api/tokens/actors": {
+			http.MethodGet: "listAPITokenActors",
 		},
 	}
 
@@ -788,6 +825,17 @@ func TestContractValidateRequest(t *testing.T) {
 			method: http.MethodPost,
 			target: "/tokens",
 			body:   strings.Repeat("x", 1<<13),
+		},
+		{
+			name:   "versions for a target",
+			method: http.MethodGet,
+			target: "/versions?target=sbc",
+		},
+		{
+			name:    "versions for an unknown target",
+			method:  http.MethodGet,
+			target:  "/versions?target=mainframe",
+			wantErr: "target",
 		},
 		{
 			// the page's JS sends no body and no content type for a revocation

@@ -232,6 +232,24 @@ Takes the token with `:id` out of circulation.
 A successful response is `204 No Content`.
 Every verification reads the token's deterministic registry tag, so a successful revocation is visible to every replica immediately.
 
+### `GET /api/tokens/actors`
+
+> [!NOTE]
+> Enterprise feature: requires [Enterprise Image Factory](https://docs.siderolabs.com/talos/latest/learn-more/enterprise-image-factory).
+> This route is registered only when API tokens are enabled.
+
+Access:
+
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | none | not applicable |
+
+Lists the [actor profiles](authentication.md#browser-actor-profiles) that `POST /tokens` accepts as `actor`, in presentation order, with the scopes each one grants.
+
+```json
+[{"id": "talos", "scopes": ["image:read"], "issuable_scopes": []}]
+```
+
 ### `GET /.well-known/jwks.json`
 
 > [!NOTE]
@@ -505,6 +523,10 @@ Returns a list of Talos Linux versions available for image generation.
 The optional `broken=true` query parameter returns the separately configured list of Talos versions marked as broken instead of the available versions.
 Other values are treated as absent.
 
+The optional `target` query parameter (`metal`, `cloud` or `sbc`) only lists available versions that can build images for that kind of machine.
+Single-board computers need overlay support, so `sbc` lists Talos 1.7.0 and later; `metal` and `cloud` list every version.
+Any other value is `400 Bad Request`.
+
 ```json
 ["v1.5.0","v1.5.1", "v1.5.2"]
 ```
@@ -543,6 +565,107 @@ Talos versions that predate overlay support return an empty JSON array.
     "digest": "sha256:849ace01b9af514d817b05a9c5963a35202e09a4807d12f8a3ea83657c76c863"
   }
 ]
+```
+
+### `GET /api/version/:version/platforms`
+
+Access: `public`.
+
+Returns the cloud platforms that the specified Talos Linux version supports.
+`documentation` is the path of the platform's installation guide, relative to the Talos documentation of the version, for example `https://docs.siderolabs.com/talos/v1.13` followed by the path.
+
+```json
+[
+  {
+    "name": "aws",
+    "label": "Amazon Web Services (AWS)",
+    "description": "Runs on AWS VMs booted from an AMI",
+    "documentation": "/platform-specific-installations/cloud-platforms/aws",
+    "architectures": ["amd64", "arm64"],
+    "bootMethods": ["disk-image"],
+    "secureBootSupported": false,
+    "notOnlyDiskImage": false
+  }
+]
+```
+
+### `GET /api/version/:version/boards`
+
+Access: `public`.
+
+Returns the single-board computers that the specified Talos Linux version supports, with the overlay each one needs.
+
+```json
+[
+  {
+    "name": "rpi_generic",
+    "label": "Raspberry Pi Series",
+    "documentation": "/platform-specific-installations/single-board-computers/rpi_generic",
+    "overlay": {"name": "rpi_generic", "image": "siderolabs/sbc-raspberrypi"}
+  }
+]
+```
+
+### `GET /api/version/:version/features`
+
+Access: `public`.
+
+Returns the names of the version-dependent features of Talos Linux and of the factory that the specified version has.
+New features may be added, so clients should ignore names they don't know.
+
+```json
+[
+  "SecureBoot",
+  "BootloaderSelection",
+  "EmbeddedConfig",
+  "TalosctlDownload",
+  "LocalTestCluster",
+  "SBOM",
+  "VEX",
+  "ProductionGuide",
+  "TroubleshootingGuide"
+]
+```
+
+### `GET /api/schematics/:schematic/:version/assets`
+
+Access:
+
+| Auth | Scopes | Ownership |
+| -------- | ------ | --------- |
+| required | none | enforced |
+
+Lists the downloads of a schematic for one Talos Linux version, target and architecture: what the UI shows once a schematic is created.
+An unknown schematic is `404`, and an invalid combination of query parameters is `400`.
+
+| Query parameter | Description |
+| --- | --- |
+| `target` | Required: `metal`, `cloud` or `sbc`. |
+| `platform` | Cloud platform from `GET /api/version/:version/platforms`, required for `cloud`. |
+| `board` | Single-board computer from `GET /api/version/:version/boards`, required for `sbc`. |
+| `arch` | Required: `amd64` or `arm64`. |
+| `secureboot` | `true` to list SecureBoot assets; the version and platform have to support SecureBoot. |
+
+`bootAssets` boot the machine, in the order the platform prefers them, and `extraAssets` are their individual parts, for bare metal only.
+An asset's `kind` is one of `disk-image`, `iso`, `pxe`, `board-image`, `kernel`, `cmdline`, `initramfs` or `uki`, and disk images carry a `format` where the platform offers several.
+With authentication enabled, PXE script URLs carry a `user:<password>@` placeholder, as iPXE cannot send credentials otherwise.
+On Enterprise builds, assets other than PXE scripts carry `checksums` and a sigstore `signature`, and the response adds the `sbom`, `vex` and vulnerability `scan` URLs for versions that publish them.
+
+```json
+{
+  "bootAssets": [
+    {"kind": "iso", "secureBoot": false, "url": "https://factory.talos.dev/image/<id>/v1.13.0/metal-amd64.iso"},
+    {"kind": "disk-image", "format": "raw", "secureBoot": false, "url": "https://factory.talos.dev/image/<id>/v1.13.0/metal-amd64.raw.zst"},
+    {"kind": "pxe", "secureBoot": false, "url": "https://pxe.factory.talos.dev/pxe/<id>/v1.13.0/metal-amd64"}
+  ],
+  "extraAssets": [
+    {"kind": "kernel", "secureBoot": false, "url": "https://factory.talos.dev/image/<id>/v1.13.0/kernel-amd64"}
+  ],
+  "talosctl": [
+    {"name": "talosctl-linux-amd64", "url": "https://factory.talos.dev/talosctl/v1.13.0/talosctl-linux-amd64"}
+  ],
+  "installerImage": "factory.talos.dev/metal-installer/<id>:v1.13.0"
+}
 ```
 
 ### `GET /talosctl/:version`

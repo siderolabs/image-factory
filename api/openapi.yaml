@@ -38,6 +38,8 @@ paths:
     $ref: "./openapi/paths/tokens.yaml#/listCreate"
   /tokens/{id}/revoke:
     $ref: "./openapi/paths/tokens.yaml#/revoke"
+  /api/tokens/actors:
+    $ref: "./openapi/paths/tokens.yaml#/actors"
   /css/{filepath+}:
     $ref: "./openapi/paths/frontend.yaml#/staticCSS"
   /favicons/{filepath+}:
@@ -66,6 +68,14 @@ paths:
     $ref: "./openapi/paths/official-extensions.yaml"
   /version/{version}/overlays/official:
     $ref: "./openapi/paths/official-overlays.yaml"
+  /api/schematics/{schematic}/{version}/assets:
+    $ref: "./openapi/paths/api-schematic-assets.yaml"
+  /api/version/{version}/platforms:
+    $ref: "./openapi/paths/api-platforms.yaml"
+  /api/version/{version}/boards:
+    $ref: "./openapi/paths/api-boards.yaml"
+  /api/version/{version}/features:
+    $ref: "./openapi/paths/api-features.yaml"
   /talosctl/{version}:
     $ref: "./openapi/paths/talosctl-index.yaml"
   /talosctl/{version}/{path}:

@@ -18,10 +18,16 @@ import (
 	"github.com/siderolabs/image-factory/internal/frontend/http/spa"
 )
 
-const testIndex = `<html lang="{{ .Lang }}"><title>{{ .Title }}</title><meta name="description" content="{{ .Description }}"></html>`
+const testIndex = `<html lang="{{ .Lang }}"><title>{{ .Title }}</title><meta name="description" content="{{ .Description }}">` +
+	`<script id="app-config" type="application/json">{{ .Config }}</script></html>`
 
-func pageMeta(http.ResponseWriter, *http.Request) spa.PageMeta {
-	return spa.PageMeta{Lang: "en", Title: "Image Factory", Description: `Talos "images"`}
+func indexData(http.ResponseWriter, *http.Request) spa.IndexData {
+	return spa.IndexData{
+		Lang:        "en",
+		Title:       "Image Factory",
+		Description: `Talos "images"`,
+		Config:      spa.Config{Version: "v1.8.0</script>", Enterprise: true},
+	}
 }
 
 func newRouter(t *testing.T, opts spa.Options) http.Handler {
@@ -61,7 +67,7 @@ func TestIndex(t *testing.T) {
 			"index.html":           {Data: []byte(testIndex)},
 			"assets/oindex-abc.js": {Data: []byte("console.log('hi')")},
 		},
-		PageMeta: pageMeta,
+		IndexData: indexData,
 	})
 
 	for _, target := range []string{"/", "/?target=metal&version=1.13.0", "/ui/tokens"} {
@@ -74,7 +80,10 @@ func TestIndex(t *testing.T) {
 			require.Equal(t, "text/html; charset=utf-8", response.Header().Get("Content-Type"))
 			require.Equal(t, "no-cache", response.Header().Get("Cache-Control"))
 			require.Equal(t,
-				`<html lang="en"><title>Image Factory</title><meta name="description" content="Talos &#34;images&#34;"></html>`,
+				`<html lang="en"><title>Image Factory</title><meta name="description" content="Talos &#34;images&#34;">`+
+					`<script id="app-config" type="application/json">`+
+					`{"version":"v1.8.0\u003c/script\u003e","enterprise":true,"tokensEnabled":false,"logoutEnabled":false}`+
+					`</script></html>`,
 				response.Body.String(),
 			)
 		})
@@ -98,7 +107,7 @@ func TestAssets(t *testing.T) {
 			"index.html":           {Data: []byte(testIndex)},
 			"assets/oindex-abc.js": {Data: []byte("console.log('hi')")},
 		},
-		PageMeta: pageMeta,
+		IndexData: indexData,
 	})
 
 	response := get(t, router, http.MethodGet, "/assets/oindex-abc.js", nil)
@@ -119,7 +128,7 @@ func TestAssets(t *testing.T) {
 func TestMissingIndex(t *testing.T) {
 	t.Parallel()
 
-	_, err := spa.New(spa.Options{Dist: fstest.MapFS{}, PageMeta: pageMeta})
+	_, err := spa.New(spa.Options{Dist: fstest.MapFS{}, IndexData: indexData})
 	require.ErrorContains(t, err, "index.html")
 }
 
@@ -139,7 +148,7 @@ func TestDevServer(t *testing.T) {
 	devServerURL, err := url.Parse(devServer.URL)
 	require.NoError(t, err)
 
-	router := newRouter(t, spa.Options{DevServerURL: devServerURL, PageMeta: pageMeta})
+	router := newRouter(t, spa.Options{DevServerURL: devServerURL, IndexData: indexData})
 
 	response := get(t, router, http.MethodGet, "/ui/tokens", nil)
 	require.Equal(t, http.StatusOK, response.Code)

@@ -71,8 +71,8 @@ func RegisterTestRoutesWithAuth(
 	})
 	frontend.initializeEndpointOwners(nil)
 	frontend.spa = ensure.Value(spa.New(spa.Options{
-		Dist:     ensure.Value(fs.Sub(frontenddist.Dist, "dist")),
-		PageMeta: frontend.pageMeta,
+		Dist:      ensure.Value(fs.Sub(frontenddist.Dist, "dist")),
+		IndexData: frontend.indexData,
 	}))
 	frontend.metadata = metadata.New(nil, nil, nil, getLLMsTxt)
 

@@ -75,7 +75,41 @@ func (f *ListCreateFrontend) Routes() []enterprisefrontend.Route {
 			Access:      enterprisefrontend.RouteAccessAuthenticated,
 			Handler:     f.Handle,
 		},
+		{
+			Method:      http.MethodGet,
+			Path:        "/api/tokens/actors",
+			OperationID: "listAPITokenActors",
+			Access:      enterprisefrontend.RouteAccessAuthenticated,
+			Handler:     f.Actors,
+		},
 	}
+}
+
+// actor is an actor profile that tokens can be issued for, with the scopes it resolves to.
+type actor struct {
+	ID             string           `json:"id"`
+	Scopes         []apitoken.Scope `json:"scopes"`
+	IssuableScopes []apitoken.Scope `json:"issuable_scopes"`
+}
+
+// Actors serves the actor profiles in presentation order, for the token creation dialog.
+func (f *ListCreateFrontend) Actors(_ context.Context, w http.ResponseWriter, _ *http.Request, _ httprouter.Params) error {
+	ids := apitoken.Actors()
+	actors := make([]actor, 0, len(ids))
+
+	for _, id := range ids {
+		// Actors() only ever names profiles that exist, so the lookup cannot miss.
+		scopes, issuableScopes, _ := apitoken.ScopesForActor(id)
+
+		// An actor that can't issue tokens has no issuable scopes, which is an empty list rather than null.
+		if issuableScopes == nil {
+			issuableScopes = []apitoken.Scope{}
+		}
+
+		actors = append(actors, actor{ID: id, Scopes: scopes, IssuableScopes: issuableScopes})
+	}
+
+	return writeJSON(w, actors)
 }
 
 // requireOrgID extracts the authenticated org ID from ctx, or writes a 401 and reports ok=false.

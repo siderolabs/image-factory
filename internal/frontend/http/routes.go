@@ -123,6 +123,39 @@ func (f *Frontend) routes() []transport.Route {
 		{Method: http.MethodPost, Path: "/schematics", OperationID: "createSchematic", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolAPI, Handler: f.schematicAPI.Create},
 		{Method: http.MethodGet, Path: "/schematics/:schematic", OperationID: "getSchematic", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolAPI, Handler: f.schematicAPI.Get},
 
+		{
+			Method:      http.MethodGet,
+			Path:        "/api/schematics/:schematic/:version/assets",
+			OperationID: "listSchematicAssets",
+			Access:      transport.AccessAuthenticated,
+			Protocol:    transport.ProtocolAPI,
+			Handler:     f.downloadsAPI.Assets,
+		},
+		{
+			Method:      http.MethodGet,
+			Path:        "/api/version/:version/platforms",
+			OperationID: "listPlatforms",
+			Access:      transport.AccessPublic,
+			Protocol:    transport.ProtocolAPI,
+			Handler:     f.talosVersionAPI.Platforms,
+		},
+		{
+			Method:      http.MethodGet,
+			Path:        "/api/version/:version/boards",
+			OperationID: "listBoards",
+			Access:      transport.AccessPublic,
+			Protocol:    transport.ProtocolAPI,
+			Handler:     f.talosVersionAPI.Boards,
+		},
+		{
+			Method:      http.MethodGet,
+			Path:        "/api/version/:version/features",
+			OperationID: "getVersionFeatures",
+			Access:      transport.AccessPublic,
+			Protocol:    transport.ProtocolAPI,
+			Handler:     f.talosVersionAPI.Features,
+		},
+
 		{Method: http.MethodGet, Path: "/versions", OperationID: "listVersions", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.metadata.Versions},
 		{
 			Method:      http.MethodGet,

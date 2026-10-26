@@ -62,5 +62,6 @@ func TestEnterpriseRouteCatalogMatchesContract(t *testing.T) {
 		"GET /tokens",
 		"POST /tokens",
 		"POST /tokens/:id/revoke",
+		"GET /api/tokens/actors",
 	})
 }

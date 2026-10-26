@@ -23,6 +23,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/audit"
+	"github.com/siderolabs/image-factory/internal/downloads"
 	frontenddist "github.com/siderolabs/image-factory/internal/frontend"
 	applicationapi "github.com/siderolabs/image-factory/internal/frontend/http/api"
 	"github.com/siderolabs/image-factory/internal/frontend/http/browserauth"
@@ -38,6 +39,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/internal/schematic"
 	"github.com/siderolabs/image-factory/internal/secureboot"
+	"github.com/siderolabs/image-factory/internal/version"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
@@ -50,6 +52,8 @@ type Frontend struct {
 	imageAPI         *applicationapi.ImageHandler
 	pxeAPI           *applicationapi.PXEHandler
 	talosctlAPI      *applicationapi.TalosctlHandler
+	downloadsAPI     *applicationapi.DownloadsHandler
+	talosVersionAPI  *applicationapi.TalosVersionHandler
 	browserAuth      *browserauth.Handler
 	metadata         *metadata.Handler
 	oci              *oci.Handler
@@ -62,6 +66,9 @@ type Frontend struct {
 
 	// robots is the robots.txt body; nil leaves the route unregistered.
 	robots []byte
+
+	// spaConfig is handed to the single-page UI in its index.html.
+	spaConfig spa.Config
 
 	// useSPA serves the single-page UI instead of the server-rendered one.
 	useSPA bool
@@ -141,6 +148,17 @@ func NewFrontend(
 		artifacts.NewTalosctlService(artifactsManager),
 		opts.ExternalURL,
 	)
+	frontend.talosVersionAPI = applicationapi.NewTalosVersionHandler()
+	frontend.downloadsAPI = applicationapi.NewDownloadsHandler(
+		schematicService,
+		artifactsManager,
+		opts.AuthProvider,
+		downloads.Links{
+			ExternalURL:    opts.ExternalURL,
+			ExternalPXEURL: opts.ExternalPXEURL,
+			Enterprise:     enterprise.Enabled(),
+		},
+	)
 	frontend.browserAuth = browserauth.New(opts.AuthProvider)
 	frontend.robots = robotsText(opts.AuthProvider != nil, frontend.browserAuth.LogoutEnabled())
 	frontend.ui = ui.New(schematicService, artifactsManager, ui.Options{
@@ -164,11 +182,17 @@ func NewFrontend(
 	var err error
 
 	frontend.useSPA = opts.SPA
+	frontend.spaConfig = spa.Config{
+		Version:       version.Tag,
+		Enterprise:    enterprise.Enabled(),
+		TokensEnabled: opts.TokenVerifier != nil,
+		LogoutEnabled: frontend.browserAuth.LogoutEnabled(),
+	}
 
 	frontend.spa, err = spa.New(spa.Options{
 		Dist:         ensure.Value(fs.Sub(frontenddist.Dist, "dist")),
 		DevServerURL: opts.SPADevServerURL,
-		PageMeta:     frontend.pageMeta,
+		IndexData:    frontend.indexData,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create single-page UI: %w", err)
@@ -251,9 +275,16 @@ func (f *Frontend) initializeEndpointOwners(readinessCheckers []operational.Read
 	f.staticJavaScript = staticfiles.New(http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 }
 
-// pageMeta hands the single-page UI the document metadata localized by the server-rendered UI.
-func (f *Frontend) pageMeta(w http.ResponseWriter, r *http.Request) spa.PageMeta {
-	return spa.PageMeta(f.ui.PageMeta(w, r))
+// indexData fills in the single-page UI's index.html, with the document metadata localized by the server-rendered UI.
+func (f *Frontend) indexData(w http.ResponseWriter, r *http.Request) spa.IndexData {
+	meta := f.ui.PageMeta(w, r)
+
+	return spa.IndexData{
+		Lang:        meta.Lang,
+		Title:       meta.Title,
+		Description: meta.Description,
+		Config:      f.spaConfig,
+	}
 }
 
 // Handler returns the HTTP handler.

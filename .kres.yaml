@@ -5,6 +5,7 @@ spec:
     - source: ./internal
       copy:
         - docs/configuration.md
+        - internal/talosversion/feature_enumer.go
 ---
 kind: golang.Build
 spec:
@@ -658,6 +659,15 @@ spec:
     script:
       - "@$(DOCKER_COMPOSE_ENV) docker compose $(DOCKER_COMPOSE_FILES) down"
 ---
+kind: js.Generate
+spec:
+  # frontend/src/api/schema.d.ts, the API types generated from the OpenAPI contract
+  script: generate
+  inputs:
+    - api
+  outputs:
+    - src/api/schema.d.ts
+---
 kind: js.Toolchain
 spec:
   extraPackages:
@@ -759,6 +769,7 @@ spec:
       excludeSuffixes:
         - .pb.go
         - .pb.gw.go
+        - _enumer.go
       skipPaths:
         - enterprise/
 
@@ -773,6 +784,7 @@ spec:
       excludeSuffixes:
         - .pb.go
         - .pb.gw.go
+        - _enumer.go
 ---
 kind: custom.Step
 name: docs

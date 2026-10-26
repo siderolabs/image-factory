@@ -21,6 +21,10 @@
     <link rel="icon" type="image/png" href="/favicons/android-chrome-192x192.png" sizes="192x192" />
     <!-- Applies the stored theme before first paint; shared with the server-rendered pages. -->
     <script src="/js/theme.js"></script>
+    <!-- Server configuration, read by src/config.ts. -->
+    <script id="app-config" type="application/json">
+      {{ .Config }}
+    </script>
   </head>
   <body>
     <noscript>

@@ -31,15 +31,31 @@ type Options struct {
 	// DevServerURL, when set, takes index.html and the source modules from a running Vite dev server instead of Dist.
 	DevServerURL *url.URL
 
-	// PageMeta localizes the document metadata filled into index.html. It may set response headers, such as cookies.
-	PageMeta func(http.ResponseWriter, *http.Request) PageMeta
+	// IndexData returns what to fill into index.html for a request. It may set response headers, such as cookies.
+	IndexData func(http.ResponseWriter, *http.Request) IndexData
 }
 
-// PageMeta is the document metadata filled into index.html, where crawlers and link previews can see it.
-type PageMeta struct {
+// IndexData is filled into index.html on every request.
+type IndexData struct {
+	// Lang, Title and Description are the localized document metadata, where crawlers and link previews can see it.
 	Lang        string
 	Title       string
 	Description string
+
+	// Config is handed to the frontend as JSON.
+	Config Config
+}
+
+// Config is the server configuration that the frontend needs before its first request.
+type Config struct {
+	// Version is the Image Factory version.
+	Version string `json:"version"`
+	// Enterprise is whether this is an Enterprise build.
+	Enterprise bool `json:"enterprise"`
+	// TokensEnabled is whether self-issued API tokens are enabled.
+	TokensEnabled bool `json:"tokensEnabled"`
+	// LogoutEnabled is whether users log in through the browser, and so can log out.
+	LogoutEnabled bool `json:"logoutEnabled"`
 }
 
 // Handler owns the single-page UI routes.
@@ -48,14 +64,14 @@ type Handler struct {
 	index        *template.Template
 	devServerURL *url.URL
 	devProxy     *httputil.ReverseProxy
-	pageMeta     func(http.ResponseWriter, *http.Request) PageMeta
+	indexData    func(http.ResponseWriter, *http.Request) IndexData
 }
 
 // New constructs the single-page UI handler.
 func New(opts Options) (*Handler, error) {
 	handler := &Handler{
-		dist:     opts.Dist,
-		pageMeta: opts.PageMeta,
+		dist:      opts.Dist,
+		indexData: opts.IndexData,
 	}
 
 	if opts.DevServerURL != nil {
@@ -140,7 +156,7 @@ func isDevServerRequest(r *http.Request) bool {
 }
 
 func (h *Handler) serveIndex(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
-	meta := h.pageMeta(w, r)
+	data := h.indexData(w, r)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -161,7 +177,7 @@ func (h *Handler) serveIndex(ctx context.Context, w http.ResponseWriter, r *http
 
 	var out bytes.Buffer
 
-	if err = index.Execute(&out, meta); err != nil {
+	if err = index.Execute(&out, data); err != nil {
 		return fmt.Errorf("render frontend index.html: %w", err)
 	}
 

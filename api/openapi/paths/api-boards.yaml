@@ -1,0 +1,23 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+parameters:
+- $ref: ../components/parameters.yaml#/TalosVersion
+get:
+  operationId: listBoards
+  summary: List single-board computers
+  security: []
+  responses:
+    '200':
+      description: Single-board computers that the Talos version supports.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "../components/schemas.yaml#/Board"
+    '400':
+      $ref: "../components/responses.yaml#/BadRequest"
+    '500':
+      $ref: "../components/responses.yaml#/InternalServerError"

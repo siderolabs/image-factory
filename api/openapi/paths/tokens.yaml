@@ -101,3 +101,29 @@ revoke:
         $ref: "../components/responses.yaml#/NotFound"
       "500":
         $ref: "../components/responses.yaml#/InternalServerError"
+actors:
+  get:
+    operationId: listAPITokenActors
+    summary: List the actor profiles that API tokens can be issued for
+    description: >-
+      Lists the actor profiles that `POST /tokens` accepts as `actor`, with the scopes each one grants,
+      so that a client can show what a token for that actor will be able to do.
+    tags: [APITokens]
+    x-image-factory-enterprise: true
+    responses:
+      "200":
+        description: Actor profiles, in presentation order.
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../components/schemas.yaml#/APITokenActor"
+      "303":
+        $ref: "../components/responses.yaml#/SeeOther"
+      "401":
+        $ref: "../components/responses.yaml#/Unauthorized"
+      "403":
+        $ref: "../components/responses.yaml#/Forbidden"
+      "500":
+        $ref: "../components/responses.yaml#/InternalServerError"
