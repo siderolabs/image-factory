@@ -32,6 +32,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/regtransport"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	buildversion "github.com/siderolabs/image-factory/internal/version"
+	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -78,7 +79,7 @@ type Options struct {
 	Pusher             remotewrap.Pusher
 	Signer             ImageSigner
 	EvidencePublisher  EvidencePublisher
-	ProxyImages        map[string]string
+	ProxyImages        map[string]ProxyImage
 	Logger             *zap.Logger
 	InternalRepository name.Repository
 	ExternalRepository name.Repository
@@ -86,6 +87,13 @@ type Options struct {
 	ProxyNamespace     string
 	ProxyInternal      bool
 	AuthEnabled        bool
+	EnterpriseEnabled  bool
+}
+
+// ProxyImage is an image served by the registry proxy.
+type ProxyImage struct {
+	Repository     string
+	EnterpriseOnly bool
 }
 
 // Service owns registry lookup, detached builds, and immutable publication.
@@ -224,14 +232,22 @@ func (f *Service) Proxy(_ context.Context, request Request) (Location, error) {
 		return Location{}, xerrors.NewTaggedf[ProxyUnavailableTag]("proxying to an authorized/secure backing registry is not possible")
 	}
 
-	repository, ok := f.options.ProxyImages[request.Image]
+	image, ok := f.options.ProxyImages[request.Image]
 	if !ok {
 		return Location{}, xerrors.NewTaggedf[NotFoundTag]("unknown image: %s", request.Image)
 	}
 
+	if image.EnterpriseOnly && !f.options.EnterpriseEnabled {
+		return Location{}, xerrors.NewTaggedf[enterrors.NotEnabledTag]("enterprise not enabled: image %s is not available", request.Image)
+	}
+
+	if image.Repository == "" {
+		return Location{}, xerrors.NewTaggedf[NotFoundTag]("image not configured: %s", request.Image)
+	}
+
 	return Location{
 		Scheme: f.options.ProxyRegistry.Scheme(), Host: f.options.ProxyRegistry.Name(),
-		Repository: f.options.ProxyNamespace + "/" + repository,
+		Repository: f.options.ProxyNamespace + "/" + image.Repository,
 		Resource:   request.Resource, Reference: request.Reference, Proxy: true,
 	}, nil
 }

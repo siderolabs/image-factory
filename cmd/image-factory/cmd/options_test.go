@@ -556,9 +556,9 @@ func TestComponentsImageMap(t *testing.T) {
 	mapped := make(map[string]struct{}, len(imageMap))
 
 	for key, val := range imageMap {
-		mapped[val] = struct{}{}
+		mapped[val.Repository] = struct{}{}
 
-		assert.Containsf(t, fieldByValue, val, "ImageMap key %q is not backed by any ComponentsOptions field", key)
+		assert.Containsf(t, fieldByValue, val.Repository, "ImageMap key %q is not backed by any ComponentsOptions field", key)
 	}
 
 	assert.Equal(t, len(fieldByValue), len(mapped), "ImageMap must be the same length as ComponentsOptions")

@@ -172,7 +172,7 @@ Unauthorized:
       schema:
         type: string
 PaymentRequired:
-  description: An Enterprise asset feature is unavailable.
+  description: An Enterprise feature is unavailable.
   content:
     text/plain:
       schema:

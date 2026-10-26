@@ -23,6 +23,7 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/registry"
+	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
 	"github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -111,7 +112,16 @@ func TestProxyAndReferrersFailures(t *testing.T) {
 	_, err = service.Proxy(t.Context(), registry.Request{Image: "unknown"})
 	require.True(t, xerrors.TagIs[registry.ProxyUnavailableTag](err))
 
-	service = registry.New(schematicSource{}, nil, nil, nil, registry.Options{ProxyRegistry: insecure})
+	proxyImages := map[string]registry.ProxyImage{"vex": {Repository: "siderolabs/vex", EnterpriseOnly: true}}
+
+	service = registry.New(schematicSource{}, nil, nil, nil, registry.Options{ProxyRegistry: insecure, ProxyImages: proxyImages})
+	_, err = service.Proxy(t.Context(), registry.Request{Image: "vex"})
+	require.True(t, xerrors.TagIs[enterrors.NotEnabledTag](err))
+
+	service = registry.New(schematicSource{}, nil, nil, nil, registry.Options{ProxyRegistry: insecure, ProxyImages: proxyImages, EnterpriseEnabled: true})
+	_, err = service.Proxy(t.Context(), registry.Request{Image: "vex"})
+	require.NoError(t, err)
+
 	_, err = service.Proxy(t.Context(), registry.Request{Image: "unknown"})
 	require.True(t, xerrors.TagIs[registry.NotFoundTag](err))
 

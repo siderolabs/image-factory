@@ -54,6 +54,8 @@ config:
         # overlayManifest: siderolabs/overlays
         ## Image containing the Talos CLI tool
         # talosctl: siderolabs/talosctl-all
+        ## Image containing Talos VEX data (Enterprise only)
+        # talosVexData: ""
       ## Allow connections to the registry over HTTP or with invalid TLS certificates.
       # insecure: false
       ## OCI registry host for base images and extensions (e.g., ghcr.io)

@@ -91,7 +91,7 @@ type Options struct {
 }
 
 type ImageProxyOptions struct {
-	Images          map[string]string
+	Images          map[string]registry.ProxyImage
 	BackingRegistry name.Registry
 	Namespace       string
 }
@@ -220,6 +220,7 @@ func NewFrontend(
 			ExternalRepository: opts.InstallerExternalRepository,
 			ProxyInternal:      opts.ProxyInstallerInternalRepository,
 			AuthEnabled:        opts.AuthProvider != nil,
+			EnterpriseEnabled:  enterprise.Enabled(),
 			ProxyImages:        opts.ImageProxy.Images,
 			ProxyRegistry:      opts.ImageProxy.BackingRegistry,
 			ProxyNamespace:     opts.ImageProxy.Namespace,

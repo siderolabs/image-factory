@@ -736,6 +736,16 @@ ImageFactory is the image containing the Image Factory itself.
 
 ---
 
+### `artifacts.core.components.talosVexData`
+
+- **Type:** `string`
+- **Env:** `ARTIFACTS_CORE_COMPONENTS_TALOSVEXDATA`
+
+TalosVexData is the image containing Talos VEX data.
+This image is available only in the Enterprise edition and is used for vulnerability and exposure data.
+
+---
+
 ### `artifacts.core.insecure`
 
 - **Type:** `bool`
@@ -1547,6 +1557,7 @@ artifacts:
             installer: siderolabs/installer
             installerBase: siderolabs/installer-base
             overlayManifest: siderolabs/overlays
+            talosVexData: ""
             talosctl: siderolabs/talosctl-all
         insecure: false
         namespace: ""
@@ -1722,6 +1733,7 @@ IF_ARTIFACTS_CORE_COMPONENTS_INSTALLER=siderolabs/installer
 IF_ARTIFACTS_CORE_COMPONENTS_INSTALLERBASE=siderolabs/installer-base
 IF_ARTIFACTS_CORE_COMPONENTS_OVERLAYMANIFEST=siderolabs/overlays
 IF_ARTIFACTS_CORE_COMPONENTS_TALOSCTL=siderolabs/talosctl-all
+IF_ARTIFACTS_CORE_COMPONENTS_TALOSVEXDATA=
 IF_ARTIFACTS_CORE_INSECURE=false
 IF_ARTIFACTS_CORE_NAMESPACE=
 IF_ARTIFACTS_CORE_REGISTRY=ghcr.io

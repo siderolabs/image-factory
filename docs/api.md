@@ -751,8 +751,11 @@ Images are forwarded as-is, keeping their original signatures.
 * `overlays`
 * `talosctl-all`
 * `image-factory`
+* `talos-vex-data` (Enterprise only)
 
 Example: `docker pull factory.talos.dev/siderolabs/installer-base:v1.13.5`
+
+Pulling `talos-vex-data` returns `402 Payment Required` when Enterprise is not enabled, and `404 Not Found` when `artifacts.core.components.talosVexData` is not set.
 
 The proxy forwards these OCI Distribution operations:
 

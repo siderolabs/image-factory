@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
+	"github.com/siderolabs/image-factory/internal/registry"
 	"github.com/siderolabs/image-factory/internal/remotewrap"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
@@ -643,18 +644,23 @@ type ComponentsOptions struct {
 
 	// ImageFactory is the image containing the Image Factory itself.
 	ImageFactory string `koanf:"imageFactory"`
+
+	// TalosVexData is the image containing Talos VEX data.
+	// This image is available only in the Enterprise edition and is used for vulnerability and exposure data.
+	TalosVexData string `koanf:"talosVexData"`
 }
 
-// ImageMap maps each component to its registry-facing image name.
-func (c ComponentsOptions) ImageMap() map[string]string {
-	return map[string]string{
-		"installer-base": c.InstallerBase,
-		"installer":      c.Installer,
-		"imager":         c.Imager,
-		"extensions":     c.ExtensionManifest,
-		"overlays":       c.OverlayManifest,
-		"talosctl-all":   c.Talosctl,
-		"image-factory":  c.ImageFactory,
+// ImageMap maps each component to its registry-facing image.
+func (c ComponentsOptions) ImageMap() map[string]registry.ProxyImage {
+	return map[string]registry.ProxyImage{
+		"installer-base": {Repository: c.InstallerBase},
+		"installer":      {Repository: c.Installer},
+		"imager":         {Repository: c.Imager},
+		"extensions":     {Repository: c.ExtensionManifest},
+		"overlays":       {Repository: c.OverlayManifest},
+		"talosctl-all":   {Repository: c.Talosctl},
+		"image-factory":  {Repository: c.ImageFactory},
+		"talos-vex-data": {Repository: c.TalosVexData, EnterpriseOnly: true},
 	}
 }
 
@@ -1005,6 +1011,7 @@ var DefaultOptions = Options{
 				OverlayManifest:   "siderolabs/overlays",
 				Talosctl:          "siderolabs/talosctl-all",
 				ImageFactory:      "siderolabs/image-factory",
+				TalosVexData:      "", // explicitly empty because this is enterprise-only and not available in the default config
 			},
 		},
 	},

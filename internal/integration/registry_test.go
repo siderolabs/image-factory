@@ -437,7 +437,11 @@ func testRegistryProxy(ctx context.Context, t *testing.T, registryAddr string, b
 		t.Parallel()
 
 		for _, image := range cmd.DefaultOptions.Artifacts.Core.Components.ImageMap() {
-			repo := registry.Repo(image)
+			if image.Repository == "" {
+				continue
+			}
+
+			repo := registry.Repo(image.Repository)
 
 			tags, err := remote.List(repo, ociRemoteAuthOpts()...)
 			require.NoError(t, err)

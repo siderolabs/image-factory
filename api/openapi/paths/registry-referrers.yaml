@@ -22,6 +22,8 @@ get:
       $ref: "../components/responses.yaml#/SeeOther"
     '401':
       $ref: "../components/responses.yaml#/Unauthorized"
+    '402':
+      $ref: "../components/responses.yaml#/PaymentRequired"
     '403':
       $ref: "../components/responses.yaml#/Forbidden"
     '404':
@@ -46,6 +48,8 @@ head:
       $ref: "../components/responses.yaml#/SeeOther"
     '401':
       $ref: "../components/responses.yaml#/Unauthorized"
+    '402':
+      $ref: "../components/responses.yaml#/PaymentRequired"
     '403':
       $ref: "../components/responses.yaml#/Forbidden"
     '404':
