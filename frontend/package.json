@@ -17,37 +17,47 @@
     "generate": "openapi-typescript ../api/openapi.yaml --default-non-nullable false --output src/api/schema.d.ts && prettier -w src/api/schema.d.ts"
   },
   "dependencies": {
+    "@tanstack/vue-query": "^5.105.0",
+    "@vueuse/core": "^15.0.0",
+    "@vueuse/router": "^15.0.0",
+    "date-fns": "^4.4.0",
+    "js-yaml": "^5.5.0",
     "openapi-fetch": "^0.17.0",
+    "semver": "^7.8.5",
     "vue": "^3.5.44",
+    "vue-i18n": "^11.4.16",
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
     "@siderolabs/talos-design-system": "github:siderolabs/talos-design-system#semver:^0.10.0",
     "@tailwindcss/vite": "^4.3.3",
     "@tsconfig/node24": "^24.0.5",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.19.2",
+    "@types/semver": "^7.8.0",
     "@vitejs/plugin-vue": "^6.0.10",
     "@vitest/browser-playwright": "^5.0.5",
-    "@vitest/eslint-plugin": "^1.6.27",
+    "@vitest/eslint-plugin": "^1.6.28",
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/tsconfig": "^0.9.1",
     "eslint": "^10.12.0",
     "eslint-plugin-simple-import-sort": "^14.0.0",
-    "eslint-plugin-vue": "^10.11.1",
+    "eslint-plugin-vue": "^10.12.0",
     "openapi-typescript": "^7.13.0",
     "playwright": "^1.64.1",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "vite": "^8.3.4",
+    "vite": "^8.3.5",
     "vitest": "^5.0.4",
     "vitest-browser-vue": "^3.1.0",
     "vue-tsc": "^3.3.13"
   },
   "allowScripts": {
-    "fsevents@2.3.3": true
+    "fsevents@2.3.3": true,
+    "vue-demi@0.14.10": true
   },
   "overrides": {
     "openapi-typescript": {

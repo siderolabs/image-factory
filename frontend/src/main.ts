@@ -4,9 +4,23 @@
 
 import '@/index.css'
 
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createApp } from 'vue'
 
 import App from '@/App.vue'
+import { i18n, initLanguage } from '@/i18n'
 import router from '@/router'
 
-createApp(App).use(router).mount('#app')
+await initLanguage()
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Failures show right away; a failed query loads again the next time it's used.
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
+
+createApp(App).use(router).use(i18n).use(VueQueryPlugin, { queryClient }).mount('#app')

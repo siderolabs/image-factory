@@ -18,3 +18,38 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
     box-shadow: var(--talos-shadow-focus);
   }
 }
+
+@layer components {
+  .status-glyph {
+    gap: var(--talos-space-tight);
+
+    &:not(.hidden) {
+      display: flex;
+    }
+
+    &::before {
+      content: '';
+      flex: none;
+      width: 1rem;
+      height: 1rem;
+      margin-top: var(--talos-space-micro);
+      background: var(--glyph-color);
+      mask: var(--glyph) center / contain no-repeat;
+    }
+  }
+
+  .status-failed {
+    --glyph-color: var(--talos-status-danger-default);
+    --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12%202a10%2010%200%20100%2020%2010%2010%200%20000-20zM8.5%209.9L9.9%208.5%2012%2010.6l2.1-2.1%201.4%201.4L13.4%2012l2.1%202.1-1.4%201.4L12%2013.4l-2.1%202.1-1.4-1.4L10.6%2012z'/%3E%3C/svg%3E");
+  }
+
+  .status-warning {
+    --glyph-color: var(--talos-status-warning-default);
+    --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12%202L1%2021h22L12%202zM11%209h2v5h-2zM11%2016h2v2h-2z'/%3E%3C/svg%3E");
+  }
+
+  .status-info {
+    --glyph-color: var(--talos-status-info-default);
+    --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12%202a10%2010%200%20100%2020%2010%2010%200%20000-20zM11%2010h2v7h-2zM11%207h2v2h-2z'/%3E%3C/svg%3E");
+  }
+}

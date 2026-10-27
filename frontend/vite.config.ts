@@ -29,10 +29,10 @@ export default defineConfig({
       },
     },
   },
-  // Optimize these up front: discovering them mid-run reloads the page, and a browser-mode test then
-  // ends up with two copies of Vue.
+  // Pages are only reached through the vue-router/auto-routes virtual module, which the dependency scanner can't
+  // follow. Scanning the sources finds their dependencies up front, rather than reloading mid-run on a cold cache.
   optimizeDeps: {
-    include: ['vue', 'vue-router', 'vitest-browser-vue'],
+    entries: ['index.html', 'src/**/*.{vue,ts}'],
   },
   resolve: {
     alias: {
@@ -44,6 +44,8 @@ export default defineConfig({
     root: fileURLToPath(new URL('./', import.meta.url)),
     browser: {
       enabled: true,
+      // Vitest only defaults to headless in CI; run with --browser.headless=false to watch the tests.
+      headless: true,
       // Playwright's own browser builds don't run on Alpine (musl), so in the kres js stage use the
       // Chromium that .kres.yaml installs there. Everywhere else, Playwright's own Chromium is used.
       provider: playwright({
