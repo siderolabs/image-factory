@@ -1,0 +1,24 @@
+# Applied on top of config.yaml for the enterprise e2e run: API tokens need an authenticated identity to be issued
+# to, which the htpasswd provider gives with the dev credentials in hack/dev/htpasswd.
+
+authentication:
+  enabled: true
+  provider: htpasswd
+  htpasswdPath: /etc/image-factory/htpasswd
+  tokens:
+    storage:
+      registry: 127.0.0.1:5100
+      namespace: image-factory
+      repository: tokens
+      insecure: true
+
+enterprise:
+  # The specs don't scan, so point the scanner nowhere rather than download its database on every run.
+  scanner:
+    databaseURL: http://127.0.0.1:1/databases
+  spdx:
+    cache:
+      registry: 127.0.0.1:5100
+      namespace: image-factory
+      repository: spdx-cache
+      insecure: true

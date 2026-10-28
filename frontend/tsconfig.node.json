@@ -1,7 +1,22 @@
 {
   "extends": "@tsconfig/node24/tsconfig.json",
-  "include": ["vite.config.*", "eslint.config.*", "prettier.config.*"],
+  "include": [
+    "vite.config.*",
+    "playwright.config.*",
+    "eslint.config.*",
+    "prettier.config.*",
+    "e2e/**/*"
+  ],
   "compilerOptions": {
+    "lib": [
+      "es2024",
+      "es2025.regexp",
+      "ESNext.Array",
+      "ESNext.Collection",
+      "ESNext.Error",
+      "ESNext.Iterator",
+      "ESNext.Promise"
+    ],
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",

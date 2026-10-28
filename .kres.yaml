@@ -97,6 +97,10 @@ spec:
       toplevel: true
       dependants:
         - coverage
+    - name: e2e
+      toplevel: true
+    - name: e2e-enterprise
+      toplevel: true
     - name: tailwind
       toplevel: true
     - name: docs
@@ -621,6 +625,78 @@ spec:
       RUN_TESTS_ENTERPRISE: TestIntegration(Direct|Auth0.*)
       TEST_FLAGS: "-test.schematic-service-repository=127.0.0.1:5100/image-factory/schematic -test.installer-internal-repository=127.0.0.1:5100/siderolabs -test.cache-repository=127.0.0.1:5100/image-factory/cache -test.signing-cache-repository=127.0.0.1:5100/image-factory/signing-cache -test.extra-extensions-manifest=127.0.0.1:5100/extension-testing/extensions -test.spdx-cache-repository=127.0.0.1:5100/image-factory/spdx -test.token-storage-repository=127.0.0.1:5100/image-factory/tokens -test.vex-data-repository=ghcr.io/siderolabs/image-factory/test-vex-data"
       TAG_SUFFIX: "-enterprise"
+---
+kind: custom.Step
+name: e2e
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    variables:
+      - name: CORE_REGISTRY
+        defaultValue: ghcr.io
+      - name: REGISTRY_MIRROR_ADDR
+        defaultValue: $(if $(filter true,$(CI)),$(shell python3 -c "import socket; s = socket.create_connection(('registry-$(subst .,-,$(CORE_REGISTRY)).ci.svc', 5000), 2); print('%s:5000' % s.getpeername()[0])" 2>/dev/null))
+    script:
+      - "@$(MAKE) image-image-factory PUSH=true"
+      - >-
+        @IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) PROJECT=community
+        CORE_REGISTRY=$(CORE_REGISTRY) REGISTRY_MIRROR_ADDR=$(REGISTRY_MIRROR_ADDR)
+        TEST_OUTPUTS_DIR=$(PWD)/$(ARTIFACTS)/e2e hack/test/e2e.sh
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+    parallelJob:
+      name: e2e
+      runnerGroup: large
+    artifacts:
+      enabled: true
+      skipDefaultArtifacts: true
+      additional: # the factory log, and the Playwright report and test results
+        - name: e2e
+          always: true
+          continueOnError: true
+          paths:
+            - ${{ github.workspace }}/_out/e2e
+    environment:
+      REGISTRY: registry.dev.siderolabs.io
+---
+kind: custom.Step
+name: e2e-enterprise
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    variables:
+      - name: CORE_REGISTRY
+        defaultValue: ghcr.io
+      - name: REGISTRY_MIRROR_ADDR
+        defaultValue: $(if $(filter true,$(CI)),$(shell python3 -c "import socket; s = socket.create_connection(('registry-$(subst .,-,$(CORE_REGISTRY)).ci.svc', 5000), 2); print('%s:5000' % s.getpeername()[0])" 2>/dev/null))
+    script:
+      - "@$(MAKE) image-image-factory PUSH=true"
+      - >-
+        @IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) PROJECT=enterprise
+        CORE_REGISTRY=$(CORE_REGISTRY) REGISTRY_MIRROR_ADDR=$(REGISTRY_MIRROR_ADDR)
+        TEST_OUTPUTS_DIR=$(PWD)/$(ARTIFACTS)/e2e-enterprise hack/test/e2e.sh
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+    parallelJob:
+      name: e2e-enterprise
+      runnerGroup: large
+    artifacts:
+      enabled: true
+      skipDefaultArtifacts: true
+      additional: # the factory log, and the Playwright report and test results
+        - name: e2e-enterprise
+          always: true
+          continueOnError: true
+          paths:
+            - ${{ github.workspace }}/_out/e2e-enterprise
+    environment:
+      REGISTRY: registry.dev.siderolabs.io
+      WITH_ENTERPRISE: true
+      TAG_SUFFIX: -enterprise
 ---
 kind: custom.Step
 name: push-extra-extensions

@@ -8,9 +8,12 @@ import { fileURLToPath, URL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import Vue from '@vitejs/plugin-vue'
 import { playwright } from '@vitest/browser-playwright'
+import dotenv from 'dotenv'
 import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
 import VueRouter from 'vue-router/vite'
+
+dotenv.config({ quiet: true })
 
 // https://vitejs.dev/config/
 export default defineConfig({

@@ -1,0 +1,29 @@
+# Image Factory configuration for the e2e tests, see hack/test/e2e.sh.
+#
+# The registries are the ones hack/test/e2e.sh starts: 127.0.0.1:5100 holds the factory's own artifacts, and
+# artifacts.core.registry (set by the script) is a mirror or pull-through cache of ghcr.io for Talos itself.
+
+artifacts:
+  core:
+    insecure: true
+  schematic:
+    registry: 127.0.0.1:5100
+    namespace: image-factory
+    repository: schematic
+    insecure: true
+  installer:
+    internal:
+      registry: 127.0.0.1:5100
+      namespace: siderolabs
+      insecure: true
+
+cache:
+  oci:
+    registry: 127.0.0.1:5100
+    namespace: image-factory
+    repository: cache
+    insecure: true
+  signingKeyPath: /etc/image-factory/cache-signing-key.key
+
+http:
+  externalURL: http://127.0.0.1:8080
