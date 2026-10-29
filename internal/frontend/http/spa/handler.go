@@ -99,8 +99,8 @@ func New(opts Options) (*Handler, error) {
 	return handler, nil
 }
 
-// Routes returns the browser UI routes, all of which serve index.html. They keep the paths and operations of
-// the server-rendered UI, so that bookmarks keep working, and the frontend router takes over from there.
+// Routes returns the browser UI routes, all of which serve index.html. They are the paths the UI has always had,
+// so bookmarks keep working, and the frontend router takes over from there.
 func (h *Handler) Routes() []transport.Route {
 	return []transport.Route{
 		{Method: http.MethodGet, Path: "/", OperationID: "getUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: h.serveIndex},
@@ -109,7 +109,8 @@ func (h *Handler) Routes() []transport.Route {
 	}
 }
 
-// AssetRoutes returns the routes of the built JavaScript, stylesheets and fonts.
+// AssetRoutes returns the routes of the built JavaScript, stylesheets and fonts, and of the files that keep a fixed
+// path: the favicons from public/, and the theme script that the Enterprise sign-in pages load.
 func (h *Handler) AssetRoutes() []transport.Route {
 	return []transport.Route{
 		{
@@ -120,11 +121,28 @@ func (h *Handler) AssetRoutes() []transport.Route {
 			Protocol:    transport.ProtocolStatic,
 			Handler:     h.serveAsset,
 		},
+		{
+			Method:      http.MethodGet,
+			Path:        "/favicons/*filepath",
+			OperationID: "getFaviconAsset",
+			Access:      transport.AccessPublic,
+			Protocol:    transport.ProtocolStatic,
+			Handler:     h.serveFixed("favicons"),
+		},
+		{
+			Method:      http.MethodGet,
+			Path:        "/js/*filepath",
+			OperationID: "getJavaScriptAsset",
+			Access:      transport.AccessPublic,
+			Protocol:    transport.ProtocolStatic,
+			Handler:     h.serveFixed("js"),
+		},
 	}
 }
 
 // Middleware forwards the requests of the Vite dev server client (source modules and hot reload) to the dev
-// server, as the backend has no routes for them. Without a dev server it returns next unchanged.
+// server, as the backend has no routes for them, and the fixed-path files, which only the dev server has then.
+// Without a dev server it returns next unchanged.
 func (h *Handler) Middleware(next http.Handler) http.Handler {
 	if h.devProxy == nil {
 		return next
@@ -146,7 +164,7 @@ func isDevServerRequest(r *http.Request) bool {
 		return true
 	}
 
-	for _, prefix := range []string{"/@", "/src/", "/node_modules/"} {
+	for _, prefix := range []string{"/@", "/src/", "/node_modules/", "/favicons/", "/js/"} {
 		if strings.HasPrefix(r.URL.Path, prefix) {
 			return true
 		}
@@ -242,6 +260,24 @@ func (h *Handler) serveAsset(_ context.Context, w http.ResponseWriter, r *http.R
 	http.ServeFileFS(w, r, h.dist, name)
 
 	return nil
+}
+
+// serveFixed serves the files under dir in the build, which keep their names, so they are revalidated.
+func (h *Handler) serveFixed(dir string) transport.Handler {
+	return func(_ context.Context, w http.ResponseWriter, r *http.Request, params httprouter.Params) error {
+		name := path.Join(dir, path.Clean("/"+params.ByName("filepath")))
+
+		if !isFile(h.dist, name) {
+			http.NotFound(w, r)
+
+			return nil
+		}
+
+		w.Header().Set("Cache-Control", "no-cache")
+		http.ServeFileFS(w, r, h.dist, name)
+
+		return nil
+	}
 }
 
 func isFile(filesystem fs.FS, name string) bool {

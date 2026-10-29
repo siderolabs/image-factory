@@ -32,7 +32,6 @@ import (
 	"github.com/siderolabs/image-factory/internal/frontend/http/operational"
 	"github.com/siderolabs/image-factory/internal/frontend/http/spa"
 	staticfiles "github.com/siderolabs/image-factory/internal/frontend/http/static"
-	"github.com/siderolabs/image-factory/internal/frontend/http/ui"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/registry"
@@ -46,32 +45,26 @@ import (
 
 // Frontend is the HTTP frontend.
 type Frontend struct {
-	server           *Server
-	contract         *api.Contract
-	schematicAPI     *applicationapi.SchematicHandler
-	imageAPI         *applicationapi.ImageHandler
-	pxeAPI           *applicationapi.PXEHandler
-	talosctlAPI      *applicationapi.TalosctlHandler
-	downloadsAPI     *applicationapi.DownloadsHandler
-	talosVersionAPI  *applicationapi.TalosVersionHandler
-	browserAuth      *browserauth.Handler
-	metadata         *metadata.Handler
-	oci              *oci.Handler
-	operational      *operational.Handler
-	staticCSS        *staticfiles.Handler
-	staticFavicons   *staticfiles.Handler
-	staticJavaScript *staticfiles.Handler
-	ui               *ui.Handler
-	spa              *spa.Handler
+	server          *Server
+	contract        *api.Contract
+	schematicAPI    *applicationapi.SchematicHandler
+	imageAPI        *applicationapi.ImageHandler
+	pxeAPI          *applicationapi.PXEHandler
+	talosctlAPI     *applicationapi.TalosctlHandler
+	downloadsAPI    *applicationapi.DownloadsHandler
+	talosVersionAPI *applicationapi.TalosVersionHandler
+	browserAuth     *browserauth.Handler
+	metadata        *metadata.Handler
+	oci             *oci.Handler
+	operational     *operational.Handler
+	staticCSS       *staticfiles.Handler
+	spa             *spa.Handler
 
 	// robots is the robots.txt body; nil leaves the route unregistered.
 	robots []byte
 
 	// spaConfig is handed to the single-page UI in its index.html.
 	spaConfig spa.Config
-
-	// useSPA serves the single-page UI instead of the server-rendered one.
-	useSPA bool
 }
 
 // Options configures the HTTP frontend.
@@ -94,7 +87,6 @@ type Options struct {
 	RemoteOptions                    []remote.Option
 	RegistryRefreshInterval          time.Duration
 	ProxyInstallerInternalRepository bool
-	SPA                              bool
 }
 
 type ImageProxyOptions struct {
@@ -161,13 +153,6 @@ func NewFrontend(
 	)
 	frontend.browserAuth = browserauth.New(opts.AuthProvider)
 	frontend.robots = robotsText(opts.AuthProvider != nil, frontend.browserAuth.LogoutEnabled())
-	frontend.ui = ui.New(schematicService, artifactsManager, ui.Options{
-		ExternalURL:    opts.ExternalURL,
-		ExternalPXEURL: opts.ExternalPXEURL,
-		AuthProvider:   opts.AuthProvider,
-		TokensEnabled:  opts.TokenVerifier != nil,
-		LogoutEnabled:  frontend.browserAuth.LogoutEnabled(),
-	})
 
 	var readinessCheckers []operational.ReadinessChecker
 
@@ -181,7 +166,6 @@ func NewFrontend(
 
 	var err error
 
-	frontend.useSPA = opts.SPA
 	frontend.spaConfig = spa.Config{
 		Version:       version.Tag,
 		Enterprise:    enterprise.Enabled(),
@@ -271,13 +255,11 @@ func NewFrontend(
 func (f *Frontend) initializeEndpointOwners(readinessCheckers []operational.ReadinessChecker) {
 	f.operational = operational.New(readinessCheckers...)
 	f.staticCSS = staticfiles.New(http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
-	f.staticFavicons = staticfiles.New(http.FS(ensure.Value(fs.Sub(faviconsFS, "favicons"))))
-	f.staticJavaScript = staticfiles.New(http.FS(ensure.Value(fs.Sub(jsFS, "js"))))
 }
 
-// indexData fills in the single-page UI's index.html, with the document metadata localized by the server-rendered UI.
+// indexData fills in the single-page UI's index.html.
 func (f *Frontend) indexData(w http.ResponseWriter, r *http.Request) spa.IndexData {
-	meta := f.ui.PageMeta(w, r)
+	meta := spa.NewPageMeta(w, r)
 
 	return spa.IndexData{
 		Lang:        meta.Lang,

@@ -13,17 +13,17 @@ import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
 import VueRouter from 'vue-router/vite'
 
+import { themeInit } from './vite-theme-init'
+
 dotenv.config({ quiet: true })
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [VueRouter(), Vue(), tailwindcss()],
-  // Favicons and other static files are served by the Go backend.
-  publicDir: false,
+  plugins: [VueRouter(), Vue(), tailwindcss(), themeInit()],
   build: {
     rolldownOptions: {
       output: {
-        // Everything except index.html is served by the backend from /assets/.
+        // Built files are served by the backend from /assets/, next to the public/ files and /js/theme.js.
         // Go's //go:embed skips files starting with '_', and rolldown chunks may begin with '_',
         // so prefix those names to avoid the embed exclusion.
         chunkFileNames: 'assets/o[name]-[hash].js',

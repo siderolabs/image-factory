@@ -142,7 +142,6 @@ func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
 			path             string
 			body             string
 			location         string
-			hxRedirect       string
 			bodyContains     string
 			status           int
 			expectsChallenge bool
@@ -175,14 +174,14 @@ func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
 				bodyContains: `<meta name="description"`,
 			},
 			{
-				name:       "htmx request",
-				method:     http.MethodGet,
-				path:       "/ui/version-doc?version=v1.11.0",
-				status:     http.StatusUnauthorized,
-				hxRedirect: "/login",
+				// The UI's own requests: a challenge would pop the browser's Basic auth dialog.
+				name:   "page script request",
+				method: http.MethodGet,
+				path:   "/schematics/376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",
+				status: http.StatusUnauthorized,
 				headers: map[string]string{
-					"Hx-Current-Url": "http://image-factory.test/",
-					"Hx-Request":     "true",
+					"Accept":         "application/json",
+					"Sec-Fetch-Mode": "cors",
 				},
 			},
 		} {
@@ -202,7 +201,6 @@ func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
 
 				assert.Equal(t, test.status, resp.StatusCode)
 				assert.Equal(t, test.location, resp.Header.Get("Location"))
-				assert.Equal(t, test.hxRedirect, resp.Header.Get("Hx-Redirect"))
 				assert.NotEmpty(t, resp.Header.Get("Server"))
 				assert.NotEmpty(t, resp.Header.Get("X-Request-ID"))
 

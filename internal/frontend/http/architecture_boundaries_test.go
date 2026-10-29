@@ -98,8 +98,8 @@ func TestArchitectureBoundaryCounterexamples(t *testing.T) {
 		{
 			name:      "endpoint sibling",
 			directory: "internal/frontend/http/api",
-			source:    `package api; import "github.com/siderolabs/image-factory/internal/frontend/http/ui"`,
-			want:      []string{"endpoint imports internal/frontend/http/ui"},
+			source:    `package api; import "github.com/siderolabs/image-factory/internal/frontend/http/spa"`,
+			want:      []string{"endpoint imports internal/frontend/http/spa"},
 		},
 		{
 			name:      "builder constructor alias",
@@ -161,8 +161,8 @@ func TestArchitectureBoundaryCounterexamples(t *testing.T) {
 		},
 		{
 			name:      "allowed transport",
-			directory: "internal/frontend/http/ui",
-			source:    `package ui; import "github.com/siderolabs/image-factory/internal/frontend/http/transport"`,
+			directory: "internal/frontend/http/spa",
+			source:    `package spa; import "github.com/siderolabs/image-factory/internal/frontend/http/transport"`,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

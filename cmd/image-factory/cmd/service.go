@@ -415,7 +415,6 @@ func buildFrontendOptions(cacheImageSigner signer.Signer, authProvider enterpris
 	frontendOptions.RegistryRefreshInterval = opts.Artifacts.RefreshInterval
 	frontendOptions.MetricsNamespace = opts.Metrics.Namespace
 	frontendOptions.AllowedOrigins = opts.HTTP.AllowedOrigins
-	frontendOptions.SPA = opts.HTTP.SPA.Enabled
 
 	if opts.HTTP.SPA.Dev.ServerURL != "" {
 		frontendOptions.SPADevServerURL, err = url.Parse(opts.HTTP.SPA.Dev.ServerURL)

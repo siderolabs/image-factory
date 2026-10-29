@@ -463,7 +463,8 @@ func TestLogoutHandlerRejectsCrossOrigin(t *testing.T) {
 }
 
 // TestMiddlewareDeniesByClient pins how each client shape is turned away: a redirect for a
-// browser, a header for htmx, a challenge for everything else. Getting it wrong is silent.
+// browser navigation, a bare 401 for a page's own requests, a challenge for everything else.
+// Getting it wrong is silent.
 func TestMiddlewareDeniesByClient(t *testing.T) {
 	t.Parallel()
 
@@ -493,18 +494,17 @@ func TestMiddlewareDeniesByClient(t *testing.T) {
 			},
 		},
 		{
-			name:   "htmx request",
-			method: http.MethodPost,
+			name:   "page script request",
+			method: http.MethodGet,
 			headers: map[string]string{
-				"Accept":         "*/*",
-				"HX-Request":     "true",
-				"HX-Current-URL": "https://factory.example.com/ui/page",
+				"Accept":         "application/json",
+				"Sec-Fetch-Mode": "cors",
 			},
 			assert: func(t *testing.T, rec *httptest.ResponseRecorder) {
-				require.Equal(t, "/login?return_to=%2Fui%2Fpage", rec.Header().Get("Hx-Redirect"),
-					"htmx must be sent to the page the user is on, not to the XHR endpoint")
+				require.Equal(t, http.StatusUnauthorized, rec.Code)
+				require.Empty(t, rec.Header().Get("Location"), "a fetch would follow a redirect without leaving the page")
 				require.Empty(t, rec.Header().Values("WWW-Authenticate"),
-					"a challenge on an XHR pops the browser's Basic auth dialog over the page")
+					"a challenge on a fetch pops the browser's Basic auth dialog over the page")
 			},
 		},
 		{

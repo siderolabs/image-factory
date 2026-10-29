@@ -95,7 +95,7 @@ func RenderError(writer http.ResponseWriter, request *http.Request, protocol Pro
 	}
 
 	if classification.Status == http.StatusUnauthorized && protocol != ProtocolBrowserAuth &&
-		writer.Header().Get("WWW-Authenticate") == "" && writer.Header().Get("Hx-Redirect") == "" {
+		writer.Header().Get("WWW-Authenticate") == "" {
 		writer.Header().Set("WWW-Authenticate", `Basic realm="Image Factory Enterprise", charset="UTF-8"`)
 	}
 

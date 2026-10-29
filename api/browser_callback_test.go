@@ -65,7 +65,7 @@ func TestBrowserCallbackRejectsInvalidAndConflictingPaths(t *testing.T) {
 		"/oauth/:callback", "/oauth/*callback", "/oauth/{callback}",
 		"/oauth/callback?code=x", "/oauth/callback#fragment", "/oauth/%63allback",
 		"/oauth/call back", "/oauth\\callback", "/oauth/callback\n",
-		"/", "/login", "/logout", "/versions", "/schematics", "/ui/wizard",
+		"/", "/login", "/logout", "/versions", "/schematics", "/ui/tokens",
 		"/css/callback", "/js/oauth/callback", "/image/schematic/version/callback",
 		"/v2/repository/manifests/callback",
 	} {

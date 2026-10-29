@@ -2,6 +2,7 @@
   "extends": "@tsconfig/node24/tsconfig.json",
   "include": [
     "vite.config.*",
+    "vite-theme-init.ts",
     "playwright.config.*",
     "eslint.config.*",
     "prettier.config.*",

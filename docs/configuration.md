@@ -80,22 +80,13 @@ ExternalPXEURL is the public URL for the PXE frontend, used for booting nodes vi
 
 ### `http.spa`
 
-SPA configures the new single-page UI (experimental).
-
----
-
-### `http.spa.enabled`
-
-- **Type:** `bool`
-- **Env:** `HTTP_SPA_ENABLED`
-
-Enabled serves the single-page UI instead of the server-rendered UI.
+SPA configures the browser UI, a single-page app built from frontend/.
 
 ---
 
 ### `http.spa.dev`
 
-Dev configures single-page UI development.
+Dev configures browser UI development.
 
 ---
 
@@ -104,7 +95,7 @@ Dev configures single-page UI development.
 - **Type:** `string`
 - **Env:** `HTTP_SPA_DEV_SERVERURL`
 
-ServerURL takes the single-page UI from a running Vite dev server (`npm run serve` in frontend/).
+ServerURL takes the browser UI from a running Vite dev server (`npm run serve` in frontend/).
 
 ---
 
@@ -1699,7 +1690,6 @@ http:
     spa:
         dev:
             serverURL: ""
-        enabled: false
 metrics:
     addr: :2122
 registry:
@@ -1838,7 +1828,6 @@ IF_HTTP_EXTERNALURL=https://localhost/
 IF_HTTP_HTTPLISTENADDR=:8080
 IF_HTTP_KEYFILE=
 IF_HTTP_SPA_DEV_SERVERURL=
-IF_HTTP_SPA_ENABLED=false
 IF_METRICS_ADDR=:2122
 IF_REGISTRY_DEBUG=false
 IF_REGISTRY_JOBS=64

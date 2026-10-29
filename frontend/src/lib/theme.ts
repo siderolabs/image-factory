@@ -5,23 +5,23 @@
 import { usePreferredDark, useStorage } from '@vueuse/core'
 import { computed } from 'vue'
 
-/** The theme choices; system follows the operating system's light or dark preference. */
-export const themeChoices = ['light', 'dark', 'system'] as const
+import {
+  parseThemeChoice,
+  resolveTheme,
+  THEME_STORAGE_KEY,
+  type ThemeChoice,
+} from '@/lib/theme-core'
 
-export type ThemeChoice = (typeof themeChoices)[number]
+export { type ThemeChoice, themeChoices } from '@/lib/theme-core'
 
-// Shared with /js/theme.js, which applies the stored choice before first paint.
-const stored = useStorage<string>('theme', 'system', undefined, { writeDefaults: false })
+// Shared with src/theme-init.ts, which applies the stored choice before first paint.
+const stored = useStorage<string>(THEME_STORAGE_KEY, 'system', undefined, { writeDefaults: false })
 const prefersDark = usePreferredDark()
 
-const theme = computed<ThemeChoice>(() =>
-  stored.value === 'light' || stored.value === 'dark' ? stored.value : 'system',
-)
+const theme = computed(() => parseThemeChoice(stored.value))
 
 /** The theme in use: the choice, with system resolved to light or dark. */
-const applied = computed(() =>
-  theme.value === 'system' ? (prefersDark.value ? 'dark' : 'light') : theme.value,
-)
+const applied = computed(() => resolveTheme(theme.value, prefersDark.value))
 
 /** The theme choice, stored in the browser. */
 export function useTheme() {

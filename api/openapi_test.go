@@ -165,10 +165,6 @@ func TestAuthenticationContract(t *testing.T) {
 	require.NotNil(t, challenge.Schema.Value)
 	assert.Equal(t, `Basic realm="Image Factory Enterprise", charset="UTF-8"`, challenge.Schema.Value.Example)
 
-	htmxRedirect := unauthorized.Headers["Hx-Redirect"].Value
-	require.NotNil(t, htmxRedirect)
-	assert.Contains(t, htmxRedirect.Description, "mutually exclusive")
-
 	expectedTokenScopes := map[string][]string{
 		"createAPIToken":        {"token:issue"},
 		"listAPITokens":         {"token:read"},
@@ -445,15 +441,6 @@ func TestContractOperations(t *testing.T) {
 			http.MethodGet:  "getReadiness",
 			http.MethodHead: "headReadiness",
 		},
-		"/ui/extensions-list": {
-			http.MethodPost: "postUIExtensionsList",
-		},
-		"/ui/version-doc": {
-			http.MethodGet: "getUIVersionDocumentation",
-		},
-		"/ui/wizard": {
-			http.MethodPost: "postUIWizard",
-		},
 		"/ui/tokens": {
 			http.MethodGet: "getUITokens",
 		},
@@ -583,7 +570,7 @@ func TestContractValidatesRuntimeOperations(t *testing.T) {
 	}{
 		{method: http.MethodGet, path: "/image/:schematic/:version/:path", operationID: "getImage"},
 		{method: http.MethodGet, path: "/css/*filepath", operationID: "getCSSAsset"},
-		{method: http.MethodPost, path: "/ui/wizard", operationID: "postUIWizard"},
+		{method: http.MethodGet, path: "/ui/tokens", operationID: "getUITokens"},
 		{method: http.MethodGet, path: "/callback", operationID: "completeBrowserLogin"},
 	} {
 		require.NoError(

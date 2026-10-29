@@ -58,57 +58,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/ui/wizard': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Submit the Image Factory UI wizard */
-    post: operations['postUIWizard']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/ui/version-doc': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Render Talos version documentation for the UI */
-    get: operations['getUIVersionDocumentation']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/ui/extensions-list': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Render an extensions list for the UI */
-    post: operations['postUIExtensionsList']
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   '/ui/tokens': {
     parameters: {
       query?: never
@@ -212,12 +161,12 @@ export interface paths {
       query?: never
       header?: never
       path: {
-        /** @description Embedded favicon path. */
+        /** @description Favicon path. */
         'filepath+': string
       }
       cookie?: never
     }
-    /** Download an embedded favicon */
+    /** Download a favicon */
     get: operations['getFaviconAsset']
     put?: never
     post?: never
@@ -232,12 +181,12 @@ export interface paths {
       query?: never
       header?: never
       path: {
-        /** @description Embedded JavaScript asset path. */
+        /** @description JavaScript file path. */
         'filepath+': string
       }
       cookie?: never
     }
-    /** Download an embedded JavaScript asset */
+    /** Download a JavaScript file with a fixed path */
     get: operations['getJavaScriptAsset']
     put?: never
     post?: never
@@ -1678,16 +1627,15 @@ export interface components {
     }
     /**
      * @description Authentication is configured and credentials are missing or invalid. API responses advertise
-     *     only Basic authentication even when Bearer credentials are accepted. Browser navigations may
-     *     receive a 303 login redirect instead, and htmx requests receive an `Hx-Redirect` header without
-     *     an authentication challenge.
+     *     only Basic authentication even when Bearer credentials are accepted. With browser login, page
+     *     navigations receive a 303 login redirect instead, and requests a page makes itself (marked by the
+     *     browser with a `Sec-Fetch-Mode` other than `navigate`) receive the 401 without an authentication
+     *     challenge.
      */
     Unauthorized: {
       headers: {
         /** @description Optional Basic challenge; deliberately never a Bearer challenge. */
         'WWW-Authenticate'?: string
-        /** @description Optional login URL for an unauthenticated htmx request; mutually exclusive with the Basic challenge. */
-        'Hx-Redirect'?: string
         [name: string]: unknown
       }
       content: {
@@ -1933,78 +1881,6 @@ export interface operations {
       503: components['responses']['ServiceUnavailable']
     }
   }
-  postUIWizard: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Rendered wizard result. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'text/html': string
-        }
-      }
-      303: components['responses']['SeeOther']
-      400: components['responses']['BadRequest']
-      401: components['responses']['Unauthorized']
-      500: components['responses']['InternalServerError']
-    }
-  }
-  getUIVersionDocumentation: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Rendered Talos version documentation fragment. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'text/html': string
-        }
-      }
-      303: components['responses']['SeeOther']
-      400: components['responses']['BadRequest']
-      401: components['responses']['Unauthorized']
-      500: components['responses']['InternalServerError']
-    }
-  }
-  postUIExtensionsList: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Rendered extensions-list fragment. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'text/html': string
-        }
-      }
-      303: components['responses']['SeeOther']
-      400: components['responses']['BadRequest']
-      401: components['responses']['Unauthorized']
-      500: components['responses']['InternalServerError']
-    }
-  }
   getUITokens: {
     parameters: {
       query?: never
@@ -2014,7 +1890,7 @@ export interface operations {
     }
     requestBody?: never
     responses: {
-      /** @description API tokens HTML page shell; its own JavaScript drives /tokens. */
+      /** @description Image Factory HTML user interface, opened on the API tokens page. */
       200: {
         headers: {
           [name: string]: unknown
@@ -2169,14 +2045,14 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        /** @description Embedded favicon path. */
+        /** @description Favicon path. */
         'filepath+': string
       }
       cookie?: never
     }
     requestBody?: never
     responses: {
-      /** @description Embedded favicon. */
+      /** @description Favicon. */
       200: {
         headers: {
           [name: string]: unknown
@@ -2192,14 +2068,14 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        /** @description Embedded JavaScript asset path. */
+        /** @description JavaScript file path. */
         'filepath+': string
       }
       cookie?: never
     }
     requestBody?: never
     responses: {
-      /** @description Embedded JavaScript asset. */
+      /** @description JavaScript file, such as the theme script the sign-in pages load. */
       200: {
         headers: {
           [name: string]: unknown

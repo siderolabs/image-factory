@@ -37,7 +37,7 @@ type Protocol uint8
 const (
 	// ProtocolAPI identifies ordinary API responses.
 	ProtocolAPI Protocol = iota
-	// ProtocolHTML identifies HTML and HTMX responses.
+	// ProtocolHTML identifies HTML responses.
 	ProtocolHTML
 	// ProtocolStatic identifies static file responses.
 	ProtocolStatic

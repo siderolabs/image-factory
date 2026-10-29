@@ -85,49 +85,6 @@ uiRoot:
         $ref: "../components/responses.yaml#/Unauthorized"
       "500":
         $ref: "../components/responses.yaml#/InternalServerError"
-uiWizard:
-  post:
-    operationId: postUIWizard
-    summary: Submit the Image Factory UI wizard
-    tags: [UI]
-    x-image-factory-internal: true
-    x-image-factory-handler-validates-body: true
-    responses:
-      "200":
-        description: Rendered wizard result.
-        content:
-          text/html:
-            schema:
-              type: string
-      "303":
-        $ref: "../components/responses.yaml#/SeeOther"
-      "400":
-        $ref: "../components/responses.yaml#/BadRequest"
-      "401":
-        $ref: "../components/responses.yaml#/Unauthorized"
-      "500":
-        $ref: "../components/responses.yaml#/InternalServerError"
-uiVersionDocumentation:
-  get:
-    operationId: getUIVersionDocumentation
-    summary: Render Talos version documentation for the UI
-    tags: [UI]
-    x-image-factory-internal: true
-    responses:
-      "200":
-        description: Rendered Talos version documentation fragment.
-        content:
-          text/html:
-            schema:
-              type: string
-      "303":
-        $ref: "../components/responses.yaml#/SeeOther"
-      "400":
-        $ref: "../components/responses.yaml#/BadRequest"
-      "401":
-        $ref: "../components/responses.yaml#/Unauthorized"
-      "500":
-        $ref: "../components/responses.yaml#/InternalServerError"
 uiTokens:
   get:
     operationId: getUITokens
@@ -137,35 +94,13 @@ uiTokens:
     x-image-factory-internal: true
     responses:
       "200":
-        description: API tokens HTML page shell; its own JavaScript drives /tokens.
+        description: Image Factory HTML user interface, opened on the API tokens page.
         content:
           text/html:
             schema:
               type: string
       "303":
         $ref: "../components/responses.yaml#/SeeOther"
-      "401":
-        $ref: "../components/responses.yaml#/Unauthorized"
-      "500":
-        $ref: "../components/responses.yaml#/InternalServerError"
-uiExtensionsList:
-  post:
-    operationId: postUIExtensionsList
-    summary: Render an extensions list for the UI
-    tags: [UI]
-    x-image-factory-internal: true
-    x-image-factory-handler-validates-body: true
-    responses:
-      "200":
-        description: Rendered extensions-list fragment.
-        content:
-          text/html:
-            schema:
-              type: string
-      "303":
-        $ref: "../components/responses.yaml#/SeeOther"
-      "400":
-        $ref: "../components/responses.yaml#/BadRequest"
       "401":
         $ref: "../components/responses.yaml#/Unauthorized"
       "500":
@@ -260,19 +195,19 @@ staticFavicon:
   - name: filepath+
     in: path
     required: true
-    description: Embedded favicon path.
+    description: Favicon path.
     schema:
       type: string
       minLength: 1
   get:
     operationId: getFaviconAsset
-    summary: Download an embedded favicon
+    summary: Download a favicon
     tags: [UI]
     security: []
     x-image-factory-internal: true
     responses:
       "200":
-        description: Embedded favicon.
+        description: Favicon.
       "404":
         $ref: "../components/responses.yaml#/NotFound"
       "500":
@@ -282,19 +217,19 @@ staticJavaScript:
   - name: filepath+
     in: path
     required: true
-    description: Embedded JavaScript asset path.
+    description: JavaScript file path.
     schema:
       type: string
       minLength: 1
   get:
     operationId: getJavaScriptAsset
-    summary: Download an embedded JavaScript asset
+    summary: Download a JavaScript file with a fixed path
     tags: [UI]
     security: []
     x-image-factory-internal: true
     responses:
       "200":
-        description: Embedded JavaScript asset.
+        description: JavaScript file, such as the theme script the sign-in pages load.
       "404":
         $ref: "../components/responses.yaml#/NotFound"
       "500":

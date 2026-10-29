@@ -23,11 +23,18 @@ spec:
                   - name: curl
                     image: curlimages/curl:latest
                     command: ["curl"]
+                    # Creates the empty schematic, 376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba, which
+                    # the next steps download images of.
                     args:
-                      - -s
+                      - -sS
+                      - --fail-with-body
                       - -o
                       - /dev/null
-                      - (join('', ['http://image-factory.', $namespace, '.svc.cluster.local:8080/?arch=amd64&bootloader=auto&cmdline-set=true&extensions=-&platform=metal&target=metal&version=1.12.1']))
+                      - -X
+                      - POST
+                      - --data-binary
+                      - "customization: {}"
+                      - (join('', ['http://image-factory.', $namespace, '.svc.cluster.local:8080/schematics']))
     - assert:
         timeout: 600s
         resource:

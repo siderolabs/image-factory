@@ -21,7 +21,6 @@ import (
 	ociadapter "github.com/siderolabs/image-factory/internal/frontend/http/oci"
 	"github.com/siderolabs/image-factory/internal/frontend/http/spa"
 	"github.com/siderolabs/image-factory/internal/frontend/http/transport"
-	uiadapter "github.com/siderolabs/image-factory/internal/frontend/http/ui"
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
@@ -65,10 +64,6 @@ func RegisterTestRoutesWithAuth(
 		browserAuth: browserauth.New(provider),
 		oci:         ociadapter.New(nil),
 	}
-	frontend.ui = uiadapter.New(nil, nil, uiadapter.Options{
-		AuthProvider:  provider,
-		LogoutEnabled: frontend.browserAuth.LogoutEnabled(),
-	})
 	frontend.initializeEndpointOwners(nil)
 	frontend.spa = ensure.Value(spa.New(spa.Options{
 		Dist:      ensure.Value(fs.Sub(frontenddist.Dist, "dist")),

@@ -153,20 +153,16 @@ BadRequest:
 Unauthorized:
   description: |
     Authentication is configured and credentials are missing or invalid. API responses advertise
-    only Basic authentication even when Bearer credentials are accepted. Browser navigations may
-    receive a 303 login redirect instead, and htmx requests receive an `Hx-Redirect` header without
-    an authentication challenge.
+    only Basic authentication even when Bearer credentials are accepted. With browser login, page
+    navigations receive a 303 login redirect instead, and requests a page makes itself (marked by the
+    browser with a `Sec-Fetch-Mode` other than `navigate`) receive the 401 without an authentication
+    challenge.
   headers:
     WWW-Authenticate:
       description: Optional Basic challenge; deliberately never a Bearer challenge.
       schema:
         type: string
         example: 'Basic realm="Image Factory Enterprise", charset="UTF-8"'
-    Hx-Redirect:
-      description: Optional login URL for an unauthenticated htmx request; mutually exclusive with the Basic challenge.
-      schema:
-        type: string
-        example: /login?return_to=%2F
   content:
     text/plain:
       schema:

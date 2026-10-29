@@ -26,12 +26,6 @@ paths:
     $ref: "./openapi/paths/frontend.yaml#/healthz"
   /readyz:
     $ref: "./openapi/paths/frontend.yaml#/readyz"
-  /ui/wizard:
-    $ref: "./openapi/paths/frontend.yaml#/uiWizard"
-  /ui/version-doc:
-    $ref: "./openapi/paths/frontend.yaml#/uiVersionDocumentation"
-  /ui/extensions-list:
-    $ref: "./openapi/paths/frontend.yaml#/uiExtensionsList"
   /ui/tokens:
     $ref: "./openapi/paths/frontend.yaml#/uiTokens"
   /tokens:

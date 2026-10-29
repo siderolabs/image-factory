@@ -227,27 +227,5 @@ func testFrontendPipeline(ctx context.Context, baseURL string) func(t *testing.T
 			assert.Empty(t, resp.Header.Get("Access-Control-Allow-Origin"))
 			assert.Empty(t, resp.Header.Get("Access-Control-Allow-Methods"))
 		})
-
-		t.Run("HTMX wizard start", func(t *testing.T) {
-			t.Parallel()
-
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/ui/wizard", nil)
-			require.NoError(t, err)
-
-			req.Header.Set("Hx-Request", "true")
-			addTestAuth(req)
-
-			resp, err := http.DefaultClient.Do(req)
-			require.NoError(t, err)
-			defer resp.Body.Close() //nolint:errcheck
-
-			assert.Equal(t, http.StatusOK, resp.StatusCode)
-			assert.Equal(t, "/", resp.Header.Get("Hx-Push-Url"))
-			assert.Contains(t, resp.Header.Get("Content-Type"), "text/html")
-
-			body, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-			assert.Contains(t, string(body), `name="target"`)
-		})
 	}
 }

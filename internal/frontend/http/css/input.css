@@ -3,7 +3,6 @@
 @import "@siderolabs/talos-design-system/tailwind.css";
 @import "@siderolabs/talos-design-system/fonts.css";
 
-@source "../ui/templates/**/*.html";
 @source "../../../../pkg/enterprise/pages/templates/**/*.html";
 
 @plugin "@tailwindcss/forms";

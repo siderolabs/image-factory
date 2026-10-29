@@ -16,7 +16,7 @@ make docker-compose-up
 # Build and run (enterprise)
 make docker-compose-up WITH_ENTERPRISE=true
 
-# Build and run with debug symbols, serving UI assets from internal/frontend/http/ without rebuilding
+# Build and run with debug symbols
 make docker-compose-up WITH_DEBUG=true
 ```
 
@@ -109,23 +109,21 @@ http:
   externalURL: https://example.com/
 ```
 
-## Styling the UI
+## Browser UI
 
-The UI uses the [Talos design system](https://github.com/siderolabs/talos-design-system).
-Templates use its color roles (`bg-surface-card`), type roles (`type-body`) and spacing steps (`p-compact`) instead of raw palette values, so both themes come from the same classes.
-The theme choice is stored in the browser and applied by `js/theme.js` before first paint.
-
-`make tailwind` rebuilds `internal/frontend/http/css/output.css` and copies the Inter and JetBrains Mono files next to it, so the fonts are served by Image Factory and work in air-gapped installs.
-Both are committed, so rerun it after changing template classes or bumping the design system.
-
-## Single-page UI (experimental)
-
-A Vue single-page UI is being built in [frontend/](../frontend/) to replace the server-rendered UI.
-It is served instead of the server-rendered UI when `http.spa.enabled` is set to `true`, and keeps the same browser paths (`/` and `/ui/tokens`), so bookmarks keep working.
+The browser UI is a Vue single-page app in [frontend/](../frontend/), served at `/` and `/ui/tokens`.
 
 kres picks the frontend up from `frontend/package.json`: `make frontend` builds it, `make unit-tests-frontend` runs its tests, and `make lint-eslint` lints it.
 The Docker build embeds the result through [internal/frontend/frontend.go](../internal/frontend/frontend.go); the committed `internal/frontend/dist/index.html` is only a placeholder, so that the Go code compiles without a frontend build.
-Built files are served from `/assets/`, and `index.html` is a Go template, filled in on every request with the localized title and description.
+Built files are served from `/assets/`, the files in `frontend/public/` (the favicons) at their own paths, and `index.html` is a Go template, filled in on every request with the localized title and description.
+
+The UI uses the [Talos design system](https://github.com/siderolabs/talos-design-system).
+Components use its color roles (`bg-surface-card`), type roles (`type-body`) and spacing steps (`p-compact`) instead of raw palette values, so both themes come from the same classes.
+The theme choice is stored in the browser and applied before first paint by `frontend/src/theme-init.ts`, which a Vite plugin inlines into `index.html` and also serves as `/js/theme.js`.
+
+The Enterprise sign-in pages (landing, sign-in error and sign-out) are still Go templates in [pkg/enterprise/pages](../pkg/enterprise/pages/), styled by `internal/frontend/http/css/output.css` and loading `/js/theme.js`.
+`make tailwind` rebuilds that stylesheet and copies the Inter and JetBrains Mono files next to it, so the fonts are served by Image Factory and work in air-gapped installs.
+Both are committed, so rerun it after changing those templates' classes or bumping the design system.
 
 For UI development, run the Vite dev server and point Image Factory at it:
 
@@ -138,13 +136,12 @@ npm run serve
 ```yaml
 http:
   spa:
-    enabled: true
     dev:
       serverURL: http://127.0.0.1:8121
 ```
 
 `make docker-compose-up` runs the Vite dev server in the `node-dev` container and publishes it on port 8121.
-`hack/dev/config.yaml` points `http.spa.dev.serverURL` at `http://host.docker.internal:8121`, so only `http.spa.enabled: true` is needed, for example in a local config file set in `hack/dev/compose.override.yaml`.
+`hack/dev/config.yaml` already points `http.spa.dev.serverURL` at `http://host.docker.internal:8121`.
 
 To run Vite on the host instead, disable `node-dev` so that port 8121 is free, and run `npm run serve` as above; the URL stays the same.
 On Linux, run it with `HOST=0.0.0.0 npm run serve`, as `host.docker.internal` is the Docker bridge address there rather than the host loopback.
@@ -155,7 +152,7 @@ services:
     profiles: [disabled]
 ```
 
-Open the UI through Image Factory, not through Vite directly: Image Factory fills in `index.html` and forwards the source modules and hot reloading to Vite.
+Open the UI through Image Factory, not through Vite directly: Image Factory fills in `index.html` and forwards the source modules, hot reloading, the favicons and `/js/theme.js` to Vite.
 
 ## HTTP identity and operation ownership
 
@@ -172,7 +169,7 @@ Audit sink failures are logged and do not change the response.
 Operation ownership checks compare runtime descriptors with the OpenAPI document, not an expected set inferred from those descriptors.
 Community and Enterprise assemblies are checked with browser capability both disabled and enabled.
 Every enabled operation must have exactly one owner; disabled and unknown operations must have none.
-Enterprise contract annotations describe product availability: the token UI shell remains registered in Community, and browser routes are registered only when the provider exposes browser capability.
+Enterprise contract annotations describe product availability: the token UI page remains registered in Community, and browser routes are registered only when the provider exposes browser capability.
 These exceptions are explicit in the configuration tests.
 Counterexamples exercise missing dispatched owners, duplicates, unknown operations, and disabled capabilities.
 

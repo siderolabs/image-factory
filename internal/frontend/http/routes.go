@@ -33,15 +33,9 @@ func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin,
 	return nil
 }
 
-// uiRoutes returns the browser UI routes: either the single-page UI or the server-rendered one.
+// uiRoutes returns the browser UI routes.
 func (f *Frontend) uiRoutes() []transport.Route {
-	routes := f.spa.AssetRoutes()
-
-	if f.useSPA {
-		return append(routes, f.spa.Routes()...)
-	}
-
-	return append(routes, f.ui.Routes()...)
+	return append(f.spa.AssetRoutes(), f.spa.Routes()...)
 }
 
 func (f *Frontend) enterpriseRoutes(plugins []enterprise.FrontendPlugin) ([]transport.Route, error) {
@@ -194,22 +188,6 @@ func (f *Frontend) routes() []transport.Route {
 			Access:      transport.AccessPublic,
 			Protocol:    transport.ProtocolStatic,
 			Handler:     f.staticCSS.Serve,
-		},
-		{
-			Method:      http.MethodGet,
-			Path:        "/favicons/*filepath",
-			OperationID: "getFaviconAsset",
-			Access:      transport.AccessPublic,
-			Protocol:    transport.ProtocolStatic,
-			Handler:     f.staticFavicons.Serve,
-		},
-		{
-			Method:      http.MethodGet,
-			Path:        "/js/*filepath",
-			OperationID: "getJavaScriptAsset",
-			Access:      transport.AccessPublic,
-			Protocol:    transport.ProtocolStatic,
-			Handler:     f.staticJavaScript.Serve,
 		},
 	}
 

@@ -423,8 +423,8 @@ func TestBearerOnlyDeniesBrowserWithChallenge(t *testing.T) {
 			headers: map[string]string{"Accept": "text/html,application/xhtml+xml", "Sec-Fetch-Mode": "navigate"},
 		},
 		{
-			name:    "htmx request",
-			headers: map[string]string{"Hx-Request": "true", "Hx-Current-Url": "https://factory.example.com/"},
+			name:    "page script request",
+			headers: map[string]string{"Accept": "application/json", "Sec-Fetch-Mode": "cors"},
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -440,7 +440,6 @@ func TestBearerOnlyDeniesBrowserWithChallenge(t *testing.T) {
 			require.Error(t, p.Middleware(denyHandler(t))(t.Context(), w, r, nil))
 
 			require.Empty(t, w.Header().Get("Location"), "there is no /login to redirect to")
-			require.Empty(t, w.Header().Get("Hx-Redirect"))
 			require.NotEmpty(t, w.Header().Values("WWW-Authenticate"), "a denied browser still gets the challenge")
 		})
 	}

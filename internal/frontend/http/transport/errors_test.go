@@ -114,25 +114,19 @@ func TestRenderErrorPreservesProtocolSpecificResponses(t *testing.T) {
 	)
 
 	for _, test := range []struct {
-		name       string
-		method     string
-		hxRedirect string
-		protocol   transport.Protocol
-		challenge  bool
+		name      string
+		method    string
+		protocol  transport.Protocol
+		challenge bool
 	}{
 		{name: "API challenge", method: http.MethodGet, protocol: transport.ProtocolAPI, challenge: true},
 		{name: "browser auth suppresses Basic dialog", method: http.MethodGet, protocol: transport.ProtocolBrowserAuth},
-		{name: "HTMX redirect suppresses Basic dialog", method: http.MethodGet, protocol: transport.ProtocolAPI, hxRedirect: "/login"},
 		{name: "HEAD has no body", method: http.MethodHead, protocol: transport.ProtocolAPI, challenge: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			recorder := httptest.NewRecorder()
-			if test.hxRedirect != "" {
-				recorder.Header().Set("Hx-Redirect", test.hxRedirect)
-			}
-
 			request := httptest.NewRequestWithContext(t.Context(), test.method, "/", nil)
 			transport.RenderError(recorder, request, test.protocol, classification)
 

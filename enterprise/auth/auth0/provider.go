@@ -318,25 +318,28 @@ func setChallenge(w http.ResponseWriter) {
 	w.Header().Add("WWW-Authenticate", `Basic realm="Image Factory Enterprise", charset="UTF-8"`)
 }
 
-// deny sends browsers to /login, preserving the URL they were trying to reach, and
-// answers every other client with a 401 challenge.
+// deny turns an unauthenticated request away in a form its client can act on. With browser login, a page is sent to
+// /login, preserving the URL it was trying to reach, and a page's own request gets a bare 401. Every other client
+// gets a 401 challenge.
 func (p *Provider) deny(w http.ResponseWriter, r *http.Request, reason string) error {
 	if p.BrowserLoginEnabled() {
-		// htmx swaps a redirect's target into the page, so it is told to navigate explicitly.
-		// It reads the header before the status, so the 401 stands; a challenge must not.
-		if r.Header.Get("Hx-Request") == "true" {
-			// The current URL is the page; the request URL is only the XHR endpoint.
-			w.Header().Set("Hx-Redirect", loginURL(r.Header.Get("Hx-Current-Url")))
+		fetchMode := r.Header.Get("Sec-Fetch-Mode")
 
-			return xerrors.NewTagged[schematicpkg.RequiresAuthenticationTag](errors.New(reason))
-		}
-
-		if isBrowserRequest(r) {
+		switch {
+		case strings.Contains(r.Header.Get("Accept"), "text/html"):
 			// See Other rather than Found so a denied POST is not replayed at /login.
 			http.Redirect(w, r, loginURL(r.URL.RequestURI()), http.StatusSeeOther)
 
 			// Tagged so the log carries the reason; the 303 comes off the writer.
 			return xerrors.NewTagged[enterrors.RespondedTag](fmt.Errorf("redirected to login: %s", reason))
+		case fetchMode != "" && fetchMode != "navigate":
+			// A page's own request, such as the UI's fetches: browsers mark every request with Sec-Fetch-Mode, and only
+			// opening a page with "navigate"; other clients don't send it. A challenge would make the browser ask for
+			// a username and password, which a browser login has none of. The UI reloads on the 401 instead, and the
+			// reload, a page navigation, is sent to /login.
+			http.Error(w, "authentication required", http.StatusUnauthorized)
+
+			return xerrors.NewTagged[enterrors.RespondedTag](fmt.Errorf("denied without a challenge: %s", reason))
 		}
 	}
 
@@ -353,8 +356,7 @@ func (p *Provider) isLandingRequest(r *http.Request) bool {
 	return p.BrowserLoginEnabled() &&
 		r.Method == http.MethodGet &&
 		r.URL.Path == "/" &&
-		r.URL.RawQuery == "" &&
-		r.Header.Get("Hx-Request") != "true"
+		r.URL.RawQuery == ""
 }
 
 // renderLanding serves the landing page. It is still a denial as far as the pipeline is
@@ -425,12 +427,6 @@ func looksLikeJWT(s string) bool {
 	parts := strings.Split(s, ".")
 
 	return len(parts) == 3 && !slices.Contains(parts, "")
-}
-
-// isBrowserRequest reports whether the client is a browser making a page navigation.
-// XHR from the UI wizard sends Accept: application/json or */*, so those get a 401 instead.
-func isBrowserRequest(r *http.Request) bool {
-	return strings.Contains(r.Header.Get("Accept"), "text/html")
 }
 
 // validateToken validates the token and returns its claims, whose org_id is the identity

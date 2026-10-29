@@ -125,6 +125,35 @@ func TestAssets(t *testing.T) {
 	}
 }
 
+func TestFixedPathFiles(t *testing.T) {
+	t.Parallel()
+
+	router := newRouter(t, spa.Options{
+		Dist: fstest.MapFS{
+			"index.html":           {Data: []byte(testIndex)},
+			"favicons/favicon.ico": {Data: []byte("icon")},
+			"js/theme.js":          {Data: []byte("(function(){})()")},
+			"assets/oindex-abc.js": {Data: []byte("console.log('hi')")},
+		},
+		IndexData: indexData,
+	})
+
+	for target, body := range map[string]string{"/favicons/favicon.ico": "icon", "/js/theme.js": "(function(){})()"} {
+		response := get(t, router, http.MethodGet, target, nil)
+
+		require.Equal(t, http.StatusOK, response.Code, target)
+		require.Equal(t, "no-cache", response.Header().Get("Cache-Control"), "the name stays the same when the file changes")
+		require.Equal(t, body, response.Body.String(), target)
+	}
+
+	// Each route serves only its own directory of the build.
+	for _, target := range []string{"/js/", "/js/missing.js", "/favicons/missing.png", "/js/../assets/oindex-abc.js"} {
+		response := get(t, router, http.MethodGet, target, nil)
+
+		require.Equal(t, http.StatusNotFound, response.Code, target)
+	}
+}
+
 func TestMissingIndex(t *testing.T) {
 	t.Parallel()
 
@@ -154,7 +183,7 @@ func TestDevServer(t *testing.T) {
 	require.Equal(t, http.StatusOK, response.Code)
 	require.Equal(t, `<html lang="en"><script type="module" src="/@vite/client"></script></html>`, response.Body.String())
 
-	for _, target := range []string{"/@vite/client", "/src/main.ts", "/node_modules/.vite/deps/vue.js"} {
+	for _, target := range []string{"/@vite/client", "/src/main.ts", "/node_modules/.vite/deps/vue.js", "/favicons/favicon.ico", "/js/theme.js"} {
 		response = get(t, router, http.MethodGet, target, nil)
 
 		require.Equal(t, http.StatusOK, response.Code, target)
