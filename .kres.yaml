@@ -101,6 +101,8 @@ spec:
       toplevel: true
     - name: e2e-enterprise
       toplevel: true
+    - name: e2e-auth0
+      toplevel: true
     - name: tailwind
       toplevel: true
     - name: docs
@@ -699,6 +701,45 @@ spec:
       TAG_SUFFIX: -enterprise
 ---
 kind: custom.Step
+name: e2e-auth0
+spec:
+  makefile:
+    enabled: true
+    phony: true
+    variables:
+      - name: CORE_REGISTRY
+        defaultValue: ghcr.io
+      - name: REGISTRY_MIRROR_ADDR
+        defaultValue: $(if $(filter true,$(CI)),$(shell python3 -c "import socket; s = socket.create_connection(('registry-$(subst .,-,$(CORE_REGISTRY)).ci.svc', 5000), 2); print('%s:5000' % s.getpeername()[0])" 2>/dev/null))
+    script:
+      - "@$(MAKE) image-image-factory PUSH=true"
+      # the Auth0 tenant and its test user come from the environment: the sops secrets in CI
+      - >-
+        @IMAGE=$(REGISTRY)/$(USERNAME)/image-factory:$(IMAGE_TAG) PROJECT=auth0
+        CORE_REGISTRY=$(CORE_REGISTRY) REGISTRY_MIRROR_ADDR=$(REGISTRY_MIRROR_ADDR)
+        TEST_OUTPUTS_DIR=$(PWD)/$(ARTIFACTS)/e2e-auth0 hack/test/e2e.sh
+  ghaction:
+    enabled: true
+    condition: on-pull-request
+    sops: true
+    parallelJob:
+      name: e2e-auth0
+      runnerGroup: large
+    artifacts:
+      enabled: true
+      skipDefaultArtifacts: true
+      additional: # the factory log, and the Playwright report and test results
+        - name: e2e-auth0
+          always: true
+          continueOnError: true
+          paths:
+            - ${{ github.workspace }}/_out/e2e-auth0
+    environment:
+      REGISTRY: registry.dev.siderolabs.io
+      WITH_ENTERPRISE: true
+      TAG_SUFFIX: -enterprise
+---
+kind: custom.Step
 name: push-extra-extensions
 spec:
   makefile:
@@ -1116,3 +1157,18 @@ kind: golang.GolangciLint
 spec:
   buildTags:
     - enterprise
+---
+kind: common.SOPS
+spec:
+  enabled: true
+  config: |-
+    creation_rules:
+      - age: age1xrpa9ujxxcj2u2gzfrzv8mxak4rts94a6y60ypurv6rs5cpr4e4sg95f0k
+        # order: Andrey, Noel, Artem, Utku, Edward, Oguz
+        pgp: >-
+          4F8E31286D7997C9625C6F7B322C6F63F594CE7C,
+          CC51116A94490FA6FB3C18EB2401FCAE863A06CA,
+          77D901DDCB59376D9E4131279BAC0E08F5067BB8,
+          11177A43C6E3752E682AC690DBD13117B0A14E93,
+          484DF208A16D4E209D686E9D65558E016966977A,
+          C76B256FCB26806F8AA10A82372F271E3AD80BFC

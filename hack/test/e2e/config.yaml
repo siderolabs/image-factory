@@ -26,4 +26,4 @@ cache:
   signingKeyPath: /etc/image-factory/cache-signing-key.key
 
 http:
-  externalURL: http://127.0.0.1:8080
+  externalURL: http://localhost:8080

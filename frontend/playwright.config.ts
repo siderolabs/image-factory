@@ -17,9 +17,11 @@ const permissions = ['clipboard-read', 'clipboard-write']
 
 /**
  * Specs run against the community image factory, except the ones tagged as enterprise-only, which run on their own
- * against an enterprise factory.
+ * against an enterprise factory, and the Auth0 browser login ones, which run against an enterprise factory that signs
+ * in with Auth0.
  */
 const ENTERPRISE_ONLY = /@enterprise-factory/
+const AUTH0_ONLY = /@auth0/
 
 const chrome = {
   ...devices['Desktop Chrome'],
@@ -67,12 +69,12 @@ export default defineConfig({
     {
       name: 'community-chrome',
       use: chrome,
-      grepInvert: ENTERPRISE_ONLY,
+      grepInvert: [ENTERPRISE_ONLY, AUTH0_ONLY],
     },
     {
       name: 'community-firefox',
       use: firefox,
-      grepInvert: ENTERPRISE_ONLY,
+      grepInvert: [ENTERPRISE_ONLY, AUTH0_ONLY],
     },
     {
       name: 'community',
@@ -94,6 +96,22 @@ export default defineConfig({
       name: 'enterprise',
       testMatch: /(?!)/,
       dependencies: ['enterprise-chrome', 'enterprise-firefox'],
+    },
+    {
+      name: 'auth0-chrome',
+      use: chrome,
+      grep: AUTH0_ONLY,
+    },
+    {
+      name: 'auth0-firefox',
+      use: firefox,
+      grep: AUTH0_ONLY,
+    },
+    {
+      // The Auth0 browser login specs, run against an enterprise image factory that signs in with Auth0.
+      name: 'auth0',
+      testMatch: /(?!)/,
+      dependencies: ['auth0-chrome', 'auth0-firefox'],
     },
   ],
 })

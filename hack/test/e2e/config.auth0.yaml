@@ -1,0 +1,5 @@
+# Applied on top of config.yaml and config.enterprise.yaml for the Auth0 e2e run: signs in with Auth0 instead of
+# htpasswd. The tenant, its application and the session key come from the environment, see hack/test/e2e.sh.
+
+authentication:
+  provider: auth0
