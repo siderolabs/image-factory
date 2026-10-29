@@ -115,15 +115,14 @@ The browser UI is a Vue single-page app in [frontend/](../frontend/), served at 
 
 kres picks the frontend up from `frontend/package.json`: `make frontend` builds it, `make unit-tests-frontend` runs its tests, and `make lint-eslint` lints it.
 The Docker build embeds the result through [internal/frontend/frontend.go](../internal/frontend/frontend.go); the committed `internal/frontend/dist/index.html` is only a placeholder, so that the Go code compiles without a frontend build.
-Built files are served from `/assets/`, the files in `frontend/public/` (the favicons) at their own paths, and `index.html` is a Go template, filled in on every request with the localized title and description.
+Built files are served from `/assets/`, the files in `frontend/public/` (the favicons) at their own paths, and `index.html` is a Go template, filled in on every request with the configuration the UI needs.
 
 The UI uses the [Talos design system](https://github.com/siderolabs/talos-design-system).
 Components use its color roles (`bg-surface-card`), type roles (`type-body`) and spacing steps (`p-compact`) instead of raw palette values, so both themes come from the same classes.
-The theme choice is stored in the browser and applied before first paint by `frontend/src/theme-init.ts`, which a Vite plugin inlines into `index.html` and also serves as `/js/theme.js`.
+The theme choice is stored in the browser and applied before first paint by `frontend/src/theme-init.ts`, which a Vite plugin inlines into `index.html`.
+The language choice is stored in the browser too: the UI starts in the language chosen in its language picker or with a `?lang=` link, else the first of the browser's languages it has translations for, else English.
 
-The Enterprise sign-in pages (landing, sign-in error and sign-out) are still Go templates in [pkg/enterprise/pages](../pkg/enterprise/pages/), styled by `internal/frontend/http/css/output.css` and loading `/js/theme.js`.
-`make tailwind` rebuilds that stylesheet and copies the Inter and JetBrains Mono files next to it, so the fonts are served by Image Factory and work in air-gapped installs.
-Both are committed, so rerun it after changing those templates' classes or bumping the design system.
+With Auth0 browser login, the backend lets signed-out visitors through to `/` and `/sign-in-error`, where the UI shows the landing and sign-in error pages; `authenticated` in the configuration in `index.html` tells it whether the visitor is signed in.
 
 For UI development, run the Vite dev server and point Image Factory at it:
 
@@ -152,7 +151,7 @@ services:
     profiles: [disabled]
 ```
 
-Open the UI through Image Factory, not through Vite directly: Image Factory fills in `index.html` and forwards the source modules, hot reloading, the favicons and `/js/theme.js` to Vite.
+Open the UI through Image Factory, not through Vite directly: Image Factory fills in `index.html` and forwards the source modules, hot reloading and the favicons to Vite.
 
 ## HTTP identity and operation ownership
 

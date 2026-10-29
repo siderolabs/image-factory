@@ -113,7 +113,7 @@ func TestDocumentationSchemas(t *testing.T) {
 
 	callback := document.Paths.Find("/callback").Get
 	require.NotNil(t, callback)
-	assert.NotNil(t, callback.Responses.Value("403"))
+	assert.NotNil(t, callback.Responses.Value("303"), "a failed sign-in continues at /sign-in-error")
 	assert.Nil(t, callback.Responses.Value("400"))
 }
 
@@ -417,9 +417,6 @@ func TestContractOperations(t *testing.T) {
 		"/callback": {
 			http.MethodGet: "completeBrowserLogin",
 		},
-		"/css/{filepath+}": {
-			http.MethodGet: "getCSSAsset",
-		},
 		"/favicons/{filepath+}": {
 			http.MethodGet: "getFaviconAsset",
 		},
@@ -427,19 +424,18 @@ func TestContractOperations(t *testing.T) {
 			http.MethodGet:  "getHealth",
 			http.MethodHead: "headHealth",
 		},
-		"/js/{filepath+}": {
-			http.MethodGet: "getJavaScriptAsset",
-		},
 		"/login": {
 			http.MethodGet: "startBrowserLogin",
 		},
 		"/logout": {
-			http.MethodGet:  "getBrowserLogout",
 			http.MethodPost: "postBrowserLogout",
 		},
 		"/readyz": {
 			http.MethodGet:  "getReadiness",
 			http.MethodHead: "headReadiness",
+		},
+		"/sign-in-error": {
+			http.MethodGet: "getBrowserLoginError",
 		},
 		"/ui/tokens": {
 			http.MethodGet: "getUITokens",
@@ -569,7 +565,7 @@ func TestContractValidatesRuntimeOperations(t *testing.T) {
 		operationID string
 	}{
 		{method: http.MethodGet, path: "/image/:schematic/:version/:path", operationID: "getImage"},
-		{method: http.MethodGet, path: "/css/*filepath", operationID: "getCSSAsset"},
+		{method: http.MethodGet, path: "/assets/*filepath", operationID: "getFrontendAsset"},
 		{method: http.MethodGet, path: "/ui/tokens", operationID: "getUITokens"},
 		{method: http.MethodGet, path: "/callback", operationID: "completeBrowserLogin"},
 	} {

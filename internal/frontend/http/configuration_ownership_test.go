@@ -32,7 +32,7 @@ func TestCommunityConfigurationOwnership(t *testing.T) {
 			}
 
 			routes := newCatalogFrontend(t, provider).Routes()
-			routes = append(routes, browserauth.New(provider).Routes()...)
+			routes = append(routes, browserauth.New(provider).Routes(nil)...)
 			require.Empty(t, configurationOwnershipProblems(contract, routes, false, browser))
 		})
 	}
@@ -103,7 +103,7 @@ func configurationOwnershipProblems(contract *api.Contract, routes []transport.R
 			switch id {
 			case "getUITokens":
 				enabled = true
-			case "startBrowserLogin", "getBrowserLogout", "postBrowserLogout", "completeBrowserLogin":
+			case "startBrowserLogin", "getBrowserLoginError", "postBrowserLogout", "completeBrowserLogin":
 				enabled = browserEnabled
 			case "getRobotsText":
 				// robots.txt follows authentication, and the fixtures configure a provider

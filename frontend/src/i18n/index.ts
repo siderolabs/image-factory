@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import { usePreferredLanguages, useStorage } from '@vueuse/core'
 import { createI18n } from 'vue-i18n'
 
 /** The UI languages, in the order the language picker lists them. */
@@ -31,13 +32,21 @@ function isLanguage(lang: string): lang is Language {
   return (languages as readonly string[]).includes(lang)
 }
 
-/**
- * The backend picks the language from ?lang=, the lang cookie and Accept-Language, and puts it on <html lang>.
- */
-function initialLanguage(): Language {
-  const lang = document.documentElement.lang
+/** The language chosen in the language picker, or with a ?lang= link. */
+const chosen = useStorage<string>('lang', '', undefined, { writeDefaults: false })
 
-  return isLanguage(lang) ? lang : 'en'
+/** The chosen language, else the first of the browser's languages there are messages for, else English. */
+function initialLanguage(): Language {
+  // A ?lang= link chooses the language, as the language picker does.
+  const linked = new URLSearchParams(window.location.search).get('lang')
+
+  if (linked && isLanguage(linked)) chosen.value = linked
+
+  if (isLanguage(chosen.value)) return chosen.value
+
+  const preferred = usePreferredLanguages().value.map((lang) => lang.split('-')[0].toLowerCase())
+
+  return preferred.find(isLanguage) ?? 'en'
 }
 
 export const i18n = createI18n({
@@ -59,22 +68,19 @@ async function loadLanguage(lang: Language) {
   i18n.global.setLocaleMessage(lang, messages)
 }
 
-/** Loads the language the backend picked for the page and switches to it, before the app renders. */
+/** Loads the language to start in and switches to it, before the app renders. */
 export async function initLanguage() {
   const lang = initialLanguage()
 
   await loadLanguage(lang)
   i18n.global.locale.value = lang
+  document.documentElement.lang = lang
 }
 
-/**
- * Switches the UI language, and remembers it in the lang cookie, which the backend reads.
- */
+/** Switches the UI language, and remembers it. */
 export async function setLanguage(lang: Language) {
   await loadLanguage(lang)
   i18n.global.locale.value = lang
   document.documentElement.lang = lang
-
-  // The backend sets the cookie when it serves the page with ?lang=.
-  await fetch(`/?lang=${encodeURIComponent(lang)}`, { method: 'HEAD', credentials: 'same-origin' })
+  chosen.value = lang
 }

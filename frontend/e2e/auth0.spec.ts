@@ -40,9 +40,7 @@ test('Sign in and out with Auth0', { tag: '@auth0' }, async ({ page }) => {
   })
 
   await test.step('Sign out', async () => {
-    await page.goto('/logout')
-    await expect(page.getByRole('heading', { name: 'Sign out' })).toBeVisible()
-    await page.getByRole('button', { name: 'Sign out' }).click()
+    await page.getByRole('button', { name: 'Log out' }).click()
 
     // Auth0 ends its own session too, and sends the browser back to the factory, signed out.
     await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible({

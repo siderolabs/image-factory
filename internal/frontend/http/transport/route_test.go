@@ -54,8 +54,8 @@ func TestRouteValidate(t *testing.T) {
 			name: "static greedy route",
 			route: &transport.Route{
 				Method:      http.MethodGet,
-				Path:        "/css/*filepath",
-				OperationID: "getCSSAsset",
+				Path:        "/assets/*filepath",
+				OperationID: "getFrontendAsset",
 				Access:      transport.AccessPublic,
 				Protocol:    transport.ProtocolStatic,
 				Handler:     handler,
@@ -142,8 +142,8 @@ func TestRouteValidate(t *testing.T) {
 			name: "authenticated static route",
 			route: &transport.Route{
 				Method:      http.MethodGet,
-				Path:        "/css/*filepath",
-				OperationID: "getCSSAsset",
+				Path:        "/assets/*filepath",
+				OperationID: "getFrontendAsset",
 				Access:      transport.AccessAuthenticated,
 				Protocol:    transport.ProtocolStatic,
 				Handler:     handler,

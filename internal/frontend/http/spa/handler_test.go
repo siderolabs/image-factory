@@ -18,16 +18,11 @@ import (
 	"github.com/siderolabs/image-factory/internal/frontend/http/spa"
 )
 
-const testIndex = `<html lang="{{ .Lang }}"><title>{{ .Title }}</title><meta name="description" content="{{ .Description }}">` +
+const testIndex = `<html lang="en"><title>Image Factory{{ if .Config.Enterprise }} Enterprise{{ end }}</title>` +
 	`<script id="app-config" type="application/json">{{ .Config }}</script></html>`
 
-func indexData(http.ResponseWriter, *http.Request) spa.IndexData {
-	return spa.IndexData{
-		Lang:        "en",
-		Title:       "Image Factory",
-		Description: `Talos "images"`,
-		Config:      spa.Config{Version: "v1.8.0</script>", Enterprise: true},
-	}
+func indexData(*http.Request) spa.IndexData {
+	return spa.IndexData{Config: spa.Config{Version: "v1.8.0</script>", Enterprise: true}}
 }
 
 func newRouter(t *testing.T, opts spa.Options) http.Handler {
@@ -80,9 +75,9 @@ func TestIndex(t *testing.T) {
 			require.Equal(t, "text/html; charset=utf-8", response.Header().Get("Content-Type"))
 			require.Equal(t, "no-cache", response.Header().Get("Cache-Control"))
 			require.Equal(t,
-				`<html lang="en"><title>Image Factory</title><meta name="description" content="Talos &#34;images&#34;">`+
+				`<html lang="en"><title>Image Factory Enterprise</title>`+
 					`<script id="app-config" type="application/json">`+
-					`{"version":"v1.8.0\u003c/script\u003e","enterprise":true,"tokensEnabled":false,"logoutEnabled":false}`+
+					`{"version":"v1.8.0\u003c/script\u003e","enterprise":true,"tokensEnabled":false,"logoutEnabled":false,"authenticated":false}`+
 					`</script></html>`,
 				response.Body.String(),
 			)
@@ -117,6 +112,12 @@ func TestAssets(t *testing.T) {
 	require.Equal(t, "text/javascript; charset=utf-8", response.Header().Get("Content-Type"))
 	require.Equal(t, "console.log('hi')", response.Body.String())
 
+	response = get(t, router, http.MethodGet, "/assets/oindex-abc.js", http.Header{"Range": {"bytes=0-6"}})
+
+	require.Equal(t, http.StatusPartialContent, response.Code)
+	require.Equal(t, "bytes 0-6/17", response.Header().Get("Content-Range"))
+	require.Equal(t, "console", response.Body.String())
+
 	for _, target := range []string{"/assets/", "/assets/missing.js"} {
 		response = get(t, router, http.MethodGet, target, nil)
 
@@ -132,22 +133,19 @@ func TestFixedPathFiles(t *testing.T) {
 		Dist: fstest.MapFS{
 			"index.html":           {Data: []byte(testIndex)},
 			"favicons/favicon.ico": {Data: []byte("icon")},
-			"js/theme.js":          {Data: []byte("(function(){})()")},
 			"assets/oindex-abc.js": {Data: []byte("console.log('hi')")},
 		},
 		IndexData: indexData,
 	})
 
-	for target, body := range map[string]string{"/favicons/favicon.ico": "icon", "/js/theme.js": "(function(){})()"} {
-		response := get(t, router, http.MethodGet, target, nil)
+	response := get(t, router, http.MethodGet, "/favicons/favicon.ico", nil)
 
-		require.Equal(t, http.StatusOK, response.Code, target)
-		require.Equal(t, "no-cache", response.Header().Get("Cache-Control"), "the name stays the same when the file changes")
-		require.Equal(t, body, response.Body.String(), target)
-	}
+	require.Equal(t, http.StatusOK, response.Code)
+	require.Equal(t, "no-cache", response.Header().Get("Cache-Control"), "the name stays the same when the file changes")
+	require.Equal(t, "icon", response.Body.String())
 
-	// Each route serves only its own directory of the build.
-	for _, target := range []string{"/js/", "/js/missing.js", "/favicons/missing.png", "/js/../assets/oindex-abc.js"} {
+	// The route serves only its own directory of the build.
+	for _, target := range []string{"/favicons/", "/favicons/missing.png", "/favicons/../assets/oindex-abc.js"} {
 		response := get(t, router, http.MethodGet, target, nil)
 
 		require.Equal(t, http.StatusNotFound, response.Code, target)
@@ -167,7 +165,7 @@ func TestDevServer(t *testing.T) {
 	devServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/":
-			w.Write([]byte(`<html lang="{{ .Lang }}"><script type="module" src="/@vite/client"></script></html>`)) //nolint:errcheck
+			w.Write([]byte(`<html><title>{{ .Config.Version }}</title><script type="module" src="/@vite/client"></script></html>`)) //nolint:errcheck
 		default:
 			w.Write([]byte("dev:" + r.URL.Path)) //nolint:errcheck
 		}
@@ -181,9 +179,9 @@ func TestDevServer(t *testing.T) {
 
 	response := get(t, router, http.MethodGet, "/ui/tokens", nil)
 	require.Equal(t, http.StatusOK, response.Code)
-	require.Equal(t, `<html lang="en"><script type="module" src="/@vite/client"></script></html>`, response.Body.String())
+	require.Equal(t, `<html><title>v1.8.0&lt;/script&gt;</title><script type="module" src="/@vite/client"></script></html>`, response.Body.String())
 
-	for _, target := range []string{"/@vite/client", "/src/main.ts", "/node_modules/.vite/deps/vue.js", "/favicons/favicon.ico", "/js/theme.js"} {
+	for _, target := range []string{"/@vite/client", "/src/main.ts", "/node_modules/.vite/deps/vue.js", "/favicons/favicon.ico"} {
 		response = get(t, router, http.MethodGet, target, nil)
 
 		require.Equal(t, http.StatusOK, response.Code, target)
@@ -192,5 +190,5 @@ func TestDevServer(t *testing.T) {
 
 	// The ping is answered by the dev server itself, so the template is left as is.
 	response = get(t, router, http.MethodGet, "/", http.Header{"Accept": {"text/x-vite-ping"}})
-	require.Contains(t, response.Body.String(), "{{ .Lang }}")
+	require.Contains(t, response.Body.String(), "{{ .Config.Version }}")
 }

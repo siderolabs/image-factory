@@ -18,7 +18,6 @@ import (
 const robotsBrowserLogin = `User-agent: *
 Allow: /$
 Allow: /assets/
-Allow: /css/
 Allow: /favicons/
 Disallow: /
 `

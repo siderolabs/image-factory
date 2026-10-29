@@ -27,15 +27,17 @@ func New(provider enterprise.AuthProvider) *Handler {
 	return &Handler{provider: browserProvider}
 }
 
-// Routes returns the public login, callback, and logout routes when browser login is enabled.
-func (handler *Handler) Routes() []transport.Route {
+// Routes returns the public login, callback, and logout routes when browser login is enabled. page serves the
+// browser UI, which explains a failed sign-in.
+func (handler *Handler) Routes(page transport.Handler) []transport.Route {
 	if !handler.LogoutEnabled() {
 		return nil
 	}
 
 	return []transport.Route{
 		{Method: http.MethodGet, Path: "/login", OperationID: "startBrowserLogin", Access: transport.AccessPublic, Protocol: transport.ProtocolBrowserAuth, Handler: handler.provider.LoginHandler()},
-		{Method: http.MethodGet, Path: "/logout", OperationID: "getBrowserLogout", Access: transport.AccessPublic, Protocol: transport.ProtocolBrowserAuth, Handler: handler.provider.LogoutHandler()},
+		// The browser UI explains a failed sign-in, which leaves no session.
+		{Method: http.MethodGet, Path: "/sign-in-error", OperationID: "getBrowserLoginError", Access: transport.AccessPublic, Protocol: transport.ProtocolHTML, Handler: page},
 		{
 			Method:      http.MethodPost,
 			Path:        "/logout",
@@ -55,7 +57,6 @@ func (handler *Handler) Routes() []transport.Route {
 	}
 }
 
-// LogoutEnabled reports whether pages should show a logout link.
 func (handler *Handler) LogoutEnabled() bool {
 	return handler != nil && handler.provider != nil && handler.provider.BrowserLoginEnabled()
 }

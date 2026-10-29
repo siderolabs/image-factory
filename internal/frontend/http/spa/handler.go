@@ -31,17 +31,12 @@ type Options struct {
 	// DevServerURL, when set, takes index.html and the source modules from a running Vite dev server instead of Dist.
 	DevServerURL *url.URL
 
-	// IndexData returns what to fill into index.html for a request. It may set response headers, such as cookies.
-	IndexData func(http.ResponseWriter, *http.Request) IndexData
+	// IndexData returns what to fill into index.html for a request.
+	IndexData func(*http.Request) IndexData
 }
 
 // IndexData is filled into index.html on every request.
 type IndexData struct {
-	// Lang, Title and Description are the localized document metadata, where crawlers and link previews can see it.
-	Lang        string
-	Title       string
-	Description string
-
 	// Config is handed to the frontend as JSON.
 	Config Config
 }
@@ -56,6 +51,9 @@ type Config struct {
 	TokensEnabled bool `json:"tokensEnabled"`
 	// LogoutEnabled is whether users log in through the browser, and so can log out.
 	LogoutEnabled bool `json:"logoutEnabled"`
+	// Authenticated is whether the request came with credentials, such as a browser login session. Without browser
+	// login it is only false where no route needs credentials.
+	Authenticated bool `json:"authenticated"`
 }
 
 // Handler owns the single-page UI routes.
@@ -64,7 +62,7 @@ type Handler struct {
 	index        *template.Template
 	devServerURL *url.URL
 	devProxy     *httputil.ReverseProxy
-	indexData    func(http.ResponseWriter, *http.Request) IndexData
+	indexData    func(*http.Request) IndexData
 }
 
 // New constructs the single-page UI handler.
@@ -103,14 +101,14 @@ func New(opts Options) (*Handler, error) {
 // so bookmarks keep working, and the frontend router takes over from there.
 func (h *Handler) Routes() []transport.Route {
 	return []transport.Route{
-		{Method: http.MethodGet, Path: "/", OperationID: "getUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: h.serveIndex},
-		{Method: http.MethodHead, Path: "/", OperationID: "headUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: h.serveIndex},
-		{Method: http.MethodGet, Path: "/ui/tokens", OperationID: "getUITokens", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: h.serveIndex},
+		{Method: http.MethodGet, Path: "/", OperationID: "getUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: h.ServeIndex},
+		{Method: http.MethodHead, Path: "/", OperationID: "headUI", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: h.ServeIndex},
+		{Method: http.MethodGet, Path: "/ui/tokens", OperationID: "getUITokens", Access: transport.AccessAuthenticated, Protocol: transport.ProtocolHTML, Handler: h.ServeIndex},
 	}
 }
 
-// AssetRoutes returns the routes of the built JavaScript, stylesheets and fonts, and of the files that keep a fixed
-// path: the favicons from public/, and the theme script that the Enterprise sign-in pages load.
+// AssetRoutes returns the routes of the built JavaScript, stylesheets and fonts, and of the favicons from public/,
+// which keep their paths.
 func (h *Handler) AssetRoutes() []transport.Route {
 	return []transport.Route{
 		{
@@ -128,14 +126,6 @@ func (h *Handler) AssetRoutes() []transport.Route {
 			Access:      transport.AccessPublic,
 			Protocol:    transport.ProtocolStatic,
 			Handler:     h.serveFixed("favicons"),
-		},
-		{
-			Method:      http.MethodGet,
-			Path:        "/js/*filepath",
-			OperationID: "getJavaScriptAsset",
-			Access:      transport.AccessPublic,
-			Protocol:    transport.ProtocolStatic,
-			Handler:     h.serveFixed("js"),
 		},
 	}
 }
@@ -164,7 +154,7 @@ func isDevServerRequest(r *http.Request) bool {
 		return true
 	}
 
-	for _, prefix := range []string{"/@", "/src/", "/node_modules/", "/favicons/", "/js/"} {
+	for _, prefix := range []string{"/@", "/src/", "/node_modules/", "/favicons/"} {
 		if strings.HasPrefix(r.URL.Path, prefix) {
 			return true
 		}
@@ -173,8 +163,10 @@ func isDevServerRequest(r *http.Request) bool {
 	return false
 }
 
-func (h *Handler) serveIndex(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
-	data := h.indexData(w, r)
+// ServeIndex serves index.html, which the frontend router takes over from. It serves every browser UI route,
+// including ones registered elsewhere.
+func (h *Handler) ServeIndex(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
+	data := h.indexData(r)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 

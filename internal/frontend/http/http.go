@@ -23,6 +23,7 @@ import (
 	"github.com/siderolabs/image-factory/internal/artifacts"
 	"github.com/siderolabs/image-factory/internal/asset"
 	"github.com/siderolabs/image-factory/internal/audit"
+	"github.com/siderolabs/image-factory/internal/authn"
 	"github.com/siderolabs/image-factory/internal/downloads"
 	frontenddist "github.com/siderolabs/image-factory/internal/frontend"
 	applicationapi "github.com/siderolabs/image-factory/internal/frontend/http/api"
@@ -31,7 +32,6 @@ import (
 	"github.com/siderolabs/image-factory/internal/frontend/http/oci"
 	"github.com/siderolabs/image-factory/internal/frontend/http/operational"
 	"github.com/siderolabs/image-factory/internal/frontend/http/spa"
-	staticfiles "github.com/siderolabs/image-factory/internal/frontend/http/static"
 	"github.com/siderolabs/image-factory/internal/image/signer"
 	"github.com/siderolabs/image-factory/internal/profile"
 	"github.com/siderolabs/image-factory/internal/registry"
@@ -57,7 +57,6 @@ type Frontend struct {
 	metadata        *metadata.Handler
 	oci             *oci.Handler
 	operational     *operational.Handler
-	staticCSS       *staticfiles.Handler
 	spa             *spa.Handler
 
 	// robots is the robots.txt body; nil leaves the route unregistered.
@@ -254,19 +253,14 @@ func NewFrontend(
 
 func (f *Frontend) initializeEndpointOwners(readinessCheckers []operational.ReadinessChecker) {
 	f.operational = operational.New(readinessCheckers...)
-	f.staticCSS = staticfiles.New(http.FS(ensure.Value(fs.Sub(cssFS, "css"))))
 }
 
 // indexData fills in the single-page UI's index.html.
-func (f *Frontend) indexData(w http.ResponseWriter, r *http.Request) spa.IndexData {
-	meta := spa.NewPageMeta(w, r)
+func (f *Frontend) indexData(r *http.Request) spa.IndexData {
+	config := f.spaConfig
+	_, config.Authenticated = authn.PrincipalFromContext(r.Context())
 
-	return spa.IndexData{
-		Lang:        meta.Lang,
-		Title:       meta.Title,
-		Description: meta.Description,
-		Config:      f.spaConfig,
-	}
+	return spa.IndexData{Config: config}
 }
 
 // Handler returns the HTTP handler.

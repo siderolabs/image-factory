@@ -44,7 +44,7 @@ func TestFrontendConfiguredBrowserCallback(t *testing.T) {
 }
 
 func TestFrontendRejectsInvalidBrowserCallback(t *testing.T) {
-	for _, callbackPath := range []string{"", "/versions", "/oauth/:callback", "/css/callback"} {
+	for _, callbackPath := range []string{"", "/versions", "/oauth/:callback", "/assets/callback"} {
 		t.Run(callbackPath, func(t *testing.T) {
 			frontend, err := httpfrontend.NewFrontend(t.Context(), zap.NewNop(), nil, nil, nil, nil, nil, nil, nil, httpfrontend.Options{
 				AuthProvider: &configuredCallbackProvider{path: callbackPath},

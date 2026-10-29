@@ -168,7 +168,7 @@ func TestBrowserLoginRejectsBadTokenSet(t *testing.T) {
 
 			// Terminal: a bounce through /login returns the same token set off Auth0's SSO session.
 			require.True(t, xerrors.TagIs[enterrors.RespondedTag](err), "got %v", err)
-			require.Equal(t, http.StatusForbidden, rec.Code)
+			require.Equal(t, "/sign-in-error?reason=account", rec.Header().Get("Location"))
 
 			requireNoSession(t, rec)
 		})

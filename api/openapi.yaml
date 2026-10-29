@@ -34,18 +34,16 @@ paths:
     $ref: "./openapi/paths/tokens.yaml#/revoke"
   /api/tokens/actors:
     $ref: "./openapi/paths/tokens.yaml#/actors"
-  /css/{filepath+}:
-    $ref: "./openapi/paths/frontend.yaml#/staticCSS"
   /favicons/{filepath+}:
     $ref: "./openapi/paths/frontend.yaml#/staticFavicon"
-  /js/{filepath+}:
-    $ref: "./openapi/paths/frontend.yaml#/staticJavaScript"
   /assets/{filepath+}:
     $ref: "./openapi/paths/frontend.yaml#/staticFrontendAsset"
   /login:
     $ref: "./openapi/paths/frontend.yaml#/login"
   /logout:
     $ref: "./openapi/paths/frontend.yaml#/logout"
+  /sign-in-error:
+    $ref: "./openapi/paths/frontend.yaml#/loginError"
   /callback:
     $ref: "./openapi/paths/frontend.yaml#/callback"
   /.well-known/jwks.json:

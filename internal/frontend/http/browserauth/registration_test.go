@@ -39,7 +39,7 @@ func TestProviderCallbackRegistersWithRequestValidation(t *testing.T) {
 
 			registrar, err := transport.NewRegistrar(contract, pipeline)
 			require.NoError(t, err)
-			require.NoError(t, registrar.Register(browserauth.New(provider).Routes()))
+			require.NoError(t, registrar.Register(browserauth.New(provider).Routes(page)))
 
 			response := httptest.NewRecorder()
 			request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, callbackPath+"?code=test-code&state=test-state", nil)

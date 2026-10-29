@@ -136,26 +136,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/css/{filepath+}': {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Embedded stylesheet path. */
-        'filepath+': string
-      }
-      cookie?: never
-    }
-    /** Download an embedded stylesheet */
-    get: operations['getCSSAsset']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   '/favicons/{filepath+}': {
     parameters: {
       query?: never
@@ -168,26 +148,6 @@ export interface paths {
     }
     /** Download a favicon */
     get: operations['getFaviconAsset']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/js/{filepath+}': {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description JavaScript file path. */
-        'filepath+': string
-      }
-      cookie?: never
-    }
-    /** Download a JavaScript file with a fixed path */
-    get: operations['getJavaScriptAsset']
     put?: never
     post?: never
     delete?: never
@@ -240,11 +200,27 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** End a browser session */
-    get: operations['getBrowserLogout']
+    get?: never
     put?: never
     /** End a browser session */
     post: operations['postBrowserLogout']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sign-in-error': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Explain a failed browser authentication */
+    get: operations['getBrowserLoginError']
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -2017,29 +1993,6 @@ export interface operations {
       500: components['responses']['InternalServerError']
     }
   }
-  getCSSAsset: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description Embedded stylesheet path. */
-        'filepath+': string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Embedded stylesheet. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      404: components['responses']['NotFound']
-      500: components['responses']['InternalServerError']
-    }
-  }
   getFaviconAsset: {
     parameters: {
       query?: never
@@ -2053,29 +2006,6 @@ export interface operations {
     requestBody?: never
     responses: {
       /** @description Favicon. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      404: components['responses']['NotFound']
-      500: components['responses']['InternalServerError']
-    }
-  }
-  getJavaScriptAsset: {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
-        /** @description JavaScript file path. */
-        'filepath+': string
-      }
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description JavaScript file, such as the theme script the sign-in pages load. */
       200: {
         headers: {
           [name: string]: unknown
@@ -2122,27 +2052,6 @@ export interface operations {
       500: components['responses']['InternalServerError']
     }
   }
-  getBrowserLogout: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Browser logout confirmation page. */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'text/html': string
-        }
-      }
-      500: components['responses']['InternalServerError']
-    }
-  }
   postBrowserLogout: {
     parameters: {
       query?: never
@@ -2164,6 +2073,30 @@ export interface operations {
       500: components['responses']['InternalServerError']
     }
   }
+  getBrowserLoginError: {
+    parameters: {
+      query?: {
+        /** @description Why the sign-in failed, as `cookie`, `rejected` or `account`. */
+        reason?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Image Factory HTML user interface, which explains why the sign-in failed. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'text/html': string
+        }
+      }
+      500: components['responses']['InternalServerError']
+    }
+  }
   completeBrowserLogin: {
     parameters: {
       query?: never
@@ -2174,7 +2107,14 @@ export interface operations {
     requestBody?: never
     responses: {
       302: components['responses']['Found']
-      403: components['responses']['Forbidden']
+      /** @description The sign-in failed; continue at /sign-in-error, which explains why. */
+      303: {
+        headers: {
+          Location: components['headers']['Location']
+          [name: string]: unknown
+        }
+        content?: never
+      }
       500: components['responses']['InternalServerError']
     }
   }

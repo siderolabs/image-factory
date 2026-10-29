@@ -207,21 +207,21 @@ test('Switch the language', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Hardware Type' })).toBeVisible()
 
-  // The factory remembers the language once a request with ?lang= reaches it, which may land after the page has
-  // switched, so wait for it before reloading.
-  const saved = page.waitForResponse(
-    (response) => response.url().includes('lang=fr') && response.ok(),
-  )
-
   await page
     .getByRole('combobox')
     .filter({ has: page.getByRole('option', { name: 'Français' }) })
     .selectOption('fr')
   await expect(page.getByRole('heading', { name: 'Type de matériel' })).toBeVisible()
-  await saved
 
   await test.step('The language sticks after a reload', async () => {
     await page.reload()
     await expect(page.getByRole('heading', { name: 'Type de matériel' })).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'fr')
+  })
+
+  await test.step('A ?lang= link chooses the language too', async () => {
+    await page.goto('/?lang=pl')
+    await expect(page.getByRole('heading', { name: 'Typ Sprzętu' })).toBeVisible()
+    await expect(page).not.toHaveURL(/lang=/)
   })
 })

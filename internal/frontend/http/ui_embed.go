@@ -4,12 +4,7 @@
 
 package http
 
-import (
-	"embed"
-)
-
-//go:embed css/output.css css/files/*
-var cssFS embed.FS
+import _ "embed" // for llms.txt
 
 //go:embed templates/llms.txt
 var llmsTxtContent []byte

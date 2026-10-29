@@ -6,22 +6,14 @@
 
 import { applyTheme, parseThemeChoice, resolveTheme, THEME_STORAGE_KEY } from '@/lib/theme-core'
 
-const media = window.matchMedia('(prefers-color-scheme: dark)')
+let stored: string | null = null
 
-function apply() {
-  let stored: string | null = null
-
-  try {
-    stored = localStorage.getItem(THEME_STORAGE_KEY)
-  } catch {
-    // Blocked storage: follow the system.
-  }
-
-  const choice = parseThemeChoice(stored)
-
-  applyTheme(choice, resolveTheme(choice, media.matches))
+try {
+  stored = localStorage.getItem(THEME_STORAGE_KEY)
+} catch {
+  // Blocked storage: follow the system.
 }
 
-// Also follows system changes on pages without the app, such as the Enterprise sign-in pages.
-media.addEventListener('change', apply)
-apply()
+const choice = parseThemeChoice(stored)
+
+applyTheme(choice, resolveTheme(choice, window.matchMedia('(prefers-color-scheme: dark)').matches))

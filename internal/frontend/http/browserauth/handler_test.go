@@ -17,25 +17,34 @@ import (
 	"github.com/siderolabs/image-factory/pkg/enterprise"
 )
 
+// page stands in for the browser UI.
+func page(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error { return nil }
+
 func TestHandlerPublishesBrowserAuthenticationRoutes(t *testing.T) {
 	t.Parallel()
 
 	provider := browserLoginProvider{enabled: true, callbackPath: "/oauth/callback"}
 	handler := browserauth.New(provider)
 
-	routes := handler.Routes()
+	routes := handler.Routes(page)
 	require.Len(t, routes, 4)
 	require.Equal(t, []routeIdentity{
 		{method: http.MethodGet, path: "/login", operationID: "startBrowserLogin"},
-		{method: http.MethodGet, path: "/logout", operationID: "getBrowserLogout"},
+		{method: http.MethodGet, path: "/sign-in-error", operationID: "getBrowserLoginError"},
 		{method: http.MethodPost, path: "/logout", operationID: "postBrowserLogout"},
 		{method: http.MethodGet, path: "/oauth/callback", operationID: "completeBrowserLogin"},
 	}, routeIdentities(routes))
 
 	for _, route := range routes {
 		require.Equal(t, transport.AccessPublic, route.Access)
-		require.Equal(t, transport.ProtocolBrowserAuth, route.Protocol)
 		require.NotNil(t, route.Handler)
+
+		// The pages are the browser UI's; the rest is the login flow itself.
+		if route.Path == "/sign-in-error" {
+			require.Equal(t, transport.ProtocolHTML, route.Protocol)
+		} else {
+			require.Equal(t, transport.ProtocolBrowserAuth, route.Protocol)
+		}
 	}
 
 	require.True(t, handler.LogoutEnabled())
@@ -46,7 +55,7 @@ func TestHandlerOmitsDisabledBrowserAuthentication(t *testing.T) {
 
 	handler := browserauth.New(browserLoginProvider{})
 
-	require.Empty(t, handler.Routes())
+	require.Empty(t, handler.Routes(page))
 	require.False(t, handler.LogoutEnabled())
 }
 
@@ -55,7 +64,7 @@ func TestHandlerOmitsProviderWithoutBrowserAuthentication(t *testing.T) {
 
 	handler := browserauth.New(authProvider{})
 
-	require.Empty(t, handler.Routes())
+	require.Empty(t, handler.Routes(page))
 	require.False(t, handler.LogoutEnabled())
 }
 

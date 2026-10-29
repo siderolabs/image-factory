@@ -20,7 +20,7 @@ func (f *Frontend) registerRoutes(enterprisePlugins []enterprise.FrontendPlugin,
 
 	routes = append(routes, f.routes()...)
 	routes = append(routes, f.oci.Routes()...)
-	routes = append(routes, f.browserAuth.Routes()...)
+	routes = append(routes, f.browserAuth.Routes(f.spa.ServeIndex)...)
 	routes = append(routes, f.uiRoutes()...)
 
 	server, err := newServer(f.contract, routes, middleware.Build, options)
@@ -180,15 +180,6 @@ func (f *Frontend) routes() []transport.Route {
 		{Method: http.MethodGet, Path: "/talosctl/:version/:path", OperationID: "getTalosctl", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.talosctlAPI.Download},
 		{Method: http.MethodGet, Path: "/llms.txt", OperationID: "getLLMsText", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.metadata.LLMsText},
 		{Method: http.MethodGet, Path: "/openapi.yaml", OperationID: "getOpenAPI", Access: transport.AccessPublic, Protocol: transport.ProtocolAPI, Handler: f.handleOpenAPI},
-
-		{
-			Method:      http.MethodGet,
-			Path:        "/css/*filepath",
-			OperationID: "getCSSAsset",
-			Access:      transport.AccessPublic,
-			Protocol:    transport.ProtocolStatic,
-			Handler:     f.staticCSS.Serve,
-		},
 	}
 
 	if f.robots != nil {

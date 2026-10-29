@@ -48,7 +48,7 @@ func TestEnterpriseRouteCatalogMatchesContract(t *testing.T) {
 
 	allRoutes := append([]transport.Route{}, routes...)
 	allRoutes = append(allRoutes, frontend.Routes()...)
-	allRoutes = append(allRoutes, browserauth.New(browserLoginProvider{}).Routes()...)
+	allRoutes = append(allRoutes, browserauth.New(browserLoginProvider{}).Routes(nil)...)
 	requireOpenAPIOperationOwnership(t, contract, allRoutes)
 
 	requireRouteInventory(t, contract, routes, []string{

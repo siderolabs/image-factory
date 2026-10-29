@@ -47,11 +47,6 @@ spec:
   environment:
     TUF_ROOT: /tmp
   additionalImages: [] # so we copy same fhs and ca-certificates as the version of other tools
-  allowedLocalPaths:
-    - package.json
-    - package-lock.json
-  dependsOn:
-    - tailwind
   entrypoint: /usr/bin/image-factory
   copyFrom:
     - name: imager-tools
@@ -102,8 +97,6 @@ spec:
     - name: e2e-enterprise
       toplevel: true
     - name: e2e-auth0
-      toplevel: true
-    - name: tailwind
       toplevel: true
     - name: docs
       toplevel: true
@@ -763,7 +756,6 @@ spec:
       - name: DOCKER_COMPOSE_FILES
         defaultValue: '-f hack/dev/compose.yaml$(if $(wildcard hack/dev/compose.override.yaml), -f hack/dev/compose.override.yaml)'
     script:
-      - "@$(MAKE) tailwind"
       - "@$(DOCKER_COMPOSE_ENV) docker compose $(DOCKER_COMPOSE_FILES) up --build --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io --no-attach extra-extensions"
 
 ---
@@ -796,61 +788,11 @@ spec:
 kind: common.Build
 spec:
   ignoredPaths:
-    - node_modules/
     - hack/dev/compose.override.yaml
 ---
 kind: service.CodeCov
 spec:
   targetThreshold: 50
----
-kind: custom.Step
-name: tailwind
-spec:
-  makefile:
-    enabled: true
-    phony: true
-    script:
-      - "@$(MAKE) local-tailwind-copy PUSH=false DEST=. PLATFORM=$(OPERATING_SYSTEM)/$(GOARCH)"
-  docker:
-    description: "Runs tailwind update"
-    enabled: true
-    stages:
-      - name: tailwind-base
-        description: "Installs tailwindcss"
-        from: docker.io/node:24.14.1-alpine
-        platform: "${BUILDPLATFORM}"
-        workdir: /src
-        steps:
-          - copy:
-              src: package.json package-lock.json
-              dst: .
-          - script:
-              command: npm install
-      - name: tailwind-update
-        description: "tailwind update"
-        from: tailwind-base
-        steps:
-          - copy:
-              src: internal/frontend/http
-              dst: internal/frontend/http
-          - copy:
-              src: pkg/enterprise/pages/templates
-              dst: pkg/enterprise/pages/templates
-          - script:
-              command: node_modules/.bin/tailwindcss -i internal/frontend/http/css/input.css -o internal/frontend/http/css/output.css --minify
-          - script:
-              command: mkdir -p internal/frontend/http/css/files && cp node_modules/@fontsource-variable/inter/files/*-wght-normal.woff2 node_modules/@fontsource-variable/jetbrains-mono/files/*-wght-*.woff2 internal/frontend/http/css/files/
-      - name: tailwind-copy
-        description: "Copies assets"
-        steps:
-          - copy:
-              from: tailwind-update
-              src: /src/internal/frontend/http/css/output.css
-              dst: internal/frontend/http/css/output.css
-          - copy:
-              from: tailwind-update
-              src: /src/internal/frontend/http/css/files
-              dst: internal/frontend/http/css/files
 ---
 kind: common.Repository
 spec:

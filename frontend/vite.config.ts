@@ -23,7 +23,7 @@ export default defineConfig({
   build: {
     rolldownOptions: {
       output: {
-        // Built files are served by the backend from /assets/, next to the public/ files and /js/theme.js.
+        // Built files are served by the backend from /assets/, next to the public/ files.
         // Go's //go:embed skips files starting with '_', and rolldown chunks may begin with '_',
         // so prefix those names to avoid the embed exclusion.
         chunkFileNames: 'assets/o[name]-[hash].js',

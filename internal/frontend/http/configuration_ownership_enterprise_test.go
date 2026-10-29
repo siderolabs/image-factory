@@ -46,7 +46,7 @@ func TestEnterpriseConfigurationOwnership(t *testing.T) {
 			require.NoError(t, err)
 
 			routes = append(routes, pluginRoutes...)
-			routes = append(routes, browserauth.New(provider).Routes()...)
+			routes = append(routes, browserauth.New(provider).Routes(nil)...)
 			require.Empty(t, configurationOwnershipProblems(contract, routes, true, browser))
 		})
 	}

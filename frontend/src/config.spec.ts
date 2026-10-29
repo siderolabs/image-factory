@@ -20,13 +20,27 @@ describe('readConfig', () => {
   test('reads the configuration filled in by the backend', () => {
     expect(
       readConfig(
-        page('{"version":"v1.8.0","enterprise":true,"tokensEnabled":true,"logoutEnabled":false}'),
+        page(
+          '{"version":"v1.8.0","enterprise":true,"tokensEnabled":true,"logoutEnabled":true,"authenticated":true}',
+        ),
       ),
-    ).toEqual({ version: 'v1.8.0', enterprise: true, tokensEnabled: true, logoutEnabled: false })
+    ).toEqual({
+      version: 'v1.8.0',
+      enterprise: true,
+      tokensEnabled: true,
+      logoutEnabled: true,
+      authenticated: true,
+    })
   })
 
   test('falls back to the defaults without a backend', () => {
-    const defaults = { version: '', enterprise: false, tokensEnabled: false, logoutEnabled: false }
+    const defaults = {
+      version: '',
+      enterprise: false,
+      tokensEnabled: false,
+      logoutEnabled: false,
+      authenticated: false,
+    }
 
     expect(readConfig(page())).toEqual(defaults)
     expect(readConfig(page('{{ .Config }}'))).toEqual(defaults)

@@ -91,7 +91,7 @@ func testAuditPolicy(options cmd.Options) func(t *testing.T) {
 		doRequest(http.MethodGet, "/versions", "", nil, http.StatusOK)
 
 		// Static routes and router-level misses bypass both observation and audit.
-		doRequest(http.MethodGet, "/css/output.css", "", nil, http.StatusOK)
+		doRequest(http.MethodGet, "/assets/missing.js", "", nil, http.StatusNotFound)
 		doRequest(http.MethodGet, "/not-a-route", "", nil, http.StatusNotFound)
 
 		// Protected successes and handler failures are audited even when
@@ -195,7 +195,7 @@ func testAuditPolicy(options cmd.Options) func(t *testing.T) {
 		assert.Contains(t, metricsText, `handler="/"`)
 		assert.Contains(t, metricsText, `handler="/schematics"`)
 		assert.Contains(t, metricsText, `code="400",handler="/schematics",method="POST",service=""} 1`)
-		assert.NotContains(t, metricsText, `handler="/css/*filepath"`)
+		assert.NotContains(t, metricsText, `handler="/assets/*filepath"`)
 		assert.NotContains(t, metricsText, `handler="/not-a-route"`)
 
 		if enterprise.Enabled() {

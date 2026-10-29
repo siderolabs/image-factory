@@ -65,8 +65,7 @@ func testFrontend(ctx context.Context, baseURL string) func(t *testing.T) {
 				bodyContains string
 			}{
 				{name: "OpenAPI", method: http.MethodGet, path: "/openapi.yaml", status: http.StatusOK, contentType: "application/yaml", bodyContains: "openapi: 3.1.0"},
-				{name: "nested static asset", method: http.MethodGet, path: "/css/output.css", status: http.StatusOK, contentType: "text/css"},
-				{name: "missing static asset", method: http.MethodGet, path: "/js/missing.js", status: http.StatusNotFound},
+				{name: "missing static asset", method: http.MethodGet, path: "/assets/missing.js", status: http.StatusNotFound},
 				{name: "unknown route", method: http.MethodGet, path: "/future-route", status: http.StatusNotFound},
 				{name: "unknown OCI route", method: http.MethodGet, path: "/v2/example/unknown", status: http.StatusNotFound},
 				{name: "unsupported method", method: http.MethodDelete, path: "/image/example/v1.11.0/metal-amd64.raw", status: http.StatusMethodNotAllowed},

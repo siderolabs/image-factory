@@ -65,8 +65,8 @@ func TestPipelineSelectsProtocolPath(t *testing.T) {
 			}
 
 			if test.protocol == transport.ProtocolStatic {
-				route.Path = "/css/*filepath"
-				route.OperationID = "getCSSAsset"
+				route.Path = "/assets/*filepath"
+				route.OperationID = "getFrontendAsset"
 			}
 
 			_, err = pipeline.Handler(route)

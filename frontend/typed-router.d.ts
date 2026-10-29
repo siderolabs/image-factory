@@ -38,6 +38,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/sign-in-error': RouteRecordInfo<
+      '/sign-in-error',
+      '/sign-in-error',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/ui/tokens': RouteRecordInfo<
       '/ui/tokens',
       '/ui/tokens',
@@ -61,6 +68,14 @@ declare module 'vue-router/auto-routes' {
     'src/pages/index.vue': {
       routes:
         | '/'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'src/pages/sign-in-error.vue': {
+      routes:
+        | '/sign-in-error'
       views:
         | never
       pathParamNames:

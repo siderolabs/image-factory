@@ -53,7 +53,7 @@ func TestRegisteredRoutesUseProductionMiddlewareOrdering(t *testing.T) {
 	})
 
 	t.Run("static route bypasses application middleware", func(t *testing.T) {
-		response := serveGET(t, router, "/css/not-found.css")
+		response := serveGET(t, router, "/assets/not-found.css")
 
 		require.Equal(t, http.StatusNotFound, response.Code)
 		require.Empty(t, response.Header().Get(httpfrontend.RequestIDHeader))

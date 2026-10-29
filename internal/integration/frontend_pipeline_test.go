@@ -51,16 +51,17 @@ func testFrontendPipeline(ctx context.Context, baseURL string) func(t *testing.T
 				wrapped: true,
 			},
 			{
+				// The static files come from the frontend build, which this binary embeds only a placeholder of.
 				name:    "static route",
 				method:  http.MethodGet,
-				path:    "/css/output.css",
-				status:  http.StatusOK,
+				path:    "/assets/missing.js",
+				status:  http.StatusNotFound,
 				wrapped: false,
 			},
 			{
 				name:    "static route has no implicit HEAD",
 				method:  http.MethodHead,
-				path:    "/css/output.css",
+				path:    "/assets/missing.js",
 				status:  http.StatusMethodNotAllowed,
 				wrapped: false,
 				allow:   "GET, OPTIONS",
@@ -120,29 +121,6 @@ func testFrontendPipeline(ctx context.Context, baseURL string) func(t *testing.T
 				}
 			})
 		}
-
-		t.Run("static byte range", func(t *testing.T) {
-			t.Parallel()
-
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/css/output.css", nil)
-			require.NoError(t, err)
-
-			req.Header.Set("Range", "bytes=0-9")
-
-			resp, err := client.Do(req)
-			require.NoError(t, err)
-			defer resp.Body.Close() //nolint:errcheck
-
-			assert.Equal(t, http.StatusPartialContent, resp.StatusCode)
-			assert.Regexp(t, `^bytes 0-9/[1-9][0-9]*$`, resp.Header.Get("Content-Range"))
-			assert.Equal(t, "10", resp.Header.Get("Content-Length"))
-			assert.Empty(t, resp.Header.Get("Server"))
-			assert.Empty(t, resp.Header.Get("X-Request-ID"))
-
-			body, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-			assert.Len(t, body, 10)
-		})
 
 		t.Run("OCI ping GET and HEAD", func(t *testing.T) {
 			t.Parallel()

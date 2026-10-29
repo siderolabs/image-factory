@@ -119,22 +119,6 @@ login:
       "500":
         $ref: "../components/responses.yaml#/InternalServerError"
 logout:
-  get:
-    operationId: getBrowserLogout
-    summary: End a browser session
-    tags: [Authentication]
-    security: []
-    x-image-factory-enterprise: true
-    x-image-factory-internal: true
-    responses:
-      "200":
-        description: Browser logout confirmation page.
-        content:
-          text/html:
-            schema:
-              type: string
-      "500":
-        $ref: "../components/responses.yaml#/InternalServerError"
   post:
     operationId: postBrowserLogout
     summary: End a browser session
@@ -164,30 +148,35 @@ callback:
     responses:
       "302":
         $ref: "../components/responses.yaml#/Found"
-      "403":
-        $ref: "../components/responses.yaml#/Forbidden"
+      "303":
+        description: The sign-in failed; continue at /sign-in-error, which explains why.
+        headers:
+          Location:
+            $ref: "../components/headers.yaml#/Location"
       "500":
         $ref: "../components/responses.yaml#/InternalServerError"
-staticCSS:
-  parameters:
-  - name: filepath+
-    in: path
-    required: true
-    description: Embedded stylesheet path.
-    schema:
-      type: string
-      minLength: 1
+loginError:
   get:
-    operationId: getCSSAsset
-    summary: Download an embedded stylesheet
-    tags: [UI]
+    operationId: getBrowserLoginError
+    summary: Explain a failed browser authentication
+    tags: [Authentication]
     security: []
+    x-image-factory-enterprise: true
     x-image-factory-internal: true
+    parameters:
+    - name: reason
+      in: query
+      # Not an enum: the page explains any other value as an unknown failure, rather than being refused.
+      description: Why the sign-in failed, as `cookie`, `rejected` or `account`.
+      schema:
+        type: string
     responses:
       "200":
-        description: Embedded stylesheet.
-      "404":
-        $ref: "../components/responses.yaml#/NotFound"
+        description: Image Factory HTML user interface, which explains why the sign-in failed.
+        content:
+          text/html:
+            schema:
+              type: string
       "500":
         $ref: "../components/responses.yaml#/InternalServerError"
 staticFavicon:
@@ -208,28 +197,6 @@ staticFavicon:
     responses:
       "200":
         description: Favicon.
-      "404":
-        $ref: "../components/responses.yaml#/NotFound"
-      "500":
-        $ref: "../components/responses.yaml#/InternalServerError"
-staticJavaScript:
-  parameters:
-  - name: filepath+
-    in: path
-    required: true
-    description: JavaScript file path.
-    schema:
-      type: string
-      minLength: 1
-  get:
-    operationId: getJavaScriptAsset
-    summary: Download a JavaScript file with a fixed path
-    tags: [UI]
-    security: []
-    x-image-factory-internal: true
-    responses:
-      "200":
-        description: JavaScript file, such as the theme script the sign-in pages load.
       "404":
         $ref: "../components/responses.yaml#/NotFound"
       "500":

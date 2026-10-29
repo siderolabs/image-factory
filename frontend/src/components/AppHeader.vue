@@ -26,19 +26,21 @@ const navLink =
         {{ t(config.enterprise ? 'page.header.enterprise' : 'page.header') }}
       </h1>
       <nav class="flex items-center gap-micro type-control">
-        <RouterLink v-if="route.path === '/ui/tokens'" to="/" :class="navLink">
-          {{ t('tokens.back_home') }}
-        </RouterLink>
-        <RouterLink v-else-if="config.tokensEnabled" to="/ui/tokens" :class="navLink">
-          {{ t('tokens.nav_link') }}
-        </RouterLink>
-        <div
-          v-if="config.logoutEnabled && (config.tokensEnabled || route.path === '/ui/tokens')"
-          class="h-4 w-px bg-border-default"
-        ></div>
-        <form v-if="config.logoutEnabled" method="POST" action="/logout">
-          <button type="submit" :class="navLink">{{ t('nav.logout') }}</button>
-        </form>
+        <template v-if="config.authenticated">
+          <RouterLink v-if="route.path === '/ui/tokens'" to="/" :class="navLink">
+            {{ t('tokens.back_home') }}
+          </RouterLink>
+          <RouterLink v-else-if="config.tokensEnabled" to="/ui/tokens" :class="navLink">
+            {{ t('tokens.nav_link') }}
+          </RouterLink>
+          <div
+            v-if="config.logoutEnabled && (config.tokensEnabled || route.path === '/ui/tokens')"
+            class="h-4 w-px bg-border-default"
+          ></div>
+          <form v-if="config.logoutEnabled" method="POST" action="/logout">
+            <button type="submit" :class="navLink">{{ t('nav.logout') }}</button>
+          </form>
+        </template>
         <ThemeMenu />
       </nav>
     </div>

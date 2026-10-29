@@ -89,12 +89,11 @@ func TestCommunityRouteCatalogMatchesContract(t *testing.T) {
 		"GET /talosctl/:version", "HEAD /talosctl/:version/:path", "GET /talosctl/:version/:path",
 		"GET /llms.txt", "GET /openapi.yaml",
 		"GET /", "HEAD /", "GET /ui/tokens",
-		"GET /css/*filepath", "GET /favicons/*filepath", "GET /js/*filepath", "GET /assets/*filepath",
+		"GET /favicons/*filepath", "GET /assets/*filepath",
 	}
 
 	requireRouteInventory(t, contract, routes, want)
 	requireGETRoute(t, routes, "/v2/*path", transport.AccessImageDownload, transport.ProtocolOCI)
-	requireGETRoute(t, routes, "/css/*filepath", transport.AccessPublic, transport.ProtocolStatic)
 	requireGETRoute(t, routes, "/", transport.AccessAuthenticated, transport.ProtocolHTML)
 	requireGETRoute(t, routes, "/ui/tokens", transport.AccessAuthenticated, transport.ProtocolHTML)
 	requireGETRoute(t, routes, "/assets/*filepath", transport.AccessPublic, transport.ProtocolStatic)
@@ -107,18 +106,18 @@ func TestBrowserLoginRouteCatalogMatchesContract(t *testing.T) {
 	contract, err := api.NewContract(t.Context())
 	require.NoError(t, err)
 
-	routes := browserauth.New(browserLoginProvider{}).Routes()
+	page := func(context.Context, http.ResponseWriter, *http.Request, httprouter.Params) error { return nil }
+	routes := browserauth.New(browserLoginProvider{}).Routes(page)
 
 	requireRouteInventory(t, contract, routes, []string{
 		"GET /login",
-		"GET /logout",
+		"GET /sign-in-error",
 		"POST /logout",
 		"GET /callback",
 	})
 
 	for _, route := range routes {
 		require.Equal(t, transport.AccessPublic, route.Access)
-		require.Equal(t, transport.ProtocolBrowserAuth, route.Protocol)
 	}
 }
 

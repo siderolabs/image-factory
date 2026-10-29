@@ -12,6 +12,8 @@ export interface Config {
   tokensEnabled: boolean
   /** Whether users log in through the browser, and so can log out. */
   logoutEnabled: boolean
+  /** Whether the page was requested with credentials, such as a browser login session. */
+  authenticated: boolean
 }
 
 const defaults: Config = {
@@ -19,6 +21,7 @@ const defaults: Config = {
   enterprise: false,
   tokensEnabled: false,
   logoutEnabled: false,
+  authenticated: false,
 }
 
 /**

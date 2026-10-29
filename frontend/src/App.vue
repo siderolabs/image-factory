@@ -16,7 +16,6 @@ import { applyTheme } from '@/lib/theme-core'
 const { t } = useI18n()
 const { theme, applied } = useTheme()
 
-// The backend serves the title in English, where crawlers and link previews read it; this translates it.
 useTitle(() => t(config.enterprise ? 'page.header.enterprise' : 'page.header'))
 
 // src/theme-init.ts applies the stored theme before first paint; this keeps <html> in step with later changes.

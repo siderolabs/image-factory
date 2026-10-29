@@ -27,7 +27,6 @@ import (
 	"github.com/siderolabs/image-factory/enterprise/auth"
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
-	"github.com/siderolabs/image-factory/pkg/enterprise/pages"
 	schematicpkg "github.com/siderolabs/image-factory/pkg/schematic"
 )
 
@@ -56,7 +55,7 @@ const (
 	sessionKeySize = 32
 
 	// maxErrCodeLen and maxErrDescriptionLen bound the Auth0 error strings that reach the
-	// error page and the log, since the callback query is caller-controlled.
+	// log, since the callback query is caller-controlled.
 	maxErrCodeLen        = 64
 	maxErrDescriptionLen = 256
 )
@@ -279,8 +278,10 @@ func (p *Provider) Middleware(next Handler) Handler {
 		if tokenStr == "" {
 			logger.Debug("auth0: authentication required: no token provided")
 
+			// Signed out at the root: the browser UI shows its landing page, so it is let through without
+			// an identity.
 			if sessionErr == nil && p.isLandingRequest(r) {
-				return p.renderLanding(w, r)
+				return next(ctx, w, r, params)
 			}
 
 			return p.deny(w, r, "no token provided")
@@ -349,27 +350,14 @@ func (p *Provider) deny(w http.ResponseWriter, r *http.Request, reason string) e
 }
 
 // isLandingRequest reports whether an anonymous request gets the public landing page
-// instead of a redirect: only a plain GET of the root, whoever sends it, so crawlers and
-// link-preview bots find a page describing the factory rather than the Auth0 login page.
-// Deep links (any query) still go straight to /login.
+// instead of a redirect: only a plain GET of the root, so someone opening the factory finds
+// a page describing it rather than the Auth0 login page. Deep links (any query) still go
+// straight to /login.
 func (p *Provider) isLandingRequest(r *http.Request) bool {
 	return p.BrowserLoginEnabled() &&
 		r.Method == http.MethodGet &&
 		r.URL.Path == "/" &&
 		r.URL.RawQuery == ""
-}
-
-// renderLanding serves the landing page. It is still a denial as far as the pipeline is
-// concerned: the handler never runs, and the response came off the writer.
-func (p *Provider) renderLanding(w http.ResponseWriter, r *http.Request) error {
-	// The page is translated, on top of the cookie the session lookup already varies on.
-	w.Header().Add("Vary", "Accept-Language")
-
-	if err := pages.RenderLanding(w, r, http.StatusOK, loginURL("/")); err != nil {
-		return err
-	}
-
-	return xerrors.NewTagged[enterrors.RespondedTag](errors.New("served sign-in landing page"))
 }
 
 // UsernameFromContext implements enterprise.AuthProvider.

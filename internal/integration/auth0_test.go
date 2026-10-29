@@ -116,7 +116,10 @@ func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
 		status int
 	}{
 		{name: "login", method: http.MethodGet, path: "/login", status: http.StatusFound},
-		{name: "logout GET", method: http.MethodGet, path: "/logout", status: http.StatusOK},
+		// Only the posted form signs out, so neither a link nor a prefetching browser can.
+		{name: "logout GET", method: http.MethodGet, path: "/logout", status: http.StatusMethodNotAllowed},
+		{name: "sign-in error", method: http.MethodGet, path: "/sign-in-error?reason=rejected", status: http.StatusOK},
+		{name: "sign-in error, unknown reason", method: http.MethodGet, path: "/sign-in-error?reason=unheard-of", status: http.StatusOK},
 		{name: "logout POST", method: http.MethodPost, path: "/logout", status: http.StatusSeeOther},
 		{name: "callback without state", method: http.MethodGet, path: "/callback", status: http.StatusFound},
 	} {
@@ -166,12 +169,12 @@ func TestIntegrationAuth0BrowserRoutes(t *testing.T) {
 			},
 			{
 				// The root is the one page crawlers and link-preview bots may see anonymously,
-				// whatever they send in Accept.
+				// whatever they send in Accept: the browser UI, which shows its landing page.
 				name:         "landing page",
 				method:       http.MethodGet,
 				path:         "/",
 				status:       http.StatusOK,
-				bodyContains: `<meta name="description"`,
+				bodyContains: `<html lang="en">`,
 			},
 			{
 				// The UI's own requests: a challenge would pop the browser's Basic auth dialog.
@@ -448,11 +451,11 @@ func testAuth0BrowserRoutesAbsent(ctx context.Context, t *testing.T, baseURL str
 		},
 	}
 
-	for _, path := range []string{"/login", "/logout"} {
+	for path, method := range map[string]string{"/login": http.MethodGet, "/logout": http.MethodPost} {
 		t.Run(path, func(t *testing.T) {
 			t.Parallel()
 
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+path, nil)
+			req, err := http.NewRequestWithContext(ctx, method, baseURL+path, nil)
 			require.NoError(t, err)
 
 			resp, err := noRedirect.Do(req)

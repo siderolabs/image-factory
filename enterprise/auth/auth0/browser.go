@@ -27,7 +27,6 @@ import (
 
 	"github.com/siderolabs/image-factory/internal/ctxlog"
 	enterrors "github.com/siderolabs/image-factory/pkg/enterprise/errors"
-	"github.com/siderolabs/image-factory/pkg/enterprise/pages"
 )
 
 // callbackPath is the route Auth0 redirects back to, appended to externalURL.
@@ -199,7 +198,7 @@ func (p *Provider) CallbackHandler() Handler {
 			logger.Debug("auth0: unusable state cookie", zap.Error(err))
 
 			if p.loginTerminal(r, err) {
-				return p.loginFailed(w, r, "Your browser did not keep the sign-in cookie. Check that cookies are enabled for this site.")
+				return p.loginFailed(w, r, loginErrorCookie)
 			}
 
 			http.Redirect(w, r, loginURL(""), http.StatusFound)
@@ -235,14 +234,14 @@ func (p *Provider) CallbackHandler() Handler {
 				zap.String("description", truncate(query.Get("error_description"), maxErrDescriptionLen)),
 			)
 
-			return p.loginFailed(w, r, "The identity provider rejected the sign-in request ("+errCode+").")
+			return p.loginFailed(w, r, loginErrorRejected)
 		}
 
 		payload, err := p.exchange(ctx, query.Get("code"), sc)
 		if err != nil {
 			logger.Debug("auth0: code exchange failed", zap.Error(err))
 
-			return p.loginFailed(w, r, "Your account could not be signed in to this factory.")
+			return p.loginFailed(w, r, loginErrorAccount)
 		}
 
 		if err = setSessionCookie(w, payload, p.browser.cipher, p.cookiesSecure(r)); err != nil {
@@ -270,7 +269,7 @@ func (p *Provider) loginTerminal(r *http.Request, readErr error) bool {
 	return err != nil
 }
 
-// truncate bounds attacker-influenced text before it reaches a log line or an error page.
+// truncate bounds attacker-influenced text before it reaches a log line.
 // Cut on runes: slicing bytes can split one and put invalid UTF-8 in both.
 func truncate(s string, limit int) string {
 	runes := []rune(strings.ToValidUTF8(s, ""))
@@ -318,15 +317,20 @@ func (p *Provider) exchange(ctx context.Context, code string, sc stateCookie) (s
 	return sessionPayload{AccessToken: token.AccessToken, Expiry: token.Expiry}, nil
 }
 
-// loginFailed renders reason as a terminal error page, tagged so it is logged as a 403.
-// Auth0's own SSO session turns a bounce through /login into a redirect loop, so this is
-// for failures that would otherwise recur.
-func (p *Provider) loginFailed(w http.ResponseWriter, r *http.Request, reason string) error {
-	if err := pages.RenderLoginError(w, r, http.StatusForbidden, reason); err != nil {
-		return err
-	}
+// Why a browser login failed, as the browser UI's sign-in error page (/sign-in-error) explains it.
+const (
+	loginErrorCookie   = "cookie"   // the browser did not keep the state cookie
+	loginErrorRejected = "rejected" // Auth0 answered the login with an error
+	loginErrorAccount  = "account"  // the code exchange or the resulting token failed
+)
 
-	return xerrors.NewTagged[enterrors.RespondedTag](errors.New(reason))
+// loginFailed sends the browser to the browser UI's sign-in error page, tagged so the reason is logged.
+// Auth0's own SSO session turns a bounce through /login into a redirect loop, so this is for failures that would
+// otherwise recur. Only a fixed reason travels in the URL, as the callback query is caller-controlled.
+func (p *Provider) loginFailed(w http.ResponseWriter, r *http.Request, reason string) error {
+	http.Redirect(w, r, "/sign-in-error?reason="+reason, http.StatusSeeOther)
+
+	return xerrors.NewTagged[enterrors.RespondedTag](fmt.Errorf("login failed: %s", reason))
 }
 
 // loginURL builds the /login target, carrying return_to so a failed attempt does not drop
@@ -339,22 +343,16 @@ func loginURL(returnTo string) string {
 	return "/login"
 }
 
-// LogoutHandler returns the handler for /logout. Only POST logs out; the Auth0 hand-off is
-// what drops the SSO session.
+// LogoutHandler returns the handler for POST /logout, which the browser UI's sign-out buttons submit. The
+// Auth0 hand-off is what drops the SSO session.
 func (p *Provider) LogoutHandler() Handler {
 	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
-		if r.Method != http.MethodPost {
-			return pages.RenderLogout(w, r, http.StatusOK)
-		}
-
 		// SameSite does not help here: this handler needs none of our cookies. An absent
-		// header means an older browser, where the interstitial is the only guard.
+		// header means an older browser, which is let through.
 		if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" {
 			ctxlog.Logger(ctx, p.logger).Warn("auth0: cross-origin logout rejected", zap.String("sec_fetch_site", site))
 
-			if err := pages.RenderLogout(w, r, http.StatusForbidden); err != nil {
-				return err
-			}
+			http.Error(w, "sign out from the factory itself", http.StatusForbidden)
 
 			return xerrors.NewTagged[enterrors.RespondedTag](errors.New("logout must be submitted from the factory itself"))
 		}
