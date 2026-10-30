@@ -5,8 +5,17 @@ import 'storybook/internal/csf'
 
 import type { SetupWorker } from 'msw/browser'
 
+import type { Config } from '../src/config'
+
 declare module 'storybook/internal/csf' {
   interface StoryContext {
     msw: SetupWorker
+  }
+
+  interface Parameters {
+    /** Server configuration for the story, over the defaults that apply without a backend. */
+    config?: Partial<Config>
+    /** The route the story starts on, such as /ui/tokens or /?target=metal. */
+    route?: string
   }
 }
