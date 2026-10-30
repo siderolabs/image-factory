@@ -842,12 +842,32 @@ spec:
         // file, You can obtain one at http://mozilla.org/MPL/2.0/
       includeSuffixes:
         - .go
+        - .js
+        - .ts
       excludeSuffixes:
         - .pb.go
         - .pb.gw.go
         - _enumer.go
       skipPaths:
         - enterprise/
+        - frontend/node_modules/
+        - frontend/dist/
+        - frontend/playwright-report/
+        - frontend/test-results/
+        - frontend/typed-router.d.ts
+        - frontend/src/api/schema.d.ts
+
+    - root: frontend/
+      header: |
+        <!--
+        This Source Code Form is subject to the terms of the Mozilla Public
+        License, v. 2.0. If a copy of the MPL was not distributed with this
+        file, You can obtain one at http://mozilla.org/MPL/2.0/.
+        -->
+      includeSuffixes:
+        - .vue
+      skipPaths:
+        - node_modules/
 
     - root: enterprise
       header: |
