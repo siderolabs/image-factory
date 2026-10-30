@@ -1,7 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 import { fileURLToPath } from 'node:url'
 
 import { includeIgnoreFile } from '@eslint/config-helpers'
@@ -12,6 +11,7 @@ import { vueTsConfigs, withVueTs } from '@vue/eslint-config-typescript'
 import { globalIgnores } from 'eslint/config'
 import pluginPlaywright from 'eslint-plugin-playwright'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
+import storybook from 'eslint-plugin-storybook'
 import pluginVue from 'eslint-plugin-vue'
 
 export default withVueTs(
@@ -40,6 +40,10 @@ export default withVueTs(
       '@typescript-eslint/no-floating-promises': 'error',
     },
   },
+  // By default, ESLint ignores all dot-files
+  { ignores: ['!.storybook', '.storybook/public/mockServiceWorker.js'] },
+  ...storybook.configs['flat/recommended'],
+  ...storybook.configs['flat/csf-strict'],
 
   skipFormatting,
 
