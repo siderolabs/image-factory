@@ -6,8 +6,16 @@
   "engines": {
     "node": "^24.18.0"
   },
+  "msw": {
+    "workerDirectory": [
+      ".storybook/public"
+    ]
+  },
   "scripts": {
     "serve": "vite",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "chromatic": "npx chromatic",
     "build": "npm run tsc && vite build",
     "preview": "vite preview",
     "tsc": "vue-tsc --build",
@@ -30,8 +38,11 @@
     "vue-router": "^5.4.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.64.1",
     "@siderolabs/talos-design-system": "github:siderolabs/talos-design-system#semver:^0.10.0",
+    "@storybook/addon-a11y": "^10.6.5",
+    "@storybook/vue3-vite": "^10.6.5",
     "@tailwindcss/vite": "^4.3.3",
     "@tsconfig/node24": "^24.0.5",
     "@types/js-yaml": "^4.0.9",
@@ -47,11 +58,16 @@
     "eslint": "^10.12.0",
     "eslint-plugin-playwright": "^2.12.1",
     "eslint-plugin-simple-import-sort": "^14.0.0",
+    "eslint-plugin-storybook": "^10.6.5",
     "eslint-plugin-vue": "^10.12.0",
+    "msw": "^3.0.3",
+    "msw-storybook-addon": "^3.0.3",
     "openapi-typescript": "^7.13.0",
     "playwright": "^1.64.1",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "storybook": "^10.6.5",
+    "storybook-vue3-router": "^7.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "vite": "^8.3.5",
@@ -60,10 +76,12 @@
     "vue-tsc": "^3.3.13"
   },
   "allowScripts": {
+    "esbuild@0.28.2": true,
     "fsevents@2.3.3": true,
     "vue-demi@0.14.10": true
   },
   "overrides": {
+    "vue-router": "$vue-router",
     "openapi-typescript": {
       "typescript": "$typescript"
     }

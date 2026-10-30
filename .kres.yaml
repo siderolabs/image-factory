@@ -754,7 +754,7 @@ spec:
       - name: DOCKER_COMPOSE_ENV
         defaultValue: 'TOOLCHAIN="$(TOOLCHAIN)" PKGS_PREFIX="$(PKGS_PREFIX)" PKGS="$(PKGS)" SHA="$(SHA)" TAG="$(TAG)" ABBREV_TAG="$(ABBREV_TAG)" CGO_ENABLED="$(CGO_ENABLED)" GO_BUILDFLAGS="$(GO_BUILDFLAGS)" GO_GCFLAGS="$(GO_GCFLAGS)" GO_LDFLAGS="$(GO_LDFLAGS)" GOTOOLCHAIN="$(GOTOOLCHAIN)" GOEXPERIMENT="$(GOEXPERIMENT)" TESTPKGS="$(TESTPKGS)" GOIMPORTS_VERSION="$(GOIMPORTS_VERSION)" GOMOCK_VERSION="$(GOMOCK_VERSION)" DEEPCOPY_VERSION="$(DEEPCOPY_VERSION)" GOLANGCILINT_VERSION="$(GOLANGCILINT_VERSION)" GOFUMPT_VERSION="$(GOFUMPT_VERSION)" DIS_VULNCHECK_VERSION="$(DIS_VULNCHECK_VERSION)" HELMDOCS_VERSION="$(HELMDOCS_VERSION)" JS_TOOLCHAIN="$(JS_TOOLCHAIN)"'
       - name: DOCKER_COMPOSE_FILES
-        defaultValue: '-f hack/dev/compose.yaml$(if $(wildcard hack/dev/compose.override.yaml), -f hack/dev/compose.override.yaml)'
+        defaultValue: "-f hack/dev/compose.yaml$(if $(wildcard hack/dev/compose.override.yaml), -f hack/dev/compose.override.yaml)"
     script:
       - "@$(DOCKER_COMPOSE_ENV) docker compose $(DOCKER_COMPOSE_FILES) up --build --remove-orphans --no-attach registry.local --no-attach registry.ghcr.io --no-attach extra-extensions"
 
@@ -767,6 +767,13 @@ spec:
     phony: true
     script:
       - "@$(DOCKER_COMPOSE_ENV) docker compose $(DOCKER_COMPOSE_FILES) down"
+---
+kind: auto.JS
+spec:
+  extraDirectories:
+    - e2e
+    - mocks
+    - .storybook
 ---
 kind: js.Generate
 spec:
@@ -784,6 +791,11 @@ spec:
     - git
     # Frontend unit tests run in Vitest browser mode; Playwright's own browsers don't run on Alpine.
     - chromium
+---
+kind: js.Chromatic
+spec:
+  enabled: true
+  sopsExtractKey: '["secrets"]["CHROMATIC_PROJECT_TOKEN"]'
 ---
 kind: common.Build
 spec:
@@ -837,6 +849,7 @@ spec:
         - frontend/dist/
         - frontend/playwright-report/
         - frontend/test-results/
+        - frontend/.storybook/public/mockServiceWorker.js
         - frontend/typed-router.d.ts
         - frontend/src/api/schema.d.ts
 
