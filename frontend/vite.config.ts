@@ -9,6 +9,7 @@ import tailwindcss from '@tailwindcss/vite'
 import Vue from '@vitejs/plugin-vue'
 import { playwright } from '@vitest/browser-playwright'
 import dotenv from 'dotenv'
+import { msw } from 'msw/vite'
 import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
 import VueRouter from 'vue-router/vite'
@@ -19,7 +20,14 @@ dotenv.config({ quiet: true })
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [VueRouter(), Vue(), tailwindcss(), themeInit()],
+  plugins: [
+    VueRouter(),
+    Vue(),
+    tailwindcss(),
+    themeInit(),
+    // Serves the MSW worker script that the unit tests mock the API with. Storybook serves its own copy.
+    !!process.env.VITEST && msw(),
+  ],
   build: {
     rolldownOptions: {
       output: {
@@ -45,6 +53,10 @@ export default defineConfig({
   test: {
     exclude: [...configDefaults.exclude, 'e2e/**'],
     root: fileURLToPath(new URL('./', import.meta.url)),
+    setupFiles: ['vitest.setup.ts'],
+    alias: {
+      '@mocks': fileURLToPath(new URL('./mocks', import.meta.url)),
+    },
     browser: {
       enabled: true,
       // Vitest only defaults to headless in CI; run with --browser.headless=false to watch the tests.

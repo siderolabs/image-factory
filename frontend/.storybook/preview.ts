@@ -4,6 +4,7 @@
 import '../src/index.css'
 
 import { faker } from '@faker-js/faker'
+import { apiHandlers } from '@mocks/msw/handlers'
 import { type Preview } from '@storybook/vue3-vite'
 import { startOfHour } from 'date-fns'
 import { setupWorker } from 'msw/browser'
@@ -39,8 +40,11 @@ const preview: Preview = {
   initialGlobals: {
     theme: 'system',
   },
-  beforeEach() {
+  beforeEach({ msw }) {
     faker.seed(0)
+    // Every story gets a mocked API, with fresh state. A story's own beforeEach runs after this one, so its
+    // msw.use() overrides take precedence.
+    msw.use(...apiHandlers())
   },
   loaders: [
     mswLoader(async () => {

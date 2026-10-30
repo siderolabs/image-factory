@@ -768,6 +768,13 @@ spec:
     script:
       - "@$(DOCKER_COMPOSE_ENV) docker compose $(DOCKER_COMPOSE_FILES) down"
 ---
+kind: auto.JS
+spec:
+  extraDirectories:
+    - e2e
+    - mocks
+    - .storybook
+---
 kind: js.Generate
 spec:
   # frontend/src/api/schema.d.ts, the API types generated from the OpenAPI contract

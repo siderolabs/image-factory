@@ -2,6 +2,7 @@
   "extends": "./tsconfig.app.json",
   "include": [
     ".storybook/**/*",
+    "mocks/**/*",
     "src/**/*.mocks.*",
     "src/**/*.stories.*",
     "src/types/**/*",
@@ -12,6 +13,11 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.storybook.tsbuildinfo",
 
-    "types": ["node"]
+    "types": ["node"],
+
+    "paths": {
+      "@/*": ["./src/*"],
+      "@mocks/*": ["./mocks/*"]
+    }
   }
 }
