@@ -4,7 +4,7 @@
 
 import { describe, expect, test } from 'vitest'
 
-import { languages } from '@/i18n'
+import { languages, pluralForms } from '@/i18n'
 
 const locales = import.meta.glob<Record<string, string>>('@/locales/*.json', {
   eager: true,
@@ -19,12 +19,15 @@ function messages(lang: string) {
   return found[1]
 }
 
-/** The placeholders of each message, such as {link}, by message ID. */
+/**
+ * The placeholders of each message, such as {link}, by message ID. Each is listed once, as a plural message repeats
+ * them in each of its forms, and languages have different numbers of forms.
+ */
 function placeholders(messages: Record<string, string>) {
   return Object.fromEntries(
     Object.entries(messages).map(([key, message]) => [
       key,
-      [...message.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort(),
+      [...new Set([...message.matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort(),
     ]),
   )
 }
@@ -41,6 +44,18 @@ describe('locales', () => {
 
     expect(Object.keys(translated).sort()).toEqual(Object.keys(en).sort())
     expect(placeholders(translated)).toEqual(placeholders(en))
+  })
+
+  // A plural message that lists the wrong number of forms picks a missing or wrong form for some counts.
+  test.each(languages)('%s plural messages list its plural forms', (lang) => {
+    const plural = (messages: Record<string, string>) =>
+      Object.entries(messages)
+        .filter(([, message]) => message.includes('|'))
+        .map(([key, message]) => [key, message.split('|').length])
+
+    const translated = messages(lang)
+
+    expect(plural(translated)).toEqual(plural(en).map(([key]) => [key, pluralForms[lang].length]))
   })
 
   test.each(languages)('%s has no space before punctuation', (lang) => {

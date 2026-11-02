@@ -30,6 +30,8 @@ const { scan } = defineProps<{
 
 const { t } = useI18n()
 
+const severityLabel = (severity: Severity) => t(`final.scan.severity.${severity.toLowerCase()}`)
+
 const reports = computed(() => {
   const base = scan?.replace(/\/$/, '')
 
@@ -108,7 +110,7 @@ watchEffect(() => (scrollLocked.value = !!shown.value))
       </p>
       <div v-else class="mb-tight">
         <p class="mb-tight">
-          {{ total }} vulnerabilit{{ total === 1 ? 'y' : 'ies' }} after VEX suppression
+          {{ t('final.scan.summary', total) }}
         </p>
         <ul class="mb-tight flex flex-wrap gap-snug">
           <template v-for="severity in severities" :key="severity">
@@ -116,12 +118,12 @@ watchEffect(() => (scrollLocked.value = !!shown.value))
               <button
                 type="button"
                 class="inline-flex cursor-pointer items-center gap-micro rounded-sm border border-border-default bg-surface-card px-tight py-micro type-control text-content-default hover:bg-surface-hover"
-                :title="`Click to view ${severity} vulnerabilities`"
+                :title="t('final.scan.view_severity', { severity: severityLabel(severity) })"
                 @click="shown = severity"
               >
                 <span class="size-2 rounded-pill" :class="dots[severity]"></span>
                 <AppIcon name="search" class="mr-micro inline-block h-3 w-3" />
-                {{ severity }}: {{ bySeverity.get(severity)?.length }}
+                {{ severityLabel(severity) }}: {{ bySeverity.get(severity)?.length }}
               </button>
             </li>
           </template>
@@ -132,7 +134,7 @@ watchEffect(() => (scrollLocked.value = !!shown.value))
         <a class="ml-micro underline" :href="reports.json">JSON</a>
         <a class="ml-micro underline" :href="reports.sarif">SARIF</a>
         <a class="ml-micro underline" :href="reports.cdx">CycloneDX</a>
-        <a class="ml-micro underline" :href="reports.table">Table</a>
+        <a class="ml-micro underline" :href="reports.table">{{ t('final.scan.report_table') }}</a>
       </p>
     </template>
     <p v-else>
@@ -159,11 +161,11 @@ watchEffect(() => (scrollLocked.value = !!shown.value))
       <div
         class="flex flex-none items-center justify-between border-b border-border-default px-compact py-tight"
       >
-        <h3 class="type-section-title">{{ shown }} ({{ rows.length }})</h3>
+        <h3 class="type-section-title">{{ severityLabel(shown) }} ({{ rows.length }})</h3>
         <button
           type="button"
           class="cursor-pointer border-0 bg-transparent type-control text-content-secondary hover:text-content-emphasis"
-          aria-label="Close"
+          :aria-label="t('interface.close')"
           @click="shown = undefined"
         >
           &times;
@@ -174,10 +176,18 @@ watchEffect(() => (scrollLocked.value = !!shown.value))
           <thead>
             <tr class="border-b border-border-default text-left">
               <th class="w-40 py-micro pr-snug type-overline text-content-secondary">CVE</th>
-              <th class="w-[18%] py-micro pr-snug type-overline text-content-secondary">Package</th>
-              <th class="w-28 py-micro pr-snug type-overline text-content-secondary">Version</th>
-              <th class="w-[16%] py-micro pr-snug type-overline text-content-secondary">Fix</th>
-              <th class="py-micro type-overline text-content-secondary">Description</th>
+              <th class="w-[18%] py-micro pr-snug type-overline text-content-secondary">
+                {{ t('final.scan.column.package') }}
+              </th>
+              <th class="w-28 py-micro pr-snug type-overline text-content-secondary">
+                {{ t('final.scan.column.version') }}
+              </th>
+              <th class="w-[16%] py-micro pr-snug type-overline text-content-secondary">
+                {{ t('final.scan.column.fix') }}
+              </th>
+              <th class="py-micro type-overline text-content-secondary">
+                {{ t('final.scan.column.description') }}
+              </th>
             </tr>
           </thead>
           <tbody>

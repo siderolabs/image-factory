@@ -20,6 +20,27 @@ export const languageNames: Record<Language, string> = {
 
 type Messages = Record<string, string>
 
+// The plural forms each language's messages list, in order, separated by "|".
+export const pluralForms: Record<Language, Intl.LDMLPluralRule[]> = {
+  en: ['one', 'other'],
+  fr: ['one', 'other'],
+  pl: ['one', 'few', 'many'],
+  ru: ['one', 'few', 'many'],
+}
+
+// Picks a message's plural form from the language's CLDR plural rules, which vue-i18n's default English-like rule
+// gets wrong for Polish and Russian.
+function pluralRule(lang: Language) {
+  const rules = new Intl.PluralRules(lang)
+
+  return (choice: number) => {
+    const index = pluralForms[lang].indexOf(rules.select(choice))
+
+    // A form the messages don't list, such as French "many" for millions, takes the last one.
+    return index === -1 ? pluralForms[lang].length - 1 : index
+  }
+}
+
 // Each language loads when it is first used.
 const loaders: Record<Language, () => Promise<{ default: Messages }>> = {
   en: () => import('@/locales/en.json'),
@@ -58,6 +79,7 @@ export const i18n = createI18n({
   // Message IDs such as "page.header" sit next to "page.header.enterprise", so they are looked up as flat keys
   // rather than as nested paths.
   messageResolver: (messages, key) => (messages as Record<string, string>)[key] ?? null,
+  pluralRules: Object.fromEntries(languages.map((lang) => [lang, pluralRule(lang)])),
 })
 
 async function loadLanguage(lang: Language) {

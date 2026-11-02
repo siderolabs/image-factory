@@ -5,12 +5,15 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 -->
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core'
+import { useI18n } from 'vue-i18n'
 
 import AppIcon from '@/components/AppIcon.vue'
 
 const { text } = defineProps<{
   text: string
 }>()
+
+const { t } = useI18n()
 
 // legacy falls back to execCommand on plain http origins other than localhost, which have no Clipboard API.
 const { copy, copied } = useClipboard({ legacy: true, copiedDuring: 1000 })
@@ -20,8 +23,8 @@ const { copy, copied } = useClipboard({ legacy: true, copiedDuring: 1000 })
   <button
     type="button"
     class="group relative size-6 shrink-0 rounded-sm"
-    title="Copy to clipboard"
-    aria-label="Copy to clipboard"
+    :title="t('interface.copy_to_clipboard')"
+    :aria-label="t('interface.copy_to_clipboard')"
     @click="copy(text)"
   >
     <AppIcon

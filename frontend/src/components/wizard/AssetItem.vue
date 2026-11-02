@@ -93,11 +93,11 @@ const docs = computed(() => {
         <a :href="asset.checksums.sha512" class="ml-micro type-control text-accent-text underline">(sha512)</a>
       </template>
       <!-- prettier-ignore -->
-      <span v-else-if="!config.enterprise" class="ml-tight cursor-not-allowed type-meta text-content-secondary" :title="t('final.extra.checksum_enterprise_feature')">(checksums)</span>
+      <span v-else-if="!config.enterprise" class="ml-tight cursor-not-allowed type-meta text-content-secondary" :title="t('final.extra.checksum_enterprise_feature')">({{ t('final.extra.checksums') }})</span>
       <!-- prettier-ignore -->
       <a v-if="asset.signature" :href="asset.signature" class="ml-tight type-control text-accent-text underline" :title="t('final.extra.signature_hint')">(sig)</a>
       <!-- prettier-ignore -->
-      <span v-else-if="!config.enterprise" class="ml-tight cursor-not-allowed type-meta text-content-secondary" :title="t('final.extra.signature_enterprise_feature')">(signature)</span>
+      <span v-else-if="!config.enterprise" class="ml-tight cursor-not-allowed type-meta text-content-secondary" :title="t('final.extra.signature_enterprise_feature')">({{ t('final.extra.signature') }})</span>
       <!-- prettier-ignore -->
       <span v-if="docs" class="ml-micro">(<a :href="docsURL(version, docs.path)" target="_blank" rel="noopener noreferrer" class="font-medium text-accent-text underline">{{ docs.label }}</a>)</span>
     </dd>
