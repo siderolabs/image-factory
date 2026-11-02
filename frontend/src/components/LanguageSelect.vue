@@ -29,7 +29,7 @@ onKeyStroke('Escape', () => (open.value = false))
   <div ref="menu" class="relative">
     <button
       type="button"
-      class="flex items-center rounded-md p-tight text-content-default hover:bg-surface-hover hover:text-content-emphasis"
+      class="flex items-center rounded-sm p-tight text-content-default hover:bg-surface-hover hover:text-content-emphasis"
       :aria-label="t('lang.current', { lang: languageNames[locale as Language] })"
       :title="t('lang.name')"
       :aria-expanded="open"
@@ -47,7 +47,7 @@ onKeyStroke('Escape', () => (open.value = false))
         type="button"
         :lang="lang"
         :aria-pressed="locale === lang"
-        class="flex w-full items-center gap-tight rounded-md px-snug py-tight text-left text-content-default hover:bg-surface-hover"
+        class="flex w-full items-center gap-tight rounded-sm px-snug py-tight text-left text-content-default hover:bg-surface-hover"
         @click="choose(lang)"
       >
         <span class="grow">{{ languageNames[lang] }}</span>

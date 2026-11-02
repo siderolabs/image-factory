@@ -15,7 +15,7 @@ const { t } = useI18n()
 const route = useRoute()
 
 const navLink =
-  'rounded-md px-snug py-tight text-content-default transition-colors hover:bg-surface-hover hover:text-content-emphasis'
+  'rounded-lg px-snug py-tight text-content-default transition-colors hover:bg-surface-hover hover:text-content-emphasis'
 </script>
 
 <template>

@@ -38,7 +38,7 @@ onKeyStroke('Escape', () => (open.value = false))
   <div ref="menu" class="relative">
     <button
       type="button"
-      class="flex items-center rounded-md p-tight text-content-default hover:bg-surface-hover hover:text-content-emphasis"
+      class="flex items-center rounded-sm p-tight text-content-default hover:bg-surface-hover hover:text-content-emphasis"
       :aria-label="t('nav.theme.current', { theme: t(`nav.theme.${current}`) })"
       :title="t('nav.theme')"
       :aria-expanded="open"
@@ -55,7 +55,7 @@ onKeyStroke('Escape', () => (open.value = false))
         :key="choice"
         type="button"
         :aria-pressed="current === choice"
-        class="flex w-full items-center gap-tight rounded-md px-snug py-tight text-left text-content-default hover:bg-surface-hover"
+        class="flex w-full items-center gap-tight rounded-sm px-snug py-tight text-left text-content-default hover:bg-surface-hover"
         @click="choose(choice)"
       >
         <AppIcon :name="icons[choice]" class="size-4 shrink-0" />

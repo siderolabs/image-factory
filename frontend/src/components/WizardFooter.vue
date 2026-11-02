@@ -34,7 +34,7 @@ const { t } = useI18n()
         v-if="back"
         type="button"
         :disabled="busy"
-        class="inline-flex items-center gap-tight rounded-lg border border-border-default bg-surface-card px-compact py-tight text-center type-control text-content-emphasis transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+        class="inline-flex items-center gap-tight rounded-sm border border-border-default bg-surface-card px-compact py-tight text-center type-control text-content-emphasis transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
         @click="emit('back')"
       >
         <AppIcon name="arrow" class="size-3.5 rotate-180" />
@@ -45,7 +45,7 @@ const { t } = useI18n()
         v-if="next"
         type="button"
         :disabled="busy"
-        class="inline-flex items-center gap-tight rounded-lg border border-accent-fill bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent transition-colors hover:bg-accent-fill-hover active:bg-accent-fill-active disabled:cursor-not-allowed disabled:opacity-50"
+        class="inline-flex items-center gap-tight rounded-sm border border-accent-fill bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent transition-colors hover:bg-accent-fill-hover active:bg-accent-fill-active disabled:cursor-not-allowed disabled:opacity-50"
         @click="emit('next')"
       >
         {{ t('button.next') }}

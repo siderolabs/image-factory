@@ -58,7 +58,7 @@ defineExpose({
     <div class="mb-base">
       <div
         v-if="target === 'sbc'"
-        class="status-glyph status-info mb-compact rounded-lg border border-border-default bg-surface-card p-compact type-body text-content-default"
+        class="status-glyph status-info mb-compact rounded-base border border-border-default bg-surface-card p-compact type-body text-content-default"
         role="note"
       >
         {{ t('versions.sbc_note') }}

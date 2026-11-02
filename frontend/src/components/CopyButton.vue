@@ -19,7 +19,7 @@ const { copy, copied } = useClipboard({ legacy: true, copiedDuring: 2000 })
 <template>
   <button
     type="button"
-    class="shrink-0 rounded border p-micro transition-colors hover:bg-surface-hover hover:text-content-emphasis"
+    class="shrink-0 rounded-sm border p-micro transition-colors hover:bg-surface-hover hover:text-content-emphasis"
     :class="
       copied
         ? 'border-border-strong text-content-emphasis'

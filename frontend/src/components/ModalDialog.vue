@@ -36,7 +36,7 @@ useScrollLock(document.body, true)
       role="dialog"
       aria-modal="true"
       :aria-label="title"
-      class="relative my-auto w-full rounded-md border border-border-default bg-surface-card p-base shadow-modal"
+      class="relative my-auto w-full rounded-xl border border-border-default bg-surface-card p-base shadow-modal"
       :class="width === 'lg' ? 'max-w-lg' : 'max-w-md'"
     >
       <h2 class="mb-compact type-section-title text-content-emphasis">{{ title }}</h2>

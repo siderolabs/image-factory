@@ -15,12 +15,15 @@ const { code, block } = defineProps<{
 
 <template>
   <div
-    class="gap-tight bg-surface-inset"
-    :class="block ? 'flex items-start p-tight' : 'inline-flex items-center p-micro'"
+    class="gap-tight rounded-base border border-border-default bg-surface-inset"
+    :class="block ? 'flex items-start p-snug' : 'inline-flex items-center px-tight py-micro'"
   >
     <span
-      class="type-mono"
-      :class="{ 'break-all whitespace-pre-wrap text-content-emphasis': block }"
+      :class="
+        block
+          ? 'min-w-0 flex-1 type-code-block break-all whitespace-pre-wrap text-content-emphasis'
+          : 'type-mono'
+      "
     >
       {{ code }}
     </span>

@@ -76,7 +76,7 @@ defineExpose({ canNext: computed(() => !loading.value && !error.value), next })
         <label class="inline-flex cursor-pointer items-center">
           <input v-model="secureBoot" type="checkbox" name="secureboot" class="peer sr-only" />
           <div
-            class="relative h-6 w-11 rounded-full bg-border-control peer-checked:bg-accent-fill peer-focus-visible:shadow-focus after:absolute after:inset-s-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-content-on-accent after:transition-all after:content-[''] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full"
+            class="relative h-6 w-11 rounded-pill bg-border-control peer-checked:bg-accent-fill peer-focus-visible:shadow-focus after:absolute after:inset-s-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-pill after:bg-content-on-accent after:transition-all after:content-[''] peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full"
           ></div>
           <span class="ms-snug type-control text-content-emphasis">SecureBoot</span>
         </label>

@@ -109,9 +109,7 @@ const v = computed(() => `v${props.version}`)
         </Translation>
       </div>
 
-      <div class="mb-base bg-surface-inset p-micro type-code-block whitespace-pre">
-        {{ schematic }}
-      </div>
+      <CodeBlock v-if="schematic" class="mb-base" :code="schematic" block />
 
       <div class="mb-base leading-relaxed text-content-default">
         <h2 class="mb-snug type-section-title text-content-emphasis">

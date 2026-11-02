@@ -20,7 +20,7 @@ const { t } = useI18n()
     <!-- A plain link: /login hands the browser over to the identity provider. -->
     <a
       href="/login"
-      class="inline-flex items-center rounded-lg bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent transition-colors hover:bg-accent-fill-hover active:bg-accent-fill-active"
+      class="inline-flex items-center rounded-sm bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent transition-colors hover:bg-accent-fill-hover active:bg-accent-fill-active"
     >
       {{ t('auth.sign_in') }}
     </a>

@@ -22,7 +22,10 @@ defineExpose({ focus: () => input.value?.focus() })
   <input
     ref="input"
     v-model="model"
-    class="block w-full appearance-none rounded-lg border border-border-default bg-surface-inset type-body text-content-emphasis placeholder:text-content-muted focus-visible:border-border-accent"
-    :class="dense ? 'p-tight' : 'p-snug'"
+    class="block w-full appearance-none border border-border-default bg-surface-inset type-body text-content-emphasis placeholder:text-content-muted focus-visible:border-border-accent"
+    :class="[
+      dense ? 'p-tight' : 'p-snug',
+      $attrs.type === 'search' ? 'rounded-pill' : 'rounded-base',
+    ]"
   />
 </template>

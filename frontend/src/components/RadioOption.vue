@@ -28,7 +28,7 @@ const id = useId()
       type="radio"
       :name="name"
       :value="value"
-      class="mt-micro size-3.5 shrink-0 appearance-none rounded-full border border-border-control bg-size-[100%_100%] bg-center bg-no-repeat transition-colors checked:border-accent-fill checked:bg-accent-fill"
+      class="mt-micro size-3.5 shrink-0 appearance-none rounded-pill border border-border-control bg-size-[100%_100%] bg-center bg-no-repeat transition-colors checked:border-accent-fill checked:bg-accent-fill"
     />
     <div class="type-body">
       <div class="text-content-emphasis" :class="mono ? 'type-mono' : 'type-control'">

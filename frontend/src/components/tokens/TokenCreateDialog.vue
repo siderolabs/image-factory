@@ -115,7 +115,7 @@ function create() {
           <label
             v-for="a in actors"
             :key="a.id"
-            class="relative block cursor-pointer rounded-lg border border-border-default p-snug type-label hover:border-border-accent"
+            class="relative block cursor-pointer rounded-base border border-border-default p-snug type-label hover:border-border-accent"
           >
             <input v-model="actor" type="radio" name="actor" :value="a.id" class="peer sr-only" />
             <span class="block type-control text-content-emphasis">
@@ -125,7 +125,7 @@ function create() {
               {{ t(`tokens.create.actor_${a.id}_help`) }}
             </span>
             <span
-              class="pointer-events-none absolute inset-0 rounded-lg border border-transparent peer-checked:border-border-accent peer-focus-visible:shadow-focus"
+              class="pointer-events-none absolute inset-0 rounded-base border border-transparent peer-checked:border-border-accent peer-focus-visible:shadow-focus"
             ></span>
           </label>
         </div>
@@ -152,7 +152,7 @@ function create() {
         <button
           type="button"
           :disabled="pending"
-          class="rounded-lg border border-border-default bg-surface-card px-compact py-tight type-control text-content-emphasis hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+          class="rounded-sm border border-border-default bg-surface-card px-compact py-tight type-control text-content-emphasis hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
           @click="emit('close')"
         >
           {{ t('tokens.create.cancel') }}
@@ -160,7 +160,7 @@ function create() {
         <button
           type="submit"
           :disabled="pending"
-          class="inline-flex items-center gap-tight rounded-lg bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent hover:bg-accent-fill-hover active:bg-accent-fill-active disabled:cursor-not-allowed disabled:opacity-50"
+          class="inline-flex items-center gap-tight rounded-sm bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent hover:bg-accent-fill-hover active:bg-accent-fill-active disabled:cursor-not-allowed disabled:opacity-50"
         >
           <AppSpinner v-if="pending" class="h-3.5 w-3.5" />
           {{ t('tokens.create.button') }}

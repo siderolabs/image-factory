@@ -93,7 +93,7 @@ watchEffect(() => (scrollLocked.value = !!shown.value))
 
 <template>
   <section
-    class="mb-base rounded-md border border-border-default bg-surface-inset p-compact type-body"
+    class="mb-base rounded-base border border-border-default bg-surface-inset p-compact type-body"
   >
     <h2 class="mb-tight type-section-title">{{ t('final.scan.title') }}</h2>
     <template v-if="config.enterprise && reports">
@@ -115,11 +115,11 @@ watchEffect(() => (scrollLocked.value = !!shown.value))
             <li v-if="bySeverity.get(severity)?.length">
               <button
                 type="button"
-                class="inline-flex cursor-pointer items-center gap-micro rounded border border-border-default bg-surface-card px-tight py-micro type-control text-content-default hover:bg-surface-hover"
+                class="inline-flex cursor-pointer items-center gap-micro rounded-sm border border-border-default bg-surface-card px-tight py-micro type-control text-content-default hover:bg-surface-hover"
                 :title="`Click to view ${severity} vulnerabilities`"
                 @click="shown = severity"
               >
-                <span class="size-2 rounded-full" :class="dots[severity]"></span>
+                <span class="size-2 rounded-pill" :class="dots[severity]"></span>
                 <AppIcon name="search" class="mr-micro inline-block h-3 w-3" />
                 {{ severity }}: {{ bySeverity.get(severity)?.length }}
               </button>
@@ -154,7 +154,7 @@ watchEffect(() => (scrollLocked.value = !!shown.value))
     <div
       role="dialog"
       aria-modal="true"
-      class="relative flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-md border border-border-default bg-surface-card shadow-modal"
+      class="relative flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-border-default bg-surface-card shadow-modal"
     >
       <div
         class="flex flex-none items-center justify-between border-b border-border-default px-compact py-tight"

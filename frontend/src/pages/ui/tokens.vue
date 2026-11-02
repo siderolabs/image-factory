@@ -135,7 +135,7 @@ function expiry(token: Schemas['APIToken']) {
       <button
         type="button"
         :disabled="!actors"
-        class="inline-flex shrink-0 items-center gap-tight rounded-lg bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent transition-colors hover:bg-accent-fill-hover active:bg-accent-fill-active disabled:cursor-not-allowed disabled:opacity-50"
+        class="inline-flex shrink-0 items-center gap-tight rounded-sm bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent transition-colors hover:bg-accent-fill-hover active:bg-accent-fill-active disabled:cursor-not-allowed disabled:opacity-50"
         @click="creating = true"
       >
         <AppIcon name="plus" class="h-3.5 w-3.5" />
@@ -238,7 +238,7 @@ function expiry(token: Schemas['APIToken']) {
       <div class="flex justify-end">
         <button
           type="button"
-          class="rounded-lg border border-border-default bg-surface-card px-compact py-tight type-control text-content-emphasis hover:bg-surface-hover"
+          class="rounded-sm border border-border-default bg-surface-card px-compact py-tight type-control text-content-emphasis hover:bg-surface-hover"
           @click="created = undefined"
         >
           {{ t('tokens.secret.close') }}
@@ -255,14 +255,14 @@ function expiry(token: Schemas['APIToken']) {
       <div class="flex justify-end gap-tight">
         <button
           type="button"
-          class="rounded-lg border border-border-default bg-surface-card px-compact py-tight type-control text-content-emphasis hover:bg-surface-hover"
+          class="rounded-sm border border-border-default bg-surface-card px-compact py-tight type-control text-content-emphasis hover:bg-surface-hover"
           @click="revokeTarget = undefined"
         >
           {{ t('tokens.create.cancel') }}
         </button>
         <button
           type="button"
-          class="rounded-lg bg-status-danger-fill px-compact py-tight text-center type-control text-status-danger-on-fill"
+          class="rounded-sm bg-status-danger-fill px-compact py-tight text-center type-control text-status-danger-on-fill"
           @click="revoke"
         >
           {{ t('tokens.revoke.button') }}
