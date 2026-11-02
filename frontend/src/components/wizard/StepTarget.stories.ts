@@ -14,6 +14,9 @@ const meta: Meta<typeof StepTarget> = {
   args: {
     onNext: fn(),
   },
+  parameters: {
+    config: { version: 'v1.0.0' },
+  },
 }
 
 export default meta

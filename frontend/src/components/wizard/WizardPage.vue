@@ -12,7 +12,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { boardsQuery, createSchematicMutation, platformsQuery, schematicQuery } from '@/api/queries'
 import AppSpinner from '@/components/AppSpinner.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
-import PageIntro from '@/components/PageIntro.vue'
 import StepArch from '@/components/wizard/StepArch.vue'
 import StepBoard from '@/components/wizard/StepBoard.vue'
 import StepCustomization from '@/components/wizard/StepCustomization.vue'
@@ -193,9 +192,7 @@ watch(
 <template>
   <div class="flex h-full flex-col">
     <div class="grow overflow-auto">
-      <main class="container mx-auto flex h-full flex-col gap-section px-base py-section">
-        <PageIntro />
-
+      <main class="container mx-auto h-full px-base py-section">
         <AppSpinner v-if="restoring || creating" class="size-8" />
         <ErrorNote v-else-if="displayError" :message="displayError" />
         <StepTarget v-else-if="step === 'target'" ref="step" @next="next" />
