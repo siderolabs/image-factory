@@ -1,5 +1,6 @@
 {
   "lang.name": "Язык",
+  "lang.current": "Язык: {lang}",
   "app.name": "Генератор Образов",
   "page.header": "Генератор образов Talos Linux",
   "page.header.enterprise": "Enterprise генератор образов Talos Linux",

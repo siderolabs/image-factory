@@ -1,5 +1,6 @@
 {
   "lang.name": "Language",
+  "lang.current": "Language: {lang}",
   "app.name": "Image Factory",
   "page.header": "Talos Linux Image Factory",
   "page.header.enterprise": "Talos Linux Image Factory Enterprise",

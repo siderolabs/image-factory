@@ -207,10 +207,8 @@ test('Switch the language', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Hardware Type' })).toBeVisible()
 
-  await page
-    .getByRole('combobox')
-    .filter({ has: page.getByRole('option', { name: 'Français' }) })
-    .selectOption('fr')
+  await page.getByRole('button', { name: 'Language: English' }).click()
+  await page.getByRole('button', { name: 'Français' }).click()
   await expect(page.getByRole('heading', { name: 'Type de matériel' })).toBeVisible()
 
   await test.step('The language sticks after a reload', async () => {
