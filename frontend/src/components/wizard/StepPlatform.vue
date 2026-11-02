@@ -59,7 +59,7 @@ defineExpose({ canNext: computed(() => !!platform.value), next })
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('cloud.title') }}</h1>
     <AppSpinner v-if="isLoading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error.message" />
-    <div v-else class="mb-base space-y-snug">
+    <div v-else class="space-y-snug">
       <RadioOption
         v-for="p in platforms"
         :key="p.name"

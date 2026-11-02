@@ -100,7 +100,10 @@ const v = computed(() => `v${props.version}`)
     <AppSpinner v-if="loading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error" />
     <template v-else-if="assets && features">
-      <ScanSummary v-if="features.includes('VEX')" :scan="assets.scan" />
+      <!-- ScanSummary has two root nodes, so the wrapper carries the spacing. -->
+      <div v-if="features.includes('VEX')" class="mb-base">
+        <ScanSummary :scan="assets.scan" />
+      </div>
 
       <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('final.title') }}</h1>
       <div class="mb-base type-body">
@@ -111,7 +114,7 @@ const v = computed(() => `v${props.version}`)
 
       <CodeBlock v-if="schematic" class="mb-base" :code="schematic" block />
 
-      <div class="mb-base leading-relaxed text-content-default">
+      <div class="leading-relaxed text-content-default">
         <h2 class="mb-snug type-section-title text-content-emphasis">
           {{ t('final.first_boot') }}
         </h2>
@@ -198,9 +201,7 @@ const v = computed(() => `v${props.version}`)
         <h2 class="mt-base mb-snug type-section-title text-content-emphasis">
           {{ t('final.documentation') }}
         </h2>
-        <ul
-          class="mb-compact list-disc ps-base *:my-micro *:ps-micro marker:text-content-secondary"
-        >
+        <ul class="list-disc ps-base *:my-micro *:ps-micro marker:text-content-secondary">
           <li>
             <a
               target="_blank"
@@ -307,7 +308,7 @@ const v = computed(() => `v${props.version}`)
           <h2 class="mt-base mb-snug type-section-title text-content-emphasis">
             {{ t('final.extra') }}
           </h2>
-          <dl class="mb-compact">
+          <dl>
             <AssetItem
               v-for="asset in assets.extraAssets"
               :key="asset.url"
@@ -333,7 +334,7 @@ const v = computed(() => `v${props.version}`)
           <h2 class="mt-base mb-snug type-section-title text-content-emphasis">
             {{ t('final.extra.spdx') }}
           </h2>
-          <dl class="mb-compact">
+          <dl>
             <dd v-if="assets.sbom" class="mt-micro ps-base">
               <a :href="assets.sbom" class="font-medium text-accent-text underline">
                 {{ assets.sbom }}
@@ -360,7 +361,7 @@ const v = computed(() => `v${props.version}`)
           <h2 class="mt-base mb-snug type-section-title text-content-emphasis">
             {{ t('final.extra.vex') }}
           </h2>
-          <dl class="mb-compact">
+          <dl>
             <dd v-if="assets.vex" class="mt-micro ps-base">
               <a :href="assets.vex" class="font-medium text-accent-text underline">
                 {{ assets.vex }}

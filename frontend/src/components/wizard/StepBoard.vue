@@ -52,7 +52,7 @@ defineExpose({
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('singleboard.title') }}</h1>
     <AppSpinner v-if="isLoading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error.message" />
-    <div v-else class="mb-base space-y-snug">
+    <div v-else class="space-y-snug">
       <RadioOption
         v-for="b in boards"
         :key="b.name"

@@ -59,7 +59,7 @@ defineExpose({ canNext: true, next: () => emit('next', { target: target.value })
     </div>
 
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('hardware.title') }}</h1>
-    <div class="mb-base space-y-snug">
+    <div class="space-y-snug">
       <RadioOption v-model="target" name="target" value="metal" :label="t('hardware.bmm.name')">
         {{ t('hardware.bmm.description') }}
       </RadioOption>

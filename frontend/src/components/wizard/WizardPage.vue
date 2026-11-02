@@ -192,7 +192,7 @@ watch(
 <template>
   <div class="flex h-full flex-col">
     <div class="grow overflow-auto">
-      <main class="container mx-auto h-full px-base py-section">
+      <main class="container mx-auto flex min-h-full flex-col px-base py-section">
         <AppSpinner v-if="restoring || creating" class="size-8" />
         <ErrorNote v-else-if="displayError" :message="displayError" />
         <StepTarget v-else-if="step === 'target'" ref="step" @next="next" />

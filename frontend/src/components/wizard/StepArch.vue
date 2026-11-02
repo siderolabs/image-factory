@@ -65,7 +65,7 @@ defineExpose({ canNext: computed(() => !loading.value && !error.value), next })
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('architecture.title') }}</h1>
     <AppSpinner v-if="loading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error" />
-    <div v-else class="mb-base space-y-snug">
+    <div v-else class="space-y-snug">
       <RadioOption v-model="arch" name="arch" value="amd64" label="amd64" mono>
         {{ t('architecture.amd64') }}
       </RadioOption>

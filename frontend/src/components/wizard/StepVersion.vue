@@ -55,7 +55,7 @@ defineExpose({
 <template>
   <div>
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('versions.title') }}</h1>
-    <div class="mb-base">
+    <div>
       <div
         v-if="target === 'sbc'"
         class="status-glyph status-info mb-compact rounded-base border border-border-default bg-surface-card p-compact type-body text-content-default"
@@ -77,7 +77,7 @@ defineExpose({
           <br />
           {{ t('versions.recommendation.pre_release') }}
         </p>
-        <div v-if="version" class="mt-base mb-base leading-relaxed text-content-default">
+        <div v-if="version" class="mt-base leading-relaxed text-content-default">
           <p class="mb-compact">{{ t('docs.title', { version }) }}</p>
           <ul class="list-disc ps-base *:my-micro *:ps-micro marker:text-content-secondary">
             <li>

@@ -55,7 +55,7 @@ function tag(ref: string) {
 </script>
 
 <template>
-  <div class="flex h-full flex-col gap-snug overflow-hidden">
+  <div class="flex min-h-0 grow basis-0 flex-col gap-snug overflow-hidden">
     <h1 class="type-section-title text-content-emphasis">{{ t('extensions.title') }}</h1>
 
     <div class="flex grow flex-col overflow-hidden">

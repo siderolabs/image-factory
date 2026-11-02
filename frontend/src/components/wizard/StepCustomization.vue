@@ -103,15 +103,15 @@ defineExpose({ canNext: computed(() => !loading.value && !error.value), next })
     <AppSpinner v-if="loading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error" />
 
-    <template v-else>
-      <div class="mb-base">
+    <div v-else class="flex flex-col gap-base">
+      <div>
         <label :for="`${id}-cmdline`" class="mb-tight block type-label text-content-secondary">
           {{ t('customization.cmdline') }}
         </label>
         <AppInput :id="`${id}-cmdline`" v-model="cmdline" placeholder="-console console=tty0" />
       </div>
 
-      <div class="ms-tight mb-base leading-relaxed text-content-default">
+      <div class="ms-tight leading-relaxed text-content-default">
         <p class="mb-compact">
           <Translation scope="global" keypath="customization.cmdline.description_text">
             <template #link>
@@ -154,7 +154,7 @@ defineExpose({ canNext: computed(() => !loading.value && !error.value), next })
       </div>
 
       <template v-if="features?.includes('EmbeddedConfig')">
-        <div class="mb-base">
+        <div>
           <label :for="`${id}-embedded`" class="mb-tight block type-label text-content-secondary">
             {{ t('customization.embedded_config') }}
           </label>
@@ -169,7 +169,7 @@ auto: off"
           />
         </div>
 
-        <div class="ms-tight mb-base leading-relaxed text-content-default">
+        <div class="ms-tight leading-relaxed text-content-default">
           <p class="mb-compact">
             <Translation scope="global" keypath="customization.embedded_config.description_text">
               <template #link>
@@ -194,7 +194,7 @@ auto: off"
       </template>
 
       <template v-if="target === 'sbc'">
-        <div class="mt-base mb-base">
+        <div>
           <label :for="`${id}-overlay`" class="mb-tight block type-label text-content-secondary">
             {{ t('customization.overlay') }}
           </label>
@@ -227,7 +227,7 @@ auto: off"
         </div>
       </template>
 
-      <div v-if="features?.includes('BootloaderSelection')" class="mt-base mb-base space-y-snug">
+      <div v-if="features?.includes('BootloaderSelection')" class="space-y-snug">
         <p class="mb-tight block type-label text-content-secondary">
           {{ t('customization.bootloader.title') }}
         </p>
@@ -265,6 +265,6 @@ auto: off"
           {{ t('customization.bootloader.dual_boot.description') }}
         </RadioOption>
       </div>
-    </template>
+    </div>
   </div>
 </template>

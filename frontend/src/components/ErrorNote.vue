@@ -10,7 +10,7 @@ defineProps<{
 </script>
 
 <template>
-  <p role="alert" class="status-glyph status-failed mb-compact type-body text-content-default">
+  <p role="alert" class="status-glyph status-failed type-body text-content-default">
     {{ message }}
   </p>
 </template>

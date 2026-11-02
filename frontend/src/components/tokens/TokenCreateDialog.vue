@@ -81,7 +81,7 @@ function create() {
 <template>
   <!-- A create in flight keeps the dialog open: closing it would let the next click mint a second token. -->
   <ModalDialog :title="t('tokens.create.button')" :locked="pending" @close="emit('close')">
-    <ErrorNote v-if="error" :message="error" />
+    <ErrorNote v-if="error" class="mb-compact" :message="error" />
     <form @submit.prevent="create">
       <label :for="`${id}-name`" class="mb-micro block type-label text-content-secondary">
         {{ t('tokens.create.name_label') }}

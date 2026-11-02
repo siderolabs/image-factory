@@ -94,9 +94,7 @@ watchEffect(() => (scrollLocked.value = !!shown.value))
 </script>
 
 <template>
-  <section
-    class="mb-base rounded-base border border-border-default bg-surface-inset p-compact type-body"
-  >
+  <section class="rounded-base border border-border-default bg-surface-inset p-compact type-body">
     <h2 class="mb-tight type-section-title">{{ t('final.scan.title') }}</h2>
     <template v-if="config.enterprise && reports">
       <p v-if="isLoading" class="mb-tight text-content-default">

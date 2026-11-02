@@ -145,8 +145,8 @@ function expiry(token: Schemas['APIToken']) {
 
     <p class="mb-base type-body text-content-default">{{ t('tokens.description') }}</p>
 
-    <ErrorNote v-if="error" :message="error" />
-    <ErrorNote v-if="actorsError" :message="actorsError.message" />
+    <ErrorNote v-if="error" class="mb-compact" :message="error" />
+    <ErrorNote v-if="actorsError" class="mb-compact" :message="actorsError.message" />
 
     <!-- The listing can take seconds; an empty table in the meantime would read as "no tokens". -->
     <div
