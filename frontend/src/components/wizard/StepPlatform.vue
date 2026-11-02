@@ -11,7 +11,7 @@ import { useI18n } from 'vue-i18n'
 import { platformsQuery } from '@/api/queries'
 import AppSpinner from '@/components/AppSpinner.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
-import RadioCard from '@/components/RadioCard.vue'
+import RadioOption from '@/components/RadioOption.vue'
 import { docsURL } from '@/lib/docs'
 import { draft } from '@/wizard/draft'
 import type { Arch, WizardParams } from '@/wizard/params'
@@ -59,8 +59,8 @@ defineExpose({ canNext: computed(() => !!platform.value), next })
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('cloud.title') }}</h1>
     <AppSpinner v-if="isLoading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error.message" />
-    <div v-else class="mb-base space-y-tight">
-      <RadioCard
+    <div v-else class="mb-base space-y-snug">
+      <RadioOption
         v-for="p in platforms"
         :key="p.name"
         v-model="platform"
@@ -70,7 +70,7 @@ defineExpose({ canNext: computed(() => !!platform.value), next })
       >
         <!-- prettier-ignore -->
         <span>{{ p.description }} (<a :href="docsURL(version, p.documentation)" target="_blank" rel="noopener noreferrer" class="text-accent-text underline">{{ t('common.documentation') }}</a>).</span>
-      </RadioCard>
+      </RadioOption>
     </div>
   </div>
 </template>

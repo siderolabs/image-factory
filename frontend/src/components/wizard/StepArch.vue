@@ -11,7 +11,7 @@ import { Translation, useI18n } from 'vue-i18n'
 import { featuresQuery, platformsQuery } from '@/api/queries'
 import AppSpinner from '@/components/AppSpinner.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
-import RadioCard from '@/components/RadioCard.vue'
+import RadioOption from '@/components/RadioOption.vue'
 import { docsURL } from '@/lib/docs'
 import { draft } from '@/wizard/draft'
 import type { Arch, Target, WizardParams } from '@/wizard/params'
@@ -65,13 +65,13 @@ defineExpose({ canNext: computed(() => !loading.value && !error.value), next })
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('architecture.title') }}</h1>
     <AppSpinner v-if="loading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error" />
-    <div v-else class="mb-base space-y-tight">
-      <RadioCard v-model="arch" name="arch" value="amd64" label="amd64" mono>
+    <div v-else class="mb-base space-y-snug">
+      <RadioOption v-model="arch" name="arch" value="amd64" label="amd64" mono>
         {{ t('architecture.amd64') }}
-      </RadioCard>
-      <RadioCard v-model="arch" name="arch" value="arm64" label="arm64" mono>
+      </RadioOption>
+      <RadioOption v-model="arch" name="arch" value="arm64" label="arm64" mono>
         {{ t(target === 'metal' ? 'architecture.arm64' : 'architecture.other') }}
-      </RadioCard>
+      </RadioOption>
       <div v-if="secureBootSupported" class="pt-section">
         <label class="inline-flex cursor-pointer items-center">
           <input v-model="secureBoot" type="checkbox" name="secureboot" class="peer sr-only" />

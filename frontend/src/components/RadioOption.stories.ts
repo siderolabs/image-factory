@@ -5,10 +5,10 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 import { fn } from 'storybook/test'
 
-import RadioCard from './RadioCard.vue'
+import RadioOption from './RadioOption.vue'
 
-const meta: Meta<typeof RadioCard> = {
-  component: RadioCard,
+const meta: Meta<typeof RadioOption> = {
+  component: RadioOption,
   args: {
     name: 'target',
     value: 'metal',

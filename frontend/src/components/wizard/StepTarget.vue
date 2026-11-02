@@ -7,7 +7,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import RadioCard from '@/components/RadioCard.vue'
+import RadioOption from '@/components/RadioOption.vue'
 import { draft } from '@/wizard/draft'
 import type { Target, WizardParams } from '@/wizard/params'
 
@@ -25,16 +25,16 @@ defineExpose({ canNext: true, next: () => emit('next', { target: target.value })
 <template>
   <div>
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('hardware.title') }}</h1>
-    <div class="mb-base space-y-tight">
-      <RadioCard v-model="target" name="target" value="metal" :label="t('hardware.bmm.name')">
+    <div class="mb-base space-y-snug">
+      <RadioOption v-model="target" name="target" value="metal" :label="t('hardware.bmm.name')">
         {{ t('hardware.bmm.description') }}
-      </RadioCard>
-      <RadioCard v-model="target" name="target" value="cloud" :label="t('hardware.cs.name')">
+      </RadioOption>
+      <RadioOption v-model="target" name="target" value="cloud" :label="t('hardware.cs.name')">
         {{ t('hardware.cs.description') }}
-      </RadioCard>
-      <RadioCard v-model="target" name="target" value="sbc" :label="t('hardware.sbc.name')">
+      </RadioOption>
+      <RadioOption v-model="target" name="target" value="sbc" :label="t('hardware.sbc.name')">
         {{ t('hardware.sbc.description') }}
-      </RadioCard>
+      </RadioOption>
     </div>
   </div>
 </template>

@@ -20,10 +20,7 @@ const id = useId()
 </script>
 
 <template>
-  <label
-    :for="id"
-    class="flex cursor-pointer items-start gap-snug rounded-lg border border-border-default p-snug transition-colors hover:border-border-strong hover:bg-surface-hover has-checked:border-border-accent has-checked:bg-accent-subtle"
-  >
+  <label :for="id" class="flex cursor-pointer items-start gap-snug">
     <input
       :id="id"
       v-model="model"
@@ -31,7 +28,7 @@ const id = useId()
       type="radio"
       :name="name"
       :value="value"
-      class="mt-micro h-3.5 w-3.5 shrink-0 appearance-none rounded-full border border-border-control bg-transparent bg-size-[100%_100%] bg-center bg-no-repeat bg-origin-border align-middle select-none checked:border-accent-fill checked:bg-accent-fill"
+      class="mt-micro size-3.5 shrink-0 appearance-none rounded-full border border-border-control bg-size-[100%_100%] bg-center bg-no-repeat transition-colors checked:border-accent-fill checked:bg-accent-fill"
     />
     <div class="type-body">
       <div class="text-content-emphasis" :class="mono ? 'type-mono' : 'type-control'">

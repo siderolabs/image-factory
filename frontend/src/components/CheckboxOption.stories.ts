@@ -5,10 +5,10 @@ import { faker } from '@faker-js/faker'
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
 import { fn } from 'storybook/test'
 
-import CheckboxCard from './CheckboxCard.vue'
+import CheckboxOption from './CheckboxOption.vue'
 
-const meta: Meta<typeof CheckboxCard> = {
-  component: CheckboxCard,
+const meta: Meta<typeof CheckboxOption> = {
+  component: CheckboxOption,
   args: {
     'onUpdate:modelValue': fn(),
   },

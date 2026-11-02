@@ -10,6 +10,6 @@ const model = defineModel<string>()
 <template>
   <textarea
     v-model="model"
-    class="block w-full rounded-lg border border-border-default bg-surface-inset p-snug type-body text-content-emphasis placeholder:text-content-muted focus-visible:border-border-focus"
+    class="block w-full rounded-lg border border-border-default bg-surface-inset p-snug type-body text-content-emphasis placeholder:text-content-muted focus-visible:border-border-accent"
   ></textarea>
 </template>

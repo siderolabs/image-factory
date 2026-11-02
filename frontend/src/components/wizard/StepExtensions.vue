@@ -12,7 +12,7 @@ import { extensionsQuery } from '@/api/queries'
 import AppIcon from '@/components/AppIcon.vue'
 import AppInput from '@/components/AppInput.vue'
 import AppSpinner from '@/components/AppSpinner.vue'
-import CheckboxCard from '@/components/CheckboxCard.vue'
+import CheckboxOption from '@/components/CheckboxOption.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
 import { draft } from '@/wizard/draft'
 import type { WizardParams } from '@/wizard/params'
@@ -97,8 +97,8 @@ function tag(ref: string) {
       <AppSpinner v-if="isLoading" class="size-8" />
       <ErrorNote v-else-if="error" :message="error.message" />
 
-      <div v-else class="flex-1 grow overflow-auto px-tight">
-        <CheckboxCard
+      <div v-else class="flex-1 grow space-y-snug overflow-auto px-tight">
+        <CheckboxOption
           v-for="e in shown"
           :key="e.name"
           v-model="selected"

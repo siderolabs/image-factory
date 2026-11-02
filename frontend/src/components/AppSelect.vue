@@ -15,7 +15,7 @@ const { dense } = defineProps<{
 <template>
   <select
     v-model="model"
-    class="block appearance-none rounded-lg border border-border-default bg-surface-inset type-body focus-visible:border-border-focus"
+    class="block appearance-none rounded-lg border border-border-default bg-surface-inset type-body focus-visible:border-border-accent"
     :class="dense ? 'p-tight' : 'p-snug'"
   >
     <slot />

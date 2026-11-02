@@ -16,7 +16,7 @@ import AppSpinner from '@/components/AppSpinner.vue'
 import AppTextarea from '@/components/AppTextarea.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
 import InlineCode from '@/components/InlineCode.vue'
-import RadioCard from '@/components/RadioCard.vue'
+import RadioOption from '@/components/RadioOption.vue'
 import { docsURL } from '@/lib/docs'
 import { draft } from '@/wizard/draft'
 import type { Target, WizardParams } from '@/wizard/params'
@@ -227,27 +227,27 @@ auto: off"
         </div>
       </template>
 
-      <div v-if="features?.includes('BootloaderSelection')" class="mt-base mb-base space-y-tight">
+      <div v-if="features?.includes('BootloaderSelection')" class="mt-base mb-base space-y-snug">
         <p class="mb-tight block type-label text-content-secondary">
           {{ t('customization.bootloader.title') }}
         </p>
-        <RadioCard
+        <RadioOption
           v-model="bootloader"
           name="bootloader"
           value="auto"
           :label="t('customization.bootloader.auto.name')"
         >
           {{ t('customization.bootloader.auto.description') }}
-        </RadioCard>
-        <RadioCard
+        </RadioOption>
+        <RadioOption
           v-model="bootloader"
           name="bootloader"
           value="sd-boot"
           :label="t('customization.bootloader.sd_boot.name')"
         >
           {{ t('customization.bootloader.sd_boot.description') }}
-        </RadioCard>
-        <RadioCard
+        </RadioOption>
+        <RadioOption
           v-if="!secureBoot"
           v-model="bootloader"
           name="bootloader"
@@ -255,15 +255,15 @@ auto: off"
           :label="t('customization.bootloader.grub.name')"
         >
           {{ t('customization.bootloader.grub.description') }}
-        </RadioCard>
-        <RadioCard
+        </RadioOption>
+        <RadioOption
           v-model="bootloader"
           name="bootloader"
           value="dual-boot"
           :label="t('customization.bootloader.dual_boot.name')"
         >
           {{ t('customization.bootloader.dual_boot.description') }}
-        </RadioCard>
+        </RadioOption>
       </div>
     </template>
   </div>

@@ -11,7 +11,7 @@ import { Translation, useI18n } from 'vue-i18n'
 import { boardsQuery } from '@/api/queries'
 import AppSpinner from '@/components/AppSpinner.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
-import RadioCard from '@/components/RadioCard.vue'
+import RadioOption from '@/components/RadioOption.vue'
 import { docsURL } from '@/lib/docs'
 import { draft } from '@/wizard/draft'
 import type { WizardParams } from '@/wizard/params'
@@ -52,8 +52,8 @@ defineExpose({
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('singleboard.title') }}</h1>
     <AppSpinner v-if="isLoading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error.message" />
-    <div v-else class="mb-base space-y-tight">
-      <RadioCard
+    <div v-else class="mb-base space-y-snug">
+      <RadioOption
         v-for="b in boards"
         :key="b.name"
         v-model="board"
@@ -75,7 +75,7 @@ defineExpose({
           </template>
         </Translation>
         <template v-else>{{ t('common.runs_on_board', { board: b.label }) }}</template>
-      </RadioCard>
+      </RadioOption>
     </div>
   </div>
 </template>
