@@ -13,22 +13,26 @@ const { text } = defineProps<{
 }>()
 
 // legacy falls back to execCommand on plain http origins other than localhost, which have no Clipboard API.
-const { copy, copied } = useClipboard({ legacy: true, copiedDuring: 2000 })
+const { copy, copied } = useClipboard({ legacy: true, copiedDuring: 1000 })
 </script>
 
 <template>
   <button
     type="button"
-    class="shrink-0 rounded-sm border p-micro transition-colors hover:bg-surface-hover hover:text-content-emphasis"
-    :class="
-      copied
-        ? 'border-border-strong text-content-emphasis'
-        : 'border-border-default text-content-default'
-    "
+    class="group relative size-6 shrink-0 rounded-sm"
     title="Copy to clipboard"
     aria-label="Copy to clipboard"
     @click="copy(text)"
   >
-    <AppIcon name="copy" class="h-3 w-3" />
+    <AppIcon
+      name="check"
+      class="absolute inset-0 m-auto size-4 text-status-success-text transition-all duration-300"
+      :class="copied ? 'opacity-100' : 'opacity-0'"
+    />
+    <AppIcon
+      name="copy"
+      class="absolute inset-0 m-auto size-4 text-content-secondary transition-all duration-300 group-hover:text-content-emphasis"
+      :class="copied ? 'opacity-0' : 'opacity-100'"
+    />
   </button>
 </template>
