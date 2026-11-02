@@ -15,6 +15,7 @@
   "nav.theme.current": "Motyw: {theme}",
   "nav.theme.light": "Jasny",
   "nav.theme.dark": "Ciemny",
+  "nav.theme.dim": "Przyciemniony",
   "nav.theme.system": "Systemowy",
   "auth.sign_in": "Zaloguj się",
   "auth.login_error.title": "Logowanie nie powiodło się",

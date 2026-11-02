@@ -14,7 +14,7 @@ import { defineConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
 import VueRouter from 'vue-router/vite'
 
-import { themeInit } from './vite-theme-init'
+import { themeInit } from './vite-theme-init.ts'
 
 dotenv.config({ quiet: true })
 
@@ -43,7 +43,7 @@ export default defineConfig({
   // Pages are only reached through the vue-router/auto-routes virtual module, which the dependency scanner can't
   // follow. Scanning the sources finds their dependencies up front, rather than reloading mid-run on a cold cache.
   optimizeDeps: {
-    entries: ['index.html', 'src/**/*.{vue,ts}'],
+    entries: ['index.html', 'src/**/*.{vue,ts}', '!src/**/*.{spec,stories,mocks}.ts'],
   },
   resolve: {
     alias: {

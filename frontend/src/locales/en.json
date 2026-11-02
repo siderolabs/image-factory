@@ -15,6 +15,7 @@
   "nav.theme.current": "Theme: {theme}",
   "nav.theme.light": "Light",
   "nav.theme.dark": "Dark",
+  "nav.theme.dim": "Dim",
   "nav.theme.system": "System",
   "auth.sign_in": "Sign in",
   "auth.login_error.title": "Sign-in failed",

@@ -15,6 +15,7 @@
   "nav.theme.current": "Thème: {theme}",
   "nav.theme.light": "Clair",
   "nav.theme.dark": "Sombre",
+  "nav.theme.dim": "Tamisé",
   "nav.theme.system": "Système",
   "auth.sign_in": "Se connecter",
   "auth.login_error.title": "Échec de la connexion",

@@ -16,8 +16,7 @@ import { routes } from 'vue-router/auto-routes'
 
 import { config } from '../src/config'
 import { i18n, type Language, languageNames, setLanguage } from '../src/i18n'
-import { useTheme } from '../src/lib/theme'
-import { applyTheme, parseThemeChoice } from '../src/lib/theme-core'
+import { applyTheme, useTheme } from '../src/lib/theme'
 import { draft } from '../src/wizard/draft'
 
 // Relative faker dates count back from the current hour rather than the current moment, so
@@ -46,6 +45,7 @@ const preview: Preview = {
         items: [
           { value: 'light', title: 'Light', icon: 'sun' },
           { value: 'dark', title: 'Dark', icon: 'moon' },
+          { value: 'dim', title: 'Dim', icon: 'circlehollow' },
           { value: 'system', title: 'System', icon: 'browser' },
         ],
         dynamicTitle: true,
@@ -94,12 +94,12 @@ const preview: Preview = {
   ],
   decorators: [
     // Stories have no App.vue to apply the theme, so the toolbar sets the
-    // choice that components like the theme menu read, and applies it.
+    // preference that components like the theme menu read, and applies it.
     (_story, { globals }) => {
-      const { theme, applied, setTheme } = useTheme()
+      const { preference, theme } = useTheme()
 
-      setTheme(parseThemeChoice(globals.theme))
-      applyTheme(theme.value, applied.value)
+      preference.value = globals.theme
+      applyTheme(theme.value)
 
       return { template: '<story />' }
     },

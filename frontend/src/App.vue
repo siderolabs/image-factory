@@ -10,16 +10,15 @@ import { useI18n } from 'vue-i18n'
 
 import AppHeader from '@/components/AppHeader.vue'
 import { config } from '@/config'
-import { useTheme } from '@/lib/theme'
-import { applyTheme } from '@/lib/theme-core'
+import { applyTheme, useTheme } from '@/lib/theme'
 
 const { t } = useI18n()
-const { theme, applied } = useTheme()
+const { theme } = useTheme()
 
 useTitle(() => t(config.enterprise ? 'page.header.enterprise' : 'page.header'))
 
 // src/theme-init.ts applies the stored theme before first paint; this keeps <html> in step with later changes.
-watchEffect(() => applyTheme(theme.value, applied.value))
+watchEffect(() => applyTheme(theme.value))
 </script>
 
 <template>

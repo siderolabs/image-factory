@@ -4,16 +4,14 @@
 
 // Applies the theme before first paint. Inlined into <head> by vite-theme-init.ts, as module scripts run too late.
 
-import { applyTheme, parseThemeChoice, resolveTheme, THEME_STORAGE_KEY } from '@/lib/theme-core'
+import { applyTheme, resolveTheme, THEME_STORAGE_KEY } from '@/lib/theme-core'
 
-let stored: string | null = null
+let preference: string | null = null
 
 try {
-  stored = localStorage.getItem(THEME_STORAGE_KEY)
+  preference = localStorage.getItem(THEME_STORAGE_KEY)
 } catch {
   // Blocked storage: follow the system.
 }
 
-const choice = parseThemeChoice(stored)
-
-applyTheme(choice, resolveTheme(choice, window.matchMedia('(prefers-color-scheme: dark)').matches))
+applyTheme(resolveTheme(preference, window.matchMedia('(prefers-color-scheme: dark)').matches))

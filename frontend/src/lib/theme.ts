@@ -2,28 +2,18 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import { usePreferredDark, useStorage } from '@vueuse/core'
+import { createSharedComposable, useLocalStorage, usePreferredDark } from '@vueuse/core'
 import { computed } from 'vue'
 
-import {
-  parseThemeChoice,
-  resolveTheme,
-  THEME_STORAGE_KEY,
-  type ThemeChoice,
-} from '@/lib/theme-core'
+import { resolveTheme, THEME_STORAGE_KEY, type ThemePreference } from '@/lib/theme-core'
 
-export { type ThemeChoice, themeChoices } from '@/lib/theme-core'
+export { applyTheme, type Theme, type ThemePreference } from '@/lib/theme-core'
 
-// Shared with src/theme-init.ts, which applies the stored choice before first paint.
-const stored = useStorage<string>(THEME_STORAGE_KEY, 'system', undefined, { writeDefaults: false })
-const prefersDark = usePreferredDark()
+export const useTheme = createSharedComposable(() => {
+  const preference = useLocalStorage<ThemePreference>(THEME_STORAGE_KEY, 'system')
+  const prefersDark = usePreferredDark()
 
-const theme = computed(() => parseThemeChoice(stored.value))
+  const theme = computed(() => resolveTheme(preference.value, prefersDark.value))
 
-/** The theme in use: the choice, with system resolved to light or dark. */
-const applied = computed(() => resolveTheme(theme.value, prefersDark.value))
-
-/** The theme choice, stored in the browser. */
-export function useTheme() {
-  return { theme, applied, setTheme: (value: ThemeChoice) => (stored.value = value) }
-}
+  return { preference, theme }
+})

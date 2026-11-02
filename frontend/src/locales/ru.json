@@ -15,6 +15,7 @@
   "nav.theme.current": "Тема: {theme}",
   "nav.theme.light": "Светлая",
   "nav.theme.dark": "Тёмная",
+  "nav.theme.dim": "Приглушённая",
   "nav.theme.system": "Системная",
   "auth.sign_in": "Войти",
   "auth.login_error.title": "Не удалось войти",
