@@ -23,6 +23,11 @@ watchEffect(() => applyTheme(theme.value, applied.value))
 </script>
 
 <template>
-  <AppHeader />
-  <RouterView />
+  <div class="flex h-dvh flex-col">
+    <AppHeader />
+
+    <div class="grow overflow-auto">
+      <RouterView />
+    </div>
+  </div>
 </template>

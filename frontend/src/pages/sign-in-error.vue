@@ -23,11 +23,13 @@ const message = computed(() => {
 </script>
 
 <template>
-  <main class="container mx-auto max-w-3xl px-base py-section">
-    <h2 class="mb-compact type-page-title text-content-emphasis">
+  <main class="container mx-auto flex flex-col gap-compact px-base py-section">
+    <h2 class="type-page-title text-content-emphasis">
       {{ t('auth.login_error.title') }}
     </h2>
-    <p class="mb-compact type-body text-content-default">{{ message }}</p>
+
+    <p class="type-body text-content-default">{{ message }}</p>
+
     <!-- A real form post: the backend clears the session and hands over to the identity provider's sign-out. -->
     <form method="POST" action="/logout" class="type-body text-content-default">
       <Translation scope="global" keypath="auth.login_error.try_again">

@@ -5,7 +5,6 @@
 import { vanillaSchematic } from '@mocks/fixtures'
 import { apiError, apiPending } from '@mocks/msw/helpers'
 import type { Meta, StoryObj } from '@storybook/vue3-vite'
-import { fn } from 'storybook/test'
 
 import StepFinal from './StepFinal.vue'
 
@@ -17,7 +16,6 @@ const meta: Meta<typeof StepFinal> = {
     version: '1.13.4',
     arch: 'amd64',
     secureBoot: false,
-    onBack: fn(),
   },
 }
 

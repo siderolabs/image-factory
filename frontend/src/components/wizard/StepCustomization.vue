@@ -17,7 +17,6 @@ import AppTextarea from '@/components/AppTextarea.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
 import InlineCode from '@/components/InlineCode.vue'
 import RadioCard from '@/components/RadioCard.vue'
-import WizardFooter from '@/components/WizardFooter.vue'
 import { docsURL } from '@/lib/docs'
 import { draft } from '@/wizard/draft'
 import type { Target, WizardParams } from '@/wizard/params'
@@ -30,7 +29,6 @@ const { target, version, board, secureBoot } = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  back: []
   next: [patch: Partial<WizardParams>]
 }>()
 
@@ -94,14 +92,18 @@ function next() {
     bootloader: features.value?.includes('BootloaderSelection') ? bootloader.value : undefined,
   })
 }
+
+defineExpose({ canNext: computed(() => !loading.value && !error.value), next })
 </script>
 
 <template>
-  <form @submit.prevent="next">
+  <div>
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('customization.title') }}</h1>
+
     <AppSpinner v-if="loading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error" />
-    <div v-else class="mb-base">
+
+    <template v-else>
       <div class="mb-base">
         <label :for="`${id}-cmdline`" class="mb-tight block type-label text-content-secondary">
           {{ t('customization.cmdline') }}
@@ -109,7 +111,7 @@ function next() {
         <AppInput :id="`${id}-cmdline`" v-model="cmdline" placeholder="-console console=tty0" />
       </div>
 
-      <div class="ms-tight mb-base max-w-xl leading-[1.7142857] text-content-default">
+      <div class="ms-tight mb-base leading-relaxed text-content-default">
         <p class="mb-compact">
           <Translation scope="global" keypath="customization.cmdline.description_text">
             <template #link>
@@ -167,7 +169,7 @@ auto: off"
           />
         </div>
 
-        <div class="ms-tight mb-base max-w-xl leading-[1.7142857] text-content-default">
+        <div class="ms-tight mb-base leading-relaxed text-content-default">
           <p class="mb-compact">
             <Translation scope="global" keypath="customization.embedded_config.description_text">
               <template #link>
@@ -205,7 +207,7 @@ auto: off"
         </div>
         <ErrorNote v-if="overlayError" :message="overlayError" />
 
-        <div class="ms-tight max-w-xl leading-[1.7142857] text-content-default">
+        <div class="ms-tight leading-relaxed text-content-default">
           <p class="mb-compact">
             <Translation scope="global" keypath="customization.overlay.description_text">
               <template #link>
@@ -263,7 +265,6 @@ auto: off"
           {{ t('customization.bootloader.dual_boot.description') }}
         </RadioCard>
       </div>
-    </div>
-    <WizardFooter back :next="!loading && !error" @back="emit('back')" />
-  </form>
+    </template>
+  </div>
 </template>

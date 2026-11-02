@@ -14,7 +14,6 @@ import AppInput from '@/components/AppInput.vue'
 import AppSpinner from '@/components/AppSpinner.vue'
 import CheckboxCard from '@/components/CheckboxCard.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
-import WizardFooter from '@/components/WizardFooter.vue'
 import { draft } from '@/wizard/draft'
 import type { WizardParams } from '@/wizard/params'
 
@@ -23,7 +22,6 @@ const { version } = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  back: []
   next: [patch: Partial<WizardParams>]
 }>()
 
@@ -46,15 +44,21 @@ const shown = computed(() => {
   )
 })
 
+defineExpose({
+  canNext: computed(() => !!extensions.value),
+  next: () => emit('next', { extensions: selected.value }),
+})
+
 function tag(ref: string) {
   return ref.slice(ref.lastIndexOf(':') + 1)
 }
 </script>
 
 <template>
-  <form @submit.prevent="emit('next', { extensions: selected })">
-    <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('extensions.title') }}</h1>
-    <div class="mb-base flex max-h-125 flex-col">
+  <div class="flex flex-col gap-snug overflow-hidden">
+    <h1 class="type-section-title text-content-emphasis">{{ t('extensions.title') }}</h1>
+
+    <div class="flex grow flex-col overflow-hidden">
       <div class="ms-tight type-body">
         <p class="type-meta text-content-secondary">
           <Translation scope="global" keypath="extensions.description_text">
@@ -92,7 +96,8 @@ function tag(ref: string) {
 
       <AppSpinner v-if="isLoading" class="size-8" />
       <ErrorNote v-else-if="error" :message="error.message" />
-      <div v-else class="min-h-0 flex-1 overflow-y-auto ps-tight">
+
+      <div v-else class="flex-1 grow overflow-auto px-tight">
         <CheckboxCard
           v-for="e in shown"
           :key="e.name"
@@ -102,7 +107,6 @@ function tag(ref: string) {
           :description="e.description"
         />
       </div>
-      <WizardFooter back :next="!!extensions" @back="emit('back')" />
     </div>
-  </form>
+  </div>
 </template>

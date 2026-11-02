@@ -6,13 +6,12 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 <script setup lang="ts">
 import { useMutation, useQuery } from '@tanstack/vue-query'
 import { useRouteQuery } from '@vueuse/router'
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { boardsQuery, createSchematicMutation, platformsQuery, schematicQuery } from '@/api/queries'
 import AppSpinner from '@/components/AppSpinner.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
-import LanguageSelect from '@/components/LanguageSelect.vue'
 import PageIntro from '@/components/PageIntro.vue'
 import StepArch from '@/components/wizard/StepArch.vue'
 import StepBoard from '@/components/wizard/StepBoard.vue'
@@ -95,8 +94,13 @@ const restoring = computed(
   () => schematicLoading.value || (!!restored.value?.overlay && boardsLoading.value),
 )
 const restoreError = computed(() => (schematicError.value ?? boardsError.value)?.message)
+const displayError = computed(() => restoreError.value ?? createError.value?.message)
 
 const step = computed(() => currentStep(params.value))
+
+// The footer is the same for every step, so it lives here: each step but the final one exposes whether it can go
+// on, and goes on with its choices.
+const stepComponent = useTemplateRef<{ canNext: boolean; next: () => void }>('step')
 
 // The platform decides the architecture when it has only one, and Back skips the architecture step then.
 const { data: platforms } = useQuery(() => ({
@@ -187,72 +191,74 @@ watch(
 </script>
 
 <template>
-  <main class="container mx-auto max-w-3xl px-base">
-    <PageIntro />
-    <!-- Keeps its space while the spinner is hidden, so the steps don't move. -->
-    <div class="h-8">
-      <AppSpinner v-if="restoring || creating" class="size-8" />
+  <div class="flex h-full flex-col">
+    <div class="grow overflow-auto">
+      <main class="container mx-auto flex h-full flex-col gap-section px-base py-section">
+        <PageIntro />
+
+        <AppSpinner v-if="restoring || creating" class="size-8" />
+        <ErrorNote v-else-if="displayError" :message="displayError" />
+        <StepTarget v-else-if="step === 'target'" ref="step" @next="next" />
+        <StepVersion
+          v-else-if="step === 'version'"
+          ref="step"
+          :target="params.target!"
+          @next="next"
+        />
+        <StepPlatform
+          v-else-if="step === 'platform'"
+          ref="step"
+          :version="params.version!"
+          @next="next"
+        />
+        <StepBoard
+          v-else-if="step === 'board'"
+          ref="step"
+          :version="params.version!"
+          @next="next"
+        />
+        <StepArch
+          v-else-if="step === 'arch'"
+          ref="step"
+          :target="params.target!"
+          :version="params.version!"
+          :platform="params.platform"
+          @next="next"
+        />
+        <StepExtensions
+          v-else-if="step === 'extensions'"
+          ref="step"
+          :version="params.version!"
+          @next="next"
+        />
+        <StepCustomization
+          v-else-if="step === 'customization'"
+          ref="step"
+          :target="params.target!"
+          :version="params.version!"
+          :board="params.board"
+          :secure-boot="params.secureBoot"
+          @next="next"
+        />
+        <StepFinal
+          v-else-if="step === 'final' && params.schematicId"
+          :schematic-id="params.schematicId"
+          :target="params.target!"
+          :version="params.version!"
+          :arch="params.arch!"
+          :platform="params.platform"
+          :board="params.board"
+          :secure-boot="params.secureBoot"
+        />
+      </main>
     </div>
-    <div class="mt-base text-content-emphasis">
-      <template v-if="restoring || creating" />
-      <template v-else-if="restoreError || createError">
-        <ErrorNote :message="(restoreError ?? createError?.message)!" />
-        <WizardFooter back @back="back" />
-      </template>
-      <StepTarget v-else-if="step === 'target'" @next="next" />
-      <StepVersion
-        v-else-if="step === 'version'"
-        :target="params.target!"
-        @back="back"
-        @next="next"
-      />
-      <StepPlatform
-        v-else-if="step === 'platform'"
-        :version="params.version!"
-        @back="back"
-        @next="next"
-      />
-      <StepBoard
-        v-else-if="step === 'board'"
-        :version="params.version!"
-        @back="back"
-        @next="next"
-      />
-      <StepArch
-        v-else-if="step === 'arch'"
-        :target="params.target!"
-        :version="params.version!"
-        :platform="params.platform"
-        @back="back"
-        @next="next"
-      />
-      <StepExtensions
-        v-else-if="step === 'extensions'"
-        :version="params.version!"
-        @back="back"
-        @next="next"
-      />
-      <StepCustomization
-        v-else-if="step === 'customization'"
-        :target="params.target!"
-        :version="params.version!"
-        :board="params.board"
-        :secure-boot="params.secureBoot"
-        @back="back"
-        @next="next"
-      />
-      <StepFinal
-        v-else-if="step === 'final' && params.schematicId"
-        :schematic-id="params.schematicId"
-        :target="params.target!"
-        :version="params.version!"
-        :arch="params.arch!"
-        :platform="params.platform"
-        :board="params.board"
-        :secure-boot="params.secureBoot"
-        @back="back"
-      />
-    </div>
-    <LanguageSelect />
-  </main>
+
+    <WizardFooter
+      v-if="!restoring && !creating"
+      :back="!!(restoreError || createError) || step !== 'target'"
+      :next="stepComponent?.canNext"
+      @back="back"
+      @next="stepComponent?.next()"
+    />
+  </div>
 </template>

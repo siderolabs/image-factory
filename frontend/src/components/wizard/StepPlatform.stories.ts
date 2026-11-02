@@ -14,7 +14,6 @@ const meta: Meta<typeof StepPlatform> = {
   component: StepPlatform,
   args: {
     version: '1.13.4',
-    onBack: fn(),
     onNext: fn(),
   },
 }

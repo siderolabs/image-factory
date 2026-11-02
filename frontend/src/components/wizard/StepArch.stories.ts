@@ -17,7 +17,6 @@ const meta: Meta<typeof StepArch> = {
   args: {
     target: 'metal',
     version: '1.13.4',
-    onBack: fn(),
     onNext: fn(),
   },
 }

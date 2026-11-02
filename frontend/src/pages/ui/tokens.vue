@@ -129,7 +129,7 @@ function expiry(token: Schemas['APIToken']) {
 </script>
 
 <template>
-  <main class="container mx-auto max-w-3xl px-base py-section">
+  <main class="container mx-auto px-base py-section">
     <div class="mb-compact flex items-center justify-between gap-compact">
       <h2 class="type-page-title text-content-emphasis">{{ t('tokens.title') }}</h2>
       <button
@@ -142,6 +142,7 @@ function expiry(token: Schemas['APIToken']) {
         {{ t('tokens.create.button') }}
       </button>
     </div>
+
     <p class="mb-base type-body text-content-default">{{ t('tokens.description') }}</p>
 
     <ErrorNote v-if="error" :message="error" />
@@ -155,6 +156,7 @@ function expiry(token: Schemas['APIToken']) {
       <AppSpinner class="h-4 w-4" />
       {{ t('tokens.loading') }}
     </div>
+
     <template v-else-if="tokens">
       <table v-if="rows.length" class="mb-base w-full type-body">
         <thead>

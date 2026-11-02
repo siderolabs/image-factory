@@ -20,7 +20,6 @@ import CodeBlock from '@/components/CodeBlock.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
 import AssetItem from '@/components/wizard/AssetItem.vue'
 import ScanSummary from '@/components/wizard/ScanSummary.vue'
-import WizardFooter from '@/components/WizardFooter.vue'
 import { config } from '@/config'
 import { docsURL, enterpriseDocsURL } from '@/lib/docs'
 import { shortVersion } from '@/lib/versions'
@@ -34,10 +33,6 @@ const props = defineProps<{
   platform?: string
   board?: string
   secureBoot: boolean
-}>()
-
-const emit = defineEmits<{
-  back: []
 }>()
 
 const { t } = useI18n()
@@ -118,7 +113,7 @@ const v = computed(() => `v${props.version}`)
         {{ schematic }}
       </div>
 
-      <div class="mb-base leading-[1.7142857] text-content-default">
+      <div class="mb-base leading-relaxed text-content-default">
         <h2 class="mb-snug type-section-title text-content-emphasis">
           {{ t('final.first_boot') }}
         </h2>
@@ -391,6 +386,5 @@ const v = computed(() => `v${props.version}`)
         </template>
       </div>
     </template>
-    <WizardFooter back @back="emit('back')" />
   </div>
 </template>

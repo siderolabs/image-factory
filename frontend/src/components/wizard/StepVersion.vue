@@ -12,7 +12,6 @@ import { versionsQuery } from '@/api/queries'
 import AppSelect from '@/components/AppSelect.vue'
 import AppSpinner from '@/components/AppSpinner.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
-import WizardFooter from '@/components/WizardFooter.vue'
 import { docsURL } from '@/lib/docs'
 import { groupVersions } from '@/lib/versions'
 import { draft } from '@/wizard/draft'
@@ -23,7 +22,6 @@ const { target } = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  back: []
   next: [patch: Partial<WizardParams>]
 }>()
 
@@ -47,10 +45,15 @@ watch(
   },
   { immediate: true },
 )
+
+defineExpose({
+  canNext: computed(() => !!version.value),
+  next: () => version.value && emit('next', { version: version.value }),
+})
 </script>
 
 <template>
-  <form @submit.prevent="version && emit('next', { version })">
+  <div>
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('versions.title') }}</h1>
     <div class="mb-base">
       <div
@@ -74,7 +77,7 @@ watch(
           <br />
           {{ t('versions.recommendation.pre_release') }}
         </p>
-        <div v-if="version" class="mt-base mb-base leading-[1.7142857] text-content-default">
+        <div v-if="version" class="mt-base mb-base leading-relaxed text-content-default">
           <p class="mb-compact">{{ t('docs.title', { version }) }}</p>
           <ul class="list-disc ps-base *:my-micro *:ps-micro marker:text-content-secondary">
             <li>
@@ -101,6 +104,5 @@ watch(
         </div>
       </template>
     </div>
-    <WizardFooter back :next="!!version" @back="emit('back')" />
-  </form>
+  </div>
 </template>

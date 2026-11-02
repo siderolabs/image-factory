@@ -17,9 +17,9 @@ defineProps<{
   busy?: boolean
 }>()
 
-// Next submits the step's form, so only Back is an event.
 const emit = defineEmits<{
   back: []
+  next: []
 }>()
 
 const { t } = useI18n()
@@ -27,26 +27,30 @@ const { t } = useI18n()
 
 <template>
   <div
-    class="sticky bottom-0 z-10 -mx-base mt-base flex gap-snug border-t border-border-default bg-surface-chrome px-base py-compact"
+    class="flex flex-col items-center border-t border-border-default bg-surface-chrome px-base py-compact"
   >
-    <button
-      v-if="back"
-      type="button"
-      :disabled="busy"
-      class="inline-flex items-center rounded-lg border border-border-default bg-surface-card px-compact py-tight text-center type-control text-content-emphasis transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
-      @click="emit('back')"
-    >
-      <AppIcon name="arrow" class="me-tight h-3.5 w-3.5 rotate-180" />
-      {{ t('button.back') }}
-    </button>
-    <button
-      v-if="next"
-      type="submit"
-      :disabled="busy"
-      class="inline-flex items-center rounded-lg bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent transition-colors hover:bg-accent-fill-hover active:bg-accent-fill-active disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {{ t('button.next') }}
-      <AppIcon name="arrow" class="ms-tight h-3.5 w-3.5" />
-    </button>
+    <div class="container flex items-center justify-end gap-snug">
+      <button
+        v-if="back"
+        type="button"
+        :disabled="busy"
+        class="inline-flex items-center gap-tight rounded-lg border border-border-default bg-surface-card px-compact py-tight text-center type-control text-content-emphasis transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+        @click="emit('back')"
+      >
+        <AppIcon name="arrow" class="size-3.5 rotate-180" />
+        {{ t('button.back') }}
+      </button>
+
+      <button
+        v-if="next"
+        type="button"
+        :disabled="busy"
+        class="inline-flex items-center gap-tight rounded-lg border border-accent-fill bg-accent-fill px-compact py-tight text-center type-control text-content-on-accent transition-colors hover:bg-accent-fill-hover active:bg-accent-fill-active disabled:cursor-not-allowed disabled:opacity-50"
+        @click="emit('next')"
+      >
+        {{ t('button.next') }}
+        <AppIcon name="arrow" class="size-3.5" />
+      </button>
+    </div>
   </div>
 </template>

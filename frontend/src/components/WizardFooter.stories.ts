@@ -13,6 +13,7 @@ const meta: Meta<typeof WizardFooter> = {
     back: true,
     next: true,
     onBack: fn(),
+    onNext: fn(),
   },
 }
 

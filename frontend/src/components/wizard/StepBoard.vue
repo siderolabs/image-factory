@@ -5,14 +5,13 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 -->
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Translation, useI18n } from 'vue-i18n'
 
 import { boardsQuery } from '@/api/queries'
 import AppSpinner from '@/components/AppSpinner.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
 import RadioCard from '@/components/RadioCard.vue'
-import WizardFooter from '@/components/WizardFooter.vue'
 import { docsURL } from '@/lib/docs'
 import { draft } from '@/wizard/draft'
 import type { WizardParams } from '@/wizard/params'
@@ -22,7 +21,6 @@ const { version } = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  back: []
   next: [patch: Partial<WizardParams>]
 }>()
 
@@ -41,11 +39,16 @@ watch(
   },
   { immediate: true },
 )
+
+// Single-board computers are arm64, so the board decides the architecture.
+defineExpose({
+  canNext: computed(() => !!board.value),
+  next: () => board.value && emit('next', { board: board.value, arch: 'arm64' }),
+})
 </script>
 
 <template>
-  <!-- Single-board computers are arm64, so the board decides the architecture. -->
-  <form @submit.prevent="board && emit('next', { board, arch: 'arm64' })">
+  <div>
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('singleboard.title') }}</h1>
     <AppSpinner v-if="isLoading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error.message" />
@@ -74,6 +77,5 @@ watch(
         <template v-else>{{ t('common.runs_on_board', { board: b.label }) }}</template>
       </RadioCard>
     </div>
-    <WizardFooter back :next="!!board" @back="emit('back')" />
-  </form>
+  </div>
 </template>

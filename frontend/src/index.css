@@ -13,6 +13,15 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
     @apply bg-surface-page type-body text-content-default antialiased;
   }
 
+  * {
+    @apply scrollbar-thin scrollbar-thumb-surface-inert scrollbar-track-transparent;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
   :focus-visible {
     outline: 2px solid transparent;
     box-shadow: var(--talos-shadow-focus);

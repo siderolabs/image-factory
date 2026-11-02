@@ -7,6 +7,7 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 
+import LanguageSelect from '@/components/LanguageSelect.vue'
 import ThemeMenu from '@/components/ThemeMenu.vue'
 import { config } from '@/config'
 
@@ -18,10 +19,8 @@ const navLink =
 </script>
 
 <template>
-  <header class="sticky top-0 z-10 border-b border-border-default bg-surface-chrome">
-    <div
-      class="container mx-auto flex max-w-3xl items-center justify-between gap-compact px-base py-snug"
-    >
+  <header class="border-b border-border-default bg-surface-chrome">
+    <div class="container mx-auto flex items-center justify-between gap-compact px-base py-snug">
       <h1 class="type-page-title text-content-emphasis">
         {{ t(config.enterprise ? 'page.header.enterprise' : 'page.header') }}
       </h1>
@@ -42,6 +41,7 @@ const navLink =
           </form>
         </template>
         <ThemeMenu />
+        <LanguageSelect />
       </nav>
     </div>
   </header>

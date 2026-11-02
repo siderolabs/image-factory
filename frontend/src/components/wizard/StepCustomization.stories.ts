@@ -18,7 +18,6 @@ const meta: Meta<typeof StepCustomization> = {
     target: 'metal',
     version: '1.13.4',
     secureBoot: false,
-    onBack: fn(),
     onNext: fn(),
   },
 }

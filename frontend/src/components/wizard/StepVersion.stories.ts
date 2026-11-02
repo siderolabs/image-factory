@@ -14,7 +14,6 @@ const meta: Meta<typeof StepVersion> = {
   component: StepVersion,
   args: {
     target: 'metal',
-    onBack: fn(),
     onNext: fn(),
   },
 }

@@ -5,14 +5,13 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 -->
 <script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { platformsQuery } from '@/api/queries'
 import AppSpinner from '@/components/AppSpinner.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
 import RadioCard from '@/components/RadioCard.vue'
-import WizardFooter from '@/components/WizardFooter.vue'
 import { docsURL } from '@/lib/docs'
 import { draft } from '@/wizard/draft'
 import type { Arch, WizardParams } from '@/wizard/params'
@@ -22,7 +21,6 @@ const { version } = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  back: []
   next: [patch: Partial<WizardParams>]
 }>()
 
@@ -52,10 +50,12 @@ function next() {
 
   emit('next', { platform: chosen.name, arch })
 }
+
+defineExpose({ canNext: computed(() => !!platform.value), next })
 </script>
 
 <template>
-  <form @submit.prevent="next">
+  <div>
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('cloud.title') }}</h1>
     <AppSpinner v-if="isLoading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error.message" />
@@ -72,6 +72,5 @@ function next() {
         <span>{{ p.description }} (<a :href="docsURL(version, p.documentation)" target="_blank" rel="noopener noreferrer" class="text-accent-text underline">{{ t('common.documentation') }}</a>).</span>
       </RadioCard>
     </div>
-    <WizardFooter back :next="!!platform" @back="emit('back')" />
-  </form>
+  </div>
 </template>

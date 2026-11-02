@@ -8,7 +8,6 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import RadioCard from '@/components/RadioCard.vue'
-import WizardFooter from '@/components/WizardFooter.vue'
 import { draft } from '@/wizard/draft'
 import type { Target, WizardParams } from '@/wizard/params'
 
@@ -19,10 +18,12 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const target = ref<Target>(draft.value.target ?? 'metal')
+
+defineExpose({ canNext: true, next: () => emit('next', { target: target.value }) })
 </script>
 
 <template>
-  <form @submit.prevent="emit('next', { target })">
+  <div>
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('hardware.title') }}</h1>
     <div class="mb-base space-y-tight">
       <RadioCard v-model="target" name="target" value="metal" :label="t('hardware.bmm.name')">
@@ -35,6 +36,5 @@ const target = ref<Target>(draft.value.target ?? 'metal')
         {{ t('hardware.sbc.description') }}
       </RadioCard>
     </div>
-    <WizardFooter next />
-  </form>
+  </div>
 </template>

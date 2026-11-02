@@ -12,20 +12,22 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div class="mt-compact max-w-xl leading-[1.7142857] text-content-default">
-    <p class="mb-compact">
+  <div class="flex flex-col gap-compact leading-relaxed text-content-default">
+    <p>
       <Translation scope="global" keypath="info.intro">
         <template #company>
           <!-- prettier-ignore -->
           <a href="https://siderolabs.com/" class="font-medium text-accent-text underline">Sidero Labs, Inc.</a>
         </template>
+
         <template #distro>
           <!-- prettier-ignore -->
           <a href="https://talos.dev/" class="font-medium text-accent-text underline">Talos Linux</a>
         </template>
       </Translation>
     </p>
-    <p class="mb-compact">
+
+    <p>
       <Translation scope="global" keypath="info.more_text">
         <template #github>
           <a
@@ -37,6 +39,7 @@ const { t } = useI18n()
         </template>
       </Translation>
     </p>
+
     <p class="type-meta text-content-secondary">
       {{ t('info.version', { version: config.version }) }}
     </p>

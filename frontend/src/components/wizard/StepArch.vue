@@ -12,7 +12,6 @@ import { featuresQuery, platformsQuery } from '@/api/queries'
 import AppSpinner from '@/components/AppSpinner.vue'
 import ErrorNote from '@/components/ErrorNote.vue'
 import RadioCard from '@/components/RadioCard.vue'
-import WizardFooter from '@/components/WizardFooter.vue'
 import { docsURL } from '@/lib/docs'
 import { draft } from '@/wizard/draft'
 import type { Arch, Target, WizardParams } from '@/wizard/params'
@@ -24,7 +23,6 @@ const { target, version, platform } = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  back: []
   next: [patch: Partial<WizardParams>]
 }>()
 
@@ -58,10 +56,12 @@ const secureBootSupported = computed(() => {
 function next() {
   emit('next', { arch: arch.value, secureBoot: secureBootSupported.value && secureBoot.value })
 }
+
+defineExpose({ canNext: computed(() => !loading.value && !error.value), next })
 </script>
 
 <template>
-  <form @submit.prevent="next">
+  <div>
     <h1 class="mb-snug type-section-title text-content-emphasis">{{ t('architecture.title') }}</h1>
     <AppSpinner v-if="loading" class="size-8" />
     <ErrorNote v-else-if="error" :message="error" />
@@ -92,6 +92,5 @@ function next() {
         </div>
       </div>
     </div>
-    <WizardFooter back :next="!loading && !error" @back="emit('back')" />
-  </form>
+  </div>
 </template>

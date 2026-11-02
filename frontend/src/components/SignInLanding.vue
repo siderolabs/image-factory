@@ -12,10 +12,11 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <main class="container mx-auto max-w-3xl px-base py-section">
-    <p class="mb-base type-body text-content-default">
+  <main class="container mx-auto flex flex-col gap-base px-base py-section">
+    <p class="type-body text-content-default">
       {{ t(config.enterprise ? 'page.description.enterprise' : 'page.description') }}
     </p>
+
     <!-- A plain link: /login hands the browser over to the identity provider. -->
     <a
       href="/login"
