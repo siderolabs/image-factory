@@ -40,6 +40,11 @@ export default defineConfig({
       },
     },
   },
+  html: {
+    // Filled in per request by internal/frontend/http/spa, which also sets the content security policy, for the dev
+    // server's index.html as well.
+    cspNonce: '{{ .Nonce }}',
+  },
   // Pages are only reached through the vue-router/auto-routes virtual module, which the dependency scanner can't
   // follow. Scanning the sources finds their dependencies up front, rather than reloading mid-run on a cold cache.
   optimizeDeps: {

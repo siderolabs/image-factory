@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"testing"
 	"testing/fstest"
 
@@ -92,6 +93,39 @@ func TestIndex(t *testing.T) {
 		require.Equal(t, http.StatusOK, response.Code)
 		require.Empty(t, response.Body.String())
 	})
+}
+
+func TestSecurityHeaders(t *testing.T) {
+	t.Parallel()
+
+	router := newRouter(t, spa.Options{
+		Dist: fstest.MapFS{
+			"index.html": {Data: []byte(`<script nonce="{{ .Nonce }}"></script>`)},
+		},
+		ExternalURL: &url.URL{Scheme: "https", Host: "factory.example.com", Path: "/base"},
+		IndexData:   indexData,
+	})
+
+	nonceRE := regexp.MustCompile(`'nonce-([^']+)'`)
+
+	nonce := func() string {
+		response := get(t, router, http.MethodGet, "/", nil)
+		require.Equal(t, http.StatusOK, response.Code)
+
+		csp := response.Header().Get("Content-Security-Policy")
+		require.Contains(t, csp, "connect-src 'self' https://factory.example.com")
+		require.Equal(t, "SAMEORIGIN", response.Header().Get("X-Frame-Options"))
+		require.Equal(t, "nosniff", response.Header().Get("X-Content-Type-Options"))
+		require.NotEmpty(t, response.Header().Get("Permissions-Policy"))
+
+		match := nonceRE.FindStringSubmatch(csp)
+		require.NotNil(t, match, csp)
+		require.Equal(t, `<script nonce="`+match[1]+`"></script>`, response.Body.String(), "the page has the nonce of the policy")
+
+		return match[1]
+	}
+
+	require.NotEqual(t, nonce(), nonce(), "every request has its own nonce")
 }
 
 func TestAssets(t *testing.T) {

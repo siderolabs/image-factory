@@ -8,6 +8,7 @@ package spa
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"fmt"
 	"html/template"
 	"io"
@@ -31,12 +32,19 @@ type Options struct {
 	// DevServerURL, when set, takes index.html and the source modules from a running Vite dev server instead of Dist.
 	DevServerURL *url.URL
 
+	// ExternalURL is where the UI fetches the vulnerability scan reports from, so the content security policy allows
+	// connecting to it. It may differ from the origin the UI is opened on.
+	ExternalURL *url.URL
+
 	// IndexData returns what to fill into index.html for a request.
 	IndexData func(*http.Request) IndexData
 }
 
 // IndexData is filled into index.html on every request.
 type IndexData struct {
+	// Nonce allows the inline and bundled scripts and styles under the content security policy. It is set by the
+	// handler, new for every request.
+	Nonce string
 	// Config is handed to the frontend as JSON.
 	Config Config
 }
@@ -63,13 +71,19 @@ type Handler struct {
 	devServerURL *url.URL
 	devProxy     *httputil.ReverseProxy
 	indexData    func(*http.Request) IndexData
+	connectSrc   []string
 }
 
 // New constructs the single-page UI handler.
 func New(opts Options) (*Handler, error) {
 	handler := &Handler{
-		dist:      opts.Dist,
-		indexData: opts.IndexData,
+		dist:       opts.Dist,
+		indexData:  opts.IndexData,
+		connectSrc: []string{"'self'"},
+	}
+
+	if opts.ExternalURL != nil && opts.ExternalURL.Host != "" {
+		handler.connectSrc = append(handler.connectSrc, opts.ExternalURL.Scheme+"://"+opts.ExternalURL.Host)
 	}
 
 	if opts.DevServerURL != nil {
@@ -167,8 +181,10 @@ func isDevServerRequest(r *http.Request) bool {
 // including ones registered elsewhere.
 func (h *Handler) ServeIndex(ctx context.Context, w http.ResponseWriter, r *http.Request, _ httprouter.Params) error {
 	data := h.indexData(r)
+	data.Nonce = rand.Text()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	setSecurityHeaders(w.Header(), data.Nonce, h.connectSrc)
 
 	// index.html names the current hashed assets, so it must be revalidated. Authenticated responses are
 	// already marked no-store, which is stricter.

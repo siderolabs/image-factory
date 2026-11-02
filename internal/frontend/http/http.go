@@ -175,6 +175,7 @@ func NewFrontend(
 	frontend.spa, err = spa.New(spa.Options{
 		Dist:         ensure.Value(fs.Sub(frontenddist.Dist, "dist")),
 		DevServerURL: opts.SPADevServerURL,
+		ExternalURL:  opts.ExternalURL,
 		IndexData:    frontend.indexData,
 	})
 	if err != nil {
