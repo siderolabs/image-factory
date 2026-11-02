@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "engines": {
-    "node": "^24.18.0"
+    "node": "^26.13.0"
   },
   "msw": {
     "workerDirectory": [
@@ -44,9 +44,9 @@
     "@storybook/addon-a11y": "^10.6.5",
     "@storybook/vue3-vite": "^10.6.5",
     "@tailwindcss/vite": "^4.3.3",
-    "@tsconfig/node24": "^24.0.5",
+    "@tsconfig/node26": "^26.0.1",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@types/semver": "^7.8.0",
     "@vitejs/plugin-vue": "^6.0.10",
     "@vitest/browser-playwright": "^5.0.5",
