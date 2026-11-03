@@ -5,13 +5,47 @@ project_name = "image-factory"
 github_repo = "siderolabs/image-factory"
 match_deps = "^github.com/(siderolabs/[a-zA-Z0-9-]+)$"
 
-previous = "v1.7.1"
+previous = "v1.7.2"
 pre_release = false
 
 [notes]
 
-[make_deps]
+    [notes.ui]
+        title = "New UI"
+        description = """\
+The browser UI has been rewritten as a Vue single-page app and replaces the server-rendered UI.
+It follows the Sidero design system, and is served with a Content-Security-Policy header.
 
-    [make_deps.pkgs]
-        variable = "PKGS"
-        repository = "github.com/siderolabs/pkgs"
+The Enterprise Auth0 landing, login error and logout pages are part of the new UI as well.
+"""
+
+    [notes.vex]
+        title = "VEX Annotations"
+        description = """\
+Enterprise only: scan results are annotated with VEX comments.
+Raw JSON statements carry the annotation, and the UI shows it next to the upstream CVE description.
+
+The `talos-vex-data` image is proxied through the registry frontend on Enterprise builds.
+Other builds answer `402 Payment Required` for it, and a factory without a `talosVexData` repository configured answers `404`.
+"""
+
+    [notes.http_statuses]
+        title = "HTTP Status Fixes"
+        description = """\
+Several error paths now return the correct HTTP status instead of `500` or `401`:
+
+* A stored API token that cannot be checked because the token storage is unavailable is answered with `503`, so clients can retry, instead of `401`.
+* A `403` from the token storage registry is treated as a failed read, not as a missing token or an empty token list.
+* An installer tag that is not a valid version, or an unknown file under `/talosctl/<version>/`, is answered with `404`.
+* `/secureboot/signing-cert.pem` is answered with `404` on a factory without Secure Boot.
+* An invalid Talos version in the extensions and overlays endpoints is answered with `400`.
+
+A failed fetch of the Secure Boot signing certificate from a remote signer is no longer cached until restart; the next request retries it.
+"""
+
+    [notes.misc]
+        title = "Other Changes"
+        description = """\
+* Legacy signature bundles are validated by checking that the image digest matches the signature's claims.
+* An SBOM is generated for the Image Factory image.
+"""
