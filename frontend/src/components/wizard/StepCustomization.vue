@@ -161,7 +161,7 @@ defineExpose({ canNext: computed(() => !loading.value && !error.value), next })
           <AppTextarea
             :id="`${id}-embedded`"
             v-model="embeddedConfig"
-            class="h-16 min-h-24"
+            rows="4"
             placeholder="apiVersion: v1alpha1
 kind: HostnameConfig
 hostname: my-custom-hostname
@@ -201,7 +201,7 @@ auto: off"
           <AppTextarea
             :id="`${id}-overlay`"
             v-model="overlayOptions"
-            class="h-16"
+            rows="1"
             placeholder="configTxtAppend: 'dtoverlay=vc4-fkms-v3d'"
           />
         </div>

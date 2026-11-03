@@ -12,7 +12,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <main class="container mx-auto flex flex-col gap-base px-base py-section">
+  <main class="container mx-auto flex flex-col items-start gap-base px-base py-section">
     <p class="type-body text-content-default">
       {{ t(config.enterprise ? 'page.description.enterprise' : 'page.description') }}
     </p>
