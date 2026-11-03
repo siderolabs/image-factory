@@ -39,6 +39,11 @@ spec:
     - PKGS_PREFIX
     - PKGS
 ---
+kind: common.SBOM
+spec:
+  enabled: true
+  includeStage: imager-tools-sbom
+---
 kind: common.Image
 name: image-image-factory
 spec:
@@ -351,6 +356,13 @@ spec:
               from: pkg-zstd
               src: /
               dst: /
+      - name: imager-tools-sbom
+        description: collects the SBOMs shipped by the imager tools
+        steps:
+          - copy:
+              from: imager-tools
+              src: /usr/share/spdx
+              dst: /usr/share/spdx
 ---
 kind: custom.Step
 name: integration.test
