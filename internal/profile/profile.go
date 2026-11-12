@@ -415,6 +415,8 @@ func ExtensionNameAlias(extensionName string) (string, bool) {
 		return "siderolabs/i915", true
 	case "siderolabs/amdgpu-firmware": // extension got renamed
 		return "siderolabs/amdgpu", true
+	case "siderolabs/nonfree-kmod-nvidia-lts":
+		return "siderolabs/nvidia-open-gpu-kernel-modules-lts", true // Talos 1.15, the NVIDIA LTS 620.x removed the nonfree- version
 	default:
 		return "", false
 	}
