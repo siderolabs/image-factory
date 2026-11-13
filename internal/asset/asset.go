@@ -163,6 +163,15 @@ func (b *Builder) Build(ctx context.Context, prof profile.Profile, versionString
 		return asset, nil
 	}
 
+	// A request canceled mid-lookup fails the lookup with whatever error the cancellation
+	// surfaced as (a canceled blob fetch, or a signature check that reads as "no valid
+	// bundles"), not with a verdict on the entry. Building then would be for nobody -- the
+	// caller is gone -- and the detached build would replace a valid entry, missing every
+	// concurrent request for the same asset while it does.
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return nil, ctxErr
+	}
+
 	b.metricAssetCachedErrors.WithLabelValues(versionString, prof.Output.Kind.String(), prof.Arch).Inc()
 
 	if b.cacheMightFail {
