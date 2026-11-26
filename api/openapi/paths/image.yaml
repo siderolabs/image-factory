@@ -18,7 +18,9 @@ get:
   - sessionCookie: []
   responses:
     '200':
-      $ref: "../components/responses.yaml#/Artifact"
+      $ref: "../components/responses.yaml#/ImageArtifact"
+    '206':
+      $ref: "../components/responses.yaml#/PartialContent"
     '302':
       $ref: "../components/responses.yaml#/Found"
     "303":
@@ -33,6 +35,8 @@ get:
       $ref: "../components/responses.yaml#/Forbidden"
     '404':
       $ref: "../components/responses.yaml#/NotFound"
+    '416':
+      $ref: "../components/responses.yaml#/RangeNotSatisfiable"
     '500':
       $ref: "../components/responses.yaml#/InternalServerError"
 head:
@@ -46,7 +50,7 @@ head:
   - sessionCookie: []
   responses:
     '200':
-      $ref: "../components/responses.yaml#/ArtifactHeaders"
+      $ref: "../components/responses.yaml#/ImageArtifactHeaders"
     "303":
       $ref: "../components/responses.yaml#/SeeOther"
     '400':

@@ -37,6 +37,12 @@ type RedirectableAsset interface {
 	Redirect(ctx context.Context, filename string) (string, error)
 }
 
+// SeekableAsset is an interface for a boot asset which can be read at any offset.
+type SeekableAsset interface {
+	BootAsset
+	SeekableReader() (io.ReadSeekCloser, error)
+}
+
 // Cache is an interface for a cache that stores boot assets.
 type Cache interface {
 	Get(ctx context.Context, profileID string) (BootAsset, error)

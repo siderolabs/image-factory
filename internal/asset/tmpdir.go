@@ -19,7 +19,10 @@ type tmpDir struct {
 }
 
 // Check interface.
-var _ BootAsset = (*tmpDir)(nil)
+var (
+	_ BootAsset         = (*tmpDir)(nil)
+	_ SeekableBootAsset = (*tmpDir)(nil)
+)
 
 // newTmpDir creates a new temporary directory to hold the boot asset.
 func newTmpDir() (*tmpDir, error) {
@@ -46,6 +49,11 @@ func (t *tmpDir) Size() int64 {
 
 // Reader returns a reader for the boot asset.
 func (t *tmpDir) Reader() (io.ReadCloser, error) {
+	return os.Open(t.assetPath)
+}
+
+// SeekableReader returns a seekable reader for the boot asset.
+func (t *tmpDir) SeekableReader() (io.ReadSeekCloser, error) {
 	return os.Open(t.assetPath)
 }
 

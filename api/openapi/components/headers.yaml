@@ -2,6 +2,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+AcceptRanges:
+  description: Byte ranges are supported by direct responses for this artifact.
+  schema:
+    type: string
 ContentDisposition:
   description: Suggested attachment filename.
   schema:
@@ -11,6 +15,10 @@ ContentLength:
   schema:
     type: integer
     format: int64
+ContentRange:
+  description: Position of the returned part in the artifact, in bytes.
+  schema:
+    type: string
 Location:
   description: Redirect target.
   schema:

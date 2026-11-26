@@ -89,6 +89,78 @@ ArtifactHeaders:
       $ref: "./headers.yaml#/ContentDisposition"
     Content-Length:
       $ref: "./headers.yaml#/ContentLength"
+ImageArtifact:
+  description: Image artifact which the factory can serve in byte ranges.
+  headers:
+    Accept-Ranges:
+      $ref: "./headers.yaml#/AcceptRanges"
+    Content-Disposition:
+      $ref: "./headers.yaml#/ContentDisposition"
+    Content-Length:
+      $ref: "./headers.yaml#/ContentLength"
+  content:
+    '*/*':
+      schema:
+        type: string
+        format: binary
+    application/efi:
+      schema:
+        type: string
+        format: binary
+    application/gzip:
+      schema:
+        type: string
+        format: binary
+    application/octet-stream:
+      schema:
+        type: string
+        format: binary
+    application/x-iso9660-image:
+      schema:
+        type: string
+        format: binary
+    application/x-qemu-disk:
+      schema:
+        type: string
+        format: binary
+    application/x-xz:
+      schema:
+        type: string
+        format: binary
+    text/plain:
+      schema:
+        type: string
+    application/vnd.dev.sigstore.bundle.v0.3+json:
+      schema: {}
+ImageArtifactHeaders:
+  description: Image artifact metadata without a response body.
+  headers:
+    Accept-Ranges:
+      $ref: "./headers.yaml#/AcceptRanges"
+    Content-Disposition:
+      $ref: "./headers.yaml#/ContentDisposition"
+    Content-Length:
+      $ref: "./headers.yaml#/ContentLength"
+PartialContent:
+  description: Part of the artifact, selected by the `Range` header of the request.
+  headers:
+    Accept-Ranges:
+      $ref: "./headers.yaml#/AcceptRanges"
+    Content-Disposition:
+      $ref: "./headers.yaml#/ContentDisposition"
+    Content-Length:
+      $ref: "./headers.yaml#/ContentLength"
+    Content-Range:
+      $ref: "./headers.yaml#/ContentRange"
+  content:
+    '*/*':
+      schema:
+        type: string
+        format: binary
+    multipart/byteranges:
+      schema:
+        type: string
+        format: binary
 OCIResponse:
   description: Response forwarded from or generated for an OCI registry.
   content:
@@ -187,6 +259,15 @@ Conflict:
         type: string
 NotFound:
   description: The route or requested object does not exist.
+  content:
+    text/plain:
+      schema:
+        type: string
+RangeNotSatisfiable:
+  description: The `Range` header of the request is invalid, or does not overlap the artifact.
+  headers:
+    Content-Range:
+      $ref: "./headers.yaml#/ContentRange"
   content:
     text/plain:
       schema:

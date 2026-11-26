@@ -1533,6 +1533,60 @@ export interface components {
       }
       content?: never
     }
+    /** @description Image artifact which the factory can serve in byte ranges. */
+    ImageArtifact: {
+      headers: {
+        'Accept-Ranges': components['headers']['AcceptRanges']
+        'Content-Disposition': components['headers']['ContentDisposition']
+        'Content-Length': components['headers']['ContentLength']
+        [name: string]: unknown
+      }
+      content: {
+        '*/*': string
+        'application/efi': string
+        'application/gzip': string
+        'application/octet-stream': string
+        'application/x-iso9660-image': string
+        'application/x-qemu-disk': string
+        'application/x-xz': string
+        'text/plain': string
+        'application/vnd.dev.sigstore.bundle.v0.3+json': unknown
+      }
+    }
+    /** @description Image artifact metadata without a response body. */
+    ImageArtifactHeaders: {
+      headers: {
+        'Accept-Ranges': components['headers']['AcceptRanges']
+        'Content-Disposition': components['headers']['ContentDisposition']
+        'Content-Length': components['headers']['ContentLength']
+        [name: string]: unknown
+      }
+      content?: never
+    }
+    /** @description Part of the artifact, selected by the `Range` header of the request. */
+    PartialContent: {
+      headers: {
+        'Accept-Ranges': components['headers']['AcceptRanges']
+        'Content-Disposition': components['headers']['ContentDisposition']
+        'Content-Length': components['headers']['ContentLength']
+        'Content-Range': components['headers']['ContentRange']
+        [name: string]: unknown
+      }
+      content: {
+        '*/*': string
+        'multipart/byteranges': string
+      }
+    }
+    /** @description The `Range` header of the request is invalid, or does not overlap the artifact. */
+    RangeNotSatisfiable: {
+      headers: {
+        'Content-Range': components['headers']['ContentRange']
+        [name: string]: unknown
+      }
+      content: {
+        'text/plain': string
+      }
+    }
     /** @description Response forwarded from or generated for an OCI registry. */
     OCIResponse: {
       headers: {
@@ -1752,6 +1806,10 @@ export interface components {
     ContentDisposition: string
     /** @description Response body size in bytes. */
     ContentLength: number
+    /** @description Byte ranges are supported by direct responses for this artifact. */
+    AcceptRanges: string
+    /** @description Position of the returned part in the artifact, in bytes. */
+    ContentRange: string
     /** @description Redirect target. */
     Location: string
   }
@@ -2241,7 +2299,8 @@ export interface operations {
     }
     requestBody?: never
     responses: {
-      200: components['responses']['Artifact']
+      200: components['responses']['ImageArtifact']
+      206: components['responses']['PartialContent']
       302: components['responses']['Found']
       303: components['responses']['SeeOther']
       400: components['responses']['BadRequest']
@@ -2249,6 +2308,7 @@ export interface operations {
       402: components['responses']['PaymentRequired']
       403: components['responses']['Forbidden']
       404: components['responses']['NotFound']
+      416: components['responses']['RangeNotSatisfiable']
       500: components['responses']['InternalServerError']
     }
   }
@@ -2299,7 +2359,7 @@ export interface operations {
     }
     requestBody?: never
     responses: {
-      200: components['responses']['ArtifactHeaders']
+      200: components['responses']['ImageArtifactHeaders']
       303: components['responses']['SeeOther']
       400: components['responses']['BadRequest']
       401: components['responses']['Unauthorized']

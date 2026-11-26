@@ -138,6 +138,10 @@ components:
       $ref: "./openapi/components/headers.yaml#/ContentDisposition"
     ContentLength:
       $ref: "./openapi/components/headers.yaml#/ContentLength"
+    AcceptRanges:
+      $ref: "./openapi/components/headers.yaml#/AcceptRanges"
+    ContentRange:
+      $ref: "./openapi/components/headers.yaml#/ContentRange"
     Location:
       $ref: "./openapi/components/headers.yaml#/Location"
   schemas:
@@ -190,6 +194,14 @@ components:
       $ref: "./openapi/components/responses.yaml#/Artifact"
     ArtifactHeaders:
       $ref: "./openapi/components/responses.yaml#/ArtifactHeaders"
+    ImageArtifact:
+      $ref: "./openapi/components/responses.yaml#/ImageArtifact"
+    ImageArtifactHeaders:
+      $ref: "./openapi/components/responses.yaml#/ImageArtifactHeaders"
+    PartialContent:
+      $ref: "./openapi/components/responses.yaml#/PartialContent"
+    RangeNotSatisfiable:
+      $ref: "./openapi/components/responses.yaml#/RangeNotSatisfiable"
     OCIResponse:
       $ref: "./openapi/components/responses.yaml#/OCIResponse"
     OCIIndexResponse:
