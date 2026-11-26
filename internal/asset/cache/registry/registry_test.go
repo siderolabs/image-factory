@@ -10,6 +10,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"errors"
 	"io"
 	"net/http/httptest"
 	"testing"
@@ -22,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
+	"github.com/siderolabs/image-factory/internal/asset/cache"
 	assetregistry "github.com/siderolabs/image-factory/internal/asset/cache/registry"
 	"github.com/siderolabs/image-factory/internal/image/attestation"
 	"github.com/siderolabs/image-factory/internal/image/signer"
@@ -189,4 +191,81 @@ func TestPutSignsEveryTimeWithoutReferrers(t *testing.T) {
 	}
 
 	require.Equal(t, 3, imageSigner.calls, "signatures that are not referrers must keep being written")
+}
+
+// tagProbeSigner records, at signing time, whether the entry's tag already resolves.
+type tagProbeSigner struct {
+	*referrerSigner
+
+	taggedRef     name.Tag
+	tagVisibleNow []bool
+}
+
+func (s *tagProbeSigner) SignImage(ctx context.Context, imageRef name.Digest, pusher remotewrap.Pusher) error {
+	_, err := remote.Head(s.taggedRef)
+	s.tagVisibleNow = append(s.tagVisibleNow, err == nil)
+
+	return s.referrerSigner.SignImage(ctx, imageRef, pusher)
+}
+
+// TestPutTagsOnlyAfterSigning asserts that a cache entry's tag is not published before its
+// signature. Get resolves the tag and treats an unsigned digest as a miss, so a tag that is
+// visible while signing is still running makes every concurrent request rebuild the asset.
+func TestPutTagsOnlyAfterSigning(t *testing.T) {
+	base := keySigner(t)
+
+	attestor, ok := base.(signer.ImageAttestor)
+	require.True(t, ok)
+
+	imageSigner := &tagProbeSigner{referrerSigner: &referrerSigner{Signer: base, attestor: attestor}}
+	c, repository := testCache(t, imageSigner)
+	imageSigner.taggedRef = repository.Tag(testProfileHash)
+
+	require.NoError(t, c.Put(t.Context(), testProfileHash, testAsset{data: []byte("talos.platform=metal")}, "cmdline-metal-amd64"))
+
+	require.Equal(t, []bool{false}, imageSigner.tagVisibleNow, "the tag must not resolve until the entry is signed")
+
+	_, err := c.Get(t.Context(), testProfileHash)
+	require.NoError(t, err, "a freshly put entry must be a cache hit")
+}
+
+// cancelingSigner, once armed, cancels the request while its signature is being verified and
+// fails the verification the way a cut-short keyless check does. Unarmed, it reports every
+// entry as unsigned, so Put goes on to sign it.
+type cancelingSigner struct {
+	signer.Signer
+
+	cancel context.CancelFunc
+	armed  bool
+}
+
+func (s *cancelingSigner) VerifyImage(context.Context, name.Digest, remotewrap.Puller) error {
+	if s.armed {
+		s.cancel()
+	}
+
+	return errors.New("no valid bundles exist in registry")
+}
+
+func (s *cancelingSigner) SignImage(context.Context, name.Digest, remotewrap.Pusher) error {
+	return nil
+}
+
+// TestGetReportsCancellationNotMiss asserts that a signature check failed by the request's
+// cancellation is reported as the cancellation, not as a cache miss that would trigger a
+// rebuild of a valid entry.
+func TestGetReportsCancellationNotMiss(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	imageSigner := &cancelingSigner{Signer: keySigner(t), cancel: cancel}
+	c, _ := testCache(t, imageSigner)
+
+	require.NoError(t, c.Put(t.Context(), testProfileHash, testAsset{data: []byte("talos.platform=metal")}, "cmdline-metal-amd64"))
+
+	imageSigner.armed = true
+
+	_, err := c.Get(ctx, testProfileHash)
+	require.ErrorIs(t, err, context.Canceled)
+	require.NotErrorIs(t, err, cache.ErrCacheNotFound)
 }
