@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"go.uber.org/zap"
@@ -94,15 +95,48 @@ func (handler *ImageHandler) Serve(ctx context.Context, writer http.ResponseWrit
 		return nil
 	}
 
-	writer.Header().Set("Content-Length", strconv.FormatInt(resolved.Asset.Size(), 10))
 	writer.Header().Set("Content-Type", factorymime.ContentType(resolved.Path))
 	writer.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, resolved.Filename))
 
+	// The capability is reported without opening the asset: HEAD requests must not open it.
+	seekable, canSeek := resolved.Asset.(asset.SeekableBootAsset)
+	if canSeek {
+		writer.Header().Set("Accept-Ranges", "bytes")
+	}
+
 	if request.Method == http.MethodHead {
+		writer.Header().Set("Content-Length", strconv.FormatInt(resolved.Asset.Size(), 10))
 		writer.WriteHeader(http.StatusOK)
 
 		return nil
 	}
+
+	if canSeek {
+		// http.ServeContent answers Range requests, and finds the size of the content by seeking.
+		reader, seekErr := seekable.SeekableReader()
+		if seekErr != nil {
+			return seekErr
+		}
+
+		defer reader.Close() //nolint:errcheck
+
+		// RFC 9110 requires a Range header with a unit the server does not
+		// understand to be ignored, but http.ServeContent answers it with 416.
+		// It matches the unit as written, so a unit in another case is ignored too.
+		if unit, _, found := strings.Cut(request.Header.Get("Range"), "="); found && unit != "bytes" {
+			request = request.Clone(ctx)
+			request.Header.Del("Range")
+		}
+
+		content := newSizedSeekCloser(reader, resolved.Asset.Size())
+
+		http.ServeContent(writer, request, "", time.Time{}, content)
+
+		// The status is on the wire already when the storage fails, so the error can only be reported.
+		return content.Err()
+	}
+
+	writer.Header().Set("Content-Length", strconv.FormatInt(resolved.Asset.Size(), 10))
 
 	reader, err := resolved.Asset.Reader()
 	if err != nil {

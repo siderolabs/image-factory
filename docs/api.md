@@ -392,6 +392,12 @@ The optional `filename` query parameter overrides the download filename used to 
 On a direct response, the factory returns `200 OK` with `Content-Type`, `Content-Length` and an attachment `Content-Disposition`.
 A `GET` may instead return `302 Found` to a configured object-storage or CDN URL; `HEAD` is always served directly and returns the same headers as a direct `GET`, without a body.
 
+When the factory can read the asset at any offset (an asset built on demand, or an object streamed from S3 without a redirect while the CDN cache is not enabled), a direct response also carries `Accept-Ranges: bytes`:
+a `GET` with a `Range` header in bytes then returns `206 Partial Content`, or `416 Range Not Satisfiable` when the range is invalid or does not fit the asset.
+A `Range` header in another unit is ignored, and the whole asset is returned.
+An asset streamed from a registry cache is always served whole, and a redirect leaves byte ranges to the storage behind it.
+For an asset the factory can read at any offset, `If-Match` with an entity tag is answered with `412 Precondition Failed`, and `If-None-Match: *` with `304 Not Modified`: the route has no validators to compare with.
+
 In Enterprise edition this route also accepts a stored or ephemeral `image:read` [API token](authentication.md#api-tokens) as `?token=<token>` in place of the `Authorization` header, as does `GET /pxe/`; see [The `?token=` query parameter](authentication.md#the-token-query-parameter).
 
 Common parameters:

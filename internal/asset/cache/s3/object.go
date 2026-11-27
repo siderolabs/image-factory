@@ -26,6 +26,7 @@ type objectAsset struct {
 var (
 	_ cache.BootAsset         = (*objectAsset)(nil)
 	_ cache.RedirectableAsset = (*objectAsset)(nil)
+	_ cache.SeekableAsset     = (*objectAsset)(nil)
 )
 
 // Redirect returns the presigned URL for the boot asset.
@@ -41,10 +42,22 @@ func (r *objectAsset) Size() int64 {
 
 // Reader returns a reader for the boot asset.
 func (r *objectAsset) Reader() (io.ReadCloser, error) {
+	return r.object()
+}
+
+// SeekableReader returns a seekable reader for the boot asset.
+//
+// The object storage answers the first seek with a request for the size of the
+// object, and serves a changed position with a ranged request on the next read.
+func (r *objectAsset) SeekableReader() (io.ReadSeekCloser, error) {
+	return r.object()
+}
+
+// object returns the object of the cached version of the asset.
+func (r *objectAsset) object() (*minio.Object, error) {
 	opts := minio.GetObjectOptions{}
 
-	err := opts.SetMatchETag(r.etag)
-	if err != nil {
+	if err := opts.SetMatchETag(r.etag); err != nil {
 		return nil, err
 	}
 

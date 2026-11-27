@@ -102,6 +102,17 @@ type RedirectableBootAsset interface {
 	Redirect(ctx context.Context, filename string) (string, error)
 }
 
+// SeekableBootAsset can provide a reader with random access to the asset.
+//
+// The HTTP layer uses it to serve byte range requests, and to advertise them
+// on HEAD requests, which must not open the asset.
+type SeekableBootAsset interface {
+	BootAsset
+	// SeekableReader returns a reader for the boot asset which supports io.Seeker,
+	// and exposes exactly Size() bytes.
+	SeekableReader() (io.ReadSeekCloser, error)
+}
+
 // ResolvedImage is the domain result consumed by an HTTP or other transport adapter.
 type ResolvedImage struct {
 	Asset             BootAsset

@@ -712,20 +712,23 @@ func TestArtifactResponseAcceptsRuntimeMediaTypes(t *testing.T) {
 	document, err := api.Load(t.Context())
 	require.NoError(t, err)
 
-	artifact := document.Components.Responses["Artifact"].Value
-	require.NotNil(t, artifact)
+	// ImageArtifact serves the same assets as Artifact, and must not fall behind it.
+	for _, name := range []string{"Artifact", "ImageArtifact"} {
+		artifact := document.Components.Responses[name].Value
+		require.NotNil(t, artifact, name)
 
-	for _, mediaType := range []string{
-		"*/*",
-		"application/efi",
-		"application/gzip",
-		"application/octet-stream",
-		"application/x-iso9660-image",
-		"application/x-qemu-disk",
-		"application/x-xz",
-		"text/plain",
-	} {
-		require.Contains(t, artifact.Content, mediaType)
+		for _, mediaType := range []string{
+			"*/*",
+			"application/efi",
+			"application/gzip",
+			"application/octet-stream",
+			"application/x-iso9660-image",
+			"application/x-qemu-disk",
+			"application/x-xz",
+			"text/plain",
+		} {
+			require.Contains(t, artifact.Content, mediaType, name)
+		}
 	}
 }
 
